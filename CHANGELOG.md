@@ -1,5 +1,17 @@
 # Changelog
 
+## v2026.06.27.1
+
+TinManX1 native FibreSeek planner safety correction.
+
+Included:
+
+- removed automatic close-hole cluster halos after validation showed they could connect outboard gear-tooth features
+- added printable-material checks for generated hole reinforcement loops
+- rejects enclosing web/outer rings that contain other distinct hole centers
+- keeps the 90 mm mechanical minimum and smooth multi-lap route support for legal-size hole loops
+- installed-app dry run against the current gear-guide slice confirmed zero cluster routes and zero routes under 90 mm
+
 ## v2026.06.27
 
 TinManX1 native FibreSeek planner follow-up.
@@ -7,10 +19,12 @@ TinManX1 native FibreSeek planner follow-up.
 Included:
 
 - hard 90 mm mechanical minimum carried through route filtering and planner summaries
-- close-hole cluster halo reinforcement for hole groups that cannot accept individual continuous-fiber loops
+- close-hole cluster halo reinforcement experiment for hole groups that cannot accept individual continuous-fiber loops
 - profile bend-radius handling that honors the FibreSeek profile value instead of silently flooring it higher
 - native planner smoke coverage for the close-hole cluster case
 - installed-app validation against the current sliced gear guide part
+
+Superseded by `v2026.06.27.1` for close-hole planning. The cluster-halo experiment is not used by the corrected planner.
 
 ## v2026.06.26
 

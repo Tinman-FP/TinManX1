@@ -24,7 +24,7 @@ import tempfile
 from typing import Iterable, Sequence
 
 try:
-    from shapely.geometry import GeometryCollection, LineString, MultiLineString, MultiPoint, MultiPolygon, Polygon
+    from shapely.geometry import GeometryCollection, LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon
 except Exception as exc:  # pragma: no cover - exercised on machines without shapely.
     raise SystemExit(
         "The native FibreSeek planner needs shapely. Install it with "
@@ -150,6 +150,7 @@ class PlannerConfig:
     perimeter_routes_per_layer: int = 4
     hole_reinforcement_routes_per_layer: int = 0
     hole_reinforcement_max_laps: int = 3
+    hole_reinforcement_max_radius_factor: float = 2.3
     infill_routes_per_layer: int = 8
     max_routes_per_layer: int = 80
     routes_per_cut: int = 1
@@ -981,6 +982,38 @@ def smooth_cluster_halo(
     return normalized_route_points([(float(x), float(y)) for x, y in geometry.exterior.coords])
 
 
+def smooth_circular_trace_route(
+    points: Sequence[tuple[float, float]],
+    cfg: PlannerConfig,
+) -> list[tuple[float, float]]:
+    base = route_base_points(points)
+    if len(base) < 8:
+        return []
+    line = LineString(base + [base[0]])
+    center = line.centroid
+    distances = [distance((float(center.x), float(center.y)), point) for point in base]
+    radius = max(max(distances), cfg.min_radius)
+    if radius + EPSILON < cfg.min_radius:
+        return []
+
+    max_segment = max(cfg.max_arc_segment_length, 0.5)
+    segments = max(24, int(math.ceil((2.0 * math.pi * radius) / max_segment)))
+    start_angle = math.atan2(base[0][1] - center.y, base[0][0] - center.x)
+    signed_area = 0.0
+    for start, end in zip(base, base[1:] + [base[0]]):
+        signed_area += start[0] * end[1] - end[0] * start[1]
+    direction = 1.0 if signed_area >= 0.0 else -1.0
+    smooth = [
+        (
+            float(center.x) + radius * math.cos(start_angle + direction * 2.0 * math.pi * index / segments),
+            float(center.y) + radius * math.sin(start_angle + direction * 2.0 * math.pi * index / segments),
+        )
+        for index in range(segments)
+    ]
+    smooth.append(smooth[0])
+    return normalized_route_points(smooth)
+
+
 def nearest_route_connection(
     first: FiberRoute,
     second: FiberRoute,
@@ -1007,6 +1040,18 @@ def connector_is_printable(
     if connector.length <= EPSILON:
         return True
     return any(polygon.buffer(0.05).covers(connector) for polygon in polygons)
+
+
+def route_is_printable(
+    points: Sequence[tuple[float, float]],
+    polygons: Sequence[Polygon],
+) -> bool:
+    if len(points) < 2:
+        return False
+    route = LineString(points)
+    if route.length <= EPSILON:
+        return False
+    return any(polygon.buffer(0.05).covers(route) for polygon in polygons)
 
 
 def stitched_short_perimeter_routes(
@@ -1178,6 +1223,7 @@ def hole_reinforcement_routes(
 
 def traced_hole_reinforcement_routes(
     layer: LayerGeometry,
+    polygons: Sequence[Polygon],
     cfg: PlannerConfig,
     skipped: dict[str, int],
 ) -> list[FiberRoute]:
@@ -1185,8 +1231,9 @@ def traced_hole_reinforcement_routes(
         return []
 
     candidates_by_center: dict[tuple[int, int], tuple[tuple[float, float], float, FiberRoute]] = {}
-    small_hole_centers: list[tuple[float, float]] = []
     minimum_hardware_length = hardware_min_route_length(cfg)
+    max_hole_radius = cfg.min_radius * cfg.hole_reinforcement_max_radius_factor
+    closed_loops: list[dict] = []
     for extrusion_path in layer.extrusion_paths:
         if extrusion_path.role not in PERIMETER_TRACE_ROLES:
             continue
@@ -1199,24 +1246,66 @@ def traced_hole_reinforcement_routes(
         centroid = LineString(loop).centroid
         center = (float(centroid.x), float(centroid.y))
         equivalent_radius = loop_length / (2.0 * math.pi)
+        polygon = None
+        try:
+            candidate_polygon = Polygon(loop)
+            if candidate_polygon.is_valid and not candidate_polygon.is_empty:
+                polygon = candidate_polygon
+        except Exception:
+            polygon = None
+        closed_loops.append(
+            {
+                "loop": loop,
+                "length": loop_length,
+                "center": center,
+                "equivalent_radius": equivalent_radius,
+                "polygon": polygon,
+            }
+        )
 
-        laps = max(1, math.ceil(minimum_hardware_length / loop_length))
+    for loop_info in closed_loops:
+        loop = loop_info["loop"]
+        loop_length = loop_info["length"]
+        center = loop_info["center"]
+        equivalent_radius = loop_info["equivalent_radius"]
+        polygon = loop_info["polygon"]
+        if equivalent_radius + EPSILON < cfg.min_radius or equivalent_radius > max_hole_radius + EPSILON:
+            skipped["hole_reinforcement_skipped_by_radius"] += 1
+            continue
+        if polygon is not None:
+            encloses_distinct_loop = any(
+                other is not loop_info
+                and other["equivalent_radius"] < equivalent_radius + EPSILON
+                and distance(center, other["center"]) > max(cfg.min_radius, cfg.fiber_width * 8.0)
+                and polygon.contains(Point(other["center"]))
+                for other in closed_loops
+            )
+            if encloses_distinct_loop:
+                skipped["hole_reinforcement_skipped_by_enclosing_loop"] += 1
+                continue
+
+        smooth_loop = smooth_circular_trace_route(loop, cfg)
+        if len(smooth_loop) < 4:
+            skipped["hole_reinforcement_skipped_by_bend_radius"] += 1
+            continue
+
+        smooth_loop_length = polyline_length(smooth_loop)
+        laps = max(1, math.ceil(minimum_hardware_length / smooth_loop_length))
         if laps > cfg.hole_reinforcement_max_laps:
-            if equivalent_radius < cfg.min_radius:
-                small_hole_centers.append(center)
             skipped["hole_reinforcement_skipped_by_max_laps"] += 1
             continue
 
-        points = repeated_closed_route(loop, laps)
+        points = repeated_closed_route(smooth_loop, laps)
         route_length = polyline_length(points)
         if route_length + EPSILON < minimum_hardware_length:
             skipped["hole_reinforcement_skipped_by_hardware_min_length"] += 1
             continue
+        if not route_is_printable(points, polygons):
+            skipped["hole_reinforcement_skipped_by_unprintable_path"] += 1
+            continue
 
         warnings = route_warnings_for_path(points, cfg)
         if "below_min_bend_radius" in warnings:
-            if equivalent_radius < cfg.min_radius * 1.25:
-                small_hole_centers.append(center)
             skipped["hole_reinforcement_skipped_by_bend_radius"] += 1
             continue
 
@@ -1240,59 +1329,14 @@ def traced_hole_reinforcement_routes(
         if existing is None or candidate_score < existing[0]:
             candidates_by_center[center_key] = (candidate_score, loop_length, route)
 
-    cluster_routes: list[FiberRoute] = []
-    small_centers_by_key: dict[tuple[int, int], tuple[float, float]] = {}
-    for x, y in small_hole_centers:
-        small_centers_by_key.setdefault((round(x / 2.0), round(y / 2.0)), (x, y))
-    unique_small_centers = sorted(small_centers_by_key.values())
-    cluster_gap = max(cfg.min_radius * 2.75, cfg.fiber_width * 8.0)
-    halo_radius = max(cfg.min_radius + cfg.fiber_width * 0.5, cfg.min_radius)
-    for cluster in clustered_points(unique_small_centers, cluster_gap):
-        if len(cluster) < 2:
-            continue
-        halo = smooth_cluster_halo(cluster, halo_radius, cfg)
-        if len(halo) < 4:
-            skipped["hole_cluster_reinforcement_skipped"] += 1
-            continue
-        laps = max(1, math.ceil(minimum_hardware_length / polyline_length(halo)))
-        if laps > cfg.hole_reinforcement_max_laps:
-            skipped["hole_cluster_reinforcement_skipped"] += 1
-            continue
-        points = repeated_closed_route(halo, laps)
-        if polyline_length(points) + EPSILON < minimum_hardware_length:
-            skipped["hole_cluster_reinforcement_skipped"] += 1
-            continue
-        warnings = route_warnings_for_path(points, cfg)
-        if "below_min_bend_radius" in warnings:
-            skipped["hole_cluster_reinforcement_skipped"] += 1
-            continue
-        warnings.append("hole_cluster_reinforcement")
-        warnings.append(f"hole_cluster_count_{len(cluster)}")
-        if laps > 1:
-            warnings.append(f"hole_reinforcement_{laps}x_lap")
-        warnings.append(f"mechanical_min_route_{fmt_float(minimum_hardware_length, 0)}mm")
-        cluster_routes.append(
-            FiberRoute(
-                layer_index=layer.index,
-                z=layer.z,
-                kind="hole_cluster_reinforcement_loop",
-                angle=None,
-                points=points,
-                source_role="Inner wall",
-                warnings=warnings,
-            )
-        )
-
     selected = [
         route
         for _, _, route in sorted(
             candidates_by_center.values(),
             key=lambda item: (item[1], item[2].length),
-        )[: max(cfg.hole_reinforcement_routes_per_layer - len(cluster_routes), 0)]
+        )[: cfg.hole_reinforcement_routes_per_layer]
     ]
-    selected = cluster_routes[: cfg.hole_reinforcement_routes_per_layer] + selected
     skipped["hole_reinforcement_routes"] += len(selected)
-    skipped["hole_cluster_reinforcement_routes"] += len(cluster_routes[: cfg.hole_reinforcement_routes_per_layer])
     return selected
 
 
@@ -1440,8 +1484,11 @@ def plan_routes(parsed: ParsedGCode, cfg: PlannerConfig) -> tuple[list[FiberRout
         "hole_cluster_reinforcement_routes": 0,
         "hole_cluster_reinforcement_skipped": 0,
         "hole_reinforcement_skipped_by_bend_radius": 0,
+        "hole_reinforcement_skipped_by_enclosing_loop": 0,
         "hole_reinforcement_skipped_by_hardware_min_length": 0,
         "hole_reinforcement_skipped_by_max_laps": 0,
+        "hole_reinforcement_skipped_by_radius": 0,
+        "hole_reinforcement_skipped_by_unprintable_path": 0,
         "infill_requested_without_explicit_source_layers": 0,
         "infill_explicit_fallback_to_plastic_trace_layers": 0,
         "infill_explicit_fallback_to_generated_ribs_layers": 0,
@@ -1484,7 +1531,7 @@ def plan_routes(parsed: ParsedGCode, cfg: PlannerConfig) -> tuple[list[FiberRout
                 route_cfg.perimeter_routes_per_layer,
             )
             layer_routes.extend(perimeter_trace_routes)
-            layer_routes.extend(traced_hole_reinforcement_routes(layer, route_cfg, skipped))
+            layer_routes.extend(traced_hole_reinforcement_routes(layer, polygons, route_cfg, skipped))
             for polygon in polygons[:1]:
                 layer_routes.extend(hole_reinforcement_routes(layer, polygon, route_cfg, skipped))
         if route_cfg.generate_infill:

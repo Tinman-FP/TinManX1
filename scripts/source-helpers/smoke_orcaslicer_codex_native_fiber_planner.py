@@ -134,6 +134,35 @@ def synthetic_close_hole_cluster_gcode() -> str:
     )
 
 
+def synthetic_legal_small_hole_gcode() -> str:
+    block, _ = circular_inner_wall_gcode(50.0, 50.0, 11.0, 4.0, segments=64)
+    return "\n".join(
+        [
+            ";LAYER_CHANGE",
+            ";Z:0.2",
+            ";HEIGHT:0.2",
+            "G90",
+            "M82",
+            "G0 X0 Y0 F9000",
+            ";TYPE:Outer wall",
+            "G1 X100 Y0 E1 F1800",
+            "G1 X100 Y100 E2",
+            "G1 X0 Y100 E3",
+            "G1 X0 Y0 E4",
+            block,
+            "; fiber_generate_perimeters = 1",
+            "; fiber_generate_infill = 0",
+            "; fiber_reinforcement_mode = heavy",
+            "; fiber_cut_distance = 60",
+            "; fiber_start_length = 15",
+            "; fiber_min_radius = 8",
+            "; fiber_diameter = 0.25",
+            "; fiber_linear_density = 102",
+            "",
+        ]
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--keep-gcode", type=Path, help="Optional path to keep the generated fixture.")
@@ -231,6 +260,35 @@ def main() -> int:
         )
         close_hole_routes, close_hole_skipped = planner.plan_routes(close_hole_parsed, close_hole_cfg)
 
+        legal_hole_fixture = Path(tmpdir) / "legal_small_hole_fixture.gcode"
+        legal_hole_fixture.write_text(synthetic_legal_small_hole_gcode(), encoding="utf-8")
+        legal_hole_parsed = planner.parse_gcode(legal_hole_fixture)
+        legal_hole_cfg = planner.planner_config(
+            legal_hole_parsed,
+            SimpleNamespace(
+                angles=None,
+                fiber_reinforcement_mode="heavy",
+                fiber_generate_perimeters="1",
+                fiber_generate_infill="0",
+                fiber_infill_pattern=None,
+                fiber_infill_source=None,
+                spacing=None,
+                layer_step=1,
+                fiber_start_layer=None,
+                min_route_length=None,
+                line_width=None,
+                perimeter_inset=None,
+                infill_inset=None,
+                fiber_print_speed=None,
+                fiber_start_speed=None,
+                max_routes_per_layer=200,
+                fiber_routes_per_cut=None,
+                no_perimeters=False,
+                no_infill=False,
+            ),
+        )
+        legal_hole_routes, legal_hole_skipped = planner.plan_routes(legal_hole_parsed, legal_hole_cfg)
+
     pocket = Polygon([(35, 35), (65, 35), (65, 65), (35, 65)])
     infill_routes = [route for route in routes if route.kind == "infill_chord"]
     if not infill_routes:
@@ -264,21 +322,30 @@ def main() -> int:
         raise SystemExit("A raw short pocket route passed the hardware filter without stitching.")
 
     cluster_routes = [route for route in close_hole_routes if route.kind == "hole_cluster_reinforcement_loop"]
-    if len(cluster_routes) != 1:
-        raise SystemExit(f"Expected one close-hole cluster reinforcement route, got {len(cluster_routes)}.")
-    cluster_route = cluster_routes[0]
-    if cluster_route.length + 1e-6 < planner.hardware_min_route_length(close_hole_cfg):
-        raise SystemExit("Close-hole cluster route did not satisfy the 90 mm hardware minimum.")
-    if "below_min_bend_radius" in cluster_route.warnings:
-        raise SystemExit(f"Close-hole cluster route violated bend radius: {cluster_route.warnings}")
-    if close_hole_skipped.get("hole_cluster_reinforcement_routes") != 1:
-        raise SystemExit(f"Close-hole cluster route was not reported in skipped summary: {close_hole_skipped}")
+    if cluster_routes:
+        raise SystemExit(f"Tiny close-hole cluster incorrectly generated a connecting halo route: {len(cluster_routes)}.")
+    impossible_hole_routes = [route for route in close_hole_routes if route.kind == "hole_reinforcement_loop"]
+    if impossible_hole_routes:
+        raise SystemExit(f"Tiny holes below bend radius incorrectly generated fiber routes: {len(impossible_hole_routes)}.")
+
+    legal_hole_routes = [route for route in legal_hole_routes if route.kind == "hole_reinforcement_loop"]
+    if len(legal_hole_routes) != 1:
+        raise SystemExit(f"Expected one legal small-hole reinforcement route, got {len(legal_hole_routes)}.")
+    legal_hole_route = legal_hole_routes[0]
+    if legal_hole_route.length + 1e-6 < planner.hardware_min_route_length(legal_hole_cfg):
+        raise SystemExit("Legal small-hole route did not satisfy the 90 mm hardware minimum.")
+    if "below_min_bend_radius" in legal_hole_route.warnings:
+        raise SystemExit(f"Legal small-hole route violated bend radius: {legal_hole_route.warnings}")
+    if "hole_reinforcement_2x_lap" not in legal_hole_route.warnings:
+        raise SystemExit(f"Legal small-hole route did not use the expected multi-lap route: {legal_hole_route.warnings}")
+    if legal_hole_skipped.get("hole_reinforcement_routes") != 1:
+        raise SystemExit(f"Legal small-hole route was not reported in skipped summary: {legal_hole_skipped}")
 
     print(
         "native fiber planner smoke passed: "
         f"{len(routes)} route(s), {len(infill_routes)} infill route(s), "
         f"stitched_short_pocket_length={stitched_route.length:.2f}, "
-        f"close_hole_cluster_length={cluster_route.length:.2f}, skipped={skipped}"
+        f"legal_small_hole_length={legal_hole_route.length:.2f}, skipped={skipped}"
     )
     return 0
 
