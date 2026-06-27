@@ -310,16 +310,19 @@ def main() -> int:
     if "Inner wall" not in perimeter_sources:
         raise SystemExit("No continuous-fiber perimeter route was generated around the pocket wall.")
 
-    stitched_routes = [route for route in short_pocket_routes if route.kind == "stitched_perimeter_trace"]
-    if len(stitched_routes) != 1:
-        raise SystemExit(f"Expected one stitched short-pocket perimeter route, got {len(stitched_routes)}.")
-    stitched_route = stitched_routes[0]
-    if stitched_route.length + 1e-6 < planner.hardware_min_route_length(short_pocket_cfg):
-        raise SystemExit("Stitched short-pocket route did not satisfy the hardware minimum length.")
-    if short_pocket_skipped.get("short_perimeter_stitched_routes") != 1:
-        raise SystemExit(f"Short-pocket stitching was not reported in skipped summary: {short_pocket_skipped}")
-    if any(route.kind == "perimeter_trace" for route in short_pocket_routes):
-        raise SystemExit("A raw short pocket route passed the hardware filter without stitching.")
+    minimum_pocket_routes = [
+        route
+        for route in short_pocket_routes
+        if route.kind == "perimeter_trace" and route.source_role == "Inner wall"
+    ]
+    if len(minimum_pocket_routes) != 2:
+        raise SystemExit(f"Expected two minimum pocket perimeter routes, got {len(minimum_pocket_routes)}.")
+    if any(route.length + 1e-6 < planner.hardware_min_route_length(short_pocket_cfg) for route in minimum_pocket_routes):
+        raise SystemExit("A minimum pocket route did not satisfy the 55 mm route floor.")
+    if any(route.length >= 90.0 for route in minimum_pocket_routes):
+        raise SystemExit("Minimum pocket fixture no longer proves the old 90 mm floor was removed.")
+    if short_pocket_skipped.get("short_perimeter_stitched_routes") != 0:
+        raise SystemExit(f"Minimum pocket routes should not require stitching at the 55 mm floor: {short_pocket_skipped}")
 
     cluster_routes = [route for route in close_hole_routes if route.kind == "hole_cluster_reinforcement_loop"]
     if cluster_routes:
@@ -333,18 +336,18 @@ def main() -> int:
         raise SystemExit(f"Expected one legal small-hole reinforcement route, got {len(legal_hole_routes)}.")
     legal_hole_route = legal_hole_routes[0]
     if legal_hole_route.length + 1e-6 < planner.hardware_min_route_length(legal_hole_cfg):
-        raise SystemExit("Legal small-hole route did not satisfy the 90 mm hardware minimum.")
+        raise SystemExit("Legal small-hole route did not satisfy the 55 mm route minimum.")
     if "below_min_bend_radius" in legal_hole_route.warnings:
         raise SystemExit(f"Legal small-hole route violated bend radius: {legal_hole_route.warnings}")
-    if "hole_reinforcement_2x_lap" not in legal_hole_route.warnings:
-        raise SystemExit(f"Legal small-hole route did not use the expected multi-lap route: {legal_hole_route.warnings}")
+    if any(warning.startswith("hole_reinforcement_") and warning.endswith("x_lap") for warning in legal_hole_route.warnings):
+        raise SystemExit(f"Legal small-hole route should not require multi-lap routing at the 55 mm floor: {legal_hole_route.warnings}")
     if legal_hole_skipped.get("hole_reinforcement_routes") != 1:
         raise SystemExit(f"Legal small-hole route was not reported in skipped summary: {legal_hole_skipped}")
 
     print(
         "native fiber planner smoke passed: "
         f"{len(routes)} route(s), {len(infill_routes)} infill route(s), "
-        f"stitched_short_pocket_length={stitched_route.length:.2f}, "
+        f"minimum_pocket_lengths={[round(route.length, 2) for route in minimum_pocket_routes]}, "
         f"legal_small_hole_length={legal_hole_route.length:.2f}, skipped={skipped}"
     )
     return 0

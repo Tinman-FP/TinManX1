@@ -1,5 +1,15 @@
 # Changelog
 
+## v2026.06.27.2
+
+TinManX1 native FibreSeek planner route-floor correction.
+
+Included:
+
+- corrected the misunderstood minimum route floor from 90 mm to 55 mm
+- removed the derived `cut_distance + 2 * start_length` filter that kept candidate routes effectively capped at the old 90 mm assumption
+- updated smoke coverage to prove 56 mm pocket routes and a 68.92 mm legal small-hole route pass the planner
+
 ## v2026.06.27.1
 
 TinManX1 native FibreSeek planner safety correction.
@@ -9,8 +19,8 @@ Included:
 - removed automatic close-hole cluster halos after validation showed they could connect outboard gear-tooth features
 - added printable-material checks for generated hole reinforcement loops
 - rejects enclosing web/outer rings that contain other distinct hole centers
-- keeps the 90 mm mechanical minimum and smooth multi-lap route support for legal-size hole loops
-- installed-app dry run against the current gear-guide slice confirmed zero cluster routes and zero routes under 90 mm
+- kept the then-assumed 90 mm mechanical minimum and smooth multi-lap route support for legal-size hole loops
+- installed-app dry run against the current gear-guide slice confirmed zero cluster routes and zero routes under the then-assumed 90 mm floor
 
 ## v2026.06.27
 
@@ -18,7 +28,7 @@ TinManX1 native FibreSeek planner follow-up.
 
 Included:
 
-- hard 90 mm mechanical minimum carried through route filtering and planner summaries
+- hard 90 mm mechanical minimum carried through route filtering and planner summaries; superseded by the later 55 mm route-floor correction
 - close-hole cluster halo reinforcement experiment for hole groups that cannot accept individual continuous-fiber loops
 - profile bend-radius handling that honors the FibreSeek profile value instead of silently flooring it higher
 - native planner smoke coverage for the close-hole cluster case

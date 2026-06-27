@@ -10,7 +10,7 @@ TinManX1 includes an experimental native continuous-fiber planning path for Fibr
 - Prefers validated polymer wall and infill traces, then falls back to generated clipped routes when needed.
 - Applies route length and bend-radius safety checks before accepting fiber paths.
 - Stitches short pocket perimeters when a safe printable route can be formed from multiple short segments.
-- Enforces a 90 mm mechanical minimum for emitted continuous-fiber routes.
+- Enforces a 55 mm minimum for emitted continuous-fiber routes. Cutter/feed load remains calculated separately as route length plus cut distance.
 - Supports smooth multi-lap loops for legal-size hole traces when the path remains inside printable material.
 - Rejects tiny holes, enclosing web rings, and any generated hole route that would cross empty space or connect outboard features.
 - Reloads preview data after G-code rewrite so continuous-fiber usage can appear in summaries and rendered paths.
@@ -23,5 +23,5 @@ This is not certified structural analysis and not a replacement for hardware qua
 
 - `python3 scripts/smoke_orcaslicer_codex_native_fiber_planner.py`
 - Installed-resource help/syntax check against `/Applications/TinManX1.app`
-- Installed planner dry run against the current gear-guide slice: zero close-hole cluster routes, zero routes under 90 mm.
+- Smoke coverage confirms 56 mm pocket routes and a 68.92 mm legal small-hole route pass the planner after the 55 mm route-floor correction.
 - Current local app build of `src/OrcaSlicer.app/Contents/MacOS/OrcaSlicer`

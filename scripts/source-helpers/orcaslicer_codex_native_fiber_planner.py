@@ -121,7 +121,7 @@ class PlannerConfig:
     fiber_width: float = 0.80
     min_radius: float = 8.0
     max_arc_segment_length: float = 3.0
-    mechanical_min_route_length: float = 90.0
+    mechanical_min_route_length: float = 55.0
     min_route_length: float = 10.0
     perimeter_min_route_length: float = 55.0
     thin_feature_min_route_lengths: list[float] = field(default_factory=lambda: [5.0, 2.0])
@@ -577,12 +577,9 @@ def planner_config(parsed: ParsedGCode, args: argparse.Namespace) -> PlannerConf
     cfg.fiber_p_value = round(math.pi * (cfg.fiber_diameter / 2.0) ** 2 * 0.835, 5)
     cfg.fiber_v_per_mm = cfg.fiber_p_value
     cfg.min_radius = parse_first_positive_float(comments.get("fiber_min_radius"), cfg.min_radius)
-    cfg.mechanical_min_route_length = max(
+    cfg.mechanical_min_route_length = parse_first_positive_float(
+        comments.get("fiber_mechanical_min_route_length") or comments.get("fiber_hardware_min_route_length"),
         cfg.mechanical_min_route_length,
-        parse_first_positive_float(
-            comments.get("fiber_mechanical_min_route_length") or comments.get("fiber_hardware_min_route_length"),
-            cfg.mechanical_min_route_length,
-        ),
     )
     cfg.max_arc_segment_length = parse_first_positive_float(comments.get("fiber_max_arc_segment_length"), cfg.max_arc_segment_length)
     cfg.min_route_length = parse_first_positive_float(comments.get("fiber_min_route_length"), cfg.min_route_length)
@@ -886,7 +883,6 @@ def hardware_min_route_length(cfg: PlannerConfig) -> float:
     return max(
         cfg.mechanical_min_route_length,
         cfg.min_route_length,
-        cfg.cut_distance + 2.0 * cfg.start_length + max(cfg.tension_length, 0.0),
     )
 
 
