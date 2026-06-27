@@ -81,6 +81,59 @@ G1 X36 Y20 E12
 """
 
 
+def circular_inner_wall_gcode(cx: float, cy: float, radius: float, e_start: float, segments: int = 32) -> tuple[str, float]:
+    import math
+
+    lines = [f"G0 X{cx + radius:.3f} Y{cy:.3f} F9000", ";TYPE:Inner wall"]
+    e_value = e_start
+    for index in range(1, segments + 1):
+        angle = 2.0 * math.pi * index / segments
+        e_value += 0.12
+        lines.append(f"G1 X{cx + radius * math.cos(angle):.3f} Y{cy + radius * math.sin(angle):.3f} E{e_value:.4f} F1800")
+    return "\n".join(lines), e_value
+
+
+def synthetic_close_hole_cluster_gcode() -> str:
+    centers = [
+        (44.7, 48.0),
+        (44.7, 57.0),
+        (52.5, 43.5),
+        (52.5, 61.5),
+        (60.3, 48.0),
+        (60.3, 57.0),
+    ]
+    e_value = 4.0
+    hole_blocks: list[str] = []
+    for cx, cy in centers:
+        block, e_value = circular_inner_wall_gcode(cx, cy, 3.0, e_value)
+        hole_blocks.append(block)
+    return "\n".join(
+        [
+            ";LAYER_CHANGE",
+            ";Z:0.2",
+            ";HEIGHT:0.2",
+            "G90",
+            "M82",
+            "G0 X0 Y0 F9000",
+            ";TYPE:Outer wall",
+            "G1 X100 Y0 E1 F1800",
+            "G1 X100 Y100 E2",
+            "G1 X0 Y100 E3",
+            "G1 X0 Y0 E4",
+            *hole_blocks,
+            "; fiber_generate_perimeters = 1",
+            "; fiber_generate_infill = 0",
+            "; fiber_reinforcement_mode = heavy",
+            "; fiber_cut_distance = 60",
+            "; fiber_start_length = 15",
+            "; fiber_min_radius = 8",
+            "; fiber_diameter = 0.25",
+            "; fiber_linear_density = 102",
+            "",
+        ]
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--keep-gcode", type=Path, help="Optional path to keep the generated fixture.")
@@ -149,6 +202,35 @@ def main() -> int:
         )
         short_pocket_routes, short_pocket_skipped = planner.plan_routes(short_pocket_parsed, short_pocket_cfg)
 
+        close_hole_fixture = Path(tmpdir) / "close_hole_cluster_fixture.gcode"
+        close_hole_fixture.write_text(synthetic_close_hole_cluster_gcode(), encoding="utf-8")
+        close_hole_parsed = planner.parse_gcode(close_hole_fixture)
+        close_hole_cfg = planner.planner_config(
+            close_hole_parsed,
+            SimpleNamespace(
+                angles=None,
+                fiber_reinforcement_mode="heavy",
+                fiber_generate_perimeters="1",
+                fiber_generate_infill="0",
+                fiber_infill_pattern=None,
+                fiber_infill_source=None,
+                spacing=None,
+                layer_step=1,
+                fiber_start_layer=None,
+                min_route_length=None,
+                line_width=None,
+                perimeter_inset=None,
+                infill_inset=None,
+                fiber_print_speed=None,
+                fiber_start_speed=None,
+                max_routes_per_layer=200,
+                fiber_routes_per_cut=None,
+                no_perimeters=False,
+                no_infill=False,
+            ),
+        )
+        close_hole_routes, close_hole_skipped = planner.plan_routes(close_hole_parsed, close_hole_cfg)
+
     pocket = Polygon([(35, 35), (65, 35), (65, 65), (35, 65)])
     infill_routes = [route for route in routes if route.kind == "infill_chord"]
     if not infill_routes:
@@ -181,10 +263,22 @@ def main() -> int:
     if any(route.kind == "perimeter_trace" for route in short_pocket_routes):
         raise SystemExit("A raw short pocket route passed the hardware filter without stitching.")
 
+    cluster_routes = [route for route in close_hole_routes if route.kind == "hole_cluster_reinforcement_loop"]
+    if len(cluster_routes) != 1:
+        raise SystemExit(f"Expected one close-hole cluster reinforcement route, got {len(cluster_routes)}.")
+    cluster_route = cluster_routes[0]
+    if cluster_route.length + 1e-6 < planner.hardware_min_route_length(close_hole_cfg):
+        raise SystemExit("Close-hole cluster route did not satisfy the 90 mm hardware minimum.")
+    if "below_min_bend_radius" in cluster_route.warnings:
+        raise SystemExit(f"Close-hole cluster route violated bend radius: {cluster_route.warnings}")
+    if close_hole_skipped.get("hole_cluster_reinforcement_routes") != 1:
+        raise SystemExit(f"Close-hole cluster route was not reported in skipped summary: {close_hole_skipped}")
+
     print(
         "native fiber planner smoke passed: "
         f"{len(routes)} route(s), {len(infill_routes)} infill route(s), "
-        f"stitched_short_pocket_length={stitched_route.length:.2f}, skipped={skipped}"
+        f"stitched_short_pocket_length={stitched_route.length:.2f}, "
+        f"close_hole_cluster_length={cluster_route.length:.2f}, skipped={skipped}"
     )
     return 0
 

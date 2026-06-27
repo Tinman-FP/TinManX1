@@ -17,7 +17,7 @@ This repository is a clean public release package. It does not contain private p
 
 | Lane | Status | Notes |
 | --- | --- | --- |
-| Native FibreSeek planner | Experimental / active | Standalone continuous-fiber G-code generation path with light/medium/heavy reinforcement modes, layer guard controls, hardware-aware route filtering, and rendered fiber preview support. |
+| Native FibreSeek planner | Experimental / active | Standalone continuous-fiber G-code generation path with light/medium/heavy reinforcement modes, layer guard controls, 90 mm mechanical route filtering, close-hole cluster reinforcement, and rendered fiber preview support. |
 | Strength Lens | Advisory / experimental | Prepare-view strength evidence, material model hints, load-axis selection, and sidecar metadata. Not FEA and not certified engineering output. |
 | Wave Overhangs | Experimental source port | Opt-in Wave Overhangs scaffold from the OrcaSlicer Wave Overhangs lineage with audit markers and smoke coverage. |
 | Arc Supports | Experimental operator-test path | Arc-overhang transform adapter and runtime glue with guarded metadata. Printer-bound trust still requires local validation. |

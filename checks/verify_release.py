@@ -24,6 +24,7 @@ REQUIRED_FILES = [
     "docs/features/arc-supports.md",
     "docs/features/backend-improvements.md",
     "docs/audit/tinmanx1-houseclean-2026-06-26.md",
+    "docs/audit/tinmanx1-hole-cluster-fiber-2026-06-27.md",
     "patches/tinmanx1-v2.4.0-houseclean-native-fiber.patch",
 ]
 
