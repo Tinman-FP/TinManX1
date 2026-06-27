@@ -1,0 +1,14 @@
+.DS_Store
+__pycache__/
+*.pyc
+*.log
+*.tmp
+*.bak
+*.dmg
+*.app/
+*.AppImage
+*.deb
+*.dylib
+manifests/current-local.json
+local-state/
+Application Support/
