@@ -13,6 +13,7 @@ Top-level scripts:
 - Fibre metadata sidecar
 - Native FibreSeek planner, profile generator/lint helpers, contract audit, Rocket/TinManX1 comparison helper, wiring check, and smoke guard
 - Native FibreSeek golden fixture comparison for deterministic planner regression checks
+- Native FibreSeek layup payload builder for generating validated advanced `fiber_reinforcement_payload` JSON
 - Wave, Arc, and Strength/Fibre smoke guards
 
 Public scripts default away from real printer hosts where possible. Pass explicit host details only in a private local environment.

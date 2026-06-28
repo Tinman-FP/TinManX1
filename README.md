@@ -61,6 +61,13 @@ Run the public synthetic FibreSeek planner checks before changing route logic:
 ```bash
 python3 scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py
 python3 scripts/source-helpers/golden_orcaslicer_codex_native_fiber_planner.py
+python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py --self-test
+```
+
+Build a validated advanced FibreSeek layup payload for the `fiber_reinforcement_payload` process field:
+
+```bash
+python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py --template tetragrid-core --as-gcode-comment
 ```
 
 For local installed-app validation, see:

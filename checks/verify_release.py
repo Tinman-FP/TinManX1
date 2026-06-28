@@ -30,6 +30,7 @@ REQUIRED_FILES = [
     ".github/workflows/validate_public_helpers.yml",
     "patches/tinmanx1-v2.4.0-houseclean-native-fiber.patch",
     "scripts/source-helpers/audit_fiberseek_gcode_contract.py",
+    "scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py",
     "scripts/source-helpers/check_tinmanx1_fiber_wiring.py",
     "scripts/source-helpers/compare_fiberseek_gcode.py",
     "scripts/source-helpers/golden_orcaslicer_codex_native_fiber_planner.py",

@@ -27,6 +27,7 @@ This is not certified structural analysis and not a replacement for hardware qua
 
 - `python3 scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py`
 - `python3 scripts/source-helpers/golden_orcaslicer_codex_native_fiber_planner.py`
+- `python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py --self-test`
 - `python3 scripts/source-helpers/check_tinmanx1_fiber_wiring.py`
 - `python3 scripts/source-helpers/compare_fiberseek_gcode.py <rocket.gcode> <tinmanx1.gcode>`
 - `.github/workflows/validate_public_helpers.yml` runs release hygiene plus the smoke and golden fixtures.
@@ -35,3 +36,21 @@ This is not certified structural analysis and not a replacement for hardware qua
 - Golden coverage stores public synthetic expected outputs for eight fixtures, including 55 mm pocket routes, legal/isolated small-hole routing, internal void stitching, alternating hole-family selection, radial small-gear coverage, and FibreSeek command contract counts.
 - Installed TinManX1 recovery dry run against the bad gear slice produced 139 continuous-fiber routes, zero `hole_cluster_reinforcement_loop` routes, and 16.91 m / 1.72 g estimated continuous fiber.
 - Current local app build of `src/OrcaSlicer.app/Contents/MacOS/OrcaSlicer`
+
+## Advanced Layup Payload Helper
+
+`fiber_reinforcement_payload` is the expert field for layer/Z-specific FibreSeek routing rules. To avoid hand-writing compact JSON, use:
+
+```bash
+python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py --template balanced --as-gcode-comment
+```
+
+Available templates are `balanced`, `perimeter-shell`, `tetragrid-core`, and `first-layer-off-tetragrid`. Custom bands use semicolon-separated `key=value` fields:
+
+```bash
+python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py \
+  --band "name=Core;from_layer=4;to_layer=80;mode=heavy;pattern=tetragrid;perimeters=0;infill=1;spacing=8;priority=25" \
+  --as-gcode-comment
+```
+
+The helper validates modes, patterns, layer/Z ranges, density, seam selection, prime-line values, and parser compatibility with the native planner.

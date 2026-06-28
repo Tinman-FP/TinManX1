@@ -38,3 +38,6 @@ jobs:
 
       - name: Compare native FibreSeek golden fixtures
         run: python3 scripts/source-helpers/golden_orcaslicer_codex_native_fiber_planner.py
+
+      - name: Validate FibreSeek layup payload helper
+        run: python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py --self-test
