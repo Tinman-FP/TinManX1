@@ -50038,7 +50038,7 @@ index 0000000000..5d514322f3
 +}
 diff --git a/resources/profiles/TinManX1/machine/TinManX1 FibreSeek machine common.json b/resources/profiles/TinManX1/machine/TinManX1 FibreSeek machine common.json
 new file mode 100644
-index 0000000000..57255e8ee9
+index 0000000000..71fcb12fb9
 --- /dev/null
 +++ b/resources/profiles/TinManX1/machine/TinManX1 FibreSeek machine common.json	
 @@ -0,0 +1,113 @@
@@ -50117,7 +50117,7 @@ index 0000000000..57255e8ee9
 +  "machine_start_gcode": "G92 E0\nG0 Z10 F900\n",
 +  "machine_end_gcode": "M400\nG90\nG0 X300 Y280 F6000\nG91\nG0 Z10 F900\n",
 +  "before_layer_change_gcode": ";BEFORE_LAYER_CHANGE\n;[layer_z]\nG92 E0\n",
-+  "layer_change_gcode": ";AFTER_LAYER_CHANGE\n;[layer_z]\n",
++  "layer_change_gcode": "G92 E0",
 +  "use_relative_e_distances": "1",
 +  "fiber_enabled": "0",
 +  "fiber_shared_nozzle": "0",
@@ -50157,10 +50157,10 @@ index 0000000000..57255e8ee9
 +}
 diff --git a/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json
 new file mode 100644
-index 0000000000..b3e100c43b
+index 0000000000..c367672e22
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json	
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,82 @@
 +{
 +  "type": "process",
 +  "name": "0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle",
@@ -50177,6 +50177,7 @@ index 0000000000..b3e100c43b
 +  "internal_solid_infill_line_width": "0.42",
 +  "top_surface_line_width": "0.42",
 +  "support_line_width": "0.42",
++  "bridge_line_width": "0.4",
 +  "wall_loops": "3",
 +  "sparse_infill_density": "18%",
 +  "sparse_infill_pattern": "grid",
@@ -50231,7 +50232,7 @@ index 0000000000..b3e100c43b
 +  "fiber_print_speed": "30",
 +  "fiber_start_speed": "5",
 +  "fiber_max_routes_per_layer": "8",
-+  "fiber_routes_per_cut": "2",
++  "fiber_routes_per_cut": "1",
 +  "fiber_outer_perimeter_loops": "1",
 +  "fiber_inner_perimeter_loops": "1",
 +  "fiber_plastic_outer_loops_with_fiber": "2",
@@ -50244,10 +50245,10 @@ index 0000000000..b3e100c43b
 +}
 diff --git a/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json
 new file mode 100644
-index 0000000000..c654c36e25
+index 0000000000..cb80c7e06c
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json	
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,81 @@
 +{
 +  "type": "process",
 +  "name": "0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle",
@@ -50264,6 +50265,7 @@ index 0000000000..c654c36e25
 +  "internal_solid_infill_line_width": "0.62",
 +  "top_surface_line_width": "0.62",
 +  "support_line_width": "0.62",
++  "bridge_line_width": "0.6",
 +  "wall_loops": "3",
 +  "sparse_infill_density": "18%",
 +  "sparse_infill_pattern": "grid",
@@ -50318,7 +50320,7 @@ index 0000000000..c654c36e25
 +  "fiber_print_speed": "30",
 +  "fiber_start_speed": "5",
 +  "fiber_max_routes_per_layer": "8",
-+  "fiber_routes_per_cut": "2",
++  "fiber_routes_per_cut": "1",
 +  "fiber_outer_perimeter_loops": "1",
 +  "fiber_inner_perimeter_loops": "1",
 +  "fiber_plastic_outer_loops_with_fiber": "2",
@@ -50330,10 +50332,10 @@ index 0000000000..c654c36e25
 +}
 diff --git a/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle.json b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle.json
 new file mode 100644
-index 0000000000..8bbcfbfc43
+index 0000000000..61f57eb8f6
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle.json	
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,81 @@
 +{
 +  "type": "process",
 +  "name": "0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle",
@@ -50350,6 +50352,7 @@ index 0000000000..8bbcfbfc43
 +  "internal_solid_infill_line_width": "0.82",
 +  "top_surface_line_width": "0.82",
 +  "support_line_width": "0.82",
++  "bridge_line_width": "0.8",
 +  "wall_loops": "3",
 +  "sparse_infill_density": "18%",
 +  "sparse_infill_pattern": "grid",
@@ -50404,7 +50407,7 @@ index 0000000000..8bbcfbfc43
 +  "fiber_print_speed": "30",
 +  "fiber_start_speed": "5",
 +  "fiber_max_routes_per_layer": "8",
-+  "fiber_routes_per_cut": "2",
++  "fiber_routes_per_cut": "1",
 +  "fiber_outer_perimeter_loops": "1",
 +  "fiber_inner_perimeter_loops": "1",
 +  "fiber_plastic_outer_loops_with_fiber": "2",
@@ -50416,10 +50419,10 @@ index 0000000000..8bbcfbfc43
 +}
 diff --git a/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.4+0.7 nozzle.json b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.4+0.7 nozzle.json
 new file mode 100644
-index 0000000000..eb72f66e78
+index 0000000000..1ae7579999
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.4+0.7 nozzle.json	
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,82 @@
 +{
 +  "type": "process",
 +  "name": "0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.4+0.7 nozzle",
@@ -50436,6 +50439,7 @@ index 0000000000..eb72f66e78
 +  "internal_solid_infill_line_width": "0.42",
 +  "top_surface_line_width": "0.42",
 +  "support_line_width": "0.42",
++  "bridge_line_width": "0.4",
 +  "wall_loops": "3",
 +  "sparse_infill_density": "18%",
 +  "sparse_infill_pattern": "grid",
@@ -50503,10 +50507,10 @@ index 0000000000..eb72f66e78
 +}
 diff --git a/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.6+0.7 nozzle.json b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.6+0.7 nozzle.json
 new file mode 100644
-index 0000000000..40a724a83b
+index 0000000000..d56634219c
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.6+0.7 nozzle.json	
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,81 @@
 +{
 +  "type": "process",
 +  "name": "0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.6+0.7 nozzle",
@@ -50523,6 +50527,7 @@ index 0000000000..40a724a83b
 +  "internal_solid_infill_line_width": "0.62",
 +  "top_surface_line_width": "0.62",
 +  "support_line_width": "0.62",
++  "bridge_line_width": "0.6",
 +  "wall_loops": "3",
 +  "sparse_infill_density": "18%",
 +  "sparse_infill_pattern": "grid",
@@ -50589,10 +50594,10 @@ index 0000000000..40a724a83b
 +}
 diff --git a/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.8+0.7 nozzle.json b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.8+0.7 nozzle.json
 new file mode 100644
-index 0000000000..550689ffbd
+index 0000000000..13c4b33728
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.8+0.7 nozzle.json	
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,81 @@
 +{
 +  "type": "process",
 +  "name": "0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.8+0.7 nozzle",
@@ -50609,6 +50614,7 @@ index 0000000000..550689ffbd
 +  "internal_solid_infill_line_width": "0.82",
 +  "top_surface_line_width": "0.82",
 +  "support_line_width": "0.82",
++  "bridge_line_width": "0.8",
 +  "wall_loops": "3",
 +  "sparse_infill_density": "18%",
 +  "sparse_infill_pattern": "grid",
@@ -50675,10 +50681,10 @@ index 0000000000..550689ffbd
 +}
 diff --git a/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4+0.7 nozzle.json b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4+0.7 nozzle.json
 new file mode 100644
-index 0000000000..3ef9a7d924
+index 0000000000..3088c1fc0b
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4+0.7 nozzle.json	
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,82 @@
 +{
 +  "type": "process",
 +  "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4+0.7 nozzle",
@@ -50695,6 +50701,7 @@ index 0000000000..3ef9a7d924
 +  "internal_solid_infill_line_width": "0.42",
 +  "top_surface_line_width": "0.42",
 +  "support_line_width": "0.42",
++  "bridge_line_width": "0.4",
 +  "wall_loops": "3",
 +  "sparse_infill_density": "18%",
 +  "sparse_infill_pattern": "grid",
@@ -50749,7 +50756,7 @@ index 0000000000..3ef9a7d924
 +  "fiber_print_speed": "30",
 +  "fiber_start_speed": "5",
 +  "fiber_max_routes_per_layer": "4",
-+  "fiber_routes_per_cut": "2",
++  "fiber_routes_per_cut": "1",
 +  "fiber_outer_perimeter_loops": "1",
 +  "fiber_inner_perimeter_loops": "1",
 +  "fiber_plastic_outer_loops_with_fiber": "2",
@@ -50762,10 +50769,10 @@ index 0000000000..3ef9a7d924
 +}
 diff --git a/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6+0.7 nozzle.json b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6+0.7 nozzle.json
 new file mode 100644
-index 0000000000..ed9a9cf2e8
+index 0000000000..32e4076ae7
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6+0.7 nozzle.json	
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,81 @@
 +{
 +  "type": "process",
 +  "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6+0.7 nozzle",
@@ -50782,6 +50789,7 @@ index 0000000000..ed9a9cf2e8
 +  "internal_solid_infill_line_width": "0.62",
 +  "top_surface_line_width": "0.62",
 +  "support_line_width": "0.62",
++  "bridge_line_width": "0.6",
 +  "wall_loops": "3",
 +  "sparse_infill_density": "18%",
 +  "sparse_infill_pattern": "grid",
@@ -50836,7 +50844,7 @@ index 0000000000..ed9a9cf2e8
 +  "fiber_print_speed": "30",
 +  "fiber_start_speed": "5",
 +  "fiber_max_routes_per_layer": "4",
-+  "fiber_routes_per_cut": "2",
++  "fiber_routes_per_cut": "1",
 +  "fiber_outer_perimeter_loops": "1",
 +  "fiber_inner_perimeter_loops": "1",
 +  "fiber_plastic_outer_loops_with_fiber": "2",
@@ -50848,10 +50856,10 @@ index 0000000000..ed9a9cf2e8
 +}
 diff --git a/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8+0.7 nozzle.json b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8+0.7 nozzle.json
 new file mode 100644
-index 0000000000..e2a25f5e40
+index 0000000000..45a9d07a17
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8+0.7 nozzle.json	
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,81 @@
 +{
 +  "type": "process",
 +  "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8+0.7 nozzle",
@@ -50868,6 +50876,7 @@ index 0000000000..e2a25f5e40
 +  "internal_solid_infill_line_width": "0.82",
 +  "top_surface_line_width": "0.82",
 +  "support_line_width": "0.82",
++  "bridge_line_width": "0.8",
 +  "wall_loops": "3",
 +  "sparse_infill_density": "18%",
 +  "sparse_infill_pattern": "grid",
@@ -50922,7 +50931,7 @@ index 0000000000..e2a25f5e40
 +  "fiber_print_speed": "30",
 +  "fiber_start_speed": "5",
 +  "fiber_max_routes_per_layer": "4",
-+  "fiber_routes_per_cut": "2",
++  "fiber_routes_per_cut": "1",
 +  "fiber_outer_perimeter_loops": "1",
 +  "fiber_inner_perimeter_loops": "1",
 +  "fiber_plastic_outer_loops_with_fiber": "2",
@@ -50934,10 +50943,10 @@ index 0000000000..e2a25f5e40
 +}
 diff --git a/resources/profiles/TinManX1/process/0.20mm Plastic Only @FibreSeek Seeker 3 0.4 nozzle.json b/resources/profiles/TinManX1/process/0.20mm Plastic Only @FibreSeek Seeker 3 0.4 nozzle.json
 new file mode 100644
-index 0000000000..040677b3e3
+index 0000000000..cd08a2d412
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.20mm Plastic Only @FibreSeek Seeker 3 0.4 nozzle.json	
-@@ -0,0 +1,22 @@
+@@ -0,0 +1,23 @@
 +{
 +  "type": "process",
 +  "name": "0.20mm Plastic Only @FibreSeek Seeker 3 0.4 nozzle",
@@ -50954,6 +50963,7 @@ index 0000000000..040677b3e3
 +  "internal_solid_infill_line_width": "0.42",
 +  "top_surface_line_width": "0.42",
 +  "support_line_width": "0.42",
++  "bridge_line_width": "0.4",
 +  "compatible_printers": [
 +    "FibreSeek Seeker 3 0.4 nozzle",
 +    "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
@@ -50962,10 +50972,10 @@ index 0000000000..040677b3e3
 +}
 diff --git a/resources/profiles/TinManX1/process/0.20mm Plastic Only @FibreSeek Seeker 3 0.6 nozzle.json b/resources/profiles/TinManX1/process/0.20mm Plastic Only @FibreSeek Seeker 3 0.6 nozzle.json
 new file mode 100644
-index 0000000000..803abfc415
+index 0000000000..fca59dc3e7
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.20mm Plastic Only @FibreSeek Seeker 3 0.6 nozzle.json	
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,22 @@
 +{
 +  "type": "process",
 +  "name": "0.20mm Plastic Only @FibreSeek Seeker 3 0.6 nozzle",
@@ -50982,6 +50992,7 @@ index 0000000000..803abfc415
 +  "internal_solid_infill_line_width": "0.62",
 +  "top_surface_line_width": "0.62",
 +  "support_line_width": "0.62",
++  "bridge_line_width": "0.6",
 +  "compatible_printers": [
 +    "FibreSeek Seeker 3 0.6 nozzle",
 +    "FibreSeek Seeker 3 0.6+0.7 composite nozzle"
@@ -50989,10 +51000,10 @@ index 0000000000..803abfc415
 +}
 diff --git a/resources/profiles/TinManX1/process/0.32mm Plastic Only @FibreSeek Seeker 3 0.8 nozzle.json b/resources/profiles/TinManX1/process/0.32mm Plastic Only @FibreSeek Seeker 3 0.8 nozzle.json
 new file mode 100644
-index 0000000000..c019701fbe
+index 0000000000..6f08d12fb6
 --- /dev/null
 +++ b/resources/profiles/TinManX1/process/0.32mm Plastic Only @FibreSeek Seeker 3 0.8 nozzle.json	
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,22 @@
 +{
 +  "type": "process",
 +  "name": "0.32mm Plastic Only @FibreSeek Seeker 3 0.8 nozzle",
@@ -51009,6 +51020,7 @@ index 0000000000..c019701fbe
 +  "internal_solid_infill_line_width": "0.82",
 +  "top_surface_line_width": "0.82",
 +  "support_line_width": "0.82",
++  "bridge_line_width": "0.8",
 +  "compatible_printers": [
 +    "FibreSeek Seeker 3 0.8 nozzle",
 +    "FibreSeek Seeker 3 0.8+0.7 composite nozzle"
@@ -54869,10 +54881,10 @@ index 9afd48f74a..39964e2fd4 100644
      'UltiMaker',
 diff --git a/scripts/generate_tinmanx1_fiberseek_profiles.py b/scripts/generate_tinmanx1_fiberseek_profiles.py
 new file mode 100644
-index 0000000000..73f22c50c8
+index 0000000000..ec15151992
 --- /dev/null
 +++ b/scripts/generate_tinmanx1_fiberseek_profiles.py
-@@ -0,0 +1,1061 @@
+@@ -0,0 +1,1063 @@
 +#!/usr/bin/env python3
 +"""Generate TinManX1 FibreSeek system presets.
 +
@@ -55220,7 +55232,7 @@ index 0000000000..73f22c50c8
 +        "spacing": "1.60",
 +        "layer_step": "4",
 +        "max_routes": "4",
-+        "routes_per_cut": "2",
++        "routes_per_cut": "1",
 +        "infill_source": "plastic_traces",
 +        "generate_perimeters": "1",
 +        "generate_infill": "1",
@@ -55230,7 +55242,7 @@ index 0000000000..73f22c50c8
 +        "spacing": "0.80",
 +        "layer_step": "2",
 +        "max_routes": "8",
-+        "routes_per_cut": "2",
++        "routes_per_cut": "1",
 +        "infill_source": "generated_ribs",
 +        "generate_perimeters": "1",
 +        "generate_infill": "1",
@@ -55563,7 +55575,7 @@ index 0000000000..73f22c50c8
 +        "machine_start_gcode": "G92 E0\nG0 Z10 F900\n",
 +        "machine_end_gcode": "M400\nG90\nG0 X300 Y280 F6000\nG91\nG0 Z10 F900\n",
 +        "before_layer_change_gcode": ";BEFORE_LAYER_CHANGE\n;[layer_z]\nG92 E0\n",
-+        "layer_change_gcode": ";AFTER_LAYER_CHANGE\n;[layer_z]\n",
++        "layer_change_gcode": "G92 E0",
 +        "use_relative_e_distances": "1",
 +        "fiber_enabled": "0",
 +        "fiber_shared_nozzle": "0",
@@ -55779,6 +55791,7 @@ index 0000000000..73f22c50c8
 +        "internal_solid_infill_line_width": width,
 +        "top_surface_line_width": width,
 +        "support_line_width": width,
++        "bridge_line_width": nozzle,
 +        "compatible_printers": compatible_process_printers(nozzle, fiber=False),
 +    }
 +
@@ -55801,6 +55814,7 @@ index 0000000000..73f22c50c8
 +        "internal_solid_infill_line_width": width,
 +        "top_surface_line_width": width,
 +        "support_line_width": width,
++        "bridge_line_width": plastic_nozzle,
 +        "wall_loops": "3",
 +        "sparse_infill_density": "18%",
 +        "sparse_infill_pattern": "grid",
@@ -55936,10 +55950,10 @@ index 0000000000..73f22c50c8
 +    build_pack()
 diff --git a/scripts/lint_tinmanx1_fiberseek_profiles.py b/scripts/lint_tinmanx1_fiberseek_profiles.py
 new file mode 100644
-index 0000000000..ca329c0e5a
+index 0000000000..e7eb30d9fc
 --- /dev/null
 +++ b/scripts/lint_tinmanx1_fiberseek_profiles.py
-@@ -0,0 +1,321 @@
+@@ -0,0 +1,336 @@
 +#!/usr/bin/env python3
 +"""Validate TinManX1 FibreSeek profile-pack invariants.
 +
@@ -56129,6 +56143,13 @@ index 0000000000..ca329c0e5a
 +        if needle not in after:
 +            fail(f"{path.relative_to(ROOT)} fiber_toolchange_gcode_after missing {needle}")
 +
++    before_layer = require_string(data, "before_layer_change_gcode", path)
++    if "G92 E0" not in before_layer:
++        fail(f"{path.relative_to(ROOT)} before_layer_change_gcode must reset relative E")
++    layer_change = require_string(data, "layer_change_gcode", path)
++    if layer_change.strip() != "G92 E0":
++        fail(f"{path.relative_to(ROOT)} layer_change_gcode must be exactly G92 E0 for Orca validation")
++
 +    payload = json.loads(require_string(data, "fiber_machine_contract_payload", path))
 +    if payload.get("composite_extruder", {}).get("cut_distance") != 58:
 +        fail(f"{path.relative_to(ROOT)} machine contract payload has wrong cut distance")
@@ -56206,6 +56227,9 @@ index 0000000000..ca329c0e5a
 +            count += 1
 +            if data.get("fiber_reinforcement_mode") != mode_value:
 +                fail(f"{path.relative_to(ROOT)} has wrong fiber_reinforcement_mode")
++            bridge_width = require_float(data, "bridge_line_width", path)
++            if bridge_width > float(nozzle):
++                fail(f"{path.relative_to(ROOT)} bridge_line_width exceeds plastic nozzle diameter")
 +            require_int(data, "fiber_start_layer", path, 4)
 +            require_float(data, "fiber_min_radius", path, 12)
 +            require_float(data, "fiber_min_route_length", path, 55)
@@ -56228,6 +56252,7 @@ index 0000000000..ca329c0e5a
 +            require_float(data, "fiber_correction_move_speed", path, 2)
 +            require_float(data, "fiber_correction_move_feedrate_percent", path, 0)
 +            require_float(data, "fiber_after_cut_plastic_extrusion_multiplier", path, 0.72)
++            require_int(data, "fiber_routes_per_cut", path, 1)
 +            require_float(data, "fiber_infill_density", path, 0)
 +            require_string(data, "fiber_infill_angles", path, nonempty=False)
 +            require_choice(data, "fiber_seam_position", path, {"source", "nearest", "aligned", "rear", "random"})
@@ -56240,6 +56265,10 @@ index 0000000000..ca329c0e5a
 +
 +    for path in sorted((PROFILE_ROOT / "process").glob("*Plastic Only*.json")):
 +        data = load_json(path)
++        nozzle = path.stem.rsplit(" ", 2)[1]
++        bridge_width = require_float(data, "bridge_line_width", path)
++        if bridge_width > float(nozzle):
++            fail(f"{path.relative_to(ROOT)} bridge_line_width exceeds plastic nozzle diameter")
 +        if str(data.get("fiber_generate_perimeters", "0")) != "0" or str(data.get("fiber_generate_infill", "0")) != "0":
 +            fail(f"{path.relative_to(ROOT)} plastic-only process should not generate fiber")
 +    return count
