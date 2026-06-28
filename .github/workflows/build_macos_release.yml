@@ -1,0 +1,201 @@
+name: Build macOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "TinManX1 public release tag to build"
+        required: true
+        default: "v2026.06.28-fibreseek-alpha.2"
+      upload_to_release:
+        description: "Upload macOS artifacts to the matching GitHub release"
+        required: true
+        type: boolean
+        default: true
+      force_deps:
+        description: "Rebuild dependencies even if the cache is present"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build-macos:
+    name: Build TinManX1 macOS arm64
+    runs-on: macos-14
+    timeout-minutes: 360
+
+    env:
+      ORCA_BASE_COMMIT: 6d9eb1792f50d11ea12d60526b6ace58666354fd
+      PATCH_FILE: patches/tinmanx1-v2.4.0-houseclean-native-fiber.patch
+      CMAKE_BUILD_PARALLEL_LEVEL: 3
+
+    steps:
+      - name: Checkout TinManX1 release patch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag }}
+          path: tinmanx1
+          lfs: false
+
+      - name: Checkout OrcaSlicer source base
+        uses: actions/checkout@v4
+        with:
+          repository: OrcaSlicer/OrcaSlicer
+          ref: ${{ env.ORCA_BASE_COMMIT }}
+          path: source
+          lfs: false
+
+      - name: Apply TinManX1 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          patch_path="$GITHUB_WORKSPACE/tinmanx1/$PATCH_FILE"
+          python3 - "$patch_path" <<'PY'
+          import pathlib, sys
+          path = pathlib.Path(sys.argv[1])
+          text = path.read_text()
+          path.write_text(text.replace("\r\n", "\n"))
+          PY
+
+          cd source
+          git config core.autocrlf false
+          git apply --check --binary "$patch_path"
+          git apply --binary "$patch_path"
+          git status --short
+
+          test -f resources/profiles/TinManX1.json
+
+      - name: Set up CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "~4.3.0"
+          useLocalCache: true
+          useCloudCache: true
+
+      - name: Install macOS build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew update
+          brew install gettext ninja
+          echo "$(brew --prefix gettext)/bin" >> "$GITHUB_PATH"
+
+      - name: Restore dependency cache
+        id: deps-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: source/deps/build/arm64/OrcaSlicer_dep
+          key: tinmanx1-macos-arm64-deps-${{ hashFiles('source/deps/**') }}
+
+      - name: Build dependencies
+        if: ${{ inputs.force_deps || steps.deps-cache.outputs.cache-hit != 'true' }}
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./build_release_macos.sh -d -a arm64 -x
+
+      - name: Save dependency cache
+        if: ${{ !inputs.force_deps && steps.deps-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: source/deps/build/arm64/OrcaSlicer_dep
+          key: ${{ steps.deps-cache.outputs.cache-primary-key }}
+
+      - name: Build TinManX1 slicer
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./build_release_macos.sh -s -a arm64 -x
+
+      - name: Stage macOS app package
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ inputs.release_tag }}"
+          stage_root="$GITHUB_WORKSPACE/stage"
+          artifact_root="$GITHUB_WORKSPACE/artifacts"
+          package_name="TinManX1-macOS-arm64-$tag"
+          built_app="$GITHUB_WORKSPACE/source/build/arm64/OrcaSlicer/OrcaSlicer.app"
+          app="$stage_root/$package_name/TinManX1.app"
+
+          if [ ! -d "$built_app" ]; then
+            echo "Expected built app was not found: $built_app" >&2
+            find "$GITHUB_WORKSPACE/source/build/arm64" -maxdepth 4 -name "*.app" -print || true
+            exit 1
+          fi
+
+          rm -rf "$stage_root" "$artifact_root"
+          mkdir -p "$(dirname "$app")" "$artifact_root"
+          ditto "$built_app" "$app"
+
+          macos_dir="$app/Contents/MacOS"
+          if [ -f "$macos_dir/OrcaSlicer" ]; then
+            mv "$macos_dir/OrcaSlicer" "$macos_dir/TinManX1"
+          elif [ -f "$macos_dir/OrcaSlicer.real" ] && [ ! -f "$macos_dir/TinManX1" ]; then
+            mv "$macos_dir/OrcaSlicer.real" "$macos_dir/TinManX1"
+          fi
+
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tinmanfp.TinManX1" "$app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable TinManX1" "$app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName TinManX1" "$app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TinManX1" "$app/Contents/Info.plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TinManX1" "$app/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleURLTypes:0:CFBundleURLName TinManX1 Downloads" "$app/Contents/Info.plist" 2>/dev/null || true
+
+          test -f "$app/Contents/Resources/profiles/TinManX1.json"
+          test -f "$app/Contents/Resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
+          test -f "$app/Contents/Resources/orcaslicer_codex/fiber_planner/orcaslicer_codex_native_fiber_planner.py"
+
+          python3 - "$app" <<'PY'
+          import json, pathlib, sys
+          app = pathlib.Path(sys.argv[1])
+          base = app / "Contents" / "Resources" / "profiles"
+          idx = json.loads((base / "TinManX1.json").read_text())
+          missing = []
+          for list_key in ("filament_list", "machine_list", "machine_model_list", "process_list"):
+              for item in idx.get(list_key, []):
+                  path = base / "TinManX1" / item["sub_path"]
+                  if not path.exists():
+                      missing.append((list_key, item.get("name"), str(path)))
+          if missing:
+              for row in missing:
+                  print(row)
+              raise SystemExit(f"missing profile references: {len(missing)}")
+          print("profile reference check passed")
+          PY
+
+          private_user="$(printf "%s%s" "william" "tinney")"
+          private_root="/Users/$private_user"
+          if grep -R -I -n "$private_root" "$app"; then
+            echo "Private local path leaked into macOS app package." >&2
+            exit 1
+          fi
+
+          codesign --force --deep --sign - "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+
+          cd "$stage_root/$package_name"
+          zip_path="$artifact_root/$package_name.zip"
+          ditto -c -k --keepParent TinManX1.app "$zip_path"
+          hash="$(shasum -a 256 "$zip_path" | awk '{print $1}')"
+          printf "%s  %s\n" "$hash" "$(basename "$zip_path")" > "$zip_path.sha256"
+          ls -lh "$artifact_root"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TinManX1-macOS-arm64-${{ inputs.release_tag }}
+          path: artifacts/*
+
+      - name: Upload artifacts to GitHub release
+        if: ${{ inputs.upload_to_release }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ inputs.release_tag }}" artifacts/* --repo "${{ github.repository }}" --clobber
