@@ -88,7 +88,7 @@ jobs:
 
       - name: Restore dependency cache
         id: deps-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: source/deps/build/OrcaSlicer_dep
           key: tinmanx1-windows-deps-${{ hashFiles('source/deps/**') }}
@@ -99,6 +99,13 @@ jobs:
         shell: pwsh
         run: |
           .\build_release_vs2022.bat deps
+
+      - name: Save dependency cache
+        if: ${{ !inputs.force_deps && steps.deps-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: source/deps/build/OrcaSlicer_dep
+          key: ${{ steps.deps-cache.outputs.cache-primary-key }}
 
       - name: Build TinManX1 slicer
         working-directory: source
