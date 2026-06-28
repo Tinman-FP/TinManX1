@@ -70903,7 +70903,7 @@ index 966d1629b0..15f79cd284 100644
      new_def("previous_extruder", coInt, "Previous extruder", "Index of the extruder that is being unloaded. The index is zero based (first extruder has index 0).");
      new_def("next_extruder", coInt, "Next extruder", "Index of the extruder that is being loaded. The index is zero based (first extruder has index 0).");
 diff --git a/src/libslic3r/PrintConfig.hpp b/src/libslic3r/PrintConfig.hpp
-index 45281d5ce1..2427d51db3 100644
+index 45281d5ce1..90105aea88 100644
 --- a/src/libslic3r/PrintConfig.hpp
 +++ b/src/libslic3r/PrintConfig.hpp
 @@ -80,6 +80,28 @@ enum PrintHostType {
@@ -71040,53 +71040,7 @@ index 45281d5ce1..2427d51db3 100644
  CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(AuthorizationType)
  CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WipeTowerWallType)
  CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(PerimeterGeneratorType)
-@@ -913,6 +1011,45 @@ protected: \
-         BOOST_PP_SEQ_FOR_EACH(PRINT_CONFIG_CLASS_ELEMENT_HASH, _, PARAMETER_DEFINITION_SEQ), \
-         BOOST_PP_SEQ_FOR_EACH(PRINT_CONFIG_CLASS_ELEMENT_EQUAL, _, PARAMETER_DEFINITION_SEQ))
- 
-+#define TINMAN_CONFIG_CLASS_ELEMENT_DEFINITION(TYPE, KEY) TYPE KEY;
-+#define TINMAN_CONFIG_CLASS_ELEMENT_HASH(TYPE, KEY) boost::hash_combine(seed, KEY.hash());
-+#define TINMAN_CONFIG_CLASS_ELEMENT_EQUAL(TYPE, KEY) if (! (KEY == rhs.KEY)) return false;
-+#define TINMAN_CONFIG_CLASS_ELEMENT_LOWER(TYPE, KEY) \
-+        if (KEY < rhs.KEY) return true; \
-+        if (! (KEY == rhs.KEY)) return false;
-+#define TINMAN_CONFIG_CLASS_ELEMENT_INITIALIZATION(TYPE, KEY) cache.opt_add(#KEY, base_ptr, this->KEY);
-+
-+// TinManX option groups avoid Boost.Preprocessor sequence recursion so MSVC does
-+// not hit C1009 while compiling generated FibreSeek and experimental planner keys.
-+#define TINMAN_CONFIG_CLASS_DEFINE(CLASS_NAME, OPTION_LIST_MACRO) \
-+class CLASS_NAME : public StaticPrintConfig { \
-+    STATIC_PRINT_CONFIG_CACHE(CLASS_NAME) \
-+public: \
-+    OPTION_LIST_MACRO(TINMAN_CONFIG_CLASS_ELEMENT_DEFINITION) \
-+    size_t hash() const throw() \
-+    { \
-+        size_t seed = 0; \
-+        OPTION_LIST_MACRO(TINMAN_CONFIG_CLASS_ELEMENT_HASH) \
-+        return seed; \
-+    } \
-+    bool operator==(const CLASS_NAME &rhs) const throw() \
-+    { \
-+        OPTION_LIST_MACRO(TINMAN_CONFIG_CLASS_ELEMENT_EQUAL) \
-+        return true; \
-+    } \
-+    bool operator!=(const CLASS_NAME &rhs) const throw() { return ! (*this == rhs); } \
-+    bool operator<(const CLASS_NAME &rhs) const throw() \
-+    { \
-+        OPTION_LIST_MACRO(TINMAN_CONFIG_CLASS_ELEMENT_LOWER) \
-+        return false; \
-+    } \
-+protected: \
-+    void initialize(StaticCacheBase &cache, const char *base_ptr) \
-+    { \
-+        OPTION_LIST_MACRO(TINMAN_CONFIG_CLASS_ELEMENT_INITIALIZATION) \
-+    } \
-+};
-+
- // This object is mapped to Perl as Slic3r::Config::PrintObject.
- PRINT_CONFIG_CLASS_DEFINE(
-     PrintObjectConfig,
-@@ -948,6 +1085,13 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -948,6 +1046,13 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBool,                enable_support))
      // Automatic supports (generated based on support_threshold_angle).
      ((ConfigOptionEnum<SupportType>,   support_type))
@@ -71100,7 +71054,7 @@ index 45281d5ce1..2427d51db3 100644
      // Direction of the support pattern (in XY plane).`
      ((ConfigOptionFloat,               support_angle))
      ((ConfigOptionBool,                support_on_build_plate_only))
-@@ -1070,9 +1214,11 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1070,9 +1175,11 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBool,  calib_flowrate_topinfill_special_order)) // ORCA: special flag for flow rate calibration
  )
  
@@ -71114,7 +71068,7 @@ index 45281d5ce1..2427d51db3 100644
  
      ((ConfigOptionInts,  print_extruder_id))
      ((ConfigOptionStrings,  print_extruder_variant))
-@@ -1156,8 +1302,8 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1156,8 +1263,8 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionFloatsNullable, filament_ironing_speed))
      // Detect bridging perimeters
      ((ConfigOptionBool, detect_overhang_wall))
@@ -71125,68 +71079,358 @@ index 45281d5ce1..2427d51db3 100644
      ((ConfigOptionFloatOrPercent, inner_wall_line_width))
      ((ConfigOptionFloat, inner_wall_speed))
      // Total number of perimeters.
-@@ -1246,7 +1392,195 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1246,7 +1353,855 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBool, zaa_dont_alternate_fill_direction))
      ((ConfigOptionFloat, zaa_min_z))
      ((ConfigOptionFloat, zaa_minimize_perimeter_height))
 -    )
 +)
 +
-+#define TINMAN_WAVE_OVERHANG_CORE_CONFIG_OPTIONS(OPTION) \
-+    OPTION(ConfigOptionBool,                 wave_overhangs) \
-+    OPTION(ConfigOptionBool,                 wave_overhangs_instead_of_bridges) \
-+    OPTION(ConfigOptionInt,                  wave_overhang_outer_perimeters) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_perimeter_overlap) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_minimum_width) \
-+    OPTION(ConfigOptionEnum<WaveOverhangPattern>, wave_overhang_pattern) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_line_spacing) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_flow_mm3_per_mm)
++template <typename Option>
++inline void tinman_config_hash_combine(size_t &seed, const Option &option)
++{
++    boost::hash_combine(seed, option.hash());
++}
 +
-+TINMAN_CONFIG_CLASS_DEFINE(WaveOverhangCoreConfig, TINMAN_WAVE_OVERHANG_CORE_CONFIG_OPTIONS)
++inline bool tinman_config_equal()
++{
++    return true;
++}
 +
-+#define TINMAN_WAVE_OVERHANG_SPEED_CONFIG_OPTIONS(OPTION) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_print_speed) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_perimeter_speed) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_travel_speed) \
-+    OPTION(ConfigOptionInt,                  wave_overhang_fan_speed) \
-+    OPTION(ConfigOptionInt,                  wave_overhang_floor_layers) \
-+    OPTION(ConfigOptionBool,                 wave_overhang_floor_use_hilbert) \
-+    OPTION(ConfigOptionInt,                  wave_overhang_floor_hilbert_layers) \
-+    OPTION(ConfigOptionInt,                  wave_overhang_floor_hilbert_density) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_floor_print_speed) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_floor_perimeter_speed) \
-+    OPTION(ConfigOptionInt,                  wave_overhang_floor_fan_speed) \
-+    OPTION(ConfigOptionInt,                  wave_overhang_nozzle_temp)
++template <typename Option, typename... Rest>
++inline bool tinman_config_equal(const Option &lhs, const Option &rhs, const Rest&... rest)
++{
++    return lhs == rhs && tinman_config_equal(rest...);
++}
 +
-+TINMAN_CONFIG_CLASS_DEFINE(WaveOverhangSpeedConfig, TINMAN_WAVE_OVERHANG_SPEED_CONFIG_OPTIONS)
++inline bool tinman_config_less()
++{
++    return false;
++}
 +
-+#define TINMAN_WAVE_OVERHANG_PLANNER_CONFIG_OPTIONS(OPTION) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_min_wave_time) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_min_layer_time) \
-+    OPTION(ConfigOptionEnum<WaveOverhangAlgorithm>, wave_overhang_algorithm) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_ring_overlap) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_min_angle) \
-+    OPTION(ConfigOptionEnum<WaveOverhangSpacingMode>, wave_overhang_spacing_mode) \
-+    OPTION(ConfigOptionEnum<WaveOverhangSeamMode>,    wave_overhang_seam_mode) \
-+    OPTION(ConfigOptionBool,                 wave_overhang_debug_gcode) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_min_length) \
-+    OPTION(ConfigOptionInt,                  wave_overhang_max_iterations) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_min_new_area)
++template <typename Option, typename... Rest>
++inline bool tinman_config_less(const Option &lhs, const Option &rhs, const Rest&... rest)
++{
++    if (lhs < rhs)
++        return true;
++    if (!(lhs == rhs))
++        return false;
++    return tinman_config_less(rest...);
++}
 +
-+TINMAN_CONFIG_CLASS_DEFINE(WaveOverhangPlannerConfig, TINMAN_WAVE_OVERHANG_PLANNER_CONFIG_OPTIONS)
++// TinManX option groups are written out as plain C++ classes so MSVC does not
++// repeatedly expand large generated config macros in every libslic3r source.
++class WaveOverhangCoreConfig : public StaticPrintConfig {
++    STATIC_PRINT_CONFIG_CACHE(WaveOverhangCoreConfig)
++public:
++    ConfigOptionBool wave_overhangs;
++    ConfigOptionBool wave_overhangs_instead_of_bridges;
++    ConfigOptionInt wave_overhang_outer_perimeters;
++    ConfigOptionFloat wave_overhang_perimeter_overlap;
++    ConfigOptionFloat wave_overhang_minimum_width;
++    ConfigOptionEnum<WaveOverhangPattern> wave_overhang_pattern;
++    ConfigOptionFloat wave_overhang_line_spacing;
++    ConfigOptionFloat wave_overhang_flow_mm3_per_mm;
 +
-+#define TINMAN_WAVE_OVERHANG_FRINGE_CONFIG_OPTIONS(OPTION) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_fringe_reinforcement_max_cover_to_real) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_fringe_reinforcement_max_cover_area) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_fringe_contact_compensation_max_over_cap) \
-+    OPTION(ConfigOptionBool,                 wave_overhang_corner_taper_enable) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_line_spacing_corner) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_corner_taper_distance) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_corner_angle_threshold) \
-+    OPTION(ConfigOptionFloat,                wave_overhang_end_retract_length) \
-+    OPTION(ConfigOptionBool,                 support_remaining_areas_after_wave_overhangs)
++    size_t hash() const throw()
++    {
++        size_t seed = 0;
++        tinman_config_hash_combine(seed, wave_overhangs);
++        tinman_config_hash_combine(seed, wave_overhangs_instead_of_bridges);
++        tinman_config_hash_combine(seed, wave_overhang_outer_perimeters);
++        tinman_config_hash_combine(seed, wave_overhang_perimeter_overlap);
++        tinman_config_hash_combine(seed, wave_overhang_minimum_width);
++        tinman_config_hash_combine(seed, wave_overhang_pattern);
++        tinman_config_hash_combine(seed, wave_overhang_line_spacing);
++        tinman_config_hash_combine(seed, wave_overhang_flow_mm3_per_mm);
++        return seed;
++    }
 +
-+TINMAN_CONFIG_CLASS_DEFINE(WaveOverhangFringeConfig, TINMAN_WAVE_OVERHANG_FRINGE_CONFIG_OPTIONS)
++    bool operator==(const WaveOverhangCoreConfig &rhs) const throw()
++    {
++        return tinman_config_equal(
++            wave_overhangs, rhs.wave_overhangs,
++            wave_overhangs_instead_of_bridges, rhs.wave_overhangs_instead_of_bridges,
++            wave_overhang_outer_perimeters, rhs.wave_overhang_outer_perimeters,
++            wave_overhang_perimeter_overlap, rhs.wave_overhang_perimeter_overlap,
++            wave_overhang_minimum_width, rhs.wave_overhang_minimum_width,
++            wave_overhang_pattern, rhs.wave_overhang_pattern,
++            wave_overhang_line_spacing, rhs.wave_overhang_line_spacing,
++            wave_overhang_flow_mm3_per_mm, rhs.wave_overhang_flow_mm3_per_mm);
++    }
++
++    bool operator!=(const WaveOverhangCoreConfig &rhs) const throw() { return !(*this == rhs); }
++
++    bool operator<(const WaveOverhangCoreConfig &rhs) const throw()
++    {
++        return tinman_config_less(
++            wave_overhangs, rhs.wave_overhangs,
++            wave_overhangs_instead_of_bridges, rhs.wave_overhangs_instead_of_bridges,
++            wave_overhang_outer_perimeters, rhs.wave_overhang_outer_perimeters,
++            wave_overhang_perimeter_overlap, rhs.wave_overhang_perimeter_overlap,
++            wave_overhang_minimum_width, rhs.wave_overhang_minimum_width,
++            wave_overhang_pattern, rhs.wave_overhang_pattern,
++            wave_overhang_line_spacing, rhs.wave_overhang_line_spacing,
++            wave_overhang_flow_mm3_per_mm, rhs.wave_overhang_flow_mm3_per_mm);
++    }
++
++protected:
++    void initialize(StaticCacheBase &cache, const char *base_ptr)
++    {
++        cache.opt_add("wave_overhangs", base_ptr, this->wave_overhangs);
++        cache.opt_add("wave_overhangs_instead_of_bridges", base_ptr, this->wave_overhangs_instead_of_bridges);
++        cache.opt_add("wave_overhang_outer_perimeters", base_ptr, this->wave_overhang_outer_perimeters);
++        cache.opt_add("wave_overhang_perimeter_overlap", base_ptr, this->wave_overhang_perimeter_overlap);
++        cache.opt_add("wave_overhang_minimum_width", base_ptr, this->wave_overhang_minimum_width);
++        cache.opt_add("wave_overhang_pattern", base_ptr, this->wave_overhang_pattern);
++        cache.opt_add("wave_overhang_line_spacing", base_ptr, this->wave_overhang_line_spacing);
++        cache.opt_add("wave_overhang_flow_mm3_per_mm", base_ptr, this->wave_overhang_flow_mm3_per_mm);
++    }
++};
++
++class WaveOverhangSpeedConfig : public StaticPrintConfig {
++    STATIC_PRINT_CONFIG_CACHE(WaveOverhangSpeedConfig)
++public:
++    ConfigOptionFloat wave_overhang_print_speed;
++    ConfigOptionFloat wave_overhang_perimeter_speed;
++    ConfigOptionFloat wave_overhang_travel_speed;
++    ConfigOptionInt wave_overhang_fan_speed;
++    ConfigOptionInt wave_overhang_floor_layers;
++    ConfigOptionBool wave_overhang_floor_use_hilbert;
++    ConfigOptionInt wave_overhang_floor_hilbert_layers;
++    ConfigOptionInt wave_overhang_floor_hilbert_density;
++    ConfigOptionFloat wave_overhang_floor_print_speed;
++    ConfigOptionFloat wave_overhang_floor_perimeter_speed;
++    ConfigOptionInt wave_overhang_floor_fan_speed;
++    ConfigOptionInt wave_overhang_nozzle_temp;
++
++    size_t hash() const throw()
++    {
++        size_t seed = 0;
++        tinman_config_hash_combine(seed, wave_overhang_print_speed);
++        tinman_config_hash_combine(seed, wave_overhang_perimeter_speed);
++        tinman_config_hash_combine(seed, wave_overhang_travel_speed);
++        tinman_config_hash_combine(seed, wave_overhang_fan_speed);
++        tinman_config_hash_combine(seed, wave_overhang_floor_layers);
++        tinman_config_hash_combine(seed, wave_overhang_floor_use_hilbert);
++        tinman_config_hash_combine(seed, wave_overhang_floor_hilbert_layers);
++        tinman_config_hash_combine(seed, wave_overhang_floor_hilbert_density);
++        tinman_config_hash_combine(seed, wave_overhang_floor_print_speed);
++        tinman_config_hash_combine(seed, wave_overhang_floor_perimeter_speed);
++        tinman_config_hash_combine(seed, wave_overhang_floor_fan_speed);
++        tinman_config_hash_combine(seed, wave_overhang_nozzle_temp);
++        return seed;
++    }
++
++    bool operator==(const WaveOverhangSpeedConfig &rhs) const throw()
++    {
++        return tinman_config_equal(
++            wave_overhang_print_speed, rhs.wave_overhang_print_speed,
++            wave_overhang_perimeter_speed, rhs.wave_overhang_perimeter_speed,
++            wave_overhang_travel_speed, rhs.wave_overhang_travel_speed,
++            wave_overhang_fan_speed, rhs.wave_overhang_fan_speed,
++            wave_overhang_floor_layers, rhs.wave_overhang_floor_layers,
++            wave_overhang_floor_use_hilbert, rhs.wave_overhang_floor_use_hilbert,
++            wave_overhang_floor_hilbert_layers, rhs.wave_overhang_floor_hilbert_layers,
++            wave_overhang_floor_hilbert_density, rhs.wave_overhang_floor_hilbert_density,
++            wave_overhang_floor_print_speed, rhs.wave_overhang_floor_print_speed,
++            wave_overhang_floor_perimeter_speed, rhs.wave_overhang_floor_perimeter_speed,
++            wave_overhang_floor_fan_speed, rhs.wave_overhang_floor_fan_speed,
++            wave_overhang_nozzle_temp, rhs.wave_overhang_nozzle_temp);
++    }
++
++    bool operator!=(const WaveOverhangSpeedConfig &rhs) const throw() { return !(*this == rhs); }
++
++    bool operator<(const WaveOverhangSpeedConfig &rhs) const throw()
++    {
++        return tinman_config_less(
++            wave_overhang_print_speed, rhs.wave_overhang_print_speed,
++            wave_overhang_perimeter_speed, rhs.wave_overhang_perimeter_speed,
++            wave_overhang_travel_speed, rhs.wave_overhang_travel_speed,
++            wave_overhang_fan_speed, rhs.wave_overhang_fan_speed,
++            wave_overhang_floor_layers, rhs.wave_overhang_floor_layers,
++            wave_overhang_floor_use_hilbert, rhs.wave_overhang_floor_use_hilbert,
++            wave_overhang_floor_hilbert_layers, rhs.wave_overhang_floor_hilbert_layers,
++            wave_overhang_floor_hilbert_density, rhs.wave_overhang_floor_hilbert_density,
++            wave_overhang_floor_print_speed, rhs.wave_overhang_floor_print_speed,
++            wave_overhang_floor_perimeter_speed, rhs.wave_overhang_floor_perimeter_speed,
++            wave_overhang_floor_fan_speed, rhs.wave_overhang_floor_fan_speed,
++            wave_overhang_nozzle_temp, rhs.wave_overhang_nozzle_temp);
++    }
++
++protected:
++    void initialize(StaticCacheBase &cache, const char *base_ptr)
++    {
++        cache.opt_add("wave_overhang_print_speed", base_ptr, this->wave_overhang_print_speed);
++        cache.opt_add("wave_overhang_perimeter_speed", base_ptr, this->wave_overhang_perimeter_speed);
++        cache.opt_add("wave_overhang_travel_speed", base_ptr, this->wave_overhang_travel_speed);
++        cache.opt_add("wave_overhang_fan_speed", base_ptr, this->wave_overhang_fan_speed);
++        cache.opt_add("wave_overhang_floor_layers", base_ptr, this->wave_overhang_floor_layers);
++        cache.opt_add("wave_overhang_floor_use_hilbert", base_ptr, this->wave_overhang_floor_use_hilbert);
++        cache.opt_add("wave_overhang_floor_hilbert_layers", base_ptr, this->wave_overhang_floor_hilbert_layers);
++        cache.opt_add("wave_overhang_floor_hilbert_density", base_ptr, this->wave_overhang_floor_hilbert_density);
++        cache.opt_add("wave_overhang_floor_print_speed", base_ptr, this->wave_overhang_floor_print_speed);
++        cache.opt_add("wave_overhang_floor_perimeter_speed", base_ptr, this->wave_overhang_floor_perimeter_speed);
++        cache.opt_add("wave_overhang_floor_fan_speed", base_ptr, this->wave_overhang_floor_fan_speed);
++        cache.opt_add("wave_overhang_nozzle_temp", base_ptr, this->wave_overhang_nozzle_temp);
++    }
++};
++
++class WaveOverhangPlannerConfig : public StaticPrintConfig {
++    STATIC_PRINT_CONFIG_CACHE(WaveOverhangPlannerConfig)
++public:
++    ConfigOptionFloat wave_overhang_min_wave_time;
++    ConfigOptionFloat wave_overhang_min_layer_time;
++    ConfigOptionEnum<WaveOverhangAlgorithm> wave_overhang_algorithm;
++    ConfigOptionFloat wave_overhang_ring_overlap;
++    ConfigOptionFloat wave_overhang_min_angle;
++    ConfigOptionEnum<WaveOverhangSpacingMode> wave_overhang_spacing_mode;
++    ConfigOptionEnum<WaveOverhangSeamMode> wave_overhang_seam_mode;
++    ConfigOptionBool wave_overhang_debug_gcode;
++    ConfigOptionFloat wave_overhang_min_length;
++    ConfigOptionInt wave_overhang_max_iterations;
++    ConfigOptionFloat wave_overhang_min_new_area;
++
++    size_t hash() const throw()
++    {
++        size_t seed = 0;
++        tinman_config_hash_combine(seed, wave_overhang_min_wave_time);
++        tinman_config_hash_combine(seed, wave_overhang_min_layer_time);
++        tinman_config_hash_combine(seed, wave_overhang_algorithm);
++        tinman_config_hash_combine(seed, wave_overhang_ring_overlap);
++        tinman_config_hash_combine(seed, wave_overhang_min_angle);
++        tinman_config_hash_combine(seed, wave_overhang_spacing_mode);
++        tinman_config_hash_combine(seed, wave_overhang_seam_mode);
++        tinman_config_hash_combine(seed, wave_overhang_debug_gcode);
++        tinman_config_hash_combine(seed, wave_overhang_min_length);
++        tinman_config_hash_combine(seed, wave_overhang_max_iterations);
++        tinman_config_hash_combine(seed, wave_overhang_min_new_area);
++        return seed;
++    }
++
++    bool operator==(const WaveOverhangPlannerConfig &rhs) const throw()
++    {
++        return tinman_config_equal(
++            wave_overhang_min_wave_time, rhs.wave_overhang_min_wave_time,
++            wave_overhang_min_layer_time, rhs.wave_overhang_min_layer_time,
++            wave_overhang_algorithm, rhs.wave_overhang_algorithm,
++            wave_overhang_ring_overlap, rhs.wave_overhang_ring_overlap,
++            wave_overhang_min_angle, rhs.wave_overhang_min_angle,
++            wave_overhang_spacing_mode, rhs.wave_overhang_spacing_mode,
++            wave_overhang_seam_mode, rhs.wave_overhang_seam_mode,
++            wave_overhang_debug_gcode, rhs.wave_overhang_debug_gcode,
++            wave_overhang_min_length, rhs.wave_overhang_min_length,
++            wave_overhang_max_iterations, rhs.wave_overhang_max_iterations,
++            wave_overhang_min_new_area, rhs.wave_overhang_min_new_area);
++    }
++
++    bool operator!=(const WaveOverhangPlannerConfig &rhs) const throw() { return !(*this == rhs); }
++
++    bool operator<(const WaveOverhangPlannerConfig &rhs) const throw()
++    {
++        return tinman_config_less(
++            wave_overhang_min_wave_time, rhs.wave_overhang_min_wave_time,
++            wave_overhang_min_layer_time, rhs.wave_overhang_min_layer_time,
++            wave_overhang_algorithm, rhs.wave_overhang_algorithm,
++            wave_overhang_ring_overlap, rhs.wave_overhang_ring_overlap,
++            wave_overhang_min_angle, rhs.wave_overhang_min_angle,
++            wave_overhang_spacing_mode, rhs.wave_overhang_spacing_mode,
++            wave_overhang_seam_mode, rhs.wave_overhang_seam_mode,
++            wave_overhang_debug_gcode, rhs.wave_overhang_debug_gcode,
++            wave_overhang_min_length, rhs.wave_overhang_min_length,
++            wave_overhang_max_iterations, rhs.wave_overhang_max_iterations,
++            wave_overhang_min_new_area, rhs.wave_overhang_min_new_area);
++    }
++
++protected:
++    void initialize(StaticCacheBase &cache, const char *base_ptr)
++    {
++        cache.opt_add("wave_overhang_min_wave_time", base_ptr, this->wave_overhang_min_wave_time);
++        cache.opt_add("wave_overhang_min_layer_time", base_ptr, this->wave_overhang_min_layer_time);
++        cache.opt_add("wave_overhang_algorithm", base_ptr, this->wave_overhang_algorithm);
++        cache.opt_add("wave_overhang_ring_overlap", base_ptr, this->wave_overhang_ring_overlap);
++        cache.opt_add("wave_overhang_min_angle", base_ptr, this->wave_overhang_min_angle);
++        cache.opt_add("wave_overhang_spacing_mode", base_ptr, this->wave_overhang_spacing_mode);
++        cache.opt_add("wave_overhang_seam_mode", base_ptr, this->wave_overhang_seam_mode);
++        cache.opt_add("wave_overhang_debug_gcode", base_ptr, this->wave_overhang_debug_gcode);
++        cache.opt_add("wave_overhang_min_length", base_ptr, this->wave_overhang_min_length);
++        cache.opt_add("wave_overhang_max_iterations", base_ptr, this->wave_overhang_max_iterations);
++        cache.opt_add("wave_overhang_min_new_area", base_ptr, this->wave_overhang_min_new_area);
++    }
++};
++
++class WaveOverhangFringeConfig : public StaticPrintConfig {
++    STATIC_PRINT_CONFIG_CACHE(WaveOverhangFringeConfig)
++public:
++    ConfigOptionFloat wave_overhang_fringe_reinforcement_max_cover_to_real;
++    ConfigOptionFloat wave_overhang_fringe_reinforcement_max_cover_area;
++    ConfigOptionFloat wave_overhang_fringe_contact_compensation_max_over_cap;
++    ConfigOptionBool wave_overhang_corner_taper_enable;
++    ConfigOptionFloat wave_overhang_line_spacing_corner;
++    ConfigOptionFloat wave_overhang_corner_taper_distance;
++    ConfigOptionFloat wave_overhang_corner_angle_threshold;
++    ConfigOptionFloat wave_overhang_end_retract_length;
++    ConfigOptionBool support_remaining_areas_after_wave_overhangs;
++
++    size_t hash() const throw()
++    {
++        size_t seed = 0;
++        tinman_config_hash_combine(seed, wave_overhang_fringe_reinforcement_max_cover_to_real);
++        tinman_config_hash_combine(seed, wave_overhang_fringe_reinforcement_max_cover_area);
++        tinman_config_hash_combine(seed, wave_overhang_fringe_contact_compensation_max_over_cap);
++        tinman_config_hash_combine(seed, wave_overhang_corner_taper_enable);
++        tinman_config_hash_combine(seed, wave_overhang_line_spacing_corner);
++        tinman_config_hash_combine(seed, wave_overhang_corner_taper_distance);
++        tinman_config_hash_combine(seed, wave_overhang_corner_angle_threshold);
++        tinman_config_hash_combine(seed, wave_overhang_end_retract_length);
++        tinman_config_hash_combine(seed, support_remaining_areas_after_wave_overhangs);
++        return seed;
++    }
++
++    bool operator==(const WaveOverhangFringeConfig &rhs) const throw()
++    {
++        return tinman_config_equal(
++            wave_overhang_fringe_reinforcement_max_cover_to_real, rhs.wave_overhang_fringe_reinforcement_max_cover_to_real,
++            wave_overhang_fringe_reinforcement_max_cover_area, rhs.wave_overhang_fringe_reinforcement_max_cover_area,
++            wave_overhang_fringe_contact_compensation_max_over_cap, rhs.wave_overhang_fringe_contact_compensation_max_over_cap,
++            wave_overhang_corner_taper_enable, rhs.wave_overhang_corner_taper_enable,
++            wave_overhang_line_spacing_corner, rhs.wave_overhang_line_spacing_corner,
++            wave_overhang_corner_taper_distance, rhs.wave_overhang_corner_taper_distance,
++            wave_overhang_corner_angle_threshold, rhs.wave_overhang_corner_angle_threshold,
++            wave_overhang_end_retract_length, rhs.wave_overhang_end_retract_length,
++            support_remaining_areas_after_wave_overhangs, rhs.support_remaining_areas_after_wave_overhangs);
++    }
++
++    bool operator!=(const WaveOverhangFringeConfig &rhs) const throw() { return !(*this == rhs); }
++
++    bool operator<(const WaveOverhangFringeConfig &rhs) const throw()
++    {
++        return tinman_config_less(
++            wave_overhang_fringe_reinforcement_max_cover_to_real, rhs.wave_overhang_fringe_reinforcement_max_cover_to_real,
++            wave_overhang_fringe_reinforcement_max_cover_area, rhs.wave_overhang_fringe_reinforcement_max_cover_area,
++            wave_overhang_fringe_contact_compensation_max_over_cap, rhs.wave_overhang_fringe_contact_compensation_max_over_cap,
++            wave_overhang_corner_taper_enable, rhs.wave_overhang_corner_taper_enable,
++            wave_overhang_line_spacing_corner, rhs.wave_overhang_line_spacing_corner,
++            wave_overhang_corner_taper_distance, rhs.wave_overhang_corner_taper_distance,
++            wave_overhang_corner_angle_threshold, rhs.wave_overhang_corner_angle_threshold,
++            wave_overhang_end_retract_length, rhs.wave_overhang_end_retract_length,
++            support_remaining_areas_after_wave_overhangs, rhs.support_remaining_areas_after_wave_overhangs);
++    }
++
++protected:
++    void initialize(StaticCacheBase &cache, const char *base_ptr)
++    {
++        cache.opt_add("wave_overhang_fringe_reinforcement_max_cover_to_real", base_ptr, this->wave_overhang_fringe_reinforcement_max_cover_to_real);
++        cache.opt_add("wave_overhang_fringe_reinforcement_max_cover_area", base_ptr, this->wave_overhang_fringe_reinforcement_max_cover_area);
++        cache.opt_add("wave_overhang_fringe_contact_compensation_max_over_cap", base_ptr, this->wave_overhang_fringe_contact_compensation_max_over_cap);
++        cache.opt_add("wave_overhang_corner_taper_enable", base_ptr, this->wave_overhang_corner_taper_enable);
++        cache.opt_add("wave_overhang_line_spacing_corner", base_ptr, this->wave_overhang_line_spacing_corner);
++        cache.opt_add("wave_overhang_corner_taper_distance", base_ptr, this->wave_overhang_corner_taper_distance);
++        cache.opt_add("wave_overhang_corner_angle_threshold", base_ptr, this->wave_overhang_corner_angle_threshold);
++        cache.opt_add("wave_overhang_end_retract_length", base_ptr, this->wave_overhang_end_retract_length);
++        cache.opt_add("support_remaining_areas_after_wave_overhangs", base_ptr, this->support_remaining_areas_after_wave_overhangs);
++    }
++};
 +
 +PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
 +    WaveOverhangRegionConfig,
@@ -71199,98 +71443,486 @@ index 45281d5ce1..2427d51db3 100644
 +    (PrintRegionCoreConfig, WaveOverhangRegionConfig)
 +)
 +
-+#define TINMAN_FIBER_REINFORCEMENT_MODE_CONFIG_OPTIONS(OPTION) \
-+    OPTION(ConfigOptionEnum<FiberReinforcementMode>, fiber_reinforcement_mode) \
-+    OPTION(ConfigOptionBool,                 fiber_generate_perimeters) \
-+    OPTION(ConfigOptionBool,                 fiber_generate_infill) \
-+    OPTION(ConfigOptionInt,                  fiber_start_layer) \
-+    OPTION(ConfigOptionInt,                  fiber_print_order_code) \
-+    OPTION(ConfigOptionFloat,                fiber_min_radius) \
-+    OPTION(ConfigOptionFloat,                fiber_max_arc_segment_length) \
-+    OPTION(ConfigOptionFloat,                fiber_start_length) \
-+    OPTION(ConfigOptionFloat,                fiber_slow_length)
++class FiberReinforcementModeConfig : public StaticPrintConfig {
++    STATIC_PRINT_CONFIG_CACHE(FiberReinforcementModeConfig)
++public:
++    ConfigOptionEnum<FiberReinforcementMode> fiber_reinforcement_mode;
++    ConfigOptionBool fiber_generate_perimeters;
++    ConfigOptionBool fiber_generate_infill;
++    ConfigOptionInt fiber_start_layer;
++    ConfigOptionInt fiber_print_order_code;
++    ConfigOptionFloat fiber_min_radius;
++    ConfigOptionFloat fiber_max_arc_segment_length;
++    ConfigOptionFloat fiber_start_length;
++    ConfigOptionFloat fiber_slow_length;
 +
-+TINMAN_CONFIG_CLASS_DEFINE(FiberReinforcementModeConfig, TINMAN_FIBER_REINFORCEMENT_MODE_CONFIG_OPTIONS)
++    size_t hash() const throw()
++    {
++        size_t seed = 0;
++        tinman_config_hash_combine(seed, fiber_reinforcement_mode);
++        tinman_config_hash_combine(seed, fiber_generate_perimeters);
++        tinman_config_hash_combine(seed, fiber_generate_infill);
++        tinman_config_hash_combine(seed, fiber_start_layer);
++        tinman_config_hash_combine(seed, fiber_print_order_code);
++        tinman_config_hash_combine(seed, fiber_min_radius);
++        tinman_config_hash_combine(seed, fiber_max_arc_segment_length);
++        tinman_config_hash_combine(seed, fiber_start_length);
++        tinman_config_hash_combine(seed, fiber_slow_length);
++        return seed;
++    }
 +
-+#define TINMAN_FIBER_REINFORCEMENT_MOTION_CONFIG_OPTIONS(OPTION) \
-+    OPTION(ConfigOptionFloat,                fiber_tension_length) \
-+    OPTION(ConfigOptionFloat,                fiber_tension_feedrate) \
-+    OPTION(ConfigOptionFloat,                fiber_tension_release_fraction) \
-+    OPTION(ConfigOptionFloat,                fiber_feedrate_percent) \
-+    OPTION(ConfigOptionFloat,                fiber_start_max_speed) \
-+    OPTION(ConfigOptionFloat,                fiber_start_min_speed) \
-+    OPTION(ConfigOptionFloat,                fiber_start_min_limit_speed) \
-+    OPTION(ConfigOptionFloat,                fiber_normal_max_speed) \
-+    OPTION(ConfigOptionFloat,                fiber_normal_min_speed) \
-+    OPTION(ConfigOptionFloat,                fiber_normal_min_limit_speed)
++    bool operator==(const FiberReinforcementModeConfig &rhs) const throw()
++    {
++        return tinman_config_equal(
++            fiber_reinforcement_mode, rhs.fiber_reinforcement_mode,
++            fiber_generate_perimeters, rhs.fiber_generate_perimeters,
++            fiber_generate_infill, rhs.fiber_generate_infill,
++            fiber_start_layer, rhs.fiber_start_layer,
++            fiber_print_order_code, rhs.fiber_print_order_code,
++            fiber_min_radius, rhs.fiber_min_radius,
++            fiber_max_arc_segment_length, rhs.fiber_max_arc_segment_length,
++            fiber_start_length, rhs.fiber_start_length,
++            fiber_slow_length, rhs.fiber_slow_length);
++    }
 +
-+TINMAN_CONFIG_CLASS_DEFINE(FiberReinforcementMotionConfig, TINMAN_FIBER_REINFORCEMENT_MOTION_CONFIG_OPTIONS)
++    bool operator!=(const FiberReinforcementModeConfig &rhs) const throw() { return !(*this == rhs); }
 +
-+#define TINMAN_FIBER_REINFORCEMENT_FINISH_CONFIG_OPTIONS(OPTION) \
-+    OPTION(ConfigOptionFloat,                fiber_finish_max_speed) \
-+    OPTION(ConfigOptionFloat,                fiber_finish_min_speed) \
-+    OPTION(ConfigOptionFloat,                fiber_finish_min_limit_speed) \
-+    OPTION(ConfigOptionBool,                 fiber_override_correction_speed) \
-+    OPTION(ConfigOptionFloat,                fiber_correction_move_speed) \
-+    OPTION(ConfigOptionFloat,                fiber_correction_move_feedrate_percent) \
-+    OPTION(ConfigOptionFloat,                fiber_after_cut_plastic_extrusion_multiplier) \
-+    OPTION(ConfigOptionBool,                 fiber_z_hop_after_cut)
++    bool operator<(const FiberReinforcementModeConfig &rhs) const throw()
++    {
++        return tinman_config_less(
++            fiber_reinforcement_mode, rhs.fiber_reinforcement_mode,
++            fiber_generate_perimeters, rhs.fiber_generate_perimeters,
++            fiber_generate_infill, rhs.fiber_generate_infill,
++            fiber_start_layer, rhs.fiber_start_layer,
++            fiber_print_order_code, rhs.fiber_print_order_code,
++            fiber_min_radius, rhs.fiber_min_radius,
++            fiber_max_arc_segment_length, rhs.fiber_max_arc_segment_length,
++            fiber_start_length, rhs.fiber_start_length,
++            fiber_slow_length, rhs.fiber_slow_length);
++    }
 +
-+TINMAN_CONFIG_CLASS_DEFINE(FiberReinforcementFinishConfig, TINMAN_FIBER_REINFORCEMENT_FINISH_CONFIG_OPTIONS)
++protected:
++    void initialize(StaticCacheBase &cache, const char *base_ptr)
++    {
++        cache.opt_add("fiber_reinforcement_mode", base_ptr, this->fiber_reinforcement_mode);
++        cache.opt_add("fiber_generate_perimeters", base_ptr, this->fiber_generate_perimeters);
++        cache.opt_add("fiber_generate_infill", base_ptr, this->fiber_generate_infill);
++        cache.opt_add("fiber_start_layer", base_ptr, this->fiber_start_layer);
++        cache.opt_add("fiber_print_order_code", base_ptr, this->fiber_print_order_code);
++        cache.opt_add("fiber_min_radius", base_ptr, this->fiber_min_radius);
++        cache.opt_add("fiber_max_arc_segment_length", base_ptr, this->fiber_max_arc_segment_length);
++        cache.opt_add("fiber_start_length", base_ptr, this->fiber_start_length);
++        cache.opt_add("fiber_slow_length", base_ptr, this->fiber_slow_length);
++    }
++};
++
++class FiberReinforcementMotionConfig : public StaticPrintConfig {
++    STATIC_PRINT_CONFIG_CACHE(FiberReinforcementMotionConfig)
++public:
++    ConfigOptionFloat fiber_tension_length;
++    ConfigOptionFloat fiber_tension_feedrate;
++    ConfigOptionFloat fiber_tension_release_fraction;
++    ConfigOptionFloat fiber_feedrate_percent;
++    ConfigOptionFloat fiber_start_max_speed;
++    ConfigOptionFloat fiber_start_min_speed;
++    ConfigOptionFloat fiber_start_min_limit_speed;
++    ConfigOptionFloat fiber_normal_max_speed;
++    ConfigOptionFloat fiber_normal_min_speed;
++    ConfigOptionFloat fiber_normal_min_limit_speed;
++
++    size_t hash() const throw()
++    {
++        size_t seed = 0;
++        tinman_config_hash_combine(seed, fiber_tension_length);
++        tinman_config_hash_combine(seed, fiber_tension_feedrate);
++        tinman_config_hash_combine(seed, fiber_tension_release_fraction);
++        tinman_config_hash_combine(seed, fiber_feedrate_percent);
++        tinman_config_hash_combine(seed, fiber_start_max_speed);
++        tinman_config_hash_combine(seed, fiber_start_min_speed);
++        tinman_config_hash_combine(seed, fiber_start_min_limit_speed);
++        tinman_config_hash_combine(seed, fiber_normal_max_speed);
++        tinman_config_hash_combine(seed, fiber_normal_min_speed);
++        tinman_config_hash_combine(seed, fiber_normal_min_limit_speed);
++        return seed;
++    }
++
++    bool operator==(const FiberReinforcementMotionConfig &rhs) const throw()
++    {
++        return tinman_config_equal(
++            fiber_tension_length, rhs.fiber_tension_length,
++            fiber_tension_feedrate, rhs.fiber_tension_feedrate,
++            fiber_tension_release_fraction, rhs.fiber_tension_release_fraction,
++            fiber_feedrate_percent, rhs.fiber_feedrate_percent,
++            fiber_start_max_speed, rhs.fiber_start_max_speed,
++            fiber_start_min_speed, rhs.fiber_start_min_speed,
++            fiber_start_min_limit_speed, rhs.fiber_start_min_limit_speed,
++            fiber_normal_max_speed, rhs.fiber_normal_max_speed,
++            fiber_normal_min_speed, rhs.fiber_normal_min_speed,
++            fiber_normal_min_limit_speed, rhs.fiber_normal_min_limit_speed);
++    }
++
++    bool operator!=(const FiberReinforcementMotionConfig &rhs) const throw() { return !(*this == rhs); }
++
++    bool operator<(const FiberReinforcementMotionConfig &rhs) const throw()
++    {
++        return tinman_config_less(
++            fiber_tension_length, rhs.fiber_tension_length,
++            fiber_tension_feedrate, rhs.fiber_tension_feedrate,
++            fiber_tension_release_fraction, rhs.fiber_tension_release_fraction,
++            fiber_feedrate_percent, rhs.fiber_feedrate_percent,
++            fiber_start_max_speed, rhs.fiber_start_max_speed,
++            fiber_start_min_speed, rhs.fiber_start_min_speed,
++            fiber_start_min_limit_speed, rhs.fiber_start_min_limit_speed,
++            fiber_normal_max_speed, rhs.fiber_normal_max_speed,
++            fiber_normal_min_speed, rhs.fiber_normal_min_speed,
++            fiber_normal_min_limit_speed, rhs.fiber_normal_min_limit_speed);
++    }
++
++protected:
++    void initialize(StaticCacheBase &cache, const char *base_ptr)
++    {
++        cache.opt_add("fiber_tension_length", base_ptr, this->fiber_tension_length);
++        cache.opt_add("fiber_tension_feedrate", base_ptr, this->fiber_tension_feedrate);
++        cache.opt_add("fiber_tension_release_fraction", base_ptr, this->fiber_tension_release_fraction);
++        cache.opt_add("fiber_feedrate_percent", base_ptr, this->fiber_feedrate_percent);
++        cache.opt_add("fiber_start_max_speed", base_ptr, this->fiber_start_max_speed);
++        cache.opt_add("fiber_start_min_speed", base_ptr, this->fiber_start_min_speed);
++        cache.opt_add("fiber_start_min_limit_speed", base_ptr, this->fiber_start_min_limit_speed);
++        cache.opt_add("fiber_normal_max_speed", base_ptr, this->fiber_normal_max_speed);
++        cache.opt_add("fiber_normal_min_speed", base_ptr, this->fiber_normal_min_speed);
++        cache.opt_add("fiber_normal_min_limit_speed", base_ptr, this->fiber_normal_min_limit_speed);
++    }
++};
++
++class FiberReinforcementFinishConfig : public StaticPrintConfig {
++    STATIC_PRINT_CONFIG_CACHE(FiberReinforcementFinishConfig)
++public:
++    ConfigOptionFloat fiber_finish_max_speed;
++    ConfigOptionFloat fiber_finish_min_speed;
++    ConfigOptionFloat fiber_finish_min_limit_speed;
++    ConfigOptionBool fiber_override_correction_speed;
++    ConfigOptionFloat fiber_correction_move_speed;
++    ConfigOptionFloat fiber_correction_move_feedrate_percent;
++    ConfigOptionFloat fiber_after_cut_plastic_extrusion_multiplier;
++    ConfigOptionBool fiber_z_hop_after_cut;
++
++    size_t hash() const throw()
++    {
++        size_t seed = 0;
++        tinman_config_hash_combine(seed, fiber_finish_max_speed);
++        tinman_config_hash_combine(seed, fiber_finish_min_speed);
++        tinman_config_hash_combine(seed, fiber_finish_min_limit_speed);
++        tinman_config_hash_combine(seed, fiber_override_correction_speed);
++        tinman_config_hash_combine(seed, fiber_correction_move_speed);
++        tinman_config_hash_combine(seed, fiber_correction_move_feedrate_percent);
++        tinman_config_hash_combine(seed, fiber_after_cut_plastic_extrusion_multiplier);
++        tinman_config_hash_combine(seed, fiber_z_hop_after_cut);
++        return seed;
++    }
++
++    bool operator==(const FiberReinforcementFinishConfig &rhs) const throw()
++    {
++        return tinman_config_equal(
++            fiber_finish_max_speed, rhs.fiber_finish_max_speed,
++            fiber_finish_min_speed, rhs.fiber_finish_min_speed,
++            fiber_finish_min_limit_speed, rhs.fiber_finish_min_limit_speed,
++            fiber_override_correction_speed, rhs.fiber_override_correction_speed,
++            fiber_correction_move_speed, rhs.fiber_correction_move_speed,
++            fiber_correction_move_feedrate_percent, rhs.fiber_correction_move_feedrate_percent,
++            fiber_after_cut_plastic_extrusion_multiplier, rhs.fiber_after_cut_plastic_extrusion_multiplier,
++            fiber_z_hop_after_cut, rhs.fiber_z_hop_after_cut);
++    }
++
++    bool operator!=(const FiberReinforcementFinishConfig &rhs) const throw() { return !(*this == rhs); }
++
++    bool operator<(const FiberReinforcementFinishConfig &rhs) const throw()
++    {
++        return tinman_config_less(
++            fiber_finish_max_speed, rhs.fiber_finish_max_speed,
++            fiber_finish_min_speed, rhs.fiber_finish_min_speed,
++            fiber_finish_min_limit_speed, rhs.fiber_finish_min_limit_speed,
++            fiber_override_correction_speed, rhs.fiber_override_correction_speed,
++            fiber_correction_move_speed, rhs.fiber_correction_move_speed,
++            fiber_correction_move_feedrate_percent, rhs.fiber_correction_move_feedrate_percent,
++            fiber_after_cut_plastic_extrusion_multiplier, rhs.fiber_after_cut_plastic_extrusion_multiplier,
++            fiber_z_hop_after_cut, rhs.fiber_z_hop_after_cut);
++    }
++
++protected:
++    void initialize(StaticCacheBase &cache, const char *base_ptr)
++    {
++        cache.opt_add("fiber_finish_max_speed", base_ptr, this->fiber_finish_max_speed);
++        cache.opt_add("fiber_finish_min_speed", base_ptr, this->fiber_finish_min_speed);
++        cache.opt_add("fiber_finish_min_limit_speed", base_ptr, this->fiber_finish_min_limit_speed);
++        cache.opt_add("fiber_override_correction_speed", base_ptr, this->fiber_override_correction_speed);
++        cache.opt_add("fiber_correction_move_speed", base_ptr, this->fiber_correction_move_speed);
++        cache.opt_add("fiber_correction_move_feedrate_percent", base_ptr, this->fiber_correction_move_feedrate_percent);
++        cache.opt_add("fiber_after_cut_plastic_extrusion_multiplier", base_ptr, this->fiber_after_cut_plastic_extrusion_multiplier);
++        cache.opt_add("fiber_z_hop_after_cut", base_ptr, this->fiber_z_hop_after_cut);
++    }
++};
 +
 +PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
 +    FiberReinforcementHardwareConfig,
 +    (FiberReinforcementModeConfig, FiberReinforcementMotionConfig, FiberReinforcementFinishConfig)
 +)
 +
-+#define TINMAN_FIBER_REINFORCEMENT_INFILL_CONFIG_OPTIONS(OPTION) \
-+    OPTION(ConfigOptionFloat,                fiber_first_layer_flow_ratio) \
-+    OPTION(ConfigOptionFloat,                fiber_first_layer_line_width) \
-+    OPTION(ConfigOptionFloat,                fiber_first_layer_height) \
-+    OPTION(ConfigOptionFloat,                fiber_first_layer_speed_ratio) \
-+    OPTION(ConfigOptionEnum<FiberInfillPattern>, fiber_infill_pattern) \
-+    OPTION(ConfigOptionPercent,              fiber_infill_density) \
-+    OPTION(ConfigOptionString,               fiber_infill_angles) \
-+    OPTION(ConfigOptionEnum<FiberInfillSourcePolicy>, fiber_infill_source_policy)
++class FiberReinforcementInfillConfig : public StaticPrintConfig {
++    STATIC_PRINT_CONFIG_CACHE(FiberReinforcementInfillConfig)
++public:
++    ConfigOptionFloat fiber_first_layer_flow_ratio;
++    ConfigOptionFloat fiber_first_layer_line_width;
++    ConfigOptionFloat fiber_first_layer_height;
++    ConfigOptionFloat fiber_first_layer_speed_ratio;
++    ConfigOptionEnum<FiberInfillPattern> fiber_infill_pattern;
++    ConfigOptionPercent fiber_infill_density;
++    ConfigOptionString fiber_infill_angles;
++    ConfigOptionEnum<FiberInfillSourcePolicy> fiber_infill_source_policy;
 +
-+TINMAN_CONFIG_CLASS_DEFINE(FiberReinforcementInfillConfig, TINMAN_FIBER_REINFORCEMENT_INFILL_CONFIG_OPTIONS)
++    size_t hash() const throw()
++    {
++        size_t seed = 0;
++        tinman_config_hash_combine(seed, fiber_first_layer_flow_ratio);
++        tinman_config_hash_combine(seed, fiber_first_layer_line_width);
++        tinman_config_hash_combine(seed, fiber_first_layer_height);
++        tinman_config_hash_combine(seed, fiber_first_layer_speed_ratio);
++        tinman_config_hash_combine(seed, fiber_infill_pattern);
++        tinman_config_hash_combine(seed, fiber_infill_density);
++        tinman_config_hash_combine(seed, fiber_infill_angles);
++        tinman_config_hash_combine(seed, fiber_infill_source_policy);
++        return seed;
++    }
 +
-+#define TINMAN_FIBER_REINFORCEMENT_SEAM_CONFIG_OPTIONS(OPTION) \
-+    OPTION(ConfigOptionEnum<FiberSeamPosition>, fiber_seam_position) \
-+    OPTION(ConfigOptionFloat,                fiber_seam_angle) \
-+    OPTION(ConfigOptionFloat,                fiber_line_width) \
-+    OPTION(ConfigOptionFloat,                fiber_infill_spacing) \
-+    OPTION(ConfigOptionFloat,                fiber_macro_layer_height) \
-+    OPTION(ConfigOptionInt,                  fiber_layer_step)
++    bool operator==(const FiberReinforcementInfillConfig &rhs) const throw()
++    {
++        return tinman_config_equal(
++            fiber_first_layer_flow_ratio, rhs.fiber_first_layer_flow_ratio,
++            fiber_first_layer_line_width, rhs.fiber_first_layer_line_width,
++            fiber_first_layer_height, rhs.fiber_first_layer_height,
++            fiber_first_layer_speed_ratio, rhs.fiber_first_layer_speed_ratio,
++            fiber_infill_pattern, rhs.fiber_infill_pattern,
++            fiber_infill_density, rhs.fiber_infill_density,
++            fiber_infill_angles, rhs.fiber_infill_angles,
++            fiber_infill_source_policy, rhs.fiber_infill_source_policy);
++    }
 +
-+TINMAN_CONFIG_CLASS_DEFINE(FiberReinforcementSeamConfig, TINMAN_FIBER_REINFORCEMENT_SEAM_CONFIG_OPTIONS)
++    bool operator!=(const FiberReinforcementInfillConfig &rhs) const throw() { return !(*this == rhs); }
++
++    bool operator<(const FiberReinforcementInfillConfig &rhs) const throw()
++    {
++        return tinman_config_less(
++            fiber_first_layer_flow_ratio, rhs.fiber_first_layer_flow_ratio,
++            fiber_first_layer_line_width, rhs.fiber_first_layer_line_width,
++            fiber_first_layer_height, rhs.fiber_first_layer_height,
++            fiber_first_layer_speed_ratio, rhs.fiber_first_layer_speed_ratio,
++            fiber_infill_pattern, rhs.fiber_infill_pattern,
++            fiber_infill_density, rhs.fiber_infill_density,
++            fiber_infill_angles, rhs.fiber_infill_angles,
++            fiber_infill_source_policy, rhs.fiber_infill_source_policy);
++    }
++
++protected:
++    void initialize(StaticCacheBase &cache, const char *base_ptr)
++    {
++        cache.opt_add("fiber_first_layer_flow_ratio", base_ptr, this->fiber_first_layer_flow_ratio);
++        cache.opt_add("fiber_first_layer_line_width", base_ptr, this->fiber_first_layer_line_width);
++        cache.opt_add("fiber_first_layer_height", base_ptr, this->fiber_first_layer_height);
++        cache.opt_add("fiber_first_layer_speed_ratio", base_ptr, this->fiber_first_layer_speed_ratio);
++        cache.opt_add("fiber_infill_pattern", base_ptr, this->fiber_infill_pattern);
++        cache.opt_add("fiber_infill_density", base_ptr, this->fiber_infill_density);
++        cache.opt_add("fiber_infill_angles", base_ptr, this->fiber_infill_angles);
++        cache.opt_add("fiber_infill_source_policy", base_ptr, this->fiber_infill_source_policy);
++    }
++};
++
++class FiberReinforcementSeamConfig : public StaticPrintConfig {
++    STATIC_PRINT_CONFIG_CACHE(FiberReinforcementSeamConfig)
++public:
++    ConfigOptionEnum<FiberSeamPosition> fiber_seam_position;
++    ConfigOptionFloat fiber_seam_angle;
++    ConfigOptionFloat fiber_line_width;
++    ConfigOptionFloat fiber_infill_spacing;
++    ConfigOptionFloat fiber_macro_layer_height;
++    ConfigOptionInt fiber_layer_step;
++
++    size_t hash() const throw()
++    {
++        size_t seed = 0;
++        tinman_config_hash_combine(seed, fiber_seam_position);
++        tinman_config_hash_combine(seed, fiber_seam_angle);
++        tinman_config_hash_combine(seed, fiber_line_width);
++        tinman_config_hash_combine(seed, fiber_infill_spacing);
++        tinman_config_hash_combine(seed, fiber_macro_layer_height);
++        tinman_config_hash_combine(seed, fiber_layer_step);
++        return seed;
++    }
++
++    bool operator==(const FiberReinforcementSeamConfig &rhs) const throw()
++    {
++        return tinman_config_equal(
++            fiber_seam_position, rhs.fiber_seam_position,
++            fiber_seam_angle, rhs.fiber_seam_angle,
++            fiber_line_width, rhs.fiber_line_width,
++            fiber_infill_spacing, rhs.fiber_infill_spacing,
++            fiber_macro_layer_height, rhs.fiber_macro_layer_height,
++            fiber_layer_step, rhs.fiber_layer_step);
++    }
++
++    bool operator!=(const FiberReinforcementSeamConfig &rhs) const throw() { return !(*this == rhs); }
++
++    bool operator<(const FiberReinforcementSeamConfig &rhs) const throw()
++    {
++        return tinman_config_less(
++            fiber_seam_position, rhs.fiber_seam_position,
++            fiber_seam_angle, rhs.fiber_seam_angle,
++            fiber_line_width, rhs.fiber_line_width,
++            fiber_infill_spacing, rhs.fiber_infill_spacing,
++            fiber_macro_layer_height, rhs.fiber_macro_layer_height,
++            fiber_layer_step, rhs.fiber_layer_step);
++    }
++
++protected:
++    void initialize(StaticCacheBase &cache, const char *base_ptr)
++    {
++        cache.opt_add("fiber_seam_position", base_ptr, this->fiber_seam_position);
++        cache.opt_add("fiber_seam_angle", base_ptr, this->fiber_seam_angle);
++        cache.opt_add("fiber_line_width", base_ptr, this->fiber_line_width);
++        cache.opt_add("fiber_infill_spacing", base_ptr, this->fiber_infill_spacing);
++        cache.opt_add("fiber_macro_layer_height", base_ptr, this->fiber_macro_layer_height);
++        cache.opt_add("fiber_layer_step", base_ptr, this->fiber_layer_step);
++    }
++};
 +
 +PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
 +    FiberReinforcementPatternConfig,
 +    (FiberReinforcementInfillConfig, FiberReinforcementSeamConfig)
 +)
 +
-+#define TINMAN_FIBER_REINFORCEMENT_ROUTE_LIMIT_CONFIG_OPTIONS(OPTION) \
-+    OPTION(ConfigOptionFloat,                fiber_min_route_length) \
-+    OPTION(ConfigOptionFloat,                fiber_perimeter_min_route_length) \
-+    OPTION(ConfigOptionFloat,                fiber_mechanical_min_route_length) \
-+    OPTION(ConfigOptionFloat,                fiber_perimeter_inset) \
-+    OPTION(ConfigOptionFloat,                fiber_infill_inset)
++class FiberReinforcementRouteLimitConfig : public StaticPrintConfig {
++    STATIC_PRINT_CONFIG_CACHE(FiberReinforcementRouteLimitConfig)
++public:
++    ConfigOptionFloat fiber_min_route_length;
++    ConfigOptionFloat fiber_perimeter_min_route_length;
++    ConfigOptionFloat fiber_mechanical_min_route_length;
++    ConfigOptionFloat fiber_perimeter_inset;
++    ConfigOptionFloat fiber_infill_inset;
 +
-+TINMAN_CONFIG_CLASS_DEFINE(FiberReinforcementRouteLimitConfig, TINMAN_FIBER_REINFORCEMENT_ROUTE_LIMIT_CONFIG_OPTIONS)
++    size_t hash() const throw()
++    {
++        size_t seed = 0;
++        tinman_config_hash_combine(seed, fiber_min_route_length);
++        tinman_config_hash_combine(seed, fiber_perimeter_min_route_length);
++        tinman_config_hash_combine(seed, fiber_mechanical_min_route_length);
++        tinman_config_hash_combine(seed, fiber_perimeter_inset);
++        tinman_config_hash_combine(seed, fiber_infill_inset);
++        return seed;
++    }
 +
-+#define TINMAN_FIBER_REINFORCEMENT_ROUTE_OUTPUT_CONFIG_OPTIONS(OPTION) \
-+    OPTION(ConfigOptionFloat,                fiber_print_speed) \
-+    OPTION(ConfigOptionFloat,                fiber_start_speed) \
-+    OPTION(ConfigOptionInt,                  fiber_max_routes_per_layer) \
-+    OPTION(ConfigOptionInt,                  fiber_routes_per_cut) \
-+    OPTION(ConfigOptionInt,                  fiber_outer_perimeter_loops) \
-+    OPTION(ConfigOptionInt,                  fiber_inner_perimeter_loops) \
-+    OPTION(ConfigOptionInt,                  fiber_plastic_outer_loops_with_fiber) \
-+    OPTION(ConfigOptionInt,                  fiber_plastic_inner_loops_with_fiber) \
-+    OPTION(ConfigOptionString,               fiber_reinforcement_payload)
++    bool operator==(const FiberReinforcementRouteLimitConfig &rhs) const throw()
++    {
++        return tinman_config_equal(
++            fiber_min_route_length, rhs.fiber_min_route_length,
++            fiber_perimeter_min_route_length, rhs.fiber_perimeter_min_route_length,
++            fiber_mechanical_min_route_length, rhs.fiber_mechanical_min_route_length,
++            fiber_perimeter_inset, rhs.fiber_perimeter_inset,
++            fiber_infill_inset, rhs.fiber_infill_inset);
++    }
 +
-+TINMAN_CONFIG_CLASS_DEFINE(FiberReinforcementRouteOutputConfig, TINMAN_FIBER_REINFORCEMENT_ROUTE_OUTPUT_CONFIG_OPTIONS)
++    bool operator!=(const FiberReinforcementRouteLimitConfig &rhs) const throw() { return !(*this == rhs); }
++
++    bool operator<(const FiberReinforcementRouteLimitConfig &rhs) const throw()
++    {
++        return tinman_config_less(
++            fiber_min_route_length, rhs.fiber_min_route_length,
++            fiber_perimeter_min_route_length, rhs.fiber_perimeter_min_route_length,
++            fiber_mechanical_min_route_length, rhs.fiber_mechanical_min_route_length,
++            fiber_perimeter_inset, rhs.fiber_perimeter_inset,
++            fiber_infill_inset, rhs.fiber_infill_inset);
++    }
++
++protected:
++    void initialize(StaticCacheBase &cache, const char *base_ptr)
++    {
++        cache.opt_add("fiber_min_route_length", base_ptr, this->fiber_min_route_length);
++        cache.opt_add("fiber_perimeter_min_route_length", base_ptr, this->fiber_perimeter_min_route_length);
++        cache.opt_add("fiber_mechanical_min_route_length", base_ptr, this->fiber_mechanical_min_route_length);
++        cache.opt_add("fiber_perimeter_inset", base_ptr, this->fiber_perimeter_inset);
++        cache.opt_add("fiber_infill_inset", base_ptr, this->fiber_infill_inset);
++    }
++};
++
++class FiberReinforcementRouteOutputConfig : public StaticPrintConfig {
++    STATIC_PRINT_CONFIG_CACHE(FiberReinforcementRouteOutputConfig)
++public:
++    ConfigOptionFloat fiber_print_speed;
++    ConfigOptionFloat fiber_start_speed;
++    ConfigOptionInt fiber_max_routes_per_layer;
++    ConfigOptionInt fiber_routes_per_cut;
++    ConfigOptionInt fiber_outer_perimeter_loops;
++    ConfigOptionInt fiber_inner_perimeter_loops;
++    ConfigOptionInt fiber_plastic_outer_loops_with_fiber;
++    ConfigOptionInt fiber_plastic_inner_loops_with_fiber;
++    ConfigOptionString fiber_reinforcement_payload;
++
++    size_t hash() const throw()
++    {
++        size_t seed = 0;
++        tinman_config_hash_combine(seed, fiber_print_speed);
++        tinman_config_hash_combine(seed, fiber_start_speed);
++        tinman_config_hash_combine(seed, fiber_max_routes_per_layer);
++        tinman_config_hash_combine(seed, fiber_routes_per_cut);
++        tinman_config_hash_combine(seed, fiber_outer_perimeter_loops);
++        tinman_config_hash_combine(seed, fiber_inner_perimeter_loops);
++        tinman_config_hash_combine(seed, fiber_plastic_outer_loops_with_fiber);
++        tinman_config_hash_combine(seed, fiber_plastic_inner_loops_with_fiber);
++        tinman_config_hash_combine(seed, fiber_reinforcement_payload);
++        return seed;
++    }
++
++    bool operator==(const FiberReinforcementRouteOutputConfig &rhs) const throw()
++    {
++        return tinman_config_equal(
++            fiber_print_speed, rhs.fiber_print_speed,
++            fiber_start_speed, rhs.fiber_start_speed,
++            fiber_max_routes_per_layer, rhs.fiber_max_routes_per_layer,
++            fiber_routes_per_cut, rhs.fiber_routes_per_cut,
++            fiber_outer_perimeter_loops, rhs.fiber_outer_perimeter_loops,
++            fiber_inner_perimeter_loops, rhs.fiber_inner_perimeter_loops,
++            fiber_plastic_outer_loops_with_fiber, rhs.fiber_plastic_outer_loops_with_fiber,
++            fiber_plastic_inner_loops_with_fiber, rhs.fiber_plastic_inner_loops_with_fiber,
++            fiber_reinforcement_payload, rhs.fiber_reinforcement_payload);
++    }
++
++    bool operator!=(const FiberReinforcementRouteOutputConfig &rhs) const throw() { return !(*this == rhs); }
++
++    bool operator<(const FiberReinforcementRouteOutputConfig &rhs) const throw()
++    {
++        return tinman_config_less(
++            fiber_print_speed, rhs.fiber_print_speed,
++            fiber_start_speed, rhs.fiber_start_speed,
++            fiber_max_routes_per_layer, rhs.fiber_max_routes_per_layer,
++            fiber_routes_per_cut, rhs.fiber_routes_per_cut,
++            fiber_outer_perimeter_loops, rhs.fiber_outer_perimeter_loops,
++            fiber_inner_perimeter_loops, rhs.fiber_inner_perimeter_loops,
++            fiber_plastic_outer_loops_with_fiber, rhs.fiber_plastic_outer_loops_with_fiber,
++            fiber_plastic_inner_loops_with_fiber, rhs.fiber_plastic_inner_loops_with_fiber,
++            fiber_reinforcement_payload, rhs.fiber_reinforcement_payload);
++    }
++
++protected:
++    void initialize(StaticCacheBase &cache, const char *base_ptr)
++    {
++        cache.opt_add("fiber_print_speed", base_ptr, this->fiber_print_speed);
++        cache.opt_add("fiber_start_speed", base_ptr, this->fiber_start_speed);
++        cache.opt_add("fiber_max_routes_per_layer", base_ptr, this->fiber_max_routes_per_layer);
++        cache.opt_add("fiber_routes_per_cut", base_ptr, this->fiber_routes_per_cut);
++        cache.opt_add("fiber_outer_perimeter_loops", base_ptr, this->fiber_outer_perimeter_loops);
++        cache.opt_add("fiber_inner_perimeter_loops", base_ptr, this->fiber_inner_perimeter_loops);
++        cache.opt_add("fiber_plastic_outer_loops_with_fiber", base_ptr, this->fiber_plastic_outer_loops_with_fiber);
++        cache.opt_add("fiber_plastic_inner_loops_with_fiber", base_ptr, this->fiber_plastic_inner_loops_with_fiber);
++        cache.opt_add("fiber_reinforcement_payload", base_ptr, this->fiber_reinforcement_payload);
++    }
++};
 +
 +PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
 +    FiberReinforcementRoutingConfig,
@@ -71301,28 +71933,10 @@ index 45281d5ce1..2427d51db3 100644
 +    FiberReinforcementConfig,
 +    (FiberReinforcementHardwareConfig, FiberReinforcementPatternConfig, FiberReinforcementRoutingConfig)
 +)
-+
-+#undef TINMAN_FIBER_REINFORCEMENT_ROUTE_OUTPUT_CONFIG_OPTIONS
-+#undef TINMAN_FIBER_REINFORCEMENT_ROUTE_LIMIT_CONFIG_OPTIONS
-+#undef TINMAN_FIBER_REINFORCEMENT_SEAM_CONFIG_OPTIONS
-+#undef TINMAN_FIBER_REINFORCEMENT_INFILL_CONFIG_OPTIONS
-+#undef TINMAN_FIBER_REINFORCEMENT_FINISH_CONFIG_OPTIONS
-+#undef TINMAN_FIBER_REINFORCEMENT_MOTION_CONFIG_OPTIONS
-+#undef TINMAN_FIBER_REINFORCEMENT_MODE_CONFIG_OPTIONS
-+#undef TINMAN_WAVE_OVERHANG_FRINGE_CONFIG_OPTIONS
-+#undef TINMAN_WAVE_OVERHANG_PLANNER_CONFIG_OPTIONS
-+#undef TINMAN_WAVE_OVERHANG_SPEED_CONFIG_OPTIONS
-+#undef TINMAN_WAVE_OVERHANG_CORE_CONFIG_OPTIONS
-+#undef TINMAN_CONFIG_CLASS_DEFINE
-+#undef TINMAN_CONFIG_CLASS_ELEMENT_INITIALIZATION
-+#undef TINMAN_CONFIG_CLASS_ELEMENT_LOWER
-+#undef TINMAN_CONFIG_CLASS_ELEMENT_EQUAL
-+#undef TINMAN_CONFIG_CLASS_ELEMENT_HASH
-+#undef TINMAN_CONFIG_CLASS_ELEMENT_DEFINITION
  
  PRINT_CONFIG_CLASS_DEFINE(
      MachineEnvelopeConfig,
-@@ -1331,6 +1665,32 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1331,6 +2286,32 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBools,               filament_soluble))
      ((ConfigOptionStrings,             filament_ids))
      ((ConfigOptionStrings,             filament_colour))
@@ -71355,7 +71969,7 @@ index 45281d5ce1..2427d51db3 100644
      ((ConfigOptionStrings,             filament_vendor))
      ((ConfigOptionBools,               filament_is_support))
      ((ConfigOptionInts,                filament_printable))
-@@ -1583,6 +1943,41 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
+@@ -1583,6 +2564,41 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
      ((ConfigOptionInts,               nozzle_temperature_range_low))
      ((ConfigOptionInts,               nozzle_temperature_range_high))
      ((ConfigOptionFloats,             wipe_distance))
@@ -71397,7 +72011,7 @@ index 45281d5ce1..2427d51db3 100644
      ((ConfigOptionBool,               enable_prime_tower))
      ((ConfigOptionBool,               prime_tower_enable_framework))
      // BBS: change wipe_tower_x and wipe_tower_y data type to floats to add partplate logic
-@@ -1661,7 +2056,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
+@@ -1661,7 +2677,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
  // This object is mapped to Perl as Slic3r::Config::Full.
  PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
      FullPrintConfig,
