@@ -12,6 +12,21 @@ index 8007f0a05c..6f64e29246 100644
 +
 +# TinManX1 local validation artifacts.
 +/outputs/
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e24e296ad4..f5d20d98d6 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -223,6 +223,10 @@ if (MSVC)
+ 	# -Zm520 fixes error C3859 but forces the compiler to pre-allocate that memory for every translation unit regardless
+ 	# combining /Zi with /FS frees up a significant amount of memory pressure across all parallel compile jobs and makes /MP faster overall.
+     add_compile_options(-bigobj /Zi /FS)
++    # TinManX1 adds generated config keys for FibreSeek and experimental planners.
++    # Use MSVC's conforming preprocessor so Boost.Preprocessor does not hit the
++    # traditional 256-level nested macro expansion limit while compiling them.
++    add_compile_options(/Zc:preprocessor)
+     # Disable STL4007: Many result_type typedefs and all argument_type, first_argument_type, and second_argument_type typedefs are deprecated in C++17.
+     #FIXME Remove this line after eigen library adapts to the new C++17 adaptor rules.
+     add_compile_options(-D_SILENCE_CXX17_ADAPTOR_TYPEDEFS_DEPRECATION_WARNING)
 diff --git a/SoftFever_doc/orcaslicer_codex_feature_attribution.md b/SoftFever_doc/orcaslicer_codex_feature_attribution.md
 new file mode 100644
 index 0000000000..c7c8aab8ab
