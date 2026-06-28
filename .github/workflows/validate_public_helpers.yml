@@ -41,3 +41,8 @@ jobs:
 
       - name: Validate FibreSeek layup payload helper
         run: python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py --self-test
+
+      - name: Generate and lint FibreSeek profile pack
+        run: |
+          python3 scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py --fiber-layup-template first-layer-off-tetragrid
+          python3 scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py

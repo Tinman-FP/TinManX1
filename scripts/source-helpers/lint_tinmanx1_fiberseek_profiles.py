@@ -14,7 +14,14 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parents[1]
+def find_repo_root(start: Path) -> Path:
+    for candidate in (start.parent, *start.parents):
+        if (candidate / "README.md").is_file() and (candidate / "scripts").is_dir():
+            return candidate
+    return start.parents[1]
+
+
+ROOT = find_repo_root(Path(__file__).resolve())
 PROFILE_ROOT = ROOT / "resources" / "profiles" / "TinManX1"
 INDEX_PATH = ROOT / "resources" / "profiles" / "TinManX1.json"
 

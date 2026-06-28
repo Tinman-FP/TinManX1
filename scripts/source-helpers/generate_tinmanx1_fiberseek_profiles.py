@@ -10,12 +10,23 @@ cleanly.
 
 from __future__ import annotations
 
+import argparse
+import importlib.util
 import json
 import shutil
 from pathlib import Path
+import sys
 
 
-ROOT = Path(__file__).resolve().parents[1]
+def find_repo_root(start: Path) -> Path:
+    for candidate in (start.parent, *start.parents):
+        if (candidate / "README.md").is_file() and (candidate / "scripts").is_dir():
+            return candidate
+    return start.parents[1]
+
+
+ROOT = find_repo_root(Path(__file__).resolve())
+HELPER_DIR = Path(__file__).resolve().parent
 PROFILE_ROOT = ROOT / "resources" / "profiles"
 PACK_ROOT = PROFILE_ROOT / "TinManX1"
 PACK_VERSION = "02.04.00.13"
@@ -422,6 +433,26 @@ def arr(value):
 def write_json(path: Path, data: dict):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=True) + "\n")
+
+
+def load_layup_payload_helper():
+    helper_path = HELPER_DIR / "build_tinmanx1_fiber_layup_payload.py"
+    spec = importlib.util.spec_from_file_location("tinmanx1_layup_payload_helper", helper_path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"Unable to load layup payload helper: {helper_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def layup_payload_for_template(template: str) -> str:
+    if template == "none":
+        return "{}"
+    helper = load_layup_payload_helper()
+    payload = {"layup_bands": [helper.normalize_band(dict(item)) for item in helper.TEMPLATES[template]]}
+    helper.assert_planner_accepts(payload)
+    return helper.compact_json(payload)
 
 
 def material_slug(material: str) -> str:
@@ -909,7 +940,7 @@ def plastic_process(nozzle: str, spec: dict) -> dict:
     }
 
 
-def fiber_process(plastic_nozzle: str, spec: dict, mode_label: str, mode: dict) -> dict:
+def fiber_process(plastic_nozzle: str, spec: dict, mode_label: str, mode: dict, layup_payload: str = "{}") -> dict:
     width = spec["line_width"]
     return {
         "type": "process",
@@ -987,12 +1018,13 @@ def fiber_process(plastic_nozzle: str, spec: dict, mode_label: str, mode: dict) 
         "fiber_inner_perimeter_loops": "1",
         "fiber_plastic_outer_loops_with_fiber": "2",
         "fiber_plastic_inner_loops_with_fiber": "0",
-        "fiber_reinforcement_payload": "{}",
+        "fiber_reinforcement_payload": layup_payload,
         "compatible_printers": compatible_process_printers(plastic_nozzle, fiber=True),
     }
 
 
-def build_pack():
+def build_pack(layup_template: str = "none"):
+    layup_payload = layup_payload_for_template(layup_template)
     if PACK_ROOT.exists():
         shutil.rmtree(PACK_ROOT)
 
@@ -1034,7 +1066,7 @@ def build_pack():
         write_json(PACK_ROOT / ppath, p)
 
         for label, mode in FIBER_MODES.items():
-            fp = fiber_process(nozzle, spec, label, mode)
+            fp = fiber_process(nozzle, spec, label, mode, layup_payload)
             fpath = f"process/{fp['name']}.json"
             top["process_list"].append({"name": fp["name"], "sub_path": fpath})
             write_json(PACK_ROOT / fpath, fp)
@@ -1060,4 +1092,12 @@ def build_pack():
 
 
 if __name__ == "__main__":
-    build_pack()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--fiber-layup-template",
+        choices=["none", "balanced", "perimeter-shell", "tetragrid-core", "first-layer-off-tetragrid"],
+        default="none",
+        help="Optional advanced layup payload template to write into continuous-fiber process profiles.",
+    )
+    args = parser.parse_args()
+    build_pack(args.fiber_layup_template)

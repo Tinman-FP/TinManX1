@@ -70,6 +70,13 @@ Build a validated advanced FibreSeek layup payload for the `fiber_reinforcement_
 python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py --template tetragrid-core --as-gcode-comment
 ```
 
+Generate and lint the FibreSeek profile pack with an advanced layup template:
+
+```bash
+python3 scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py --fiber-layup-template first-layer-off-tetragrid
+python3 scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py
+```
+
 For local installed-app validation, see:
 
 ```bash

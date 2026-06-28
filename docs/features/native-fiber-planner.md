@@ -28,6 +28,8 @@ This is not certified structural analysis and not a replacement for hardware qua
 - `python3 scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py`
 - `python3 scripts/source-helpers/golden_orcaslicer_codex_native_fiber_planner.py`
 - `python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py --self-test`
+- `python3 scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py --fiber-layup-template first-layer-off-tetragrid`
+- `python3 scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py`
 - `python3 scripts/source-helpers/check_tinmanx1_fiber_wiring.py`
 - `python3 scripts/source-helpers/compare_fiberseek_gcode.py <rocket.gcode> <tinmanx1.gcode>`
 - `.github/workflows/validate_public_helpers.yml` runs release hygiene plus the smoke and golden fixtures.
@@ -54,3 +56,10 @@ python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py \
 ```
 
 The helper validates modes, patterns, layer/Z ranges, density, seam selection, prime-line values, and parser compatibility with the native planner.
+
+The profile generator can also write one of these templates directly into every continuous-fiber process profile:
+
+```bash
+python3 scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py --fiber-layup-template first-layer-off-tetragrid
+python3 scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py
+```
