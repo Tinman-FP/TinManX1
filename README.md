@@ -2,7 +2,7 @@
 
 Public source patchset, documentation, and credit ledger for TinManX1, a FibreSeek-focused slicer build maintained by William Tinney / Tinman-FP with OpenAI Codex engineering assistance.
 
-This repository is a clean public release package. It does not contain private printer credentials, app-support data, bundled app binaries, native networking plugins, or local machine history.
+This repository is a clean public release package. It does not contain private printer credentials, app-support data, committed app binaries, native networking plugins, or local machine history. Tagged GitHub releases may attach CI-built alpha binaries generated from this public workflow.
 
 ## What Is Included
 
@@ -42,7 +42,7 @@ Included:
 
 Excluded:
 
-- `.app`, `.dmg`, `.deb`, `.AppImage`, `.dylib`, and other binary payloads
+- `.app`, `.dmg`, `.deb`, `.AppImage`, `.dylib`, and other binary payloads committed into the repository
 - private printer credentials, access codes, passwords, API keys, cloud tokens, and private keys
 - full `Application Support` trees or private printer profile dumps
 - proprietary Bambu networking plugin binaries

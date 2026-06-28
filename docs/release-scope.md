@@ -1,6 +1,6 @@
 # Release Scope
 
-This release is a public source patchset and documentation package. It is not a binary application release.
+This repository is a public source patchset and documentation package. Tagged GitHub releases may also attach CI-built alpha application packages, but those binary artifacts are generated from the public release workflow and are not stored in the repository.
 
 ## Included
 
@@ -12,7 +12,7 @@ This release is a public source patchset and documentation package. It is not a 
 
 ## Excluded
 
-- compiled app bundles
+- compiled app bundles in the repository tree
 - native networking plugin binaries
 - private printer profiles and credentials
 - proprietary Rocket or FibreSeek assets
@@ -20,7 +20,7 @@ This release is a public source patchset and documentation package. It is not a 
 
 ## Validation Status
 
-The feature-port notes record local smoke checks and installed-app verification for the private working copy. Public consumers should treat the patch as experimental source material and rerun their own build, smoke, and real-printer validation.
+The feature-port notes record local smoke checks and installed-app verification for the private working copy. Public consumers should treat the patch and any attached alpha binaries as experimental material and rerun their own build, smoke, and real-printer validation.
 
 Strength Lens is advisory. It does not calculate certified stress, displacement, safety factor, or engineering allowables.
 
