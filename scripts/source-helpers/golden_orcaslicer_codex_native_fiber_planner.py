@@ -22,6 +22,10 @@ CENTER_KINDS = {
     "outer_perimeter_loop",
     "perimeter_trace",
 }
+SECTOR_WARNING_PREFIXES = (
+    "hole_reinforcement_region_sector_",
+    "internal_void_sector_",
+)
 
 
 sys.path.insert(0, str(HELPER_DIR))
@@ -136,6 +140,24 @@ def rounded_center(route: Any) -> list[float] | None:
     return [round(center[0], 3), round(center[1], 3)]
 
 
+def stable_warning_counts(warnings: dict[str, int]) -> dict[str, int]:
+    stable: dict[str, int] = {}
+    sector_totals = {f"{prefix}total": 0 for prefix in SECTOR_WARNING_PREFIXES}
+    for key, value in warnings.items():
+        matched_sector = False
+        for prefix in SECTOR_WARNING_PREFIXES:
+            if key.startswith(prefix):
+                sector_totals[f"{prefix}total"] += value
+                matched_sector = True
+                break
+        if not matched_sector:
+            stable[key] = value
+    for key, value in sector_totals.items():
+        if value:
+            stable[key] = value
+    return dict(sorted(stable.items()))
+
+
 def summarize_fixture(name: str, spec: dict[str, Any], tmpdir: Path) -> dict[str, Any]:
     fixture = tmpdir / f"{name}.gcode"
     fixture.write_text(fixture_gcode(spec["gcode"]), encoding="utf-8")
@@ -147,6 +169,7 @@ def summarize_fixture(name: str, spec: dict[str, Any], tmpdir: Path) -> dict[str
 
     routes, skipped = planner.plan_routes(parsed, cfg)
     route_summary = planner.route_summary(routes)
+    route_summary["warning_counts"] = stable_warning_counts(route_summary["warning_counts"])
     by_layer: dict[int, int] = {}
     kinds_by_layer: dict[str, dict[str, int]] = {}
     lengths_by_kind: dict[str, float] = {}
