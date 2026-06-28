@@ -86,7 +86,9 @@ jobs:
           brew list gettext >/dev/null 2>&1 || brew install gettext
           brew list libtool >/dev/null 2>&1 || brew install libtool
           brew list ninja >/dev/null 2>&1 || brew install ninja
+          brew list texinfo >/dev/null 2>&1 || brew install texinfo
           echo "$(brew --prefix gettext)/bin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix texinfo)/bin" >> "$GITHUB_PATH"
 
       - name: Restore dependency cache
         id: deps-cache
