@@ -1,0 +1,739 @@
+{
+  "description": "Public synthetic golden outputs for the TinManX1 native FibreSeek planner.",
+  "fixtures": {
+    "alternating_hole_family_medium": {
+      "centers_by_layer": {
+        "0": {
+          "hole_reinforcement_loop": [
+            [
+              25.0,
+              20.0
+            ],
+            [
+              50.0,
+              50.0
+            ],
+            [
+              75.0,
+              80.0
+            ]
+          ]
+        },
+        "2": {
+          "hole_reinforcement_loop": [
+            [
+              25.0,
+              80.0
+            ],
+            [
+              50.0,
+              50.0
+            ],
+            [
+              75.0,
+              20.0
+            ]
+          ]
+        }
+      },
+      "length_mm_by_kind": {
+        "hole_reinforcement_loop": 489.075
+      },
+      "route_count_by_layer": {
+        "0": 3,
+        "2": 3
+      },
+      "route_kinds_by_layer": {
+        "0": {
+          "hole_reinforcement_loop": 3
+        },
+        "2": {
+          "hole_reinforcement_loop": 3
+        }
+      },
+      "route_summary": {
+        "by_kind": {
+          "hole_reinforcement_loop": 6
+        },
+        "count": 6,
+        "layers_with_routes": 2,
+        "max_routes_on_layer": 3,
+        "total_length_mm": 489.075,
+        "warning_counts": {
+          "hole_reinforcement": 6,
+          "hole_reinforcement_region_core": 2,
+          "hole_reinforcement_region_phase_0": 3,
+          "hole_reinforcement_region_phase_1": 3,
+          "hole_reinforcement_region_sector_1": 1,
+          "hole_reinforcement_region_sector_2": 1,
+          "hole_reinforcement_region_sector_5": 1,
+          "hole_reinforcement_region_sector_6": 1,
+          "inner_wall_hole_trace": 6,
+          "mechanical_min_route_55mm": 6
+        }
+      },
+      "skipped_nonzero": {
+        "hole_reinforcement_routes": 6,
+        "layers_skipped_by_step": 1
+      },
+      "total_mass_g": 0.0499
+    },
+    "fiberseek_contract_heavy": {
+      "centers_by_layer": {
+        "0": {
+          "outer_perimeter_loop": [
+            [
+              50.0,
+              50.0
+            ]
+          ]
+        },
+        "1": {
+          "outer_perimeter_loop": [
+            [
+              50.0,
+              50.0
+            ]
+          ]
+        }
+      },
+      "command_counts": {
+        "CLEAN_NOZZLE": 4,
+        "G0": 15,
+        "G1": 33,
+        "G21": 2,
+        "G4": 3,
+        "G90": 3,
+        "G92": 1,
+        "M1001": 3,
+        "M1002": 3,
+        "M104": 12,
+        "M106": 18,
+        "M109": 5,
+        "M140": 3,
+        "M141": 2,
+        "M190": 1,
+        "M191": 1,
+        "M2800": 3,
+        "M400": 9,
+        "M83": 2,
+        "MOVE_OUT_BRUSH_STATION": 4,
+        "MOVE_TO_BRUSH_STATION": 4,
+        "SET_PRINT_STATS_INFO": 3,
+        "SET_VELOCITY_LIMIT": 1,
+        "T0": 2,
+        "T1": 3
+      },
+      "fiber_layer_markers": 2,
+      "length_mm_by_kind": {
+        "outer_perimeter_loop": 786.4
+      },
+      "route_count_by_layer": {
+        "0": 1,
+        "1": 1
+      },
+      "route_kinds_by_layer": {
+        "0": {
+          "outer_perimeter_loop": 1
+        },
+        "1": {
+          "outer_perimeter_loop": 1
+        }
+      },
+      "route_summary": {
+        "by_kind": {
+          "outer_perimeter_loop": 2
+        },
+        "count": 2,
+        "layers_with_routes": 2,
+        "max_routes_on_layer": 1,
+        "total_length_mm": 786.4,
+        "warning_counts": {}
+      },
+      "skipped_nonzero": {},
+      "summary_header": {
+        "continuous_fiber_layers": "2",
+        "continuous_fiber_route_count": "2",
+        "continuous_fiber_used_g": "0.0802",
+        "continuous_fiber_used_mm": "786.4"
+      },
+      "total_mass_g": 0.0802
+    },
+    "internal_void_stitch_gear": {
+      "centers_by_layer": {
+        "0": {
+          "hole_cluster_reinforcement_loop": [
+            [
+              42.905,
+              37.745
+            ],
+            [
+              57.095,
+              37.745
+            ]
+          ],
+          "hole_reinforcement_loop": [
+            [
+              35.0,
+              24.019
+            ],
+            [
+              35.0,
+              75.981
+            ],
+            [
+              50.0,
+              50.0
+            ],
+            [
+              80.0,
+              50.0
+            ]
+          ]
+        },
+        "1": {
+          "hole_cluster_reinforcement_loop": [
+            [
+              57.095,
+              37.745
+            ],
+            [
+              64.16,
+              50.0
+            ]
+          ],
+          "hole_reinforcement_loop": [
+            [
+              20.0,
+              50.0
+            ],
+            [
+              50.0,
+              50.0
+            ],
+            [
+              65.0,
+              24.019
+            ],
+            [
+              65.0,
+              75.981
+            ]
+          ]
+        },
+        "2": {
+          "hole_cluster_reinforcement_loop": [
+            [
+              57.095,
+              62.255
+            ],
+            [
+              64.16,
+              50.0
+            ]
+          ],
+          "hole_reinforcement_loop": [
+            [
+              35.0,
+              24.019
+            ],
+            [
+              35.0,
+              75.981
+            ],
+            [
+              50.0,
+              50.0
+            ],
+            [
+              80.0,
+              50.0
+            ]
+          ]
+        },
+        "3": {
+          "hole_cluster_reinforcement_loop": [
+            [
+              42.905,
+              62.255
+            ],
+            [
+              57.095,
+              62.255
+            ]
+          ],
+          "hole_reinforcement_loop": [
+            [
+              20.0,
+              50.0
+            ],
+            [
+              50.0,
+              50.0
+            ],
+            [
+              65.0,
+              24.019
+            ],
+            [
+              65.0,
+              75.981
+            ]
+          ]
+        },
+        "4": {
+          "hole_cluster_reinforcement_loop": [
+            [
+              35.84,
+              50.0
+            ],
+            [
+              42.905,
+              62.255
+            ]
+          ],
+          "hole_reinforcement_loop": [
+            [
+              35.0,
+              24.019
+            ],
+            [
+              35.0,
+              75.981
+            ],
+            [
+              50.0,
+              50.0
+            ],
+            [
+              80.0,
+              50.0
+            ]
+          ]
+        },
+        "5": {
+          "hole_cluster_reinforcement_loop": [
+            [
+              35.84,
+              50.0
+            ],
+            [
+              42.905,
+              37.745
+            ]
+          ],
+          "hole_reinforcement_loop": [
+            [
+              20.0,
+              50.0
+            ],
+            [
+              50.0,
+              50.0
+            ],
+            [
+              65.0,
+              24.019
+            ],
+            [
+              65.0,
+              75.981
+            ]
+          ]
+        }
+      },
+      "length_mm_by_kind": {
+        "hole_cluster_reinforcement_loop": 1135.75,
+        "hole_reinforcement_loop": 1842.765
+      },
+      "route_count_by_layer": {
+        "0": 6,
+        "1": 6,
+        "2": 6,
+        "3": 6,
+        "4": 6,
+        "5": 6
+      },
+      "route_kinds_by_layer": {
+        "0": {
+          "hole_cluster_reinforcement_loop": 2,
+          "hole_reinforcement_loop": 4
+        },
+        "1": {
+          "hole_cluster_reinforcement_loop": 2,
+          "hole_reinforcement_loop": 4
+        },
+        "2": {
+          "hole_cluster_reinforcement_loop": 2,
+          "hole_reinforcement_loop": 4
+        },
+        "3": {
+          "hole_cluster_reinforcement_loop": 2,
+          "hole_reinforcement_loop": 4
+        },
+        "4": {
+          "hole_cluster_reinforcement_loop": 2,
+          "hole_reinforcement_loop": 4
+        },
+        "5": {
+          "hole_cluster_reinforcement_loop": 2,
+          "hole_reinforcement_loop": 4
+        }
+      },
+      "route_summary": {
+        "by_kind": {
+          "hole_cluster_reinforcement_loop": 12,
+          "hole_reinforcement_loop": 24
+        },
+        "count": 36,
+        "layers_with_routes": 6,
+        "max_routes_on_layer": 6,
+        "total_length_mm": 2978.514,
+        "warning_counts": {
+          "below_min_bend_radius": 12,
+          "expanded_hole_orbit": 24,
+          "hole_reinforcement": 36,
+          "hole_reinforcement_region_core": 6,
+          "hole_reinforcement_region_phase_0": 4,
+          "hole_reinforcement_region_phase_1": 4,
+          "hole_reinforcement_region_phase_2": 4,
+          "hole_reinforcement_region_phase_3": 4,
+          "hole_reinforcement_region_phase_4": 4,
+          "hole_reinforcement_region_phase_5": 4,
+          "hole_reinforcement_region_sector_0": 3,
+          "hole_reinforcement_region_sector_1": 3,
+          "hole_reinforcement_region_sector_2": 3,
+          "hole_reinforcement_region_sector_3": 3,
+          "hole_reinforcement_region_sector_5": 3,
+          "hole_reinforcement_region_sector_6": 3,
+          "internal_void_phase_0": 2,
+          "internal_void_phase_1": 2,
+          "internal_void_phase_2": 2,
+          "internal_void_phase_3": 2,
+          "internal_void_phase_4": 2,
+          "internal_void_phase_5": 2,
+          "internal_void_sector_0": 2,
+          "internal_void_sector_1": 2,
+          "internal_void_sector_2": 2,
+          "internal_void_sector_4": 2,
+          "internal_void_sector_5": 2,
+          "internal_void_sector_6": 2,
+          "internal_void_stitch": 12,
+          "mechanical_min_route_55mm": 36
+        }
+      },
+      "skipped_nonzero": {
+        "hole_cluster_reinforcement_routes": 12,
+        "hole_reinforcement_routes": 36,
+        "hole_reinforcement_skipped_by_radius": 48,
+        "internal_void_stitch_routes": 12
+      },
+      "total_mass_g": 0.3038
+    },
+    "isolated_tiny_hole_orbit": {
+      "centers_by_layer": {
+        "0": {
+          "hole_reinforcement_loop": [
+            [
+              50.0,
+              50.0
+            ]
+          ],
+          "outer_perimeter_loop": [
+            [
+              50.0,
+              50.0
+            ]
+          ]
+        }
+      },
+      "length_mm_by_kind": {
+        "hole_reinforcement_loop": 76.782,
+        "outer_perimeter_loop": 393.2
+      },
+      "route_count_by_layer": {
+        "0": 2
+      },
+      "route_kinds_by_layer": {
+        "0": {
+          "hole_reinforcement_loop": 1,
+          "outer_perimeter_loop": 1
+        }
+      },
+      "route_summary": {
+        "by_kind": {
+          "hole_reinforcement_loop": 1,
+          "outer_perimeter_loop": 1
+        },
+        "count": 2,
+        "layers_with_routes": 1,
+        "max_routes_on_layer": 2,
+        "total_length_mm": 469.982,
+        "warning_counts": {
+          "expanded_hole_orbit": 1,
+          "hole_reinforcement": 1,
+          "mechanical_min_route_55mm": 1
+        }
+      },
+      "skipped_nonzero": {
+        "hole_reinforcement_routes": 1,
+        "hole_reinforcement_skipped_by_radius": 1
+      },
+      "total_mass_g": 0.0479
+    },
+    "legal_small_hole": {
+      "centers_by_layer": {
+        "0": {
+          "hole_reinforcement_loop": [
+            [
+              50.0,
+              50.0
+            ]
+          ],
+          "perimeter_trace": [
+            [
+              50.0,
+              50.0
+            ]
+          ]
+        }
+      },
+      "length_mm_by_kind": {
+        "hole_reinforcement_loop": 81.51,
+        "perimeter_trace": 81.647
+      },
+      "route_count_by_layer": {
+        "0": 2
+      },
+      "route_kinds_by_layer": {
+        "0": {
+          "hole_reinforcement_loop": 1,
+          "perimeter_trace": 1
+        }
+      },
+      "route_summary": {
+        "by_kind": {
+          "hole_reinforcement_loop": 1,
+          "perimeter_trace": 1
+        },
+        "count": 2,
+        "layers_with_routes": 1,
+        "max_routes_on_layer": 2,
+        "total_length_mm": 163.157,
+        "warning_counts": {
+          "hole_reinforcement": 1,
+          "inner_wall_hole_trace": 1,
+          "mechanical_min_route_55mm": 1
+        }
+      },
+      "skipped_nonzero": {
+        "hole_reinforcement_routes": 1
+      },
+      "total_mass_g": 0.0166
+    },
+    "minimum_pocket_55mm": {
+      "centers_by_layer": {
+        "0": {
+          "perimeter_trace": [
+            [
+              28.5,
+              28.5
+            ],
+            [
+              47.5,
+              28.5
+            ]
+          ]
+        }
+      },
+      "length_mm_by_kind": {
+        "perimeter_trace": 136.0
+      },
+      "route_count_by_layer": {
+        "0": 2
+      },
+      "route_kinds_by_layer": {
+        "0": {
+          "perimeter_trace": 2
+        }
+      },
+      "route_summary": {
+        "by_kind": {
+          "perimeter_trace": 2
+        },
+        "count": 2,
+        "layers_with_routes": 1,
+        "max_routes_on_layer": 2,
+        "total_length_mm": 136.0,
+        "warning_counts": {}
+      },
+      "skipped_nonzero": {
+        "hole_reinforcement_expanded_orbit_skipped": 2,
+        "hole_reinforcement_skipped_by_radius": 2
+      },
+      "total_mass_g": 0.0139
+    },
+    "pocket_generated_ribs": {
+      "centers_by_layer": {
+        "0": {
+          "hole_perimeter_loop": [
+            [
+              50.0,
+              50.0
+            ]
+          ],
+          "hole_reinforcement_loop": [
+            [
+              50.0,
+              50.0
+            ]
+          ],
+          "outer_perimeter_loop": [
+            [
+              50.0,
+              50.0
+            ]
+          ]
+        }
+      },
+      "length_mm_by_kind": {
+        "hole_perimeter_loop": 125.339,
+        "hole_reinforcement_loop": 125.339,
+        "infill_chord": 780.8,
+        "outer_perimeter_loop": 393.2
+      },
+      "route_count_by_layer": {
+        "0": 11
+      },
+      "route_kinds_by_layer": {
+        "0": {
+          "hole_perimeter_loop": 1,
+          "hole_reinforcement_loop": 1,
+          "infill_chord": 8,
+          "outer_perimeter_loop": 1
+        }
+      },
+      "route_summary": {
+        "by_kind": {
+          "hole_perimeter_loop": 1,
+          "hole_reinforcement_loop": 1,
+          "infill_chord": 8,
+          "outer_perimeter_loop": 1
+        },
+        "count": 11,
+        "layers_with_routes": 1,
+        "max_routes_on_layer": 11,
+        "total_length_mm": 1424.677,
+        "warning_counts": {
+          "below_min_bend_radius": 2,
+          "hole_reinforcement": 1,
+          "mechanical_min_route_55mm": 1
+        }
+      },
+      "skipped_nonzero": {
+        "hole_reinforcement_routes": 1
+      },
+      "total_mass_g": 0.1453
+    },
+    "radial_small_gear_medium": {
+      "centers_by_layer": {
+        "0": {
+          "hole_reinforcement_loop": [
+            [
+              35.0,
+              24.019
+            ],
+            [
+              50.0,
+              50.0
+            ],
+            [
+              65.0,
+              75.981
+            ]
+          ]
+        },
+        "1": {
+          "hole_reinforcement_loop": [
+            [
+              35.0,
+              75.981
+            ],
+            [
+              50.0,
+              50.0
+            ],
+            [
+              65.0,
+              24.019
+            ]
+          ]
+        },
+        "2": {
+          "hole_reinforcement_loop": [
+            [
+              20.0,
+              50.0
+            ],
+            [
+              50.0,
+              50.0
+            ],
+            [
+              80.0,
+              50.0
+            ]
+          ]
+        }
+      },
+      "length_mm_by_kind": {
+        "hole_reinforcement_loop": 699.529
+      },
+      "route_count_by_layer": {
+        "0": 3,
+        "1": 3,
+        "2": 3
+      },
+      "route_kinds_by_layer": {
+        "0": {
+          "hole_reinforcement_loop": 3
+        },
+        "1": {
+          "hole_reinforcement_loop": 3
+        },
+        "2": {
+          "hole_reinforcement_loop": 3
+        }
+      },
+      "route_summary": {
+        "by_kind": {
+          "hole_reinforcement_loop": 9
+        },
+        "count": 9,
+        "layers_with_routes": 3,
+        "max_routes_on_layer": 3,
+        "total_length_mm": 699.529,
+        "warning_counts": {
+          "hole_reinforcement": 9,
+          "hole_reinforcement_region_core": 3,
+          "hole_reinforcement_region_phase_0": 3,
+          "hole_reinforcement_region_phase_1": 3,
+          "hole_reinforcement_region_phase_2": 3,
+          "hole_reinforcement_region_sector_0": 1,
+          "hole_reinforcement_region_sector_1": 1,
+          "hole_reinforcement_region_sector_2": 1,
+          "hole_reinforcement_region_sector_4": 1,
+          "hole_reinforcement_region_sector_5": 1,
+          "hole_reinforcement_region_sector_6": 1,
+          "inner_wall_hole_trace": 9,
+          "mechanical_min_route_55mm": 9
+        }
+      },
+      "skipped_nonzero": {
+        "hole_reinforcement_routes": 9
+      },
+      "total_mass_g": 0.0714
+    }
+  },
+  "schema": 1
+}

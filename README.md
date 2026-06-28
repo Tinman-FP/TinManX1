@@ -56,6 +56,13 @@ Run the public release check before publishing changes:
 python3 checks/verify_release.py
 ```
 
+Run the public synthetic FibreSeek planner checks before changing route logic:
+
+```bash
+python3 scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py
+python3 scripts/source-helpers/golden_orcaslicer_codex_native_fiber_planner.py
+```
+
 For local installed-app validation, see:
 
 ```bash

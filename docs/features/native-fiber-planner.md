@@ -25,10 +25,13 @@ This is not certified structural analysis and not a replacement for hardware qua
 
 ## Validation In This Release
 
-- `python3 scripts/smoke_orcaslicer_codex_native_fiber_planner.py`
-- `python3 scripts/check_tinmanx1_fiber_wiring.py`
-- `python3 scripts/compare_fiberseek_gcode.py <rocket.gcode> <tinmanx1.gcode>`
+- `python3 scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py`
+- `python3 scripts/source-helpers/golden_orcaslicer_codex_native_fiber_planner.py`
+- `python3 scripts/source-helpers/check_tinmanx1_fiber_wiring.py`
+- `python3 scripts/source-helpers/compare_fiberseek_gcode.py <rocket.gcode> <tinmanx1.gcode>`
+- `.github/workflows/validate_public_helpers.yml` runs release hygiene plus the smoke and golden fixtures.
 - Installed-resource help/syntax check against `/Applications/TinManX1.app`
-- Smoke coverage confirms 56 mm pocket routes, a 68.92 mm legal small-hole route, a 56.41 mm isolated tiny-hole expanded orbit, and disabled production cluster halos after the 55 mm route-floor correction.
+- Smoke coverage confirms 68 mm minimum-pocket routes, an 81.51 mm legal small-hole route, a 76.78 mm isolated tiny-hole expanded orbit, and disabled production cluster halos after the 55 mm route-floor correction.
+- Golden coverage stores public synthetic expected outputs for eight fixtures, including 55 mm pocket routes, legal/isolated small-hole routing, internal void stitching, alternating hole-family selection, radial small-gear coverage, and FibreSeek command contract counts.
 - Installed TinManX1 recovery dry run against the bad gear slice produced 139 continuous-fiber routes, zero `hole_cluster_reinforcement_loop` routes, and 16.91 m / 1.72 g estimated continuous fiber.
 - Current local app build of `src/OrcaSlicer.app/Contents/MacOS/OrcaSlicer`
