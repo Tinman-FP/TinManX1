@@ -39,10 +39,14 @@ The TinManX1 port keeps the upstream bridge/overhang-infill model: bridge-derive
 
 The TinManX1 port emits advisory-only viewport metadata. The Prepare view now supports a selectable Strength Lens load axis (`Auto`, `X`, `Y`, `Z`) and treats normal FDM as stronger in X/Y than through the Z layer stack. It does not modify slicing, emit G-code, certify FEA, approve prints, or claim structural safety factors.
 
-## FibreSeek / Continuous Fiber Metadata
+## FibreSeek / Continuous Fiber Planning
 
 - Source: prior local TinManX FibreSeek metadata sidecar work.
-- Port source note: sanitized local TinManX FibreSeek metadata sidecar source.
+- Source: TinManX1 native planner, profile generator, comparison, and audit work developed from William Tinney's FibreSeek workflow requirements and local validation.
+- Port source note: sanitized local TinManX FibreSeek metadata sidecar source plus TinManX1-owned native planner tooling.
 - Ported Codex entrypoint: `scripts/orcaslicer_codex_fiber_metadata_sidecar.py`
+- Native planner entrypoint: `scripts/orcaslicer_codex_native_fiber_planner.py`
+- Validation entrypoints: `scripts/audit_fiberseek_gcode_contract.py`, `scripts/check_tinmanx1_fiber_wiring.py`, and `scripts/compare_fiberseek_gcode.py`
+- Local reference boundary: Rocket/FibreSeek behavior was used only as private interoperability evidence for command sequencing, profile comparison, and hardware constraints. Proprietary Rocket/FibreSeek assets, databases, UI strings, and private G-code exports are not redistributed.
 
-The TinManX1 port preserves continuous-fiber lane metadata and review gates for Preview/Summary use. It does not emit machine commands, start uploads, or mark hardware validation as complete.
+The TinManX1 port preserves continuous-fiber lane metadata and review gates for Preview/Summary use. The native planner emits experimental FibreSeek-style command blocks and summaries, but it does not certify hardware readiness, start uploads, or replace real-machine qualification.

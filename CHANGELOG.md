@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+TinManX1 FibreSeek nice-to-have controls and release hardening.
+
+Included:
+
+- added generated-rib fiber infill density and comma-separated custom angle controls
+- added fiber-only seam placement controls: Source, Nearest, Aligned, Rear, and Random, plus aligned seam angle
+- added a neutral Rocket/TinManX1 G-code comparison helper for command families, thermal setpoints, tool ownership, cut/load behavior, route metadata, timing, and material summaries
+- added a structural FibreSeek wiring checker so profile, config, UI, preset, generator, and planner handoff changes cannot silently drift
+- expanded compact Strength/search UI exposure for the important fiber controls
+- regenerated the public source patch from the verified TinManX1 worktree and updated source-helper scripts
+- strengthened attribution language for upstream slicer contributors, transform-source authors, William Tinney / Tinman-FP, OpenAI Codex, and Rocket/FibreSeek private reference boundaries
+
+## v2026.06.27.3
+
+TinManX1 native FibreSeek planner regression rollback.
+
+Included:
+
+- kept isolated expanded-orbit candidates for tiny holes that cannot be followed directly but have room for an 8 mm bend-radius path
+- disabled local hole-cluster racetrack emission after live visual validation showed the path could over-reinforce the gear-tooth region and still miss the intended inner holes
+- fixed hole-loop grouping so concentric model shells are not merged with small internal holes
+- updated smoke coverage for 56 mm pocket routes, 68.92 mm legal small-hole loops, 56.41 mm tiny-hole expanded orbits, and disabled production cluster halos
+- installed-app recovery dry run against the bad gear slice produced 139 routes total, zero `hole_cluster_reinforcement_loop` routes, and 16.91 m / 1.72 g estimated continuous fiber
+
 ## v2026.06.27.2
 
 TinManX1 native FibreSeek planner route-floor correction.

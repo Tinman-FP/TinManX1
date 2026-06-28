@@ -13,10 +13,10 @@ This repository preserves source credit for the TinManX1 public patch release. I
 
 | Source | URL | Credit |
 | --- | --- | --- |
-| OrcaSlicer | <https://github.com/OrcaSlicer/OrcaSlicer> | Primary upstream application and source baseline for this patchset. Preserve AGPL license and upstream notices. |
-| Bambu Studio | <https://github.com/bambulab/BambuStudio> | Upstream family member and connectivity behavior reference. Proprietary plugin binaries are not redistributed here. |
-| PrusaSlicer | <https://github.com/prusa3d/PrusaSlicer> | Upstream slicer family lineage and behavior reference. |
-| Slic3r | <https://github.com/slic3r/Slic3r> | Original slicer lineage behind PrusaSlicer-derived slicers. |
+| OrcaSlicer / SoftFever and contributors | <https://github.com/OrcaSlicer/OrcaSlicer> | Primary upstream application and source baseline for this patchset. Preserve AGPL license, upstream notices, and contributor credit. |
+| Bambu Studio / Bambu Lab contributors | <https://github.com/bambulab/BambuStudio> | Upstream family member and connectivity behavior reference. Proprietary plugin binaries are not redistributed here. |
+| PrusaSlicer / Prusa Research contributors | <https://github.com/prusa3d/PrusaSlicer> | Upstream slicer family lineage and behavior reference. |
+| Slic3r contributors | <https://github.com/slic3r/Slic3r> | Original slicer lineage behind PrusaSlicer-derived slicers. |
 
 ## Wave Overhangs
 
@@ -51,7 +51,15 @@ This repository preserves source credit for the TinManX1 public patch release. I
 | ModBot | <https://www.youtube.com/@ModBotArmy> | Expert-channel research context for calibration workflow and slicer/printer setup. |
 | Autodesk Fusion documentation | <https://www.autodesk.com/products/fusion-360/overview> | Visual-language reference for simulation-style interpretation. Codex Strength Lens is not Fusion FEA. |
 | MechaniCalc | <https://mechanicalc.com/reference/strength-of-materials> | Mechanics vocabulary and load-path reference. |
-| Rocket/FibreSeek local reference work | Proprietary/local reference only | Used as private interoperability and planning context. No proprietary Rocket/FibreSeek assets, binaries, or private validation data are redistributed here. |
+| Rocket/FibreSeek local reference work | Proprietary/local reference only | Used as private interoperability and planning context for command sequencing, profile comparison, and hardware constraints. No proprietary Rocket/FibreSeek assets, binaries, database exports, UI text, or private validation data are redistributed here. |
+
+## TinManX1 FibreSeek Planner And Profile Work
+
+| Source | Credit |
+| --- | --- |
+| William Tinney / Tinman-FP | Requirements, FibreSeek workflow direction, material/profile priorities, UI review, slice validation, Rocket/TinManX1 comparison direction, and decisions about acceptable public scope. |
+| OpenAI Codex | Implementation assistance for the native planner, G-code contract checks, FibreSeek profile generation/linting, comparison tooling, documentation, and release hygiene. |
+| TinManX1 local validation sessions | Visual and G-code review that shaped the 55 mm route floor, small-hole handling, alternating CFC paths, fiber preview/summary behavior, and the decision to disable unsafe cluster/racetrack emission until machine testing proves a stronger containment model. |
 
 ## Additional Ledgers
 

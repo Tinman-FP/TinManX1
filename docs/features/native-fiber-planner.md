@@ -7,12 +7,16 @@ TinManX1 includes an experimental native continuous-fiber planning path for Fibr
 - Uses TinManX1 light, medium, and heavy reinforcement modes.
 - Supports perimeter-only, infill-only, and combined continuous-fiber requests.
 - Supports a user-selected first fiber layer and applies the same number of guard layers at the top of the part.
+- Supports generated-rib density and custom comma-separated fiber angle controls for advanced layups.
+- Supports fiber-only seam placement with Source, Nearest, Aligned, Rear, and Random modes without changing plastic seam behavior.
 - Prefers validated polymer wall and infill traces, then falls back to generated clipped routes when needed.
 - Applies route length and bend-radius safety checks before accepting fiber paths.
 - Stitches short pocket perimeters when a safe printable route can be formed from multiple short segments.
 - Enforces a 55 mm minimum for emitted continuous-fiber routes. Cutter/feed load remains calculated separately as route length plus cut distance.
 - Supports smooth multi-lap loops for legal-size hole traces when the path remains inside printable material.
-- Rejects tiny holes, enclosing web rings, and any generated hole route that would cross empty space or connect outboard features.
+- Supports expanded orbits for isolated tiny holes when the generated path can satisfy the 8 mm bend-radius rule and 55 mm route floor.
+- Keeps cluster-halo/racetrack emission disabled for tight small-hole groups pending a stronger material-containment model.
+- Rejects enclosing web rings and any generated hole route that would cross a detected hole void or connect unrelated outboard features.
 - Reloads preview data after G-code rewrite so continuous-fiber usage can appear in summaries and rendered paths.
 
 ## Boundaries
@@ -22,6 +26,9 @@ This is not certified structural analysis and not a replacement for hardware qua
 ## Validation In This Release
 
 - `python3 scripts/smoke_orcaslicer_codex_native_fiber_planner.py`
+- `python3 scripts/check_tinmanx1_fiber_wiring.py`
+- `python3 scripts/compare_fiberseek_gcode.py <rocket.gcode> <tinmanx1.gcode>`
 - Installed-resource help/syntax check against `/Applications/TinManX1.app`
-- Smoke coverage confirms 56 mm pocket routes and a 68.92 mm legal small-hole route pass the planner after the 55 mm route-floor correction.
+- Smoke coverage confirms 56 mm pocket routes, a 68.92 mm legal small-hole route, a 56.41 mm isolated tiny-hole expanded orbit, and disabled production cluster halos after the 55 mm route-floor correction.
+- Installed TinManX1 recovery dry run against the bad gear slice produced 139 continuous-fiber routes, zero `hole_cluster_reinforcement_loop` routes, and 16.91 m / 1.72 g estimated continuous fiber.
 - Current local app build of `src/OrcaSlicer.app/Contents/MacOS/OrcaSlicer`
