@@ -36,14 +36,14 @@ jobs:
 
     steps:
       - name: Checkout TinManX1 release patch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_tag }}
           path: tinmanx1
           lfs: false
 
       - name: Checkout OrcaSlicer source base
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: OrcaSlicer/OrcaSlicer
           ref: ${{ env.ORCA_BASE_COMMIT }}
