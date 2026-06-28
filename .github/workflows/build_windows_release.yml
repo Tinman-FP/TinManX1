@@ -1,0 +1,173 @@
+name: Build Windows Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "TinManX1 public release tag to build"
+        required: true
+        default: "v2026.06.28-fibreseek-alpha.1"
+      upload_to_release:
+        description: "Upload Windows artifacts to the matching GitHub release"
+        required: true
+        type: boolean
+        default: true
+      force_deps:
+        description: "Rebuild dependencies even if the cache is present"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build-windows:
+    name: Build TinManX1 Windows x64
+    runs-on: windows-2022
+    timeout-minutes: 360
+
+    env:
+      ORCA_BASE_COMMIT: 6d9eb1792f50d11ea12d60526b6ace58666354fd
+      PATCH_FILE: patches/tinmanx1-v2.4.0-houseclean-native-fiber.patch
+
+    steps:
+      - name: Checkout TinManX1 release patch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag }}
+          path: tinmanx1
+          lfs: false
+
+      - name: Checkout OrcaSlicer source base
+        uses: actions/checkout@v4
+        with:
+          repository: OrcaSlicer/OrcaSlicer
+          ref: ${{ env.ORCA_BASE_COMMIT }}
+          path: source
+          lfs: false
+
+      - name: Enable long paths and apply TinManX1 patch
+        shell: pwsh
+        run: |
+          git config --global core.longpaths true
+          Set-Location source
+          git config core.autocrlf false
+          git apply --check --binary "../tinmanx1/${env:PATCH_FILE}"
+          git apply --binary "../tinmanx1/${env:PATCH_FILE}"
+          git status --short
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Set up CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "~4.3.0"
+          useLocalCache: true
+          useCloudCache: true
+
+      - name: Install Windows build tools
+        shell: pwsh
+        run: |
+          choco install strawberryperl nsis --yes --no-progress
+
+      - name: Restore dependency cache
+        id: deps-cache
+        uses: actions/cache@v4
+        with:
+          path: source/deps/build/OrcaSlicer_dep
+          key: tinmanx1-windows-deps-${{ hashFiles('source/deps/**') }}
+
+      - name: Build dependencies
+        if: ${{ inputs.force_deps || steps.deps-cache.outputs.cache-hit != 'true' }}
+        working-directory: source
+        shell: pwsh
+        run: |
+          .\build_release_vs2022.bat deps
+
+      - name: Build TinManX1 slicer
+        working-directory: source
+        shell: pwsh
+        run: |
+          .\build_release_vs2022.bat slicer
+
+      - name: Build NSIS installer
+        working-directory: source/build
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          cpack -G NSIS
+
+      - name: Stage portable Windows package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $tag = "${{ inputs.release_tag }}"
+          $stageRoot = Join-Path $env:GITHUB_WORKSPACE "stage"
+          $artifactRoot = Join-Path $env:GITHUB_WORKSPACE "artifacts"
+          $portableName = "TinManX1-Windows-x64-$tag-portable"
+          New-Item -ItemType Directory -Force -Path $stageRoot, $artifactRoot | Out-Null
+
+          $builtApp = Join-Path $env:GITHUB_WORKSPACE "source/build/OrcaSlicer"
+          if (-not (Test-Path $builtApp)) {
+            throw "Expected installed app folder was not found: $builtApp"
+          }
+
+          $portableRoot = Join-Path $stageRoot $portableName
+          $appRoot = Join-Path $portableRoot "TinManX1"
+          New-Item -ItemType Directory -Force -Path $portableRoot | Out-Null
+          Copy-Item -Path $builtApp -Destination $appRoot -Recurse -Force
+
+          $profileIndex = Join-Path $appRoot "resources/profiles/TinManX1.json"
+          if (-not (Test-Path $profileIndex)) {
+            throw "TinManX1 profile index missing from portable package: $profileIndex"
+          }
+
+          $heavyProfile = Join-Path $appRoot "resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
+          if (-not (Test-Path $heavyProfile)) {
+            throw "FibreSeek heavy process profile missing from portable package: $heavyProfile"
+          }
+          $heavy = Get-Content $heavyProfile -Raw | ConvertFrom-Json
+          if ($heavy.bridge_line_width -ne "0.6") {
+            throw "Expected bridge_line_width 0.6 in heavy 0.6+0.7 profile, got $($heavy.bridge_line_width)"
+          }
+          if ($heavy.fiber_routes_per_cut -ne "1") {
+            throw "Expected fiber_routes_per_cut 1 in heavy 0.6+0.7 profile, got $($heavy.fiber_routes_per_cut)"
+          }
+
+          $zip = Join-Path $artifactRoot "$portableName.zip"
+          Compress-Archive -Path $appRoot -DestinationPath $zip -Force
+          $hash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path $zip -Leaf)" | Set-Content -NoNewline -Encoding ascii "$zip.sha256"
+          Get-ChildItem $artifactRoot | Format-Table Name, Length
+
+      - name: Collect installer if available
+        shell: pwsh
+        run: |
+          $artifactRoot = Join-Path $env:GITHUB_WORKSPACE "artifacts"
+          $tag = "${{ inputs.release_tag }}"
+          $installer = Get-ChildItem -Path "source/build" -Filter "*.exe" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($installer) {
+            $dest = Join-Path $artifactRoot "TinManX1-Windows-x64-$tag-installer-experimental.exe"
+            Copy-Item $installer.FullName $dest -Force
+            $hash = (Get-FileHash -Algorithm SHA256 $dest).Hash.ToLowerInvariant()
+            "$hash  $(Split-Path $dest -Leaf)" | Set-Content -NoNewline -Encoding ascii "$dest.sha256"
+          } else {
+            Write-Host "No NSIS installer was produced; portable zip remains the release artifact."
+          }
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TinManX1-Windows-x64-${{ inputs.release_tag }}
+          path: artifacts/*
+
+      - name: Upload artifacts to GitHub release
+        if: ${{ inputs.upload_to_release }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ inputs.release_tag }}" artifacts/* --repo "${{ github.repository }}" --clobber
