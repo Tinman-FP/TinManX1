@@ -12,21 +12,6 @@ index 8007f0a05c..6f64e29246 100644
 +
 +# TinManX1 local validation artifacts.
 +/outputs/
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e24e296ad4..f5d20d98d6 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -223,6 +223,10 @@ if (MSVC)
- 	# -Zm520 fixes error C3859 but forces the compiler to pre-allocate that memory for every translation unit regardless
- 	# combining /Zi with /FS frees up a significant amount of memory pressure across all parallel compile jobs and makes /MP faster overall.
-     add_compile_options(-bigobj /Zi /FS)
-+    # TinManX1 adds generated config keys for FibreSeek and experimental planners.
-+    # Use MSVC's conforming preprocessor so Boost.Preprocessor does not hit the
-+    # traditional 256-level nested macro expansion limit while compiling them.
-+    add_compile_options(/Zc:preprocessor)
-     # Disable STL4007: Many result_type typedefs and all argument_type, first_argument_type, and second_argument_type typedefs are deprecated in C++17.
-     #FIXME Remove this line after eigen library adapts to the new C++17 adaptor rules.
-     add_compile_options(-D_SILENCE_CXX17_ADAPTOR_TYPEDEFS_DEPRECATION_WARNING)
 diff --git a/SoftFever_doc/orcaslicer_codex_feature_attribution.md b/SoftFever_doc/orcaslicer_codex_feature_attribution.md
 new file mode 100644
 index 0000000000..c7c8aab8ab
@@ -70915,7 +70900,7 @@ index 966d1629b0..f9cfc13a21 100644
      new_def("previous_extruder", coInt, "Previous extruder", "Index of the extruder that is being unloaded. The index is zero based (first extruder has index 0).");
      new_def("next_extruder", coInt, "Next extruder", "Index of the extruder that is being loaded. The index is zero based (first extruder has index 0).");
 diff --git a/src/libslic3r/PrintConfig.hpp b/src/libslic3r/PrintConfig.hpp
-index 45281d5ce1..49b1e86ceb 100644
+index 45281d5ce1..6063bc1a3a 100644
 --- a/src/libslic3r/PrintConfig.hpp
 +++ b/src/libslic3r/PrintConfig.hpp
 @@ -80,6 +80,28 @@ enum PrintHostType {
@@ -71052,7 +71037,53 @@ index 45281d5ce1..49b1e86ceb 100644
  CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(AuthorizationType)
  CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WipeTowerWallType)
  CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(PerimeterGeneratorType)
-@@ -948,6 +1046,13 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -913,6 +1011,45 @@ protected: \
+         BOOST_PP_SEQ_FOR_EACH(PRINT_CONFIG_CLASS_ELEMENT_HASH, _, PARAMETER_DEFINITION_SEQ), \
+         BOOST_PP_SEQ_FOR_EACH(PRINT_CONFIG_CLASS_ELEMENT_EQUAL, _, PARAMETER_DEFINITION_SEQ))
+ 
++#define TINMAN_CONFIG_CLASS_ELEMENT_DEFINITION(TYPE, KEY) TYPE KEY;
++#define TINMAN_CONFIG_CLASS_ELEMENT_HASH(TYPE, KEY) boost::hash_combine(seed, KEY.hash());
++#define TINMAN_CONFIG_CLASS_ELEMENT_EQUAL(TYPE, KEY) if (! (KEY == rhs.KEY)) return false;
++#define TINMAN_CONFIG_CLASS_ELEMENT_LOWER(TYPE, KEY) \
++        if (KEY < rhs.KEY) return true; \
++        if (! (KEY == rhs.KEY)) return false;
++#define TINMAN_CONFIG_CLASS_ELEMENT_INITIALIZATION(TYPE, KEY) cache.opt_add(#KEY, base_ptr, this->KEY);
++
++// TinManX option groups avoid Boost.Preprocessor sequence recursion so MSVC does
++// not hit C1009 while compiling generated FibreSeek and experimental planner keys.
++#define TINMAN_CONFIG_CLASS_DEFINE(CLASS_NAME, OPTION_LIST_MACRO) \
++class CLASS_NAME : public StaticPrintConfig { \
++    STATIC_PRINT_CONFIG_CACHE(CLASS_NAME) \
++public: \
++    OPTION_LIST_MACRO(TINMAN_CONFIG_CLASS_ELEMENT_DEFINITION) \
++    size_t hash() const throw() \
++    { \
++        size_t seed = 0; \
++        OPTION_LIST_MACRO(TINMAN_CONFIG_CLASS_ELEMENT_HASH) \
++        return seed; \
++    } \
++    bool operator==(const CLASS_NAME &rhs) const throw() \
++    { \
++        OPTION_LIST_MACRO(TINMAN_CONFIG_CLASS_ELEMENT_EQUAL) \
++        return true; \
++    } \
++    bool operator!=(const CLASS_NAME &rhs) const throw() { return ! (*this == rhs); } \
++    bool operator<(const CLASS_NAME &rhs) const throw() \
++    { \
++        OPTION_LIST_MACRO(TINMAN_CONFIG_CLASS_ELEMENT_LOWER) \
++        return false; \
++    } \
++protected: \
++    void initialize(StaticCacheBase &cache, const char *base_ptr) \
++    { \
++        OPTION_LIST_MACRO(TINMAN_CONFIG_CLASS_ELEMENT_INITIALIZATION) \
++    } \
++};
++
+ // This object is mapped to Perl as Slic3r::Config::PrintObject.
+ PRINT_CONFIG_CLASS_DEFINE(
+     PrintObjectConfig,
+@@ -948,6 +1085,13 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBool,                enable_support))
      // Automatic supports (generated based on support_threshold_angle).
      ((ConfigOptionEnum<SupportType>,   support_type))
@@ -71066,7 +71097,7 @@ index 45281d5ce1..49b1e86ceb 100644
      // Direction of the support pattern (in XY plane).`
      ((ConfigOptionFloat,               support_angle))
      ((ConfigOptionBool,                support_on_build_plate_only))
-@@ -1070,9 +1175,11 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1070,9 +1214,11 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBool,  calib_flowrate_topinfill_special_order)) // ORCA: special flag for flow rate calibration
  )
  
@@ -71080,7 +71111,7 @@ index 45281d5ce1..49b1e86ceb 100644
  
      ((ConfigOptionInts,  print_extruder_id))
      ((ConfigOptionStrings,  print_extruder_variant))
-@@ -1156,8 +1263,8 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1156,8 +1302,8 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionFloatsNullable, filament_ironing_speed))
      // Detect bridging perimeters
      ((ConfigOptionBool, detect_overhang_wall))
@@ -71091,57 +71122,56 @@ index 45281d5ce1..49b1e86ceb 100644
      ((ConfigOptionFloatOrPercent, inner_wall_line_width))
      ((ConfigOptionFloat, inner_wall_speed))
      // Total number of perimeters.
-@@ -1246,7 +1353,133 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1246,7 +1392,140 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBool, zaa_dont_alternate_fill_direction))
      ((ConfigOptionFloat, zaa_min_z))
      ((ConfigOptionFloat, zaa_minimize_perimeter_height))
 -    )
 +)
 +
-+PRINT_CONFIG_CLASS_DEFINE(
-+    WaveOverhangRegionConfig,
++#define TINMAN_WAVE_OVERHANG_REGION_CONFIG_OPTIONS(OPTION) \
++    OPTION(ConfigOptionBool,                 wave_overhangs) \
++    OPTION(ConfigOptionBool,                 wave_overhangs_instead_of_bridges) \
++    OPTION(ConfigOptionInt,                  wave_overhang_outer_perimeters) \
++    OPTION(ConfigOptionFloat,                wave_overhang_perimeter_overlap) \
++    OPTION(ConfigOptionFloat,                wave_overhang_minimum_width) \
++    OPTION(ConfigOptionEnum<WaveOverhangPattern>, wave_overhang_pattern) \
++    OPTION(ConfigOptionFloat,                wave_overhang_line_spacing) \
++    OPTION(ConfigOptionFloat,                wave_overhang_flow_mm3_per_mm) \
++    OPTION(ConfigOptionFloat,                wave_overhang_print_speed) \
++    OPTION(ConfigOptionFloat,                wave_overhang_perimeter_speed) \
++    OPTION(ConfigOptionFloat,                wave_overhang_travel_speed) \
++    OPTION(ConfigOptionInt,                  wave_overhang_fan_speed) \
++    OPTION(ConfigOptionInt,                  wave_overhang_floor_layers) \
++    OPTION(ConfigOptionBool,                 wave_overhang_floor_use_hilbert) \
++    OPTION(ConfigOptionInt,                  wave_overhang_floor_hilbert_layers) \
++    OPTION(ConfigOptionInt,                  wave_overhang_floor_hilbert_density) \
++    OPTION(ConfigOptionFloat,                wave_overhang_floor_print_speed) \
++    OPTION(ConfigOptionFloat,                wave_overhang_floor_perimeter_speed) \
++    OPTION(ConfigOptionInt,                  wave_overhang_floor_fan_speed) \
++    OPTION(ConfigOptionInt,                  wave_overhang_nozzle_temp) \
++    OPTION(ConfigOptionFloat,                wave_overhang_min_wave_time) \
++    OPTION(ConfigOptionFloat,                wave_overhang_min_layer_time) \
++    OPTION(ConfigOptionEnum<WaveOverhangAlgorithm>, wave_overhang_algorithm) \
++    OPTION(ConfigOptionFloat,                wave_overhang_ring_overlap) \
++    OPTION(ConfigOptionFloat,                wave_overhang_min_angle) \
++    OPTION(ConfigOptionEnum<WaveOverhangSpacingMode>, wave_overhang_spacing_mode) \
++    OPTION(ConfigOptionEnum<WaveOverhangSeamMode>,    wave_overhang_seam_mode) \
++    OPTION(ConfigOptionBool,                 wave_overhang_debug_gcode) \
++    OPTION(ConfigOptionFloat,                wave_overhang_min_length) \
++    OPTION(ConfigOptionInt,                  wave_overhang_max_iterations) \
++    OPTION(ConfigOptionFloat,                wave_overhang_min_new_area) \
++    OPTION(ConfigOptionFloat,                wave_overhang_fringe_reinforcement_max_cover_to_real) \
++    OPTION(ConfigOptionFloat,                wave_overhang_fringe_reinforcement_max_cover_area) \
++    OPTION(ConfigOptionFloat,                wave_overhang_fringe_contact_compensation_max_over_cap) \
++    OPTION(ConfigOptionBool,                 wave_overhang_corner_taper_enable) \
++    OPTION(ConfigOptionFloat,                wave_overhang_line_spacing_corner) \
++    OPTION(ConfigOptionFloat,                wave_overhang_corner_taper_distance) \
++    OPTION(ConfigOptionFloat,                wave_overhang_corner_angle_threshold) \
++    OPTION(ConfigOptionFloat,                wave_overhang_end_retract_length) \
++    OPTION(ConfigOptionBool,                 support_remaining_areas_after_wave_overhangs)
 +
-+    ((ConfigOptionBool,                 wave_overhangs))
-+    ((ConfigOptionBool,                 wave_overhangs_instead_of_bridges))
-+    ((ConfigOptionInt,                  wave_overhang_outer_perimeters))
-+    ((ConfigOptionFloat,                wave_overhang_perimeter_overlap))
-+    ((ConfigOptionFloat,                wave_overhang_minimum_width))
-+    ((ConfigOptionEnum<WaveOverhangPattern>, wave_overhang_pattern))
-+    ((ConfigOptionFloat,                wave_overhang_line_spacing))
-+    ((ConfigOptionFloat,                wave_overhang_flow_mm3_per_mm))
-+    ((ConfigOptionFloat,                wave_overhang_print_speed))
-+    ((ConfigOptionFloat,                wave_overhang_perimeter_speed))
-+    ((ConfigOptionFloat,                wave_overhang_travel_speed))
-+    ((ConfigOptionInt,                  wave_overhang_fan_speed))
-+    ((ConfigOptionInt,                  wave_overhang_floor_layers))
-+    ((ConfigOptionBool,                 wave_overhang_floor_use_hilbert))
-+    ((ConfigOptionInt,                  wave_overhang_floor_hilbert_layers))
-+    ((ConfigOptionInt,                  wave_overhang_floor_hilbert_density))
-+    ((ConfigOptionFloat,                wave_overhang_floor_print_speed))
-+    ((ConfigOptionFloat,                wave_overhang_floor_perimeter_speed))
-+    ((ConfigOptionInt,                  wave_overhang_floor_fan_speed))
-+    ((ConfigOptionInt,                  wave_overhang_nozzle_temp))
-+    ((ConfigOptionFloat,                wave_overhang_min_wave_time))
-+    ((ConfigOptionFloat,                wave_overhang_min_layer_time))
-+    ((ConfigOptionEnum<WaveOverhangAlgorithm>, wave_overhang_algorithm))
-+    ((ConfigOptionFloat,                wave_overhang_ring_overlap))
-+    ((ConfigOptionFloat,                wave_overhang_min_angle))
-+    ((ConfigOptionEnum<WaveOverhangSpacingMode>, wave_overhang_spacing_mode))
-+    ((ConfigOptionEnum<WaveOverhangSeamMode>,    wave_overhang_seam_mode))
-+    ((ConfigOptionBool,                 wave_overhang_debug_gcode))
-+    ((ConfigOptionFloat,                wave_overhang_min_length))
-+    ((ConfigOptionInt,                  wave_overhang_max_iterations))
-+    ((ConfigOptionFloat,                wave_overhang_min_new_area))
-+    ((ConfigOptionFloat,                wave_overhang_fringe_reinforcement_max_cover_to_real))
-+    ((ConfigOptionFloat,                wave_overhang_fringe_reinforcement_max_cover_area))
-+    ((ConfigOptionFloat,                wave_overhang_fringe_contact_compensation_max_over_cap))
-+    ((ConfigOptionBool,                 wave_overhang_corner_taper_enable))
-+    ((ConfigOptionFloat,                wave_overhang_line_spacing_corner))
-+    ((ConfigOptionFloat,                wave_overhang_corner_taper_distance))
-+    ((ConfigOptionFloat,                wave_overhang_corner_angle_threshold))
-+    ((ConfigOptionFloat,                wave_overhang_end_retract_length))
-+    ((ConfigOptionBool,                 support_remaining_areas_after_wave_overhangs))
-+)
++TINMAN_CONFIG_CLASS_DEFINE(WaveOverhangRegionConfig, TINMAN_WAVE_OVERHANG_REGION_CONFIG_OPTIONS)
 +
 +// This object is mapped to Perl as Slic3r::Config::PrintRegion.
 +PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
@@ -71149,84 +71179,92 @@ index 45281d5ce1..49b1e86ceb 100644
 +    (PrintRegionCoreConfig, WaveOverhangRegionConfig)
 +)
 +
-+PRINT_CONFIG_CLASS_DEFINE(
-+    FiberReinforcementHardwareConfig,
++#define TINMAN_FIBER_REINFORCEMENT_HARDWARE_CONFIG_OPTIONS(OPTION) \
++    OPTION(ConfigOptionEnum<FiberReinforcementMode>, fiber_reinforcement_mode) \
++    OPTION(ConfigOptionBool,                 fiber_generate_perimeters) \
++    OPTION(ConfigOptionBool,                 fiber_generate_infill) \
++    OPTION(ConfigOptionInt,                  fiber_start_layer) \
++    OPTION(ConfigOptionInt,                  fiber_print_order_code) \
++    OPTION(ConfigOptionFloat,                fiber_min_radius) \
++    OPTION(ConfigOptionFloat,                fiber_max_arc_segment_length) \
++    OPTION(ConfigOptionFloat,                fiber_start_length) \
++    OPTION(ConfigOptionFloat,                fiber_slow_length) \
++    OPTION(ConfigOptionFloat,                fiber_tension_length) \
++    OPTION(ConfigOptionFloat,                fiber_tension_feedrate) \
++    OPTION(ConfigOptionFloat,                fiber_tension_release_fraction) \
++    OPTION(ConfigOptionFloat,                fiber_feedrate_percent) \
++    OPTION(ConfigOptionFloat,                fiber_start_max_speed) \
++    OPTION(ConfigOptionFloat,                fiber_start_min_speed) \
++    OPTION(ConfigOptionFloat,                fiber_start_min_limit_speed) \
++    OPTION(ConfigOptionFloat,                fiber_normal_max_speed) \
++    OPTION(ConfigOptionFloat,                fiber_normal_min_speed) \
++    OPTION(ConfigOptionFloat,                fiber_normal_min_limit_speed) \
++    OPTION(ConfigOptionFloat,                fiber_finish_max_speed) \
++    OPTION(ConfigOptionFloat,                fiber_finish_min_speed) \
++    OPTION(ConfigOptionFloat,                fiber_finish_min_limit_speed) \
++    OPTION(ConfigOptionBool,                 fiber_override_correction_speed) \
++    OPTION(ConfigOptionFloat,                fiber_correction_move_speed) \
++    OPTION(ConfigOptionFloat,                fiber_correction_move_feedrate_percent) \
++    OPTION(ConfigOptionFloat,                fiber_after_cut_plastic_extrusion_multiplier) \
++    OPTION(ConfigOptionBool,                 fiber_z_hop_after_cut)
 +
-+    ((ConfigOptionEnum<FiberReinforcementMode>, fiber_reinforcement_mode))
-+    ((ConfigOptionBool,                 fiber_generate_perimeters))
-+    ((ConfigOptionBool,                 fiber_generate_infill))
-+    ((ConfigOptionInt,                  fiber_start_layer))
-+    ((ConfigOptionInt,                  fiber_print_order_code))
-+    ((ConfigOptionFloat,                fiber_min_radius))
-+    ((ConfigOptionFloat,                fiber_max_arc_segment_length))
-+    ((ConfigOptionFloat,                fiber_start_length))
-+    ((ConfigOptionFloat,                fiber_slow_length))
-+    ((ConfigOptionFloat,                fiber_tension_length))
-+    ((ConfigOptionFloat,                fiber_tension_feedrate))
-+    ((ConfigOptionFloat,                fiber_tension_release_fraction))
-+    ((ConfigOptionFloat,                fiber_feedrate_percent))
-+    ((ConfigOptionFloat,                fiber_start_max_speed))
-+    ((ConfigOptionFloat,                fiber_start_min_speed))
-+    ((ConfigOptionFloat,                fiber_start_min_limit_speed))
-+    ((ConfigOptionFloat,                fiber_normal_max_speed))
-+    ((ConfigOptionFloat,                fiber_normal_min_speed))
-+    ((ConfigOptionFloat,                fiber_normal_min_limit_speed))
-+    ((ConfigOptionFloat,                fiber_finish_max_speed))
-+    ((ConfigOptionFloat,                fiber_finish_min_speed))
-+    ((ConfigOptionFloat,                fiber_finish_min_limit_speed))
-+    ((ConfigOptionBool,                 fiber_override_correction_speed))
-+    ((ConfigOptionFloat,                fiber_correction_move_speed))
-+    ((ConfigOptionFloat,                fiber_correction_move_feedrate_percent))
-+    ((ConfigOptionFloat,                fiber_after_cut_plastic_extrusion_multiplier))
-+    ((ConfigOptionBool,                 fiber_z_hop_after_cut))
-+)
++TINMAN_CONFIG_CLASS_DEFINE(FiberReinforcementHardwareConfig, TINMAN_FIBER_REINFORCEMENT_HARDWARE_CONFIG_OPTIONS)
 +
-+PRINT_CONFIG_CLASS_DEFINE(
-+    FiberReinforcementPatternConfig,
++#define TINMAN_FIBER_REINFORCEMENT_PATTERN_CONFIG_OPTIONS(OPTION) \
++    OPTION(ConfigOptionFloat,                fiber_first_layer_flow_ratio) \
++    OPTION(ConfigOptionFloat,                fiber_first_layer_line_width) \
++    OPTION(ConfigOptionFloat,                fiber_first_layer_height) \
++    OPTION(ConfigOptionFloat,                fiber_first_layer_speed_ratio) \
++    OPTION(ConfigOptionEnum<FiberInfillPattern>, fiber_infill_pattern) \
++    OPTION(ConfigOptionPercent,              fiber_infill_density) \
++    OPTION(ConfigOptionString,               fiber_infill_angles) \
++    OPTION(ConfigOptionEnum<FiberInfillSourcePolicy>, fiber_infill_source_policy) \
++    OPTION(ConfigOptionEnum<FiberSeamPosition>, fiber_seam_position) \
++    OPTION(ConfigOptionFloat,                fiber_seam_angle) \
++    OPTION(ConfigOptionFloat,                fiber_line_width) \
++    OPTION(ConfigOptionFloat,                fiber_infill_spacing) \
++    OPTION(ConfigOptionFloat,                fiber_macro_layer_height) \
++    OPTION(ConfigOptionInt,                  fiber_layer_step)
 +
-+    ((ConfigOptionFloat,                fiber_first_layer_flow_ratio))
-+    ((ConfigOptionFloat,                fiber_first_layer_line_width))
-+    ((ConfigOptionFloat,                fiber_first_layer_height))
-+    ((ConfigOptionFloat,                fiber_first_layer_speed_ratio))
-+    ((ConfigOptionEnum<FiberInfillPattern>, fiber_infill_pattern))
-+    ((ConfigOptionPercent,              fiber_infill_density))
-+    ((ConfigOptionString,               fiber_infill_angles))
-+    ((ConfigOptionEnum<FiberInfillSourcePolicy>, fiber_infill_source_policy))
-+    ((ConfigOptionEnum<FiberSeamPosition>, fiber_seam_position))
-+    ((ConfigOptionFloat,                fiber_seam_angle))
-+    ((ConfigOptionFloat,                fiber_line_width))
-+    ((ConfigOptionFloat,                fiber_infill_spacing))
-+    ((ConfigOptionFloat,                fiber_macro_layer_height))
-+    ((ConfigOptionInt,                  fiber_layer_step))
-+)
++TINMAN_CONFIG_CLASS_DEFINE(FiberReinforcementPatternConfig, TINMAN_FIBER_REINFORCEMENT_PATTERN_CONFIG_OPTIONS)
 +
-+PRINT_CONFIG_CLASS_DEFINE(
-+    FiberReinforcementRoutingConfig,
++#define TINMAN_FIBER_REINFORCEMENT_ROUTING_CONFIG_OPTIONS(OPTION) \
++    OPTION(ConfigOptionFloat,                fiber_min_route_length) \
++    OPTION(ConfigOptionFloat,                fiber_perimeter_min_route_length) \
++    OPTION(ConfigOptionFloat,                fiber_mechanical_min_route_length) \
++    OPTION(ConfigOptionFloat,                fiber_perimeter_inset) \
++    OPTION(ConfigOptionFloat,                fiber_infill_inset) \
++    OPTION(ConfigOptionFloat,                fiber_print_speed) \
++    OPTION(ConfigOptionFloat,                fiber_start_speed) \
++    OPTION(ConfigOptionInt,                  fiber_max_routes_per_layer) \
++    OPTION(ConfigOptionInt,                  fiber_routes_per_cut) \
++    OPTION(ConfigOptionInt,                  fiber_outer_perimeter_loops) \
++    OPTION(ConfigOptionInt,                  fiber_inner_perimeter_loops) \
++    OPTION(ConfigOptionInt,                  fiber_plastic_outer_loops_with_fiber) \
++    OPTION(ConfigOptionInt,                  fiber_plastic_inner_loops_with_fiber) \
++    OPTION(ConfigOptionString,               fiber_reinforcement_payload)
 +
-+    ((ConfigOptionFloat,                fiber_min_route_length))
-+    ((ConfigOptionFloat,                fiber_perimeter_min_route_length))
-+    ((ConfigOptionFloat,                fiber_mechanical_min_route_length))
-+    ((ConfigOptionFloat,                fiber_perimeter_inset))
-+    ((ConfigOptionFloat,                fiber_infill_inset))
-+    ((ConfigOptionFloat,                fiber_print_speed))
-+    ((ConfigOptionFloat,                fiber_start_speed))
-+    ((ConfigOptionInt,                  fiber_max_routes_per_layer))
-+    ((ConfigOptionInt,                  fiber_routes_per_cut))
-+    ((ConfigOptionInt,                  fiber_outer_perimeter_loops))
-+    ((ConfigOptionInt,                  fiber_inner_perimeter_loops))
-+    ((ConfigOptionInt,                  fiber_plastic_outer_loops_with_fiber))
-+    ((ConfigOptionInt,                  fiber_plastic_inner_loops_with_fiber))
-+    ((ConfigOptionString,               fiber_reinforcement_payload))
-+)
++TINMAN_CONFIG_CLASS_DEFINE(FiberReinforcementRoutingConfig, TINMAN_FIBER_REINFORCEMENT_ROUTING_CONFIG_OPTIONS)
 +
 +PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
 +    FiberReinforcementConfig,
 +    (FiberReinforcementHardwareConfig, FiberReinforcementPatternConfig, FiberReinforcementRoutingConfig)
 +)
++
++#undef TINMAN_FIBER_REINFORCEMENT_ROUTING_CONFIG_OPTIONS
++#undef TINMAN_FIBER_REINFORCEMENT_PATTERN_CONFIG_OPTIONS
++#undef TINMAN_FIBER_REINFORCEMENT_HARDWARE_CONFIG_OPTIONS
++#undef TINMAN_WAVE_OVERHANG_REGION_CONFIG_OPTIONS
++#undef TINMAN_CONFIG_CLASS_DEFINE
++#undef TINMAN_CONFIG_CLASS_ELEMENT_INITIALIZATION
++#undef TINMAN_CONFIG_CLASS_ELEMENT_LOWER
++#undef TINMAN_CONFIG_CLASS_ELEMENT_EQUAL
++#undef TINMAN_CONFIG_CLASS_ELEMENT_HASH
++#undef TINMAN_CONFIG_CLASS_ELEMENT_DEFINITION
  
  PRINT_CONFIG_CLASS_DEFINE(
      MachineEnvelopeConfig,
-@@ -1331,6 +1564,32 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1331,6 +1610,32 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBools,               filament_soluble))
      ((ConfigOptionStrings,             filament_ids))
      ((ConfigOptionStrings,             filament_colour))
@@ -71259,7 +71297,7 @@ index 45281d5ce1..49b1e86ceb 100644
      ((ConfigOptionStrings,             filament_vendor))
      ((ConfigOptionBools,               filament_is_support))
      ((ConfigOptionInts,                filament_printable))
-@@ -1583,6 +1842,41 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
+@@ -1583,6 +1888,41 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
      ((ConfigOptionInts,               nozzle_temperature_range_low))
      ((ConfigOptionInts,               nozzle_temperature_range_high))
      ((ConfigOptionFloats,             wipe_distance))
@@ -71301,7 +71339,7 @@ index 45281d5ce1..49b1e86ceb 100644
      ((ConfigOptionBool,               enable_prime_tower))
      ((ConfigOptionBool,               prime_tower_enable_framework))
      // BBS: change wipe_tower_x and wipe_tower_y data type to floats to add partplate logic
-@@ -1661,7 +1955,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
+@@ -1661,7 +2001,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
  // This object is mapped to Perl as Slic3r::Config::Full.
  PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
      FullPrintConfig,
