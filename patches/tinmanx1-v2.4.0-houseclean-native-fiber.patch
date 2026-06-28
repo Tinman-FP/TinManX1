@@ -69254,7 +69254,7 @@ index a80ad6f730..381e3df547 100644
      if (enable_support_option && enable_support_option->getBool())
          m_support_used = true;
 diff --git a/src/libslic3r/PrintConfig.cpp b/src/libslic3r/PrintConfig.cpp
-index 966d1629b0..170058e4cf 100644
+index 966d1629b0..ffea0f751a 100644
 --- a/src/libslic3r/PrintConfig.cpp
 +++ b/src/libslic3r/PrintConfig.cpp
 @@ -341,14 +341,101 @@ static t_config_enum_values s_keys_map_SupportMaterialInterfacePattern {
@@ -70873,7 +70873,7 @@ index 966d1629b0..170058e4cf 100644
      }
  PRINT_CONFIG_CACHE_INITIALIZE((
 -    PrintObjectConfig, PrintRegionConfig, MachineEnvelopeConfig, GCodeConfig, PrintConfig, FullPrintConfig,
-+    PrintObjectConfig, PrintRegionConfig, FiberReinforcementConfig, MachineEnvelopeConfig, GCodeConfig, PrintConfig, FullPrintConfig,
++    PrintObjectConfig, PrintRegionCoreConfig, WaveOverhangRegionConfig, PrintRegionConfig, FiberReinforcementConfig, MachineEnvelopeConfig, GCodeConfig, PrintConfig, FullPrintConfig,
      SLAMaterialConfig, SLAPrintConfig, SLAPrintObjectConfig, SLAPrinterConfig, SLAFullPrintConfig))
  static int print_config_static_initialized = print_config_static_initializer();
  
@@ -70898,7 +70898,7 @@ index 966d1629b0..170058e4cf 100644
      new_def("previous_extruder", coInt, "Previous extruder", "Index of the extruder that is being unloaded. The index is zero based (first extruder has index 0).");
      new_def("next_extruder", coInt, "Next extruder", "Index of the extruder that is being loaded. The index is zero based (first extruder has index 0).");
 diff --git a/src/libslic3r/PrintConfig.hpp b/src/libslic3r/PrintConfig.hpp
-index 45281d5ce1..c4482395ac 100644
+index 45281d5ce1..b311d9cbd4 100644
 --- a/src/libslic3r/PrintConfig.hpp
 +++ b/src/libslic3r/PrintConfig.hpp
 @@ -80,6 +80,28 @@ enum PrintHostType {
@@ -71049,12 +71049,41 @@ index 45281d5ce1..c4482395ac 100644
      // Direction of the support pattern (in XY plane).`
      ((ConfigOptionFloat,               support_angle))
      ((ConfigOptionBool,                support_on_build_plate_only))
-@@ -1156,8 +1261,48 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1070,9 +1175,11 @@ PRINT_CONFIG_CLASS_DEFINE(
+     ((ConfigOptionBool,  calib_flowrate_topinfill_special_order)) // ORCA: special flag for flow rate calibration
+ )
+ 
+-// This object is mapped to Perl as Slic3r::Config::PrintRegion.
++// Core PrintRegion keys. TinManX1 keeps the experimental wave-overhang keys in
++// their own base class below so the generated Boost preprocessor sequences stay
++// small enough for MSVC.
+ PRINT_CONFIG_CLASS_DEFINE(
+-    PrintRegionConfig,
++    PrintRegionCoreConfig,
+ 
+     ((ConfigOptionInts,  print_extruder_id))
+     ((ConfigOptionStrings,  print_extruder_variant))
+@@ -1156,8 +1263,8 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionFloatsNullable, filament_ironing_speed))
      // Detect bridging perimeters
      ((ConfigOptionBool, detect_overhang_wall))
 -    ((ConfigOptionInt, outer_wall_filament_id))
 -    ((ConfigOptionInt, inner_wall_filament_id))
++    ((ConfigOptionInt,                  outer_wall_filament_id))
++    ((ConfigOptionInt,                  inner_wall_filament_id))
+     ((ConfigOptionFloatOrPercent, inner_wall_line_width))
+     ((ConfigOptionFloat, inner_wall_speed))
+     // Total number of perimeters.
+@@ -1246,7 +1353,118 @@ PRINT_CONFIG_CLASS_DEFINE(
+     ((ConfigOptionBool, zaa_dont_alternate_fill_direction))
+     ((ConfigOptionFloat, zaa_min_z))
+     ((ConfigOptionFloat, zaa_minimize_perimeter_height))
+-    )
++)
++
++PRINT_CONFIG_CLASS_DEFINE(
++    WaveOverhangRegionConfig,
++
 +    ((ConfigOptionBool,                 wave_overhangs))
 +    ((ConfigOptionBool,                 wave_overhangs_instead_of_bridges))
 +    ((ConfigOptionInt,                  wave_overhang_outer_perimeters))
@@ -71095,19 +71124,13 @@ index 45281d5ce1..c4482395ac 100644
 +    ((ConfigOptionFloat,                wave_overhang_corner_angle_threshold))
 +    ((ConfigOptionFloat,                wave_overhang_end_retract_length))
 +    ((ConfigOptionBool,                 support_remaining_areas_after_wave_overhangs))
-+    ((ConfigOptionInt,                  outer_wall_filament_id))
-+    ((ConfigOptionInt,                  inner_wall_filament_id))
-     ((ConfigOptionFloatOrPercent, inner_wall_line_width))
-     ((ConfigOptionFloat, inner_wall_speed))
-     // Total number of perimeters.
-@@ -1245,8 +1390,68 @@ PRINT_CONFIG_CLASS_DEFINE(
-     ((ConfigOptionBool, zaa_enabled))
-     ((ConfigOptionBool, zaa_dont_alternate_fill_direction))
-     ((ConfigOptionFloat, zaa_min_z))
--    ((ConfigOptionFloat, zaa_minimize_perimeter_height))
--    )
-+	    ((ConfigOptionFloat, zaa_minimize_perimeter_height))
-+	    )
++)
++
++// This object is mapped to Perl as Slic3r::Config::PrintRegion.
++PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
++    PrintRegionConfig,
++    (PrintRegionCoreConfig, WaveOverhangRegionConfig)
++)
 +
 +PRINT_CONFIG_CLASS_DEFINE(
 +    FiberReinforcementConfig,
@@ -71171,7 +71194,7 @@ index 45281d5ce1..c4482395ac 100644
  
  PRINT_CONFIG_CLASS_DEFINE(
      MachineEnvelopeConfig,
-@@ -1331,6 +1536,32 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1331,6 +1549,32 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBools,               filament_soluble))
      ((ConfigOptionStrings,             filament_ids))
      ((ConfigOptionStrings,             filament_colour))
@@ -71204,7 +71227,7 @@ index 45281d5ce1..c4482395ac 100644
      ((ConfigOptionStrings,             filament_vendor))
      ((ConfigOptionBools,               filament_is_support))
      ((ConfigOptionInts,                filament_printable))
-@@ -1583,6 +1814,41 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
+@@ -1583,6 +1827,41 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
      ((ConfigOptionInts,               nozzle_temperature_range_low))
      ((ConfigOptionInts,               nozzle_temperature_range_high))
      ((ConfigOptionFloats,             wipe_distance))
@@ -71246,7 +71269,7 @@ index 45281d5ce1..c4482395ac 100644
      ((ConfigOptionBool,               enable_prime_tower))
      ((ConfigOptionBool,               prime_tower_enable_framework))
      // BBS: change wipe_tower_x and wipe_tower_y data type to floats to add partplate logic
-@@ -1661,7 +1927,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
+@@ -1661,7 +1940,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
  // This object is mapped to Perl as Slic3r::Config::Full.
  PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
      FullPrintConfig,
