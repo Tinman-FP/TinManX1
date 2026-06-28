@@ -8,7 +8,7 @@ This repository is a clean public release package. It does not contain private p
 
 - A current source patch for TinManX1 on the Orca Slicer 2.4.0 source line:
   - `patches/tinmanx1-v2.4.0-houseclean-native-fiber.patch`
-- Helper scripts for the native FibreSeek planner, Arc Support, Strength Lens, fibre metadata sidecars, and smoke checks.
+- Helper scripts for the native FibreSeek planner, G-code contract audit, Rocket/TinManX1 comparison reports, wiring checks, Arc Support, Strength Lens, fibre metadata sidecars, and smoke checks.
 - Manifest helper notes and validation scripts for the local TinManX1 app workflow.
 - Feature notes for native continuous fibre, Strength Lens, Wave Overhangs, Arc Supports, and backend printer/app improvements.
 - Source credit ledgers and research snapshots used to keep attribution traceable.
@@ -17,7 +17,7 @@ This repository is a clean public release package. It does not contain private p
 
 | Lane | Status | Notes |
 | --- | --- | --- |
-| Native FibreSeek planner | Experimental / active | Standalone continuous-fiber G-code generation path with light/medium/heavy reinforcement modes, layer guard controls, 55 mm minimum route filtering, printable-path guards, and rendered fiber preview support. |
+| Native FibreSeek planner | Experimental / active | Standalone continuous-fiber G-code generation path with light/medium/heavy reinforcement modes, fiber start-layer guard controls, generated-rib density/angle controls, fiber-only seam placement, 55 mm minimum route filtering, isolated small-hole expanded orbits, disabled cluster-halo emission pending a stronger containment model, printable-path guards, rendered fiber preview support, and release wiring checks. |
 | Strength Lens | Advisory / experimental | Prepare-view strength evidence, material model hints, load-axis selection, and sidecar metadata. Not FEA and not certified engineering output. |
 | Wave Overhangs | Experimental source port | Opt-in Wave Overhangs scaffold from the OrcaSlicer Wave Overhangs lineage with audit markers and smoke coverage. |
 | Arc Supports | Experimental operator-test path | Arc-overhang transform adapter and runtime glue with guarded metadata. Printer-bound trust still requires local validation. |
@@ -67,6 +67,6 @@ Review generated manifests before committing them. They can contain local paths 
 
 ## Credits
 
-The short version: this work stands on OrcaSlicer, Bambu Studio, PrusaSlicer, Slic3r, Arc Overhang, Wave Overhangs, Klipper, Moonraker, FibreSeek hardware context, and the 3D-printing research community. The project-specific coordination, requirements, testing, and release ownership are credited to William Tinney / Tinman-FP, with OpenAI Codex credited for engineering assistance, implementation support, documentation, and review.
+The short version: this work stands on OrcaSlicer/SoftFever, Bambu Studio, PrusaSlicer, Slic3r, Arc Overhang, Wave Overhangs, Klipper, Moonraker, FibreSeek hardware context, Rocket/FibreSeek private interoperability comparison, and the 3D-printing research community. The project-specific coordination, requirements, testing, and release ownership are credited to William Tinney / Tinman-FP, with OpenAI Codex credited for engineering assistance, implementation support, documentation, verification tooling, and review.
 
 See [ATTRIBUTION.md](ATTRIBUTION.md) for the full source-credit ledger.

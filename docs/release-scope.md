@@ -5,7 +5,7 @@ This release is a public source patchset and documentation package. It is not a 
 ## Included
 
 - TinManX1 source patch on the Orca Slicer 2.4.0 source line
-- helper scripts and smoke checks
+- helper scripts, smoke checks, FibreSeek G-code audit/comparison tooling, and wiring checks
 - manifest helper notes for the local TinManX1 app workflow
 - feature notes for native continuous fiber, Strength Lens, Wave Overhangs, Arc Supports, and backend improvements
 - source-credit and research ledgers
