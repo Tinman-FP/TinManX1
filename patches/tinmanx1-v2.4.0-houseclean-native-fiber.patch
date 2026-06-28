@@ -69254,7 +69254,7 @@ index a80ad6f730..381e3df547 100644
      if (enable_support_option && enable_support_option->getBool())
          m_support_used = true;
 diff --git a/src/libslic3r/PrintConfig.cpp b/src/libslic3r/PrintConfig.cpp
-index 966d1629b0..ffea0f751a 100644
+index 966d1629b0..f9cfc13a21 100644
 --- a/src/libslic3r/PrintConfig.cpp
 +++ b/src/libslic3r/PrintConfig.cpp
 @@ -341,14 +341,101 @@ static t_config_enum_values s_keys_map_SupportMaterialInterfacePattern {
@@ -70868,16 +70868,18 @@ index 966d1629b0..ffea0f751a 100644
  }
  
  DynamicPrintConfig::DynamicPrintConfig(const StaticPrintConfig& rhs) : DynamicConfig(rhs, rhs.keys_ref())
-@@ -10565,7 +12060,7 @@ std::map<std::string, std::string> validate(const FullPrintConfig &cfg, bool und
+@@ -10565,7 +12060,9 @@ std::map<std::string, std::string> validate(const FullPrintConfig &cfg, bool und
          return ret; \
      }
  PRINT_CONFIG_CACHE_INITIALIZE((
 -    PrintObjectConfig, PrintRegionConfig, MachineEnvelopeConfig, GCodeConfig, PrintConfig, FullPrintConfig,
-+    PrintObjectConfig, PrintRegionCoreConfig, WaveOverhangRegionConfig, PrintRegionConfig, FiberReinforcementConfig, MachineEnvelopeConfig, GCodeConfig, PrintConfig, FullPrintConfig,
++    PrintObjectConfig, PrintRegionCoreConfig, WaveOverhangRegionConfig, PrintRegionConfig,
++    FiberReinforcementHardwareConfig, FiberReinforcementPatternConfig, FiberReinforcementRoutingConfig, FiberReinforcementConfig,
++    MachineEnvelopeConfig, GCodeConfig, PrintConfig, FullPrintConfig,
      SLAMaterialConfig, SLAPrintConfig, SLAPrintObjectConfig, SLAPrinterConfig, SLAFullPrintConfig))
  static int print_config_static_initialized = print_config_static_initializer();
  
-@@ -11379,7 +12874,8 @@ static std::map<t_custom_gcode_key, t_config_option_keys> s_CustomGcodeSpecificP
+@@ -11379,7 +12876,8 @@ static std::map<t_custom_gcode_key, t_config_option_keys> s_CustomGcodeSpecificP
      {"machine_pause_gcode",         {}},
      {"template_custom_gcode",       {}},
      // Filament G-code
@@ -70887,7 +70889,7 @@ index 966d1629b0..ffea0f751a 100644
      {"filament_end_gcode",          {"layer_num", "layer_z", "max_layer_z", "filament_extruder_id"}},
  };
  
-@@ -11409,6 +12905,9 @@ CustomGcodeSpecificConfigDef::CustomGcodeSpecificConfigDef()
+@@ -11409,6 +12907,9 @@ CustomGcodeSpecificConfigDef::CustomGcodeSpecificConfigDef()
      def->label = L("Filament extruder ID");
      def->tooltip = L("The current extruder ID. The same as current_extruder.");
  
@@ -70898,7 +70900,7 @@ index 966d1629b0..ffea0f751a 100644
      new_def("previous_extruder", coInt, "Previous extruder", "Index of the extruder that is being unloaded. The index is zero based (first extruder has index 0).");
      new_def("next_extruder", coInt, "Next extruder", "Index of the extruder that is being loaded. The index is zero based (first extruder has index 0).");
 diff --git a/src/libslic3r/PrintConfig.hpp b/src/libslic3r/PrintConfig.hpp
-index 45281d5ce1..b311d9cbd4 100644
+index 45281d5ce1..49b1e86ceb 100644
 --- a/src/libslic3r/PrintConfig.hpp
 +++ b/src/libslic3r/PrintConfig.hpp
 @@ -80,6 +80,28 @@ enum PrintHostType {
@@ -71074,7 +71076,7 @@ index 45281d5ce1..b311d9cbd4 100644
      ((ConfigOptionFloatOrPercent, inner_wall_line_width))
      ((ConfigOptionFloat, inner_wall_speed))
      // Total number of perimeters.
-@@ -1246,7 +1353,118 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1246,7 +1353,133 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBool, zaa_dont_alternate_fill_direction))
      ((ConfigOptionFloat, zaa_min_z))
      ((ConfigOptionFloat, zaa_minimize_perimeter_height))
@@ -71133,7 +71135,7 @@ index 45281d5ce1..b311d9cbd4 100644
 +)
 +
 +PRINT_CONFIG_CLASS_DEFINE(
-+    FiberReinforcementConfig,
++    FiberReinforcementHardwareConfig,
 +
 +    ((ConfigOptionEnum<FiberReinforcementMode>, fiber_reinforcement_mode))
 +    ((ConfigOptionBool,                 fiber_generate_perimeters))
@@ -71162,6 +71164,11 @@ index 45281d5ce1..b311d9cbd4 100644
 +    ((ConfigOptionFloat,                fiber_correction_move_feedrate_percent))
 +    ((ConfigOptionFloat,                fiber_after_cut_plastic_extrusion_multiplier))
 +    ((ConfigOptionBool,                 fiber_z_hop_after_cut))
++)
++
++PRINT_CONFIG_CLASS_DEFINE(
++    FiberReinforcementPatternConfig,
++
 +    ((ConfigOptionFloat,                fiber_first_layer_flow_ratio))
 +    ((ConfigOptionFloat,                fiber_first_layer_line_width))
 +    ((ConfigOptionFloat,                fiber_first_layer_height))
@@ -71176,6 +71183,11 @@ index 45281d5ce1..b311d9cbd4 100644
 +    ((ConfigOptionFloat,                fiber_infill_spacing))
 +    ((ConfigOptionFloat,                fiber_macro_layer_height))
 +    ((ConfigOptionInt,                  fiber_layer_step))
++)
++
++PRINT_CONFIG_CLASS_DEFINE(
++    FiberReinforcementRoutingConfig,
++
 +    ((ConfigOptionFloat,                fiber_min_route_length))
 +    ((ConfigOptionFloat,                fiber_perimeter_min_route_length))
 +    ((ConfigOptionFloat,                fiber_mechanical_min_route_length))
@@ -71191,10 +71203,15 @@ index 45281d5ce1..b311d9cbd4 100644
 +    ((ConfigOptionInt,                  fiber_plastic_inner_loops_with_fiber))
 +    ((ConfigOptionString,               fiber_reinforcement_payload))
 +)
++
++PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
++    FiberReinforcementConfig,
++    (FiberReinforcementHardwareConfig, FiberReinforcementPatternConfig, FiberReinforcementRoutingConfig)
++)
  
  PRINT_CONFIG_CLASS_DEFINE(
      MachineEnvelopeConfig,
-@@ -1331,6 +1549,32 @@ PRINT_CONFIG_CLASS_DEFINE(
+@@ -1331,6 +1564,32 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBools,               filament_soluble))
      ((ConfigOptionStrings,             filament_ids))
      ((ConfigOptionStrings,             filament_colour))
@@ -71227,7 +71244,7 @@ index 45281d5ce1..b311d9cbd4 100644
      ((ConfigOptionStrings,             filament_vendor))
      ((ConfigOptionBools,               filament_is_support))
      ((ConfigOptionInts,                filament_printable))
-@@ -1583,6 +1827,41 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
+@@ -1583,6 +1842,41 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
      ((ConfigOptionInts,               nozzle_temperature_range_low))
      ((ConfigOptionInts,               nozzle_temperature_range_high))
      ((ConfigOptionFloats,             wipe_distance))
@@ -71269,7 +71286,7 @@ index 45281d5ce1..b311d9cbd4 100644
      ((ConfigOptionBool,               enable_prime_tower))
      ((ConfigOptionBool,               prime_tower_enable_framework))
      // BBS: change wipe_tower_x and wipe_tower_y data type to floats to add partplate logic
-@@ -1661,7 +1940,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
+@@ -1661,7 +1955,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
  // This object is mapped to Perl as Slic3r::Config::Full.
  PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
      FullPrintConfig,
