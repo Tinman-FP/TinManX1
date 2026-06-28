@@ -32,6 +32,7 @@ jobs:
       ORCA_BASE_COMMIT: 6d9eb1792f50d11ea12d60526b6ace58666354fd
       PATCH_FILE: patches/tinmanx1-v2.4.0-houseclean-native-fiber.patch
       CMAKE_BUILD_PARALLEL_LEVEL: 3
+      HOMEBREW_NO_AUTO_UPDATE: 1
 
     steps:
       - name: Checkout TinManX1 release patch
@@ -80,8 +81,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          brew update
-          brew install gettext ninja
+          brew list gettext >/dev/null 2>&1 || brew install gettext
+          brew list ninja >/dev/null 2>&1 || brew install ninja
           echo "$(brew --prefix gettext)/bin" >> "$GITHUB_PATH"
 
       - name: Restore dependency cache
