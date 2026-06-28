@@ -51,12 +51,25 @@ jobs:
       - name: Enable long paths and apply TinManX1 patch
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           git config --global core.longpaths true
+
+          $patchPath = Join-Path $env:GITHUB_WORKSPACE "tinmanx1/${env:PATCH_FILE}"
+          $patchText = [System.IO.File]::ReadAllText($patchPath)
+          $patchText = $patchText -replace "`r`n", "`n"
+          [System.IO.File]::WriteAllText($patchPath, $patchText, [System.Text.UTF8Encoding]::new($false))
+
           Set-Location source
           git config core.autocrlf false
-          git apply --check --binary "../tinmanx1/${env:PATCH_FILE}"
-          git apply --binary "../tinmanx1/${env:PATCH_FILE}"
+          git apply --check --binary $patchPath
+          git apply --binary $patchPath
           git status --short
+
+          $profileIndex = Join-Path (Get-Location) "resources/profiles/TinManX1.json"
+          if (-not (Test-Path $profileIndex)) {
+            throw "TinManX1 profile index was not created by patch: $profileIndex"
+          }
 
       - name: Set up MSBuild
         uses: microsoft/setup-msbuild@v2
