@@ -68817,9 +68817,18 @@ index 948c779137..b3d89f6843 100644
      "nozzle_height", "master_extruder_id",
      "default_print_profile", "inherits",
 diff --git a/src/libslic3r/PresetBundle.cpp b/src/libslic3r/PresetBundle.cpp
-index 1ace4db685..9de09cc05a 100644
+index 1ace4db685..69d7ea44d2 100644
 --- a/src/libslic3r/PresetBundle.cpp
 +++ b/src/libslic3r/PresetBundle.cpp
+@@ -320,7 +320,7 @@ std::string PresetBundle::find_preset_vendor(const std::string &preset_name, Pre
+ }
+ 
+ PresetBundle::PresetBundle()
+-    : prints(Preset::TYPE_PRINT, Preset::print_options(), static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults()))
++    : prints(Preset::TYPE_PRINT, Preset::print_options(), static_cast<const FullPrintConfig &>(FullPrintConfig::defaults()))
+     , filaments(Preset::TYPE_FILAMENT, Preset::filament_options(), static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults()), ORCA_DEFAULT_FILAMENT_PLACEHOLDER)
+     , sla_materials(Preset::TYPE_SLA_MATERIAL, Preset::sla_material_options(), static_cast<const SLAMaterialConfig &>(SLAFullPrintConfig::defaults()))
+     , sla_prints(Preset::TYPE_SLA_PRINT, Preset::sla_print_options(), static_cast<const SLAPrintObjectConfig &>(SLAFullPrintConfig::defaults()))
 @@ -2960,7 +2960,12 @@ void PresetBundle::export_selections(AppConfig &config)
      //config.set("presets", "sla_material", sla_materials.get_selected_preset_name());
      //config.set("presets", "physical_printer", physical_printers.get_selected_full_printer_name());
@@ -69245,7 +69254,7 @@ index a80ad6f730..381e3df547 100644
      if (enable_support_option && enable_support_option->getBool())
          m_support_used = true;
 diff --git a/src/libslic3r/PrintConfig.cpp b/src/libslic3r/PrintConfig.cpp
-index 966d1629b0..52dc22ab56 100644
+index 966d1629b0..170058e4cf 100644
 --- a/src/libslic3r/PrintConfig.cpp
 +++ b/src/libslic3r/PrintConfig.cpp
 @@ -341,14 +341,101 @@ static t_config_enum_values s_keys_map_SupportMaterialInterfacePattern {
@@ -70850,6 +70859,24 @@ index 966d1629b0..52dc22ab56 100644
      } else if (opt_key == "support_type" && value == "hybrid(auto)") {
          value = "tree(auto)";
      } else if (opt_key == "support_base_pattern" && value == "none") {
+@@ -8461,7 +9956,7 @@ std::set<std::string> empty_options;
+ 
+ DynamicPrintConfig DynamicPrintConfig::full_print_config()
+ {
+-	return DynamicPrintConfig((const PrintRegionConfig&)FullPrintConfig::defaults());
++	return DynamicPrintConfig((const FullPrintConfig&)FullPrintConfig::defaults());
+ }
+ 
+ DynamicPrintConfig::DynamicPrintConfig(const StaticPrintConfig& rhs) : DynamicConfig(rhs, rhs.keys_ref())
+@@ -10565,7 +12060,7 @@ std::map<std::string, std::string> validate(const FullPrintConfig &cfg, bool und
+         return ret; \
+     }
+ PRINT_CONFIG_CACHE_INITIALIZE((
+-    PrintObjectConfig, PrintRegionConfig, MachineEnvelopeConfig, GCodeConfig, PrintConfig, FullPrintConfig,
++    PrintObjectConfig, PrintRegionConfig, FiberReinforcementConfig, MachineEnvelopeConfig, GCodeConfig, PrintConfig, FullPrintConfig,
+     SLAMaterialConfig, SLAPrintConfig, SLAPrintObjectConfig, SLAPrinterConfig, SLAFullPrintConfig))
+ static int print_config_static_initialized = print_config_static_initializer();
+ 
 @@ -11379,7 +12874,8 @@ static std::map<t_custom_gcode_key, t_config_option_keys> s_CustomGcodeSpecificP
      {"machine_pause_gcode",         {}},
      {"template_custom_gcode",       {}},
@@ -70871,7 +70898,7 @@ index 966d1629b0..52dc22ab56 100644
      new_def("previous_extruder", coInt, "Previous extruder", "Index of the extruder that is being unloaded. The index is zero based (first extruder has index 0).");
      new_def("next_extruder", coInt, "Next extruder", "Index of the extruder that is being loaded. The index is zero based (first extruder has index 0).");
 diff --git a/src/libslic3r/PrintConfig.hpp b/src/libslic3r/PrintConfig.hpp
-index 45281d5ce1..f107d95c49 100644
+index 45281d5ce1..c4482395ac 100644
 --- a/src/libslic3r/PrintConfig.hpp
 +++ b/src/libslic3r/PrintConfig.hpp
 @@ -80,6 +80,28 @@ enum PrintHostType {
@@ -71022,10 +71049,69 @@ index 45281d5ce1..f107d95c49 100644
      // Direction of the support pattern (in XY plane).`
      ((ConfigOptionFloat,               support_angle))
      ((ConfigOptionBool,                support_on_build_plate_only))
-@@ -1102,6 +1207,61 @@ PRINT_CONFIG_CLASS_DEFINE(
-     ((ConfigOptionString,               sparse_infill_rotate_template))
-     ((ConfigOptionPercent,              sparse_infill_density))
-     ((ConfigOptionEnum<InfillPattern>,  sparse_infill_pattern))
+@@ -1156,8 +1261,48 @@ PRINT_CONFIG_CLASS_DEFINE(
+     ((ConfigOptionFloatsNullable, filament_ironing_speed))
+     // Detect bridging perimeters
+     ((ConfigOptionBool, detect_overhang_wall))
+-    ((ConfigOptionInt, outer_wall_filament_id))
+-    ((ConfigOptionInt, inner_wall_filament_id))
++    ((ConfigOptionBool,                 wave_overhangs))
++    ((ConfigOptionBool,                 wave_overhangs_instead_of_bridges))
++    ((ConfigOptionInt,                  wave_overhang_outer_perimeters))
++    ((ConfigOptionFloat,                wave_overhang_perimeter_overlap))
++    ((ConfigOptionFloat,                wave_overhang_minimum_width))
++    ((ConfigOptionEnum<WaveOverhangPattern>, wave_overhang_pattern))
++    ((ConfigOptionFloat,                wave_overhang_line_spacing))
++    ((ConfigOptionFloat,                wave_overhang_flow_mm3_per_mm))
++    ((ConfigOptionFloat,                wave_overhang_print_speed))
++    ((ConfigOptionFloat,                wave_overhang_perimeter_speed))
++    ((ConfigOptionFloat,                wave_overhang_travel_speed))
++    ((ConfigOptionInt,                  wave_overhang_fan_speed))
++    ((ConfigOptionInt,                  wave_overhang_floor_layers))
++    ((ConfigOptionBool,                 wave_overhang_floor_use_hilbert))
++    ((ConfigOptionInt,                  wave_overhang_floor_hilbert_layers))
++    ((ConfigOptionInt,                  wave_overhang_floor_hilbert_density))
++    ((ConfigOptionFloat,                wave_overhang_floor_print_speed))
++    ((ConfigOptionFloat,                wave_overhang_floor_perimeter_speed))
++    ((ConfigOptionInt,                  wave_overhang_floor_fan_speed))
++    ((ConfigOptionInt,                  wave_overhang_nozzle_temp))
++    ((ConfigOptionFloat,                wave_overhang_min_wave_time))
++    ((ConfigOptionFloat,                wave_overhang_min_layer_time))
++    ((ConfigOptionEnum<WaveOverhangAlgorithm>, wave_overhang_algorithm))
++    ((ConfigOptionFloat,                wave_overhang_ring_overlap))
++    ((ConfigOptionFloat,                wave_overhang_min_angle))
++    ((ConfigOptionEnum<WaveOverhangSpacingMode>, wave_overhang_spacing_mode))
++    ((ConfigOptionEnum<WaveOverhangSeamMode>,    wave_overhang_seam_mode))
++    ((ConfigOptionBool,                 wave_overhang_debug_gcode))
++    ((ConfigOptionFloat,                wave_overhang_min_length))
++    ((ConfigOptionInt,                  wave_overhang_max_iterations))
++    ((ConfigOptionFloat,                wave_overhang_min_new_area))
++    ((ConfigOptionFloat,                wave_overhang_fringe_reinforcement_max_cover_to_real))
++    ((ConfigOptionFloat,                wave_overhang_fringe_reinforcement_max_cover_area))
++    ((ConfigOptionFloat,                wave_overhang_fringe_contact_compensation_max_over_cap))
++    ((ConfigOptionBool,                 wave_overhang_corner_taper_enable))
++    ((ConfigOptionFloat,                wave_overhang_line_spacing_corner))
++    ((ConfigOptionFloat,                wave_overhang_corner_taper_distance))
++    ((ConfigOptionFloat,                wave_overhang_corner_angle_threshold))
++    ((ConfigOptionFloat,                wave_overhang_end_retract_length))
++    ((ConfigOptionBool,                 support_remaining_areas_after_wave_overhangs))
++    ((ConfigOptionInt,                  outer_wall_filament_id))
++    ((ConfigOptionInt,                  inner_wall_filament_id))
+     ((ConfigOptionFloatOrPercent, inner_wall_line_width))
+     ((ConfigOptionFloat, inner_wall_speed))
+     // Total number of perimeters.
+@@ -1245,8 +1390,68 @@ PRINT_CONFIG_CLASS_DEFINE(
+     ((ConfigOptionBool, zaa_enabled))
+     ((ConfigOptionBool, zaa_dont_alternate_fill_direction))
+     ((ConfigOptionFloat, zaa_min_z))
+-    ((ConfigOptionFloat, zaa_minimize_perimeter_height))
+-    )
++	    ((ConfigOptionFloat, zaa_minimize_perimeter_height))
++	    )
++
++PRINT_CONFIG_CLASS_DEFINE(
++    FiberReinforcementConfig,
++
 +    ((ConfigOptionEnum<FiberReinforcementMode>, fiber_reinforcement_mode))
 +    ((ConfigOptionBool,                 fiber_generate_perimeters))
 +    ((ConfigOptionBool,                 fiber_generate_infill))
@@ -71081,61 +71167,11 @@ index 45281d5ce1..f107d95c49 100644
 +    ((ConfigOptionInt,                  fiber_plastic_outer_loops_with_fiber))
 +    ((ConfigOptionInt,                  fiber_plastic_inner_loops_with_fiber))
 +    ((ConfigOptionString,               fiber_reinforcement_payload))
-     ((ConfigOptionFloat,                lateral_lattice_angle_1))
-     ((ConfigOptionFloat,                lateral_lattice_angle_2))
-     ((ConfigOptionFloat,                infill_overhang_angle))
-@@ -1156,8 +1316,48 @@ PRINT_CONFIG_CLASS_DEFINE(
-     ((ConfigOptionFloatsNullable, filament_ironing_speed))
-     // Detect bridging perimeters
-     ((ConfigOptionBool, detect_overhang_wall))
--    ((ConfigOptionInt, outer_wall_filament_id))
--    ((ConfigOptionInt, inner_wall_filament_id))
-+    ((ConfigOptionBool,                 wave_overhangs))
-+    ((ConfigOptionBool,                 wave_overhangs_instead_of_bridges))
-+    ((ConfigOptionInt,                  wave_overhang_outer_perimeters))
-+    ((ConfigOptionFloat,                wave_overhang_perimeter_overlap))
-+    ((ConfigOptionFloat,                wave_overhang_minimum_width))
-+    ((ConfigOptionEnum<WaveOverhangPattern>, wave_overhang_pattern))
-+    ((ConfigOptionFloat,                wave_overhang_line_spacing))
-+    ((ConfigOptionFloat,                wave_overhang_flow_mm3_per_mm))
-+    ((ConfigOptionFloat,                wave_overhang_print_speed))
-+    ((ConfigOptionFloat,                wave_overhang_perimeter_speed))
-+    ((ConfigOptionFloat,                wave_overhang_travel_speed))
-+    ((ConfigOptionInt,                  wave_overhang_fan_speed))
-+    ((ConfigOptionInt,                  wave_overhang_floor_layers))
-+    ((ConfigOptionBool,                 wave_overhang_floor_use_hilbert))
-+    ((ConfigOptionInt,                  wave_overhang_floor_hilbert_layers))
-+    ((ConfigOptionInt,                  wave_overhang_floor_hilbert_density))
-+    ((ConfigOptionFloat,                wave_overhang_floor_print_speed))
-+    ((ConfigOptionFloat,                wave_overhang_floor_perimeter_speed))
-+    ((ConfigOptionInt,                  wave_overhang_floor_fan_speed))
-+    ((ConfigOptionInt,                  wave_overhang_nozzle_temp))
-+    ((ConfigOptionFloat,                wave_overhang_min_wave_time))
-+    ((ConfigOptionFloat,                wave_overhang_min_layer_time))
-+    ((ConfigOptionEnum<WaveOverhangAlgorithm>, wave_overhang_algorithm))
-+    ((ConfigOptionFloat,                wave_overhang_ring_overlap))
-+    ((ConfigOptionFloat,                wave_overhang_min_angle))
-+    ((ConfigOptionEnum<WaveOverhangSpacingMode>, wave_overhang_spacing_mode))
-+    ((ConfigOptionEnum<WaveOverhangSeamMode>,    wave_overhang_seam_mode))
-+    ((ConfigOptionBool,                 wave_overhang_debug_gcode))
-+    ((ConfigOptionFloat,                wave_overhang_min_length))
-+    ((ConfigOptionInt,                  wave_overhang_max_iterations))
-+    ((ConfigOptionFloat,                wave_overhang_min_new_area))
-+    ((ConfigOptionFloat,                wave_overhang_fringe_reinforcement_max_cover_to_real))
-+    ((ConfigOptionFloat,                wave_overhang_fringe_reinforcement_max_cover_area))
-+    ((ConfigOptionFloat,                wave_overhang_fringe_contact_compensation_max_over_cap))
-+    ((ConfigOptionBool,                 wave_overhang_corner_taper_enable))
-+    ((ConfigOptionFloat,                wave_overhang_line_spacing_corner))
-+    ((ConfigOptionFloat,                wave_overhang_corner_taper_distance))
-+    ((ConfigOptionFloat,                wave_overhang_corner_angle_threshold))
-+    ((ConfigOptionFloat,                wave_overhang_end_retract_length))
-+    ((ConfigOptionBool,                 support_remaining_areas_after_wave_overhangs))
-+    ((ConfigOptionInt,                  outer_wall_filament_id))
-+    ((ConfigOptionInt,                  inner_wall_filament_id))
-     ((ConfigOptionFloatOrPercent, inner_wall_line_width))
-     ((ConfigOptionFloat, inner_wall_speed))
-     // Total number of perimeters.
-@@ -1331,6 +1531,32 @@ PRINT_CONFIG_CLASS_DEFINE(
++)
+ 
+ PRINT_CONFIG_CLASS_DEFINE(
+     MachineEnvelopeConfig,
+@@ -1331,6 +1536,32 @@ PRINT_CONFIG_CLASS_DEFINE(
      ((ConfigOptionBools,               filament_soluble))
      ((ConfigOptionStrings,             filament_ids))
      ((ConfigOptionStrings,             filament_colour))
@@ -71168,7 +71204,7 @@ index 45281d5ce1..f107d95c49 100644
      ((ConfigOptionStrings,             filament_vendor))
      ((ConfigOptionBools,               filament_is_support))
      ((ConfigOptionInts,                filament_printable))
-@@ -1583,6 +1809,41 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
+@@ -1583,6 +1814,41 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
      ((ConfigOptionInts,               nozzle_temperature_range_low))
      ((ConfigOptionInts,               nozzle_temperature_range_high))
      ((ConfigOptionFloats,             wipe_distance))
@@ -71210,6 +71246,15 @@ index 45281d5ce1..f107d95c49 100644
      ((ConfigOptionBool,               enable_prime_tower))
      ((ConfigOptionBool,               prime_tower_enable_framework))
      // BBS: change wipe_tower_x and wipe_tower_y data type to floats to add partplate logic
+@@ -1661,7 +1927,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
+ // This object is mapped to Perl as Slic3r::Config::Full.
+ PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
+     FullPrintConfig,
+-    (PrintObjectConfig, PrintRegionConfig, PrintConfig)
++    (PrintObjectConfig, PrintRegionConfig, FiberReinforcementConfig, PrintConfig)
+ )
+ 
+ // Validate the FullPrintConfig. Returns an empty string on success, otherwise an error message is returned.
 diff --git a/src/libslic3r/PrintObject.cpp b/src/libslic3r/PrintObject.cpp
 index 925da0c564..18e83540f2 100644
 --- a/src/libslic3r/PrintObject.cpp
@@ -77003,7 +77048,7 @@ index 582c220c2f..35b4e6c1ed 100644
  
      Freeze();
 diff --git a/src/slic3r/GUI/Tab.cpp b/src/slic3r/GUI/Tab.cpp
-index 1b702c7b60..97b2dbd0a0 100644
+index 1b702c7b60..5c83402a3e 100644
 --- a/src/slic3r/GUI/Tab.cpp
 +++ b/src/slic3r/GUI/Tab.cpp
 @@ -33,6 +33,7 @@
@@ -77287,6 +77332,15 @@ index 1b702c7b60..97b2dbd0a0 100644
          opt.enum_values.clear();
          opt.enum_labels.clear();
          cb->Clear();
+@@ -2953,7 +3181,7 @@ static std::vector<std::string> substruct(std::vector<std::string> const& l, std
+ TabPrintModel::TabPrintModel(ParamsPanel* parent, std::vector<std::string> const & keys)
+     : TabPrint(parent, Preset::TYPE_MODEL)
+     , m_keys(intersect(Preset::print_options(), keys))
+-    , m_prints(Preset::TYPE_MODEL, Preset::print_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults()))
++    , m_prints(Preset::TYPE_MODEL, Preset::print_options(), static_cast<const FullPrintConfig&>(FullPrintConfig::defaults()))
+ {
+     m_opt_status_value = osInitValue | osSystemValue;
+     m_is_default_preset = true;
 @@ -3922,18 +4150,45 @@ void TabFilament::build()
          line.append_option(optgroup->get_option("nozzle_temperature_range_high"));
          optgroup->append_line(line);
