@@ -11,6 +11,7 @@ This repository is a clean public release package. It does not contain private p
 - Helper scripts for the native FibreSeek planner, G-code contract audit, Rocket/TinManX1 comparison reports, wiring checks, Arc Support, Strength Lens, fibre metadata sidecars, and smoke checks.
 - Manifest helper notes and validation scripts for the local TinManX1 app workflow.
 - Feature notes for native continuous fibre, Strength Lens, Wave Overhangs, Arc Supports, and backend printer/app improvements.
+- A public FibreSeek layup editor contract for future UI work around layer/Z-specific reinforcement bands.
 - Source credit ledgers and research snapshots used to keep attribution traceable.
 
 ## Feature Lanes
@@ -62,6 +63,7 @@ Run the public synthetic FibreSeek planner checks before changing route logic:
 python3 scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py
 python3 scripts/source-helpers/golden_orcaslicer_codex_native_fiber_planner.py
 python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py --self-test
+python3 scripts/source-helpers/validate_tinmanx1_fiber_layup_editor_contract.py
 ```
 
 Build a validated advanced FibreSeek layup payload for the `fiber_reinforcement_payload` process field:

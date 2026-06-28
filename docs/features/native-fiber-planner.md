@@ -28,6 +28,7 @@ This is not certified structural analysis and not a replacement for hardware qua
 - `python3 scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py`
 - `python3 scripts/source-helpers/golden_orcaslicer_codex_native_fiber_planner.py`
 - `python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py --self-test`
+- `python3 scripts/source-helpers/validate_tinmanx1_fiber_layup_editor_contract.py`
 - `python3 scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py --fiber-layup-template first-layer-off-tetragrid`
 - `python3 scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py`
 - `python3 scripts/source-helpers/check_tinmanx1_fiber_wiring.py`
@@ -63,3 +64,5 @@ The profile generator can also write one of these templates directly into every 
 python3 scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py --fiber-layup-template first-layer-off-tetragrid
 python3 scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py
 ```
+
+For the future in-app editor surface, see `docs/features/fiber-layup-editor.md` and `checks/contracts/fiber_layup_editor_contract.json`.

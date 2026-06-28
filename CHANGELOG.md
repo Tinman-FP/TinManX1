@@ -10,6 +10,7 @@ Included:
 - added fiber-only seam placement controls: Source, Nearest, Aligned, Rear, and Random, plus aligned seam angle
 - added a validated advanced layup payload helper for building `fiber_reinforcement_payload` JSON from named templates or simple band specs
 - added profile-generator support and CI coverage for writing validated layup templates into continuous-fiber process profiles
+- added a public FibreSeek layup editor contract and validator for future UI work
 - added a neutral Rocket/TinManX1 G-code comparison helper for command families, thermal setpoints, tool ownership, cut/load behavior, route metadata, timing, and material summaries
 - added a structural FibreSeek wiring checker so profile, config, UI, preset, generator, and planner handoff changes cannot silently drift
 - expanded compact Strength/search UI exposure for the important fiber controls

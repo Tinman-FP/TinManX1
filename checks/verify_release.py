@@ -19,6 +19,7 @@ REQUIRED_FILES = [
     "LICENSE",
     "docs/release-scope.md",
     "docs/features/native-fiber-planner.md",
+    "docs/features/fiber-layup-editor.md",
     "docs/features/strength-lens.md",
     "docs/features/wave-overhangs.md",
     "docs/features/arc-supports.md",
@@ -26,6 +27,7 @@ REQUIRED_FILES = [
     "docs/audit/tinmanx1-houseclean-2026-06-26.md",
     "docs/audit/tinmanx1-hole-cluster-fiber-2026-06-27.md",
     "docs/audit/tinmanx1-hole-loop-guard-2026-06-27.md",
+    "checks/contracts/fiber_layup_editor_contract.json",
     "checks/golden/native_fiber_planner_golden.json",
     ".github/workflows/validate_public_helpers.yml",
     "patches/tinmanx1-v2.4.0-houseclean-native-fiber.patch",
@@ -38,6 +40,7 @@ REQUIRED_FILES = [
     "scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py",
     "scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py",
     "scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py",
+    "scripts/source-helpers/validate_tinmanx1_fiber_layup_editor_contract.py",
 ]
 
 ATTRIBUTION_MARKERS = [
