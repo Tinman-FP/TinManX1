@@ -11,7 +11,7 @@ Top-level scripts:
 - Arc Support transform and in-place adapter helpers
 - Strength Lens sidecar
 - Fibre metadata sidecar
-- Native FibreSeek planner, contract audit, Rocket/TinManX1 comparison helper, wiring check, and smoke guard
+- Native FibreSeek planner, profile generator/lint helpers, contract audit, Rocket/TinManX1 comparison helper, wiring check, and smoke guard
 - Wave, Arc, and Strength/Fibre smoke guards
 
 Public scripts default away from real printer hosts where possible. Pass explicit host details only in a private local environment.

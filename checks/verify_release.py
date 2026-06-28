@@ -30,6 +30,8 @@ REQUIRED_FILES = [
     "scripts/source-helpers/audit_fiberseek_gcode_contract.py",
     "scripts/source-helpers/check_tinmanx1_fiber_wiring.py",
     "scripts/source-helpers/compare_fiberseek_gcode.py",
+    "scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py",
+    "scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py",
     "scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py",
     "scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py",
 ]

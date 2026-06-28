@@ -14,6 +14,20 @@ Included:
 - regenerated the public source patch from the verified TinManX1 worktree and updated source-helper scripts
 - strengthened attribution language for upstream slicer contributors, transform-source authors, William Tinney / Tinman-FP, OpenAI Codex, and Rocket/FibreSeek private reference boundaries
 
+## v2026.06.28-fibreseek-alpha.1
+
+TinManX1 FibreSeek alpha profile-safety correction.
+
+Included:
+
+- fixed generated FibreSeek process profiles so `bridge_line_width` is explicit and never exceeds the selected plastic nozzle diameter
+- fixed relative-E layer-change validation by making `layer_change_gcode` exactly `G92 E0`, matching Orca's strict validator
+- disabled grouped medium/heavy route cuts by forcing `fiber_routes_per_cut` to `1` until grouped-route emission has a mechanically safe cut/load model
+- added profile lint guards for bridge width, relative-E reset, and one-route-per-cut safety
+- published the macOS arm64 prerelease package and Windows build-path asset from the corrected checkpoint
+
+Supersedes `v2026.06.28-fibreseek-alpha`, which was caught by release validation before adoption.
+
 ## v2026.06.27.3
 
 TinManX1 native FibreSeek planner regression rollback.
