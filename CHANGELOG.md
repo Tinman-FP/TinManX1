@@ -17,6 +17,17 @@ Included:
 - regenerated the public source patch from the verified TinManX1 worktree and updated source-helper scripts
 - strengthened attribution language for upstream slicer contributors, transform-source authors, William Tinney / Tinman-FP, OpenAI Codex, and Rocket/FibreSeek private reference boundaries
 
+## v2026.06.28-fibreseek-alpha.4
+
+TinManX1 2.4.1 packaging fix for FibreSeek slicing and visible release revisioning.
+
+Included:
+
+- added a visible TinManX1 rev line to the splash and about artwork
+- sanitized `PYTHONHOME` and `PYTHONPATH` before launching macOS helper planners so Autodesk Fusion's Python environment cannot break FibreSeek slicing
+- restored upstream Orca Slicer 2.4.1 `chamber_minimal_temperature` config wiring that was dropped during rebase conflict cleanup
+- updated the macOS app installer launcher template with the same clean Python environment guard
+
 ## v2026.06.28-fibreseek-alpha.3
 
 TinManX1 Orca Slicer 2.4.1 carry-forward and installed-profile slicing fix.

@@ -6,7 +6,7 @@ on:
       release_tag:
         description: "TinManX1 public release tag to build"
         required: true
-        default: "v2026.06.28-fibreseek-alpha.3"
+        default: "v2026.06.28-fibreseek-alpha.4"
       upload_to_release:
         description: "Upload macOS artifacts to the matching GitHub release"
         required: true

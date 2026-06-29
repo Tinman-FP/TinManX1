@@ -132,6 +132,11 @@ LIVE_GUARD_TICK_SECONDS="${{ORCASLICER_CODEX_LIVE_GUARD_TICK_SECONDS:-5}}"
 : "${{ORCASLICER_CODEX_BAMBU_PLUGIN_POLICY:=allow}}"
 export ORCASLICER_CODEX_BAMBU_PLUGIN_POLICY
 
+# CAD tools such as Autodesk Fusion can leave Python runtime variables in the
+# launch environment. TinManX1 helper planners must use a clean interpreter.
+unset PYTHONHOME
+unset PYTHONPATH
+
 run_preflight() {{
   PYTHONHOME= PYTHONPATH= "$PYTHON_BIN" "$PREFLIGHT" "$@"
 }}
