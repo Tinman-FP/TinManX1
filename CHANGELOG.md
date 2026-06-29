@@ -14,6 +14,7 @@ Included:
 - added a neutral Rocket/TinManX1 G-code comparison helper for command families, thermal setpoints, tool ownership, cut/load behavior, route metadata, timing, and material summaries
 - added a structural FibreSeek wiring checker so profile, config, UI, preset, generator, and planner handoff changes cannot silently drift
 - expanded compact Strength/search UI exposure for the important fiber controls
+- updated public release-scope and local install/verify helper defaults for the Orca Slicer 2.4.1 source line and TinManX1 bundle identity
 - regenerated the public source patch from the verified TinManX1 worktree and updated source-helper scripts
 - strengthened attribution language for upstream slicer contributors, transform-source authors, William Tinney / Tinman-FP, OpenAI Codex, and Rocket/FibreSeek private reference boundaries
 

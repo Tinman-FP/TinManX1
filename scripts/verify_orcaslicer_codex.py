@@ -18,7 +18,7 @@ from pathlib import Path
 DEFAULT_APP = Path("/Applications/TinManX1.app")
 DEFAULT_TINMANX_APP = Path("/Applications/TinManX TinManX1.app")
 DEFAULT_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "OrcaSlicer-Codex"
-EXPECTED_BUNDLE_ID = "com.orcaslicer.OrcaSlicerCodex"
+EXPECTED_BUNDLE_ID = "com.tinmanfp.TinManX1"
 EXPECTED_DISPLAY_NAME = "TinManX1"
 BAMBU_PLUGINS = (
     "libBambuSource.dylib",
@@ -253,7 +253,7 @@ def main() -> int:
     parser.add_argument("--app", type=Path, default=DEFAULT_APP)
     parser.add_argument("--tinmanx-app", type=Path, default=DEFAULT_TINMANX_APP)
     parser.add_argument("--app-support", type=Path, default=DEFAULT_APP_SUPPORT)
-    parser.add_argument("--expected-version", default="2.4.0-alpha")
+    parser.add_argument("--expected-version", default="2.4.1-alpha")
     parser.add_argument("--codesign", action="store_true")
     args = parser.parse_args()
 
