@@ -17,6 +17,18 @@ Included:
 - regenerated the public source patch from the verified TinManX1 worktree and updated source-helper scripts
 - strengthened attribution language for upstream slicer contributors, transform-source authors, William Tinney / Tinman-FP, OpenAI Codex, and Rocket/FibreSeek private reference boundaries
 
+## v2026.06.28-fibreseek-alpha.3
+
+TinManX1 Orca Slicer 2.4.1 carry-forward and installed-profile slicing fix.
+
+Included:
+
+- rebased the current TinManX1 patch onto upstream Orca Slicer 2.4.1
+- updated TinManX1 splash/about branding strings to say `Based on Orca Slicer Version 2.4.1`
+- made GitHub macOS and Windows release workflows build from the 2.4.1 patch line
+- added the generated TinManX1 FibreSeek profile pack to the public package
+- verified the installed macOS app profile bundle slices a PETG + X-CCF FibreSeek smoke model and emits native fiber metadata
+
 ## v2026.06.28-fibreseek-alpha.1
 
 TinManX1 FibreSeek alpha profile-safety correction.

@@ -1,0 +1,168 @@
+{
+  "type": "filament",
+  "name": "TinManX1 ABS-CF base",
+  "from": "system",
+  "instantiation": "false",
+  "filament_vendor": [
+    "TinManX1"
+  ],
+  "filament_type": [
+    "ABS-CF"
+  ],
+  "default_filament_colour": [
+    "#363636"
+  ],
+  "filament_diameter": [
+    "1.75"
+  ],
+  "filament_density": [
+    "1.12"
+  ],
+  "filament_cost": [
+    "48"
+  ],
+  "filament_flow_ratio": [
+    "0.98"
+  ],
+  "filament_max_volumetric_speed": [
+    "10"
+  ],
+  "filament_is_support": [
+    "0"
+  ],
+  "filament_soluble": [
+    "0"
+  ],
+  "nozzle_temperature": [
+    "255"
+  ],
+  "nozzle_temperature_initial_layer": [
+    "260"
+  ],
+  "nozzle_temperature_range_low": [
+    "235"
+  ],
+  "nozzle_temperature_range_high": [
+    "280"
+  ],
+  "hot_plate_temp": [
+    "100"
+  ],
+  "hot_plate_temp_initial_layer": [
+    "105"
+  ],
+  "eng_plate_temp": [
+    "100"
+  ],
+  "eng_plate_temp_initial_layer": [
+    "105"
+  ],
+  "textured_plate_temp": [
+    "100"
+  ],
+  "textured_plate_temp_initial_layer": [
+    "105"
+  ],
+  "chamber_temperature": [
+    "50"
+  ],
+  "activate_chamber_temp_control": [
+    "1"
+  ],
+  "fan_min_speed": [
+    "5"
+  ],
+  "fan_max_speed": [
+    "15"
+  ],
+  "slow_down_for_layer_cooling": [
+    "1"
+  ],
+  "enable_pressure_advance": [
+    "1"
+  ],
+  "pressure_advance": [
+    "0.020"
+  ],
+  "required_nozzle_HRC": [
+    "3"
+  ],
+  "plastic_spool_weight": [
+    "1000"
+  ],
+  "composite_enabled": [
+    "0"
+  ],
+  "fiber_name": [
+    ""
+  ],
+  "fiber_type": [
+    ""
+  ],
+  "fiber_manufacturer": [
+    ""
+  ],
+  "fiber_diameter": [
+    "0"
+  ],
+  "fiber_linear_density": [
+    "0"
+  ],
+  "fiber_spool_length_km": [
+    "0"
+  ],
+  "fiber_cost": [
+    "0"
+  ],
+  "fiber_plastic_name": [
+    ""
+  ],
+  "fiber_plastic_type": [
+    ""
+  ],
+  "fiber_plastic_manufacturer": [
+    ""
+  ],
+  "fiber_plastic_diameter": [
+    "0"
+  ],
+  "fiber_plastic_density": [
+    "0"
+  ],
+  "fiber_plastic_cost": [
+    "0"
+  ],
+  "fiber_plastic_spool_weight": [
+    "0"
+  ],
+  "fiber_nozzle_temperature_preheat": [
+    "0"
+  ],
+  "fiber_nozzle_temperature_standby": [
+    "150"
+  ],
+  "fiber_first_layers_height": [
+    "0"
+  ],
+  "fiber_plastic_extrusion_speed": [
+    "0"
+  ],
+  "fiber_extrusion_speed": [
+    "0"
+  ],
+  "fiber_restart_pause": [
+    "0"
+  ],
+  "fiber_finish_ironing_distance": [
+    "0"
+  ],
+  "fiber_priming_line_height": [
+    "0"
+  ],
+  "fiber_material_kind": [
+    "plastic"
+  ],
+  "fiber_source_material_id": [
+    "tinmanx1-abs-cf"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "type": "machine",
+  "name": "FibreSeek Seeker 3 0.8 nozzle",
+  "inherits": "TinManX1 FibreSeek machine common",
+  "from": "system",
+  "setting_id": "TMX-FS3-M-P0.8",
+  "instantiation": "true",
+  "printer_model": "FibreSeek Seeker 3",
+  "printer_variant": "0.8",
+  "nozzle_diameter": [
+    "0.8"
+  ],
+  "max_layer_height": [
+    "0.56"
+  ],
+  "min_layer_height": [
+    "0.16"
+  ],
+  "default_print_profile": "0.32mm Plastic Only @FibreSeek Seeker 3 0.8 nozzle",
+  "default_filament_profile": [
+    "TinManX1 PCTG @FibreSeek Seeker 3"
+  ],
+  "plastic_nozzle_diameter": "0.8",
+  "fiber_enabled": "0"
+}

@@ -1,0 +1,23 @@
+{
+  "type": "process",
+  "name": "0.20mm Plastic Only @FibreSeek Seeker 3 0.4 nozzle",
+  "inherits": "TinManX1 FibreSeek process common",
+  "from": "system",
+  "setting_id": "TMX-FS3-PROC-P0.4",
+  "instantiation": "true",
+  "layer_height": "0.20",
+  "first_layer_height": "0.2",
+  "line_width": "0.42",
+  "outer_wall_line_width": "0.42",
+  "inner_wall_line_width": "0.42",
+  "sparse_infill_line_width": "0.42",
+  "internal_solid_infill_line_width": "0.42",
+  "top_surface_line_width": "0.42",
+  "support_line_width": "0.42",
+  "bridge_line_width": "0.4",
+  "compatible_printers": [
+    "FibreSeek Seeker 3 0.4 nozzle",
+    "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
+    "FibreSeek Seeker 3 - Codex"
+  ]
+}

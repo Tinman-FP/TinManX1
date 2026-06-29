@@ -1,0 +1,124 @@
+{
+  "type": "filament",
+  "name": "CFC PPA-CF + CKF @FibreSeek Seeker 3",
+  "inherits": "TinManX1 PPA-CF base",
+  "from": "system",
+  "setting_id": "TMX-FS3-PPA-CF-CKF",
+  "filament_id": "tinmanx1-fs3-ppa-cf-ckf",
+  "instantiation": "true",
+  "filament_vendor": [
+    "TinManX1"
+  ],
+  "filament_type": [
+    "CFC"
+  ],
+  "description": "CFC PPA-CF + CKF @FibreSeek Seeker 3. TinManX1 estimate. Known FibreSeek/Rocket baseline only for CFC PETG + X-CCF; other matrix/fiber combinations are conservative TinManX1 estimates for coupon tuning.",
+  "default_filament_colour": [
+    "#D8A300"
+  ],
+  "filament_flow_ratio": [
+    "0.82"
+  ],
+  "filament_max_volumetric_speed": [
+    "8"
+  ],
+  "nozzle_temperature": [
+    "300"
+  ],
+  "nozzle_temperature_initial_layer": [
+    "305"
+  ],
+  "nozzle_temperature_range_low": [
+    "280"
+  ],
+  "nozzle_temperature_range_high": [
+    "325"
+  ],
+  "fan_min_speed": [
+    "15"
+  ],
+  "fan_max_speed": [
+    "25"
+  ],
+  "composite_enabled": [
+    "1"
+  ],
+  "fiber_name": [
+    "CKF Kevlar fiber 0.25 mm"
+  ],
+  "fiber_type": [
+    "aramid_fiber"
+  ],
+  "fiber_manufacturer": [
+    "TinManX1"
+  ],
+  "fiber_diameter": [
+    "0.25"
+  ],
+  "fiber_linear_density": [
+    "72.0"
+  ],
+  "fiber_spool_length_km": [
+    "0.5"
+  ],
+  "fiber_cost": [
+    "160"
+  ],
+  "fiber_plastic_name": [
+    "PPA-CF"
+  ],
+  "fiber_plastic_type": [
+    "PPA-CF"
+  ],
+  "fiber_plastic_manufacturer": [
+    "TinManX1"
+  ],
+  "fiber_plastic_diameter": [
+    "1.75"
+  ],
+  "fiber_plastic_density": [
+    "1.25"
+  ],
+  "fiber_plastic_cost": [
+    "80"
+  ],
+  "fiber_plastic_spool_weight": [
+    "1000"
+  ],
+  "fiber_nozzle_temperature_preheat": [
+    "300"
+  ],
+  "fiber_nozzle_temperature_standby": [
+    "150"
+  ],
+  "fiber_first_layers_height": [
+    "0.25"
+  ],
+  "fiber_plastic_extrusion_speed": [
+    "8"
+  ],
+  "fiber_extrusion_speed": [
+    "25"
+  ],
+  "fiber_restart_pause": [
+    "0"
+  ],
+  "fiber_finish_ironing_distance": [
+    "8"
+  ],
+  "fiber_priming_line_height": [
+    "0.2"
+  ],
+  "fiber_material_kind": [
+    "composite_matrix"
+  ],
+  "fiber_source_material_id": [
+    "tinmanx1-ppa-cf-ckf"
+  ],
+  "compatible_printers": [
+    "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
+    "FibreSeek Seeker 3 - Codex"
+  ]
+}

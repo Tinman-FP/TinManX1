@@ -1,0 +1,410 @@
+{
+  "name": "TinManX1",
+  "version": "02.04.00.13",
+  "force_update": "0",
+  "description": "TinManX1 FibreSeek Seeker 3 plastic and continuous-fiber profiles",
+  "machine_model_list": [
+    {
+      "name": "FibreSeek Seeker 3",
+      "sub_path": "machine/FibreSeek Seeker 3.json"
+    }
+  ],
+  "process_list": [
+    {
+      "name": "TinManX1 FibreSeek process common",
+      "sub_path": "process/TinManX1 FibreSeek process common.json"
+    },
+    {
+      "name": "0.20mm Plastic Only @FibreSeek Seeker 3 0.4 nozzle",
+      "sub_path": "process/0.20mm Plastic Only @FibreSeek Seeker 3 0.4 nozzle.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.4+0.7 nozzle",
+      "sub_path": "process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.4+0.7 nozzle.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4+0.7 nozzle",
+      "sub_path": "process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4+0.7 nozzle.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle",
+      "sub_path": "process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json"
+    },
+    {
+      "name": "0.20mm Plastic Only @FibreSeek Seeker 3 0.6 nozzle",
+      "sub_path": "process/0.20mm Plastic Only @FibreSeek Seeker 3 0.6 nozzle.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.6+0.7 nozzle",
+      "sub_path": "process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6+0.7 nozzle",
+      "sub_path": "process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle",
+      "sub_path": "process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
+    },
+    {
+      "name": "0.32mm Plastic Only @FibreSeek Seeker 3 0.8 nozzle",
+      "sub_path": "process/0.32mm Plastic Only @FibreSeek Seeker 3 0.8 nozzle.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.8+0.7 nozzle",
+      "sub_path": "process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.8+0.7 nozzle.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8+0.7 nozzle",
+      "sub_path": "process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8+0.7 nozzle.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle",
+      "sub_path": "process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle.json"
+    }
+  ],
+  "filament_list": [
+    {
+      "name": "TinManX1 ABS base",
+      "sub_path": "filament/TinManX1 ABS base.json"
+    },
+    {
+      "name": "TinManX1 ABS @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 ABS @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 ASA base",
+      "sub_path": "filament/TinManX1 ASA base.json"
+    },
+    {
+      "name": "TinManX1 ASA @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 ASA @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ASA + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ASA + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ASA + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ASA + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ASA + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ASA + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ASA + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ASA + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 PPA-CF base",
+      "sub_path": "filament/TinManX1 PPA-CF base.json"
+    },
+    {
+      "name": "TinManX1 PPA-CF @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 PPA-CF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PPA-CF + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PPA-CF + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PPA-CF + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PPA-CF + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PPA-CF + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PPA-CF + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PPA-CF + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PPA-CF + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 PPS-CF base",
+      "sub_path": "filament/TinManX1 PPS-CF base.json"
+    },
+    {
+      "name": "TinManX1 PPS-CF @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 PPS-CF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PPS-CF + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PPS-CF + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PPS-CF + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PPS-CF + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PPS-CF + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PPS-CF + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PPS-CF + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PPS-CF + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 ABS-CF base",
+      "sub_path": "filament/TinManX1 ABS-CF base.json"
+    },
+    {
+      "name": "TinManX1 ABS-CF @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 ABS-CF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS-CF + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS-CF + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS-CF + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS-CF + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS-CF + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS-CF + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS-CF + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS-CF + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 ABS-GF base",
+      "sub_path": "filament/TinManX1 ABS-GF base.json"
+    },
+    {
+      "name": "TinManX1 ABS-GF @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 ABS-GF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS-GF + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS-GF + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS-GF + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS-GF + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS-GF + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS-GF + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ABS-GF + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ABS-GF + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 ASA-GF base",
+      "sub_path": "filament/TinManX1 ASA-GF base.json"
+    },
+    {
+      "name": "TinManX1 ASA-GF @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 ASA-GF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ASA-GF + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ASA-GF + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ASA-GF + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ASA-GF + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ASA-GF + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ASA-GF + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC ASA-GF + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC ASA-GF + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 PP base",
+      "sub_path": "filament/TinManX1 PP base.json"
+    },
+    {
+      "name": "TinManX1 PP @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 PP @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PP + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PP + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PP + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PP + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PP + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PP + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PP + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PP + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 PETG base",
+      "sub_path": "filament/TinManX1 PETG base.json"
+    },
+    {
+      "name": "TinManX1 PETG @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 PETG @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PETG + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PETG + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PETG + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PETG + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PETG + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PETG + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PETG + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PETG + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 PET GF base",
+      "sub_path": "filament/TinManX1 PET GF base.json"
+    },
+    {
+      "name": "TinManX1 PET GF @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 PET GF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PET GF + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PET GF + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PET GF + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PET GF + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PET GF + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PET GF + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PET GF + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PET GF + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 PCTG base",
+      "sub_path": "filament/TinManX1 PCTG base.json"
+    },
+    {
+      "name": "TinManX1 PCTG @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 PCTG @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PCTG + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PCTG + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PCTG + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PCTG + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PCTG + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PCTG + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PCTG + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PCTG + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 PCTG-CF base",
+      "sub_path": "filament/TinManX1 PCTG-CF base.json"
+    },
+    {
+      "name": "TinManX1 PCTG-CF @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 PCTG-CF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PCTG-CF + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PCTG-CF + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PCTG-CF + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PCTG-CF + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PCTG-CF + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PCTG-CF + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PCTG-CF + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PCTG-CF + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 PA-CF base",
+      "sub_path": "filament/TinManX1 PA-CF base.json"
+    },
+    {
+      "name": "TinManX1 PA-CF @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 PA-CF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PA-CF + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PA-CF + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PA-CF + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PA-CF + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PA-CF + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PA-CF + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PA-CF + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PA-CF + CBF @FibreSeek Seeker 3.json"
+    }
+  ],
+  "machine_list": [
+    {
+      "name": "TinManX1 FibreSeek machine common",
+      "sub_path": "machine/TinManX1 FibreSeek machine common.json"
+    },
+    {
+      "name": "FibreSeek Seeker 3 0.4 nozzle",
+      "sub_path": "machine/FibreSeek Seeker 3 0.4 nozzle.json"
+    },
+    {
+      "name": "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
+      "sub_path": "machine/FibreSeek Seeker 3 0.4+0.7 composite nozzle.json"
+    },
+    {
+      "name": "FibreSeek Seeker 3 0.6 nozzle",
+      "sub_path": "machine/FibreSeek Seeker 3 0.6 nozzle.json"
+    },
+    {
+      "name": "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
+      "sub_path": "machine/FibreSeek Seeker 3 0.6+0.7 composite nozzle.json"
+    },
+    {
+      "name": "FibreSeek Seeker 3 0.8 nozzle",
+      "sub_path": "machine/FibreSeek Seeker 3 0.8 nozzle.json"
+    },
+    {
+      "name": "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
+      "sub_path": "machine/FibreSeek Seeker 3 0.8+0.7 composite nozzle.json"
+    }
+  ]
+}

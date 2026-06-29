@@ -1,0 +1,124 @@
+{
+  "type": "filament",
+  "name": "CFC PP + CGF @FibreSeek Seeker 3",
+  "inherits": "TinManX1 PP base",
+  "from": "system",
+  "setting_id": "TMX-FS3-PP-CGF",
+  "filament_id": "tinmanx1-fs3-pp-cgf",
+  "instantiation": "true",
+  "filament_vendor": [
+    "TinManX1"
+  ],
+  "filament_type": [
+    "CFC"
+  ],
+  "description": "CFC PP + CGF @FibreSeek Seeker 3. TinManX1 estimate. Known FibreSeek/Rocket baseline only for CFC PETG + X-CCF; other matrix/fiber combinations are conservative TinManX1 estimates for coupon tuning.",
+  "default_filament_colour": [
+    "#E8F4FF"
+  ],
+  "filament_flow_ratio": [
+    "0.85"
+  ],
+  "filament_max_volumetric_speed": [
+    "10"
+  ],
+  "nozzle_temperature": [
+    "235"
+  ],
+  "nozzle_temperature_initial_layer": [
+    "240"
+  ],
+  "nozzle_temperature_range_low": [
+    "215"
+  ],
+  "nozzle_temperature_range_high": [
+    "260"
+  ],
+  "fan_min_speed": [
+    "5"
+  ],
+  "fan_max_speed": [
+    "10"
+  ],
+  "composite_enabled": [
+    "1"
+  ],
+  "fiber_name": [
+    "CGF Glass fiber 0.35 mm"
+  ],
+  "fiber_type": [
+    "glass_fiber"
+  ],
+  "fiber_manufacturer": [
+    "TinManX1"
+  ],
+  "fiber_diameter": [
+    "0.35"
+  ],
+  "fiber_linear_density": [
+    "170.0"
+  ],
+  "fiber_spool_length_km": [
+    "0.5"
+  ],
+  "fiber_cost": [
+    "45"
+  ],
+  "fiber_plastic_name": [
+    "PP"
+  ],
+  "fiber_plastic_type": [
+    "PP"
+  ],
+  "fiber_plastic_manufacturer": [
+    "TinManX1"
+  ],
+  "fiber_plastic_diameter": [
+    "1.75"
+  ],
+  "fiber_plastic_density": [
+    "0.9"
+  ],
+  "fiber_plastic_cost": [
+    "35"
+  ],
+  "fiber_plastic_spool_weight": [
+    "1000"
+  ],
+  "fiber_nozzle_temperature_preheat": [
+    "235"
+  ],
+  "fiber_nozzle_temperature_standby": [
+    "150"
+  ],
+  "fiber_first_layers_height": [
+    "0.25"
+  ],
+  "fiber_plastic_extrusion_speed": [
+    "8"
+  ],
+  "fiber_extrusion_speed": [
+    "25"
+  ],
+  "fiber_restart_pause": [
+    "0"
+  ],
+  "fiber_finish_ironing_distance": [
+    "8"
+  ],
+  "fiber_priming_line_height": [
+    "0.2"
+  ],
+  "fiber_material_kind": [
+    "composite_matrix"
+  ],
+  "fiber_source_material_id": [
+    "tinmanx1-pp-cgf"
+  ],
+  "compatible_printers": [
+    "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
+    "FibreSeek Seeker 3 - Codex"
+  ]
+}
