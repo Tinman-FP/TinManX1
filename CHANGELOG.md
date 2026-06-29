@@ -18,6 +18,16 @@ Included:
 - regenerated the public source patch from the verified TinManX1 worktree and updated source-helper scripts
 - strengthened attribution language for upstream slicer contributors, transform-source authors, William Tinney / Tinman-FP, OpenAI Codex, and Rocket/FibreSeek private reference boundaries
 
+## v2026.06.28-fibreseek-alpha.8
+
+TinManX1 PCTG chamber target correction.
+
+Included:
+
+- sets all FibreSeek PCTG and PCTG-CF filament profiles to a 45 C active chamber target
+- carries forward the FibreSeek Seeker 3 active chamber-control capability flag
+- updates the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.8`
+
 ## v2026.06.28-fibreseek-alpha.7
 
 TinManX1 FibreSeek chamber-control profile cleanup.
