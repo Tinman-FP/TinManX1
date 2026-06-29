@@ -18,6 +18,16 @@ Included:
 - regenerated the public source patch from the verified TinManX1 worktree and updated source-helper scripts
 - strengthened attribution language for upstream slicer contributors, transform-source authors, William Tinney / Tinman-FP, OpenAI Codex, and Rocket/FibreSeek private reference boundaries
 
+## v2026.06.28-fibreseek-alpha.5
+
+TinManX1 2.4.1 startup branding follow-up.
+
+Included:
+
+- removed the upstream Orca/Bambu cloud migration popup that could show a misleading `Since version 2.4.0` message during TinManX1 startup
+- updated the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.5`
+- kept the alpha.4 FibreSeek Python environment sanitation and 2.4.1 config-wiring fixes
+
 ## v2026.06.28-fibreseek-alpha.4
 
 TinManX1 2.4.1 packaging fix for FibreSeek slicing and visible release revisioning.
