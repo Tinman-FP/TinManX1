@@ -19,7 +19,7 @@ from pathlib import Path
 
 
 EXPECTED_TARGET_NAME = "TinManX1"
-EXPECTED_BUNDLE_ID = "com.orcaslicer.OrcaSlicerCodex"
+EXPECTED_BUNDLE_ID = "com.tinmanfp.TinManX1"
 DEFAULT_TARGET_APP = Path("/Applications/TinManX1.app")
 DEFAULT_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "OrcaSlicer-Codex"
 
@@ -27,7 +27,7 @@ DEFAULT_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "OrcaSli
 def repo_defaults() -> tuple[Path, Path]:
     control_root = Path(__file__).resolve().parents[1]
     work_root = control_root.parent
-    source_root = work_root / "TinManX1-source-v2.4.0"
+    source_root = work_root / "TinManX1-source-v2.4.1"
     built_apps = [
         source_root / "build" / "arm64" / "src" / "Release" / "OrcaSlicer.app",
         source_root / "build" / "arm64" / "src" / "RelWithDebInfo" / "OrcaSlicer.app",
@@ -101,7 +101,7 @@ def update_info_plist(app: Path) -> str:
     with info_path.open("rb") as fh:
         info = plistlib.load(fh)
 
-    version = str(info.get("CFBundleShortVersionString") or "2.4.0-alpha")
+    version = str(info.get("CFBundleShortVersionString") or "2.4.1-alpha")
     info["CFBundleName"] = EXPECTED_TARGET_NAME
     info["CFBundleDisplayName"] = EXPECTED_TARGET_NAME
     info["CFBundleIdentifier"] = EXPECTED_BUNDLE_ID
@@ -131,6 +131,11 @@ LIVE_GUARD_SECONDS="${{ORCASLICER_CODEX_LIVE_GUARD_SECONDS:-300}}"
 LIVE_GUARD_TICK_SECONDS="${{ORCASLICER_CODEX_LIVE_GUARD_TICK_SECONDS:-5}}"
 : "${{ORCASLICER_CODEX_BAMBU_PLUGIN_POLICY:=allow}}"
 export ORCASLICER_CODEX_BAMBU_PLUGIN_POLICY
+
+# CAD tools such as Autodesk Fusion can leave Python runtime variables in the
+# launch environment. TinManX1 helper planners must use a clean interpreter.
+unset PYTHONHOME
+unset PYTHONPATH
 
 run_preflight() {{
   PYTHONHOME= PYTHONPATH= "$PYTHON_BIN" "$PREFLIGHT" "$@"

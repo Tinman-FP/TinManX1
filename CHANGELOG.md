@@ -14,8 +14,73 @@ Included:
 - added a neutral Rocket/TinManX1 G-code comparison helper for command families, thermal setpoints, tool ownership, cut/load behavior, route metadata, timing, and material summaries
 - added a structural FibreSeek wiring checker so profile, config, UI, preset, generator, and planner handoff changes cannot silently drift
 - expanded compact Strength/search UI exposure for the important fiber controls
+- updated public release-scope and local install/verify helper defaults for the Orca Slicer 2.4.1 source line and TinManX1 bundle identity
 - regenerated the public source patch from the verified TinManX1 worktree and updated source-helper scripts
 - strengthened attribution language for upstream slicer contributors, transform-source authors, William Tinney / Tinman-FP, OpenAI Codex, and Rocket/FibreSeek private reference boundaries
+
+## v2026.06.28-fibreseek-alpha.8
+
+TinManX1 PCTG chamber target correction.
+
+Included:
+
+- sets all FibreSeek PCTG and PCTG-CF filament profiles to a 45 C active chamber target
+- carries forward the FibreSeek Seeker 3 active chamber-control capability flag
+- updates the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.8`
+
+## v2026.06.28-fibreseek-alpha.7
+
+TinManX1 FibreSeek chamber-control profile cleanup.
+
+Included:
+
+- marks the FibreSeek Seeker 3 profile pack as active chamber-control capable
+- keeps active chamber temperature control selected for every filament profile with a nonzero chamber target
+- preserves PETG as chamber-off because its FibreSeek baseline chamber target is zero
+- updates the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.7`
+
+## v2026.06.28-fibreseek-alpha.6
+
+TinManX1 macOS launcher packaging fix.
+
+Included:
+
+- packages the macOS app with a `TinManX1` launcher wrapper and `TinManX1.real` binary so installed apps use the `OrcaSlicer-Codex` data directory where FibreSeek profiles are installed
+- preserves the clean Python environment guard for FibreSeek helper planners in the packaged launcher
+- updates the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.6`
+
+## v2026.06.28-fibreseek-alpha.5
+
+TinManX1 2.4.1 startup branding follow-up.
+
+Included:
+
+- removed the upstream Orca/Bambu cloud migration popup that could show a misleading `Since version 2.4.0` message during TinManX1 startup
+- updated the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.5`
+- kept the alpha.4 FibreSeek Python environment sanitation and 2.4.1 config-wiring fixes
+
+## v2026.06.28-fibreseek-alpha.4
+
+TinManX1 2.4.1 packaging fix for FibreSeek slicing and visible release revisioning.
+
+Included:
+
+- added a visible TinManX1 rev line to the splash and about artwork
+- sanitized `PYTHONHOME` and `PYTHONPATH` before launching macOS helper planners so Autodesk Fusion's Python environment cannot break FibreSeek slicing
+- restored upstream Orca Slicer 2.4.1 `chamber_minimal_temperature` config wiring that was dropped during rebase conflict cleanup
+- updated the macOS app installer launcher template with the same clean Python environment guard
+
+## v2026.06.28-fibreseek-alpha.3
+
+TinManX1 Orca Slicer 2.4.1 carry-forward and installed-profile slicing fix.
+
+Included:
+
+- rebased the current TinManX1 patch onto upstream Orca Slicer 2.4.1
+- updated TinManX1 splash/about branding strings to say `Based on Orca Slicer Version 2.4.1`
+- made GitHub macOS and Windows release workflows build from the 2.4.1 patch line
+- added the generated TinManX1 FibreSeek profile pack to the public package
+- verified the installed macOS app profile bundle slices a PETG + X-CCF FibreSeek smoke model and emits native fiber metadata
 
 ## v2026.06.28-fibreseek-alpha.1
 

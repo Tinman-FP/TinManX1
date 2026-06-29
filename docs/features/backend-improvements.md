@@ -6,7 +6,7 @@ The TinManX1 work also includes non-feature-surface improvements that make the a
 
 - dedicated TinManX1 bundle identity and app-support separation
 - local installed-app verification scripts
-- upgrade path from the previous local app baseline to the Orca Slicer 2.4.0 source line
+- upgrade path from the previous local app baseline to the Orca Slicer 2.4.1 source line
 - proprietary plugin boundary notes without redistributing binary-only networking components
 - profile and printer-control separation notes for local device workflows
 - device-agent compatibility context where it affects TinManX1 app behavior

@@ -6,7 +6,7 @@ on:
       release_tag:
         description: "TinManX1 public release tag to build"
         required: true
-        default: "v2026.06.28-fibreseek-alpha.2"
+        default: "v2026.06.28-fibreseek-alpha.8"
       upload_to_release:
         description: "Upload macOS artifacts to the matching GitHub release"
         required: true
@@ -29,8 +29,8 @@ jobs:
     timeout-minutes: 360
 
     env:
-      ORCA_BASE_COMMIT: 6d9eb1792f50d11ea12d60526b6ace58666354fd
-      PATCH_FILE: patches/tinmanx1-v2.4.0-houseclean-native-fiber.patch
+      ORCA_BASE_COMMIT: 19db9aa9c3f6720bceaff2d4c9c377362c440f4f
+      PATCH_FILE: patches/tinmanx1-v2.4.1-houseclean-native-fiber.patch
       CMAKE_BUILD_PARALLEL_LEVEL: 3
       HOMEBREW_NO_AUTO_UPDATE: 1
 
@@ -142,10 +142,27 @@ jobs:
 
           macos_dir="$app/Contents/MacOS"
           if [ -f "$macos_dir/OrcaSlicer" ]; then
-            mv "$macos_dir/OrcaSlicer" "$macos_dir/TinManX1"
-          elif [ -f "$macos_dir/OrcaSlicer.real" ] && [ ! -f "$macos_dir/TinManX1" ]; then
-            mv "$macos_dir/OrcaSlicer.real" "$macos_dir/TinManX1"
+            mv "$macos_dir/OrcaSlicer" "$macos_dir/TinManX1.real"
+          elif [ -f "$macos_dir/OrcaSlicer.real" ]; then
+            mv "$macos_dir/OrcaSlicer.real" "$macos_dir/TinManX1.real"
+          elif [ -f "$macos_dir/TinManX1" ]; then
+            mv "$macos_dir/TinManX1" "$macos_dir/TinManX1.real"
           fi
+
+          cat > "$macos_dir/TinManX1" <<'SH'
+          #!/bin/sh
+          DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+          DATADIR="${TINMANX1_DATADIR:-${ORCASLICER_CODEX_DATADIR:-$HOME/Library/Application Support/OrcaSlicer-Codex}}"
+
+          # CAD tools such as Autodesk Fusion can leave Python runtime variables in the
+          # launch environment. TinManX1 helper planners must use a clean interpreter.
+          unset PYTHONHOME
+          unset PYTHONPATH
+
+          mkdir -p "$DATADIR" 2>/dev/null || true
+          exec "$DIR/TinManX1.real" --datadir "$DATADIR" "$@"
+          SH
+          chmod +x "$macos_dir/TinManX1"
 
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.tinmanfp.TinManX1" "$app/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable TinManX1" "$app/Contents/Info.plist"
@@ -153,6 +170,8 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName TinManX1" "$app/Contents/Info.plist" 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string TinManX1" "$app/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleURLTypes:0:CFBundleURLName TinManX1 Downloads" "$app/Contents/Info.plist" 2>/dev/null || true
 
+          test -x "$app/Contents/MacOS/TinManX1"
+          test -x "$app/Contents/MacOS/TinManX1.real"
           test -f "$app/Contents/Resources/profiles/TinManX1.json"
           test -f "$app/Contents/Resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
           test -f "$app/Contents/Resources/orcaslicer_codex/fiber_planner/orcaslicer_codex_native_fiber_planner.py"

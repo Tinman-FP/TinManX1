@@ -1,0 +1,63 @@
+{
+  "type": "machine",
+  "name": "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
+  "inherits": "TinManX1 FibreSeek machine common",
+  "from": "system",
+  "setting_id": "TMX-FS3-M-X0.8-0.7",
+  "instantiation": "true",
+  "printer_model": "FibreSeek Seeker 3",
+  "printer_variant": "0.8+0.7",
+  "extruder_colour": [
+    "#D84B4B",
+    "#111111"
+  ],
+  "extruder_offset": [
+    "0x0",
+    "0x0"
+  ],
+  "extruder_type": [
+    "Direct Drive",
+    "Direct Drive"
+  ],
+  "extruder_variant_list": [
+    "Direct Drive Standard",
+    "Direct Drive Standard"
+  ],
+  "printer_extruder_id": [
+    "1",
+    "2"
+  ],
+  "printer_extruder_variant": [
+    "Direct Drive Standard",
+    "Direct Drive Standard"
+  ],
+  "nozzle_diameter": [
+    "0.8",
+    "0.7"
+  ],
+  "filament_map": [
+    "1",
+    "2"
+  ],
+  "max_layer_height": [
+    "0.56",
+    "0.40"
+  ],
+  "min_layer_height": [
+    "0.16",
+    "0.14"
+  ],
+  "retraction_length": [
+    "1.0",
+    "1.0"
+  ],
+  "default_print_profile": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8+0.7 nozzle",
+  "default_filament_profile": [
+    "TinManX1 PCTG @FibreSeek Seeker 3",
+    "CFC PCTG + X-CCF @FibreSeek Seeker 3"
+  ],
+  "plastic_nozzle_diameter": "0.8",
+  "composite_nozzle_diameter": "0.7",
+  "fiber_enabled": "1",
+  "fiber_shared_nozzle": "1"
+}

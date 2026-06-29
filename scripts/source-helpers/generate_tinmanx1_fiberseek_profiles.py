@@ -277,7 +277,7 @@ MATERIALS = {
         "temp_first": 265,
         "bed": 80,
         "bed_first": 80,
-        "chamber": 35,
+        "chamber": 45,
         "fan": 20,
         "fan_max": 35,
         "flow": 0.97,
@@ -297,7 +297,7 @@ MATERIALS = {
         "temp_first": 265,
         "bed": 80,
         "bed_first": 80,
-        "chamber": 35,
+        "chamber": 45,
         "fan": 5,
         "fan_max": 15,
         "flow": 0.98,
@@ -524,6 +524,7 @@ def with_optional_filament_retraction(profile: dict, values: dict, prefix: str =
 
 
 def filament_base(material: str, values: dict) -> dict:
+    chamber_temperature = int(values["chamber"])
     profile = {
         "type": "filament",
         "name": f"TinManX1 {material} base",
@@ -549,8 +550,8 @@ def filament_base(material: str, values: dict) -> dict:
         "eng_plate_temp_initial_layer": arr(values["bed_first"]),
         "textured_plate_temp": arr(values["bed"]),
         "textured_plate_temp_initial_layer": arr(values["bed_first"]),
-        "chamber_temperature": arr(values["chamber"]),
-        "activate_chamber_temp_control": arr("1" if values["chamber"] else "0"),
+        "chamber_temperature": arr(chamber_temperature),
+        "activate_chamber_temp_control": arr("1" if chamber_temperature else "0"),
         "fan_min_speed": arr(values["fan"]),
         "fan_max_speed": arr(values["fan_max"]),
         "slow_down_for_layer_cooling": arr("1" if values["fan"] else "0"),
@@ -721,6 +722,7 @@ def machine_common() -> dict:
         "before_layer_change_gcode": ";BEFORE_LAYER_CHANGE\n;[layer_z]\nG92 E0\n",
         "layer_change_gcode": "G92 E0",
         "use_relative_e_distances": "1",
+        "support_chamber_temp_control": "1",
         "fiber_enabled": "0",
         "fiber_shared_nozzle": "0",
         "plastic_nozzle_diameter": "0.4",
