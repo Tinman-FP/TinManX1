@@ -75,6 +75,7 @@
   "before_layer_change_gcode": ";BEFORE_LAYER_CHANGE\n;[layer_z]\nG92 E0\n",
   "layer_change_gcode": "G92 E0",
   "use_relative_e_distances": "1",
+  "support_chamber_temp_control": "1",
   "fiber_enabled": "0",
   "fiber_shared_nozzle": "0",
   "plastic_nozzle_diameter": "0.4",
