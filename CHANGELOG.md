@@ -18,6 +18,17 @@ Included:
 - regenerated the public source patch from the verified TinManX1 worktree and updated source-helper scripts
 - strengthened attribution language for upstream slicer contributors, transform-source authors, William Tinney / Tinman-FP, OpenAI Codex, and Rocket/FibreSeek private reference boundaries
 
+## v2026.06.28-fibreseek-alpha.7
+
+TinManX1 FibreSeek chamber-control profile cleanup.
+
+Included:
+
+- marks the FibreSeek Seeker 3 profile pack as active chamber-control capable
+- keeps active chamber temperature control selected for every filament profile with a nonzero chamber target
+- preserves PETG as chamber-off because its FibreSeek baseline chamber target is zero
+- updates the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.7`
+
 ## v2026.06.28-fibreseek-alpha.6
 
 TinManX1 macOS launcher packaging fix.
