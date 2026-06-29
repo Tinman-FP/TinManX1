@@ -6,7 +6,7 @@ on:
       release_tag:
         description: "TinManX1 public release tag to build"
         required: true
-        default: "v2026.06.28-fibreseek-alpha.5"
+        default: "v2026.06.28-fibreseek-alpha.6"
       upload_to_release:
         description: "Upload Windows artifacts to the matching GitHub release"
         required: true

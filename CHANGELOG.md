@@ -18,6 +18,16 @@ Included:
 - regenerated the public source patch from the verified TinManX1 worktree and updated source-helper scripts
 - strengthened attribution language for upstream slicer contributors, transform-source authors, William Tinney / Tinman-FP, OpenAI Codex, and Rocket/FibreSeek private reference boundaries
 
+## v2026.06.28-fibreseek-alpha.6
+
+TinManX1 macOS launcher packaging fix.
+
+Included:
+
+- packages the macOS app with a `TinManX1` launcher wrapper and `TinManX1.real` binary so installed apps use the `OrcaSlicer-Codex` data directory where FibreSeek profiles are installed
+- preserves the clean Python environment guard for FibreSeek helper planners in the packaged launcher
+- updates the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.6`
+
 ## v2026.06.28-fibreseek-alpha.5
 
 TinManX1 2.4.1 startup branding follow-up.
