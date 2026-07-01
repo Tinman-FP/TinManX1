@@ -8,6 +8,7 @@ Included:
 
 - added Push Plastic PC-PBT plastic and continuous-fiber matrix profiles across every FibreSeek Seeker 3 plastic and composite nozzle variant
 - added a local Codex catalog installer for Push Plastic PC-PBT profiles across Universal, Creality K2 Plus, Elegoo Centauri, Prusa Core One, Qidi X-Plus 4, RatRig V-Core 4, Snapmaker U1, and Sovol SV08 MAX machine buckets
+- extended the Push Plastic PC-PBT Codex installer to repair TinManX1's enabled filament list and active user preset `.info` sidecars so the profiles appear under Codex in installed apps
 - added generated-rib fiber infill density and comma-separated custom angle controls
 - added fiber-only seam placement controls: Source, Nearest, Aligned, Rear, and Random, plus aligned seam angle
 - added a validated advanced layup payload helper for building `fiber_reinforcement_payload` JSON from named templates or simple band specs
