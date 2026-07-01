@@ -1,6 +1,6 @@
 {
   "name": "TinManX1",
-  "version": "02.04.00.13",
+  "version": "02.04.00.14",
   "force_update": "0",
   "description": "TinManX1 FibreSeek Seeker 3 plastic and continuous-fiber profiles",
   "machine_model_list": [
@@ -351,6 +351,30 @@
     {
       "name": "CFC PCTG-CF + CBF @FibreSeek Seeker 3",
       "sub_path": "filament/CFC PCTG-CF + CBF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "TinManX1 Push Plastic PC-PBT base",
+      "sub_path": "filament/TinManX1 Push Plastic PC-PBT base.json"
+    },
+    {
+      "name": "TinManX1 Push Plastic PC-PBT @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 Push Plastic PC-PBT @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC Push Plastic PC-PBT + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC Push Plastic PC-PBT + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC Push Plastic PC-PBT + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC Push Plastic PC-PBT + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC Push Plastic PC-PBT + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC Push Plastic PC-PBT + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC Push Plastic PC-PBT + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC Push Plastic PC-PBT + CBF @FibreSeek Seeker 3.json"
     },
     {
       "name": "TinManX1 PA-CF base",
