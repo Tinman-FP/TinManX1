@@ -29,7 +29,7 @@ ROOT = find_repo_root(Path(__file__).resolve())
 HELPER_DIR = Path(__file__).resolve().parent
 PROFILE_ROOT = ROOT / "resources" / "profiles"
 PACK_ROOT = PROFILE_ROOT / "TinManX1"
-PACK_VERSION = "02.04.00.13"
+PACK_VERSION = "02.04.00.14"
 MACHINE_MODEL = "FibreSeek Seeker 3"
 LEGACY_COMPOSITE_MACHINE_NAMES = ["FibreSeek Seeker 3 - Codex"]
 
@@ -308,6 +308,30 @@ MATERIALS = {
         "fiber_flow": 0.82,
         "fiber_mvs": 8,
     },
+    "Push Plastic PC-PBT": {
+        "color": "#1F1F1F",
+        "fiber_color": "#111111",
+        "manufacturer": "Push Plastic",
+        "fiber_plastic_name": "Push Plastic PC-PBT",
+        "density": 1.20,
+        "cost": 40,
+        "temp": 255,
+        "temp_first": 255,
+        "temp_range_low": 245,
+        "temp_range_high": 260,
+        "bed": 110,
+        "bed_first": 110,
+        "chamber": 55,
+        "fan": 10,
+        "fan_max": 25,
+        "flow": 1.00,
+        "mvs": 6,
+        "fiber_temp": 260,
+        "fiber_temp_first": 260,
+        "fiber_fan": 15,
+        "fiber_flow": 0.82,
+        "fiber_mvs": 6,
+    },
     "PA-CF": {
         "color": "#2D2D2D",
         "fiber_color": "#111111",
@@ -542,8 +566,8 @@ def filament_base(material: str, values: dict) -> dict:
         "filament_soluble": arr("0"),
         "nozzle_temperature": arr(values["temp"]),
         "nozzle_temperature_initial_layer": arr(values["temp_first"]),
-        "nozzle_temperature_range_low": arr(max(180, values["temp"] - 20)),
-        "nozzle_temperature_range_high": arr(values["temp_first"] + 20),
+        "nozzle_temperature_range_low": arr(values.get("temp_range_low", max(180, values["temp"] - 20))),
+        "nozzle_temperature_range_high": arr(values.get("temp_range_high", values["temp_first"] + 20)),
         "hot_plate_temp": arr(values["bed"]),
         "hot_plate_temp_initial_layer": arr(values["bed_first"]),
         "eng_plate_temp": arr(values["bed"]),

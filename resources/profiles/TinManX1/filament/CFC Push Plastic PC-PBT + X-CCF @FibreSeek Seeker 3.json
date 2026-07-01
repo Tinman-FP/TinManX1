@@ -1,0 +1,124 @@
+{
+  "type": "filament",
+  "name": "CFC Push Plastic PC-PBT + X-CCF @FibreSeek Seeker 3",
+  "inherits": "TinManX1 Push Plastic PC-PBT base",
+  "from": "system",
+  "setting_id": "TMX-FS3-Push-Plastic-PC-PBT-X-CCF",
+  "filament_id": "tinmanx1-fs3-push-plastic-pc-pbt-x-ccf",
+  "instantiation": "true",
+  "filament_vendor": [
+    "TinManX1"
+  ],
+  "filament_type": [
+    "CFC"
+  ],
+  "description": "CFC Push Plastic PC-PBT + X-CCF @FibreSeek Seeker 3. TinManX1 estimate. Known FibreSeek/Rocket baseline only for CFC PETG + X-CCF; other matrix/fiber combinations are conservative TinManX1 estimates for coupon tuning.",
+  "default_filament_colour": [
+    "#111111"
+  ],
+  "filament_flow_ratio": [
+    "0.82"
+  ],
+  "filament_max_volumetric_speed": [
+    "6"
+  ],
+  "nozzle_temperature": [
+    "260"
+  ],
+  "nozzle_temperature_initial_layer": [
+    "260"
+  ],
+  "nozzle_temperature_range_low": [
+    "240"
+  ],
+  "nozzle_temperature_range_high": [
+    "280"
+  ],
+  "fan_min_speed": [
+    "15"
+  ],
+  "fan_max_speed": [
+    "25"
+  ],
+  "composite_enabled": [
+    "1"
+  ],
+  "fiber_name": [
+    "X-CCF Carbon fiber 0.25 mm"
+  ],
+  "fiber_type": [
+    "carbon_fiber"
+  ],
+  "fiber_manufacturer": [
+    "fibreseek"
+  ],
+  "fiber_diameter": [
+    "0.25"
+  ],
+  "fiber_linear_density": [
+    "102.0"
+  ],
+  "fiber_spool_length_km": [
+    "0.5"
+  ],
+  "fiber_cost": [
+    "180"
+  ],
+  "fiber_plastic_name": [
+    "Push Plastic PC-PBT"
+  ],
+  "fiber_plastic_type": [
+    "Push Plastic PC-PBT"
+  ],
+  "fiber_plastic_manufacturer": [
+    "Push Plastic"
+  ],
+  "fiber_plastic_diameter": [
+    "1.75"
+  ],
+  "fiber_plastic_density": [
+    "1.2"
+  ],
+  "fiber_plastic_cost": [
+    "40"
+  ],
+  "fiber_plastic_spool_weight": [
+    "1000"
+  ],
+  "fiber_nozzle_temperature_preheat": [
+    "260"
+  ],
+  "fiber_nozzle_temperature_standby": [
+    "150"
+  ],
+  "fiber_first_layers_height": [
+    "0.25"
+  ],
+  "fiber_plastic_extrusion_speed": [
+    "8"
+  ],
+  "fiber_extrusion_speed": [
+    "25"
+  ],
+  "fiber_restart_pause": [
+    "0"
+  ],
+  "fiber_finish_ironing_distance": [
+    "8"
+  ],
+  "fiber_priming_line_height": [
+    "0.2"
+  ],
+  "fiber_material_kind": [
+    "composite_matrix"
+  ],
+  "fiber_source_material_id": [
+    "tinmanx1-push-plastic-pc-pbt-x-ccf"
+  ],
+  "compatible_printers": [
+    "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
+    "FibreSeek Seeker 3 - Codex"
+  ]
+}

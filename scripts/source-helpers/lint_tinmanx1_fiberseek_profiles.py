@@ -36,6 +36,7 @@ MATERIALS = {
     "PP",
     "PCTG",
     "PCTG-CF",
+    "Push Plastic PC-PBT",
     "PA-CF",
     "PETG",
     "PET GF",
