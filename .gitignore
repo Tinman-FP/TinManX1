@@ -11,4 +11,5 @@ __pycache__/
 *.dylib
 manifests/current-local.json
 local-state/
+work/
 Application Support/
