@@ -544,7 +544,7 @@ def generated_profile(entry: dict[str, Any], *, system: bool) -> dict[str, Any]:
         "filament_deretraction_speed": arr(settings["filament_deretraction_speed"]),
         "compatible_printers": [],
         "is_custom_defined": "0",
-        "version": "2.4.1.0",
+        "version": "2.4.2.0",
         "description": (
             f"{GENERATED_MARKER}; material={material}; official source="
             f"{settings['source']['path']}; source updated={settings['source']['updatedAt']}"

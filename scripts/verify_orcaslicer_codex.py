@@ -157,8 +157,13 @@ def check_executable_version(state: CheckState, app: Path, expected_version: str
         state.fail("real executable missing; cannot check executable version")
         return
     text = binary_strings(real)
-    expected_label = f"OrcaSlicer {expected_version}"
-    if expected_label in text or f"OrcaSlicer/{expected_version}" in text:
+    expected_labels = (
+        f"TinManX1 {expected_version}",
+        f"TinManX1/{expected_version}",
+        f"OrcaSlicer {expected_version}",
+        f"OrcaSlicer/{expected_version}",
+    )
+    if any(label in text for label in expected_labels):
         state.ok(f"executable reports {expected_version}")
     else:
         state.fail(f"executable does not report {expected_version}")
@@ -185,11 +190,11 @@ def check_config(state: CheckState, app_support: Path, expected_version: str) ->
         state.fail("config is not parseable JSON")
         return
 
-    expected_header = f"OrcaSlicer {expected_version}"
-    if data.get("header") == expected_header:
-        state.ok(f"config header reports OrcaSlicer {expected_version}")
+    expected_headers = {f"TinManX1 {expected_version}", f"OrcaSlicer {expected_version}"}
+    if data.get("header") in expected_headers:
+        state.ok(f"config header reports {data.get('header')}")
     else:
-        state.warn(f"config header does not report OrcaSlicer {expected_version}")
+        state.warn(f"config header does not report TinManX1 {expected_version}")
 
     app = data.get("app", {})
     if isinstance(app, dict) and app.get("check_stable_update_only") is True:
@@ -275,7 +280,7 @@ def main() -> int:
     parser.add_argument("--app", type=Path, default=DEFAULT_APP)
     parser.add_argument("--tinmanx-app", type=Path, default=DEFAULT_TINMANX_APP)
     parser.add_argument("--app-support", type=Path, default=DEFAULT_APP_SUPPORT)
-    parser.add_argument("--expected-version", default="2.4.1")
+    parser.add_argument("--expected-version", default="2.4.2")
     parser.add_argument("--codesign", action="store_true")
     args = parser.parse_args()
 

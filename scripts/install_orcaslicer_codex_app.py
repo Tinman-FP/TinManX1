@@ -29,12 +29,12 @@ DEFAULT_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "OrcaSli
 def repo_defaults() -> tuple[Path, Path]:
     control_root = Path(__file__).resolve().parents[1]
     work_root = control_root.parent
-    source_root = work_root / "TinManX1-source-v2.4.1"
+    source_root = work_root / "TinManX1-source-v2.4.2"
     built_apps = [
+        source_root / "build" / "arm64" / "OrcaSlicer" / "OrcaSlicer.app",
         source_root / "build" / "arm64" / "src" / "Release" / "OrcaSlicer.app",
         source_root / "build" / "arm64" / "src" / "RelWithDebInfo" / "OrcaSlicer.app",
         source_root / "build" / "arm64" / "src" / "Debug" / "OrcaSlicer.app",
-        source_root / "build" / "arm64" / "OrcaSlicer" / "OrcaSlicer.app",
     ]
     built_app = next(
         (app for app in built_apps if (app / "Contents" / "MacOS" / "OrcaSlicer").exists()),
@@ -122,7 +122,7 @@ def update_info_plist(app: Path) -> str:
     with info_path.open("rb") as fh:
         info = plistlib.load(fh)
 
-    version = str(info.get("CFBundleShortVersionString") or "2.4.1")
+    version = str(info.get("CFBundleShortVersionString") or "2.4.2")
     info["CFBundleName"] = EXPECTED_TARGET_NAME
     info["CFBundleDisplayName"] = EXPECTED_TARGET_NAME
     info["CFBundleIdentifier"] = EXPECTED_BUNDLE_ID

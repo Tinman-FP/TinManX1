@@ -6,6 +6,10 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- rebased the current TinManX1 patch onto upstream Orca Slicer 2.4.2 commit `8500fcdccaa10b5099ac20d252af3a7c560046f1`
+- updated the installed macOS TinManX1 app to report `2.4.2` while preserving the dedicated `OrcaSlicer-Codex` data directory and FibreSeek profile visibility
+- refreshed splash/about branding text to say `Based on Orca Slicer Version 2.4.2`
+- folded Bambu networking plug-in `02.06.00.50` recognition into the current 2.4.2 source patch without redistributing proprietary native plug-in binaries
 - added a current Polymaker/Fiberon Universal Codex catalog snapshot from Polymaker's official preset index, covering 66 current materials and preserving each selected official source preset path
 - enriched the Polymaker/Fiberon catalog with current Polymaker shop price sources and 1 kg-equivalent slicer costs
 - added a local Codex catalog installer and verifier for those Polymaker/Fiberon presets, including enabled-filament list repair and active user preset `.info` sidecars

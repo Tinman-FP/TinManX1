@@ -6,8 +6,8 @@ This repository is a clean public release package. It does not contain private p
 
 ## What Is Included
 
-- A current source patch for TinManX1 on the Orca Slicer 2.4.1 source line:
-  - `patches/tinmanx1-v2.4.1-houseclean-native-fiber.patch`
+- A current source patch for TinManX1 on the Orca Slicer 2.4.2 source line:
+  - `patches/tinmanx1-v2.4.2-houseclean-native-fiber.patch`
 - A generated TinManX1 FibreSeek profile pack under `resources/profiles/TinManX1`.
 - Helper scripts for the native FibreSeek planner, G-code contract audit, Rocket/TinManX1 comparison reports, wiring checks, Arc Support, Strength Lens, fibre metadata sidecars, and smoke checks.
 - Manifest helper notes and validation scripts for the local TinManX1 app workflow.
@@ -28,8 +28,8 @@ This repository is a clean public release package. It does not contain private p
 ## Upstream Baseline
 
 - Primary upstream: [OrcaSlicer](https://github.com/OrcaSlicer/OrcaSlicer)
-- TinManX1 application display version: based on Orca Slicer `2.4.1`
-- Source base commit used to generate this patch: `19db9aa9c3f6720bceaff2d4c9c377362c440f4f`
+- TinManX1 application display version: based on Orca Slicer `2.4.2`
+- Source base commit used to generate this patch: `8500fcdccaa10b5099ac20d252af3a7c560046f1`
 - License family: AGPL-3.0-or-later, following OrcaSlicer and its upstream lineage
 
 ## Repository Boundaries
@@ -83,7 +83,7 @@ python3 scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py
 For local installed-app validation, see:
 
 ```bash
-python3 scripts/verify_orcaslicer_codex.py --expected-version 2.4.1 --codesign
+python3 scripts/verify_orcaslicer_codex.py --expected-version 2.4.2 --codesign
 python3 scripts/collect_baseline_manifest.py --output manifests/current-local.json
 ```
 
