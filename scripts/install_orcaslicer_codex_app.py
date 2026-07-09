@@ -20,6 +20,8 @@ from pathlib import Path
 
 EXPECTED_TARGET_NAME = "TinManX1"
 EXPECTED_BUNDLE_ID = "com.tinmanfp.TinManX1"
+UPSTREAM_EXECUTABLE_NAME = "OrcaSlicer"
+TARGET_EXECUTABLE_NAME = EXPECTED_TARGET_NAME
 DEFAULT_TARGET_APP = Path("/Applications/TinManX1.app")
 DEFAULT_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "OrcaSlicer-Codex"
 
@@ -65,7 +67,18 @@ def copy_optional_tree(src: Path, dst: Path) -> None:
         shutil.copytree(src, dst, symlinks=True)
 
 
+def copy_first_available(candidates: list[Path], dst: Path, *, executable: bool = False) -> None:
+    for src in candidates:
+        if src.exists():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            if executable:
+                dst.chmod(dst.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+            return
+
+
 def install_feature_resources(source_root: Path, app: Path) -> None:
+    release_root = Path(__file__).resolve().parents[1]
     resources = app / "Contents" / "Resources" / "orcaslicer_codex"
     arc_support = resources / "arc_support"
     sidecars = resources / "sidecars"
@@ -94,6 +107,14 @@ def install_feature_resources(source_root: Path, app: Path) -> None:
         source_root / "SoftFever_doc" / "orcaslicer_codex_feature_attribution.md",
         resources / "attribution" / "orcaslicer_codex_feature_attribution.md",
     )
+    copy_first_available(
+        [
+            source_root / "scripts" / "repair_tinmanx1_bambu_lan_bindings.py",
+            release_root / "scripts" / "source-helpers" / "repair_tinmanx1_bambu_lan_bindings.py",
+        ],
+        resources / "tools" / "repair_bambu_lan_bindings.py",
+        executable=True,
+    )
 
 
 def update_info_plist(app: Path) -> str:
@@ -101,11 +122,11 @@ def update_info_plist(app: Path) -> str:
     with info_path.open("rb") as fh:
         info = plistlib.load(fh)
 
-    version = str(info.get("CFBundleShortVersionString") or "2.4.1-alpha")
+    version = str(info.get("CFBundleShortVersionString") or "2.4.1")
     info["CFBundleName"] = EXPECTED_TARGET_NAME
     info["CFBundleDisplayName"] = EXPECTED_TARGET_NAME
     info["CFBundleIdentifier"] = EXPECTED_BUNDLE_ID
-    info["CFBundleExecutable"] = "OrcaSlicer"
+    info["CFBundleExecutable"] = TARGET_EXECUTABLE_NAME
     info["CFBundleShortVersionString"] = version
 
     with info_path.open("wb") as fh:
@@ -115,17 +136,23 @@ def update_info_plist(app: Path) -> str:
 
 def write_launcher(app: Path, app_support: Path) -> None:
     macos_dir = app / "Contents" / "MacOS"
-    launcher = macos_dir / "OrcaSlicer"
-    real = macos_dir / "OrcaSlicer.real"
+    launcher = macos_dir / TARGET_EXECUTABLE_NAME
+    real = macos_dir / f"{TARGET_EXECUTABLE_NAME}.real"
+    source_executable = macos_dir / TARGET_EXECUTABLE_NAME
+    if not source_executable.exists():
+        source_executable = macos_dir / UPSTREAM_EXECUTABLE_NAME
 
     if real.exists():
         real.unlink()
-    launcher.rename(real)
+    if not source_executable.exists():
+        raise SystemExit(f"source executable not found in staged app: {source_executable}")
+    source_executable.rename(real)
 
     script = f"""#!/bin/sh
 DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 DATADIR="${{ORCASLICER_CODEX_DATADIR:-{app_support}}}"
 PREFLIGHT="$DATADIR/tools/orca_codex_launch_preflight.py"
+REPAIR_HELPER="$DIR/../Resources/orcaslicer_codex/tools/repair_bambu_lan_bindings.py"
 PYTHON_BIN="${{ORCASLICER_CODEX_PYTHON:-/usr/bin/python3}}"
 LIVE_GUARD_SECONDS="${{ORCASLICER_CODEX_LIVE_GUARD_SECONDS:-300}}"
 LIVE_GUARD_TICK_SECONDS="${{ORCASLICER_CODEX_LIVE_GUARD_TICK_SECONDS:-5}}"
@@ -150,8 +177,15 @@ if [ -x "$PREFLIGHT" ]; then
     2> "$DATADIR/_orcaslicer_codex_launch_preflight_last.err" || true
 fi
 
+if [ -z "$TINMANX1_SKIP_BAMBU_LAN_REPAIR" ] && [ -f "$REPAIR_HELPER" ]; then
+  mkdir -p "$DATADIR" 2>/dev/null || true
+  PYTHONHOME= PYTHONPATH= /usr/bin/python3 "$REPAIR_HELPER" --datadir "$DATADIR" \\
+    > "$DATADIR/_tinmanx1_bambu_lan_repair_last.out" \\
+    2> "$DATADIR/_tinmanx1_bambu_lan_repair_last.err" || true
+fi
+
 ORCA_STARTED_EPOCH="$(date +%s)"
-"$DIR/OrcaSlicer.real" --datadir "$DATADIR" "$@" &
+"$DIR/{TARGET_EXECUTABLE_NAME}.real" --datadir "$DATADIR" "$@" &
 ORCA_PID=$!
 LAST_GUARD_EPOCH="$ORCA_STARTED_EPOCH"
 

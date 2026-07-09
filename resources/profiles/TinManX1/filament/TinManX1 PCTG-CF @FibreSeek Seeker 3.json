@@ -20,5 +20,62 @@
     "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
     "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
     "FibreSeek Seeker 3 - Codex"
+  ],
+  "pressure_advance": [
+    "0.024"
+  ]
+}
+{
+  "type": "filament",
+  "name": "TinManX1 PCTG-CF @FibreSeek Seeker 3",
+  "inherits": "TinManX1 PCTG-CF base",
+  "from": "system",
+  "setting_id": "TMX-FS3-PCTG-CF-P",
+  "filament_id": "tinmanx1-fs3-pctg-cf-plastic",
+  "instantiation": "true",
+  "filament_vendor": [
+    "TinManX1"
+  ],
+  "filament_type": [
+    "PCTG-CF"
+  ],
+  "compatible_printers": [
+    "FibreSeek Seeker 3 0.4 nozzle",
+    "FibreSeek Seeker 3 0.6 nozzle",
+    "FibreSeek Seeker 3 0.8 nozzle",
+    "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
+    "FibreSeek Seeker 3 - Codex"
+  ],
+  "nozzle_temperature": [
+    "260"
+  ]
+}
+{
+  "type": "filament",
+  "name": "TinManX1 PCTG-CF @FibreSeek Seeker 3",
+  "inherits": "TinManX1 PCTG-CF base",
+  "from": "system",
+  "setting_id": "TMX-FS3-PCTG-CF-P",
+  "filament_id": "tinmanx1-fs3-pctg-cf-plastic",
+  "instantiation": "true",
+  "filament_vendor": [
+    "TinManX1"
+  ],
+  "filament_type": [
+    "PCTG-CF"
+  ],
+  "compatible_printers": [
+    "FibreSeek Seeker 3 0.4 nozzle",
+    "FibreSeek Seeker 3 0.6 nozzle",
+    "FibreSeek Seeker 3 0.8 nozzle",
+    "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
+    "FibreSeek Seeker 3 - Codex"
+  ],
+  "nozzle_temperature_initial_layer": [
+    "265"
   ]
 }

@@ -12,6 +12,8 @@ Included:
 - added local Codex filament chamber/cost audit tooling for managed installed profiles, including generic 1 kg material averages when no vendor is present
 - added installed manufacturer profile-tree chamber audit tooling for Prusa CORE One, Qidi X-Plus 4, Sovol SV08 MAX, Creality, and Bambu H2D profiles
 - added installed profile-tree filament price audit tooling that resolves inheritance across all installed machine profile trees and verifies every material filament profile has a positive current 1 kg cost
+- added a local-only TinManX1 Bambu network plug-in restore helper and source patch recognizing Bambu networking plug-in `02.06.00.50` for Bambu printer connectivity without redistributing native plug-in binaries
+- added a local-only Bambu LAN binding repair helper that fixes stale TinManX1 `local_machines` IPs by matching printer TLS certificate CNs to saved Bambu serial numbers
 - added a TinManX1 profile-pack installer/validator for syncing generated FibreSeek profiles into the installed app bundle and Application Support system store
 - refreshed FibreSeek material costs for ASA, ABS-CF, ABS-GF, ASA-GF, PPA-CF, PPS-CF, PET-GF, PCTG, PCTG-CF, Push Plastic PC-PBT, and PA-CF while preserving active chamber-control settings
 - added Push Plastic PC-PBT plastic and continuous-fiber matrix profiles across every FibreSeek Seeker 3 plastic and composite nozzle variant
