@@ -147,6 +147,42 @@ SHOP_PRODUCT_HANDLES = {
     "Polymaker PLA Pro Metallic": "polylite-metallic-pla-pro",
 }
 
+TINMANX_MATERIAL_OVERRIDES = {
+    # The official PET-CF17 preset is very fast and uses heavy overhang cooling.
+    # Qidi Plus 4 0.6 mm test prints still showed porous vertical ribs after the
+    # first conservative tune, so TinManX1 carries a slower rescue/validation
+    # profile until the spool/nozzle path has been proven healthy.
+    "Fiberon PET-CF17": {
+        "filament_flow_ratio": "1.08",
+        "filament_max_volumetric_speed": "4",
+        "nozzle_temperature": "300",
+        "nozzle_temperature_initial_layer": "300",
+        "textured_plate_temp": "80",
+        "textured_plate_temp_initial_layer": "80",
+        "hot_plate_temp": "80",
+        "hot_plate_temp_initial_layer": "80",
+        "eng_plate_temp": "80",
+        "eng_plate_temp_initial_layer": "80",
+        "cool_plate_temp": "0",
+        "cool_plate_temp_initial_layer": "0",
+        "fan_min_speed": "0",
+        "fan_max_speed": "0",
+        "overhang_fan_speed": "0",
+        "slow_down_layer_time": "20",
+        "slow_down_min_speed": "8",
+        "filament_retraction_length": "0.8",
+        "enable_pressure_advance": "1",
+        "pressure_advance": "0.028",
+        "filament_notes": (
+            "TinManX1 PET-CF rescue tune 2026-07-11: after repeated porous "
+            "PET-CF test prints, use 300C nozzle, 80C bed, fan off, max "
+            "volumetric 4 mm3/s, flow 1.08, slowdown enabled, and pressure "
+            "advance enabled. Dry filament and inspect hardened nozzle if "
+            "voids persist."
+        ),
+    },
+}
+
 
 @dataclass
 class InstallResult:
@@ -429,6 +465,7 @@ def normalize_source_settings(
         "filament_retraction_speed": first_numeric(source_profile.get("filament_retraction_speed"), "30"),
         "filament_deretraction_speed": first_numeric(source_profile.get("filament_deretraction_speed"), "30"),
     }
+    settings.update(TINMANX_MATERIAL_OVERRIDES.get(material, {}))
     settings["source"] = {
         "slicer": source_preset["slicer"],
         "brand": source_preset["brand"],
@@ -542,6 +579,8 @@ def generated_profile(entry: dict[str, Any], *, system: bool) -> dict[str, Any]:
         "filament_retraction_length": arr(settings["filament_retraction_length"]),
         "filament_retraction_speed": arr(settings["filament_retraction_speed"]),
         "filament_deretraction_speed": arr(settings["filament_deretraction_speed"]),
+        "enable_pressure_advance": arr(settings.get("enable_pressure_advance", "0")),
+        "pressure_advance": arr(settings.get("pressure_advance", "0.02")),
         "compatible_printers": [],
         "is_custom_defined": "0",
         "version": "2.4.2.0",

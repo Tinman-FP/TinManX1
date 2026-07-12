@@ -4,7 +4,7 @@
   "sourceUrl": "https://raw.githubusercontent.com/Polymaker3D/Polymaker-Preset/main/index.json",
   "sourceIndexVersion": "1.0",
   "sourceIndexUpdatedAt": "2026-07-02T08:50:28.961Z",
-  "generatedAt": "2026-07-03T00:26:56",
+  "generatedAt": "2026-07-11T19:41:18",
   "materialCount": 66,
   "materials": [
     {
@@ -983,8 +983,8 @@
         "profile_source_vendor": "Polymaker",
         "filament_density": "1.34",
         "filament_cost": "44.99",
-        "filament_flow_ratio": "0.93",
-        "filament_max_volumetric_speed": "20",
+        "filament_flow_ratio": "1.08",
+        "filament_max_volumetric_speed": "4",
         "filament_is_support": "0",
         "filament_soluble": "0",
         "nozzle_temperature": "300",
@@ -993,22 +993,22 @@
         "nozzle_temperature_range_high": "300",
         "cool_plate_temp": "0",
         "cool_plate_temp_initial_layer": "0",
-        "eng_plate_temp": "70",
-        "eng_plate_temp_initial_layer": "70",
-        "hot_plate_temp": "70",
-        "hot_plate_temp_initial_layer": "70",
-        "textured_plate_temp": "70",
-        "textured_plate_temp_initial_layer": "70",
+        "eng_plate_temp": "80",
+        "eng_plate_temp_initial_layer": "80",
+        "hot_plate_temp": "80",
+        "hot_plate_temp_initial_layer": "80",
+        "textured_plate_temp": "80",
+        "textured_plate_temp_initial_layer": "80",
         "chamber_temperature": "0",
         "activate_chamber_temp_control": "0",
         "fan_min_speed": "0",
-        "fan_max_speed": "40",
-        "overhang_fan_speed": "100",
+        "fan_max_speed": "0",
+        "overhang_fan_speed": "0",
         "overhang_fan_threshold": "95%",
         "required_nozzle_HRC": "40",
         "temperature_vitrification": "79.3",
-        "filament_notes": "",
-        "filament_retraction_length": "1",
+        "filament_notes": "TinManX1 PET-CF rescue tune 2026-07-11: after repeated porous PET-CF test prints, use 300C nozzle, 80C bed, fan off, max volumetric 4 mm3/s, flow 1.08, slowdown enabled, and pressure advance enabled. Dry filament and inspect hardened nozzle if voids persist.",
+        "filament_retraction_length": "0.8",
         "filament_retraction_speed": "30",
         "filament_deretraction_speed": "30",
         "source": {
@@ -1102,7 +1102,16 @@
           "spoolWeightKg": "1",
           "retailPriceUsd": "44.99",
           "costUsdPerKg": "44.99"
-        }
+        },
+        "tinmanxProfileTune": {
+          "date": "2026-07-11",
+          "reason": "Second Qidi Plus 4 0.6 PET-CF17 test print still showed porous ribs and unstable center walls after the 6 mm3/s pass.",
+          "changes": "300C steady nozzle, 4 mm3/s max volumetric, flow 1.08, fan off, slowdown, pressure advance enabled."
+        },
+        "slow_down_layer_time": "20",
+        "slow_down_min_speed": "8",
+        "enable_pressure_advance": "1",
+        "pressure_advance": "0.028"
       }
     },
     {
