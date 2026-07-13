@@ -6,6 +6,23 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- rebased the current TinManX1 patch onto upstream Orca Slicer 2.4.2 commit `8500fcdccaa10b5099ac20d252af3a7c560046f1`
+- updated the installed macOS TinManX1 app to report `2.4.2` while preserving the dedicated `OrcaSlicer-Codex` data directory and FibreSeek profile visibility
+- refreshed splash/about branding text to say `Based on Orca Slicer Version 2.4.2`
+- folded Bambu networking plug-in `02.06.00.50` recognition into the current 2.4.2 source patch without redistributing proprietary native plug-in binaries
+- added a current Polymaker/Fiberon Universal Codex catalog snapshot from Polymaker's official preset index, covering 66 current materials and preserving each selected official source preset path
+- enriched the Polymaker/Fiberon catalog with current Polymaker shop price sources and 1 kg-equivalent slicer costs
+- added a local Codex catalog installer and verifier for those Polymaker/Fiberon presets, including enabled-filament list repair and active user preset `.info` sidecars
+- added local Codex filament chamber/cost audit tooling for managed installed profiles, including generic 1 kg material averages when no vendor is present
+- added installed manufacturer profile-tree chamber audit tooling for Prusa CORE One, Qidi X-Plus 4, Sovol SV08 MAX, Creality, and Bambu H2D profiles
+- added installed profile-tree filament price audit tooling that resolves inheritance across all installed machine profile trees and verifies every material filament profile has a positive current 1 kg cost
+- added a local-only TinManX1 Bambu network plug-in restore helper and source patch recognizing Bambu networking plug-in `02.06.00.50` for Bambu printer connectivity without redistributing native plug-in binaries
+- added a local-only Bambu LAN binding repair helper that fixes stale TinManX1 `local_machines` IPs by matching printer TLS certificate CNs to saved Bambu serial numbers
+- added a TinManX1 profile-pack installer/validator for syncing generated FibreSeek profiles into the installed app bundle and Application Support system store
+- refreshed FibreSeek material costs for ASA, ABS-CF, ABS-GF, ASA-GF, PPA-CF, PPS-CF, PET-GF, PCTG, PCTG-CF, Push Plastic PC-PBT, and PA-CF while preserving active chamber-control settings
+- added Push Plastic PC-PBT plastic and continuous-fiber matrix profiles across every FibreSeek Seeker 3 plastic and composite nozzle variant
+- added a local Codex catalog installer for Push Plastic PC-PBT profiles across Universal, Creality K2 Plus, Elegoo Centauri, Prusa Core One, Qidi X-Plus 4, RatRig V-Core 4, Snapmaker U1, and Sovol SV08 MAX machine buckets
+- extended the Push Plastic PC-PBT Codex installer to repair TinManX1's enabled filament list and active user preset `.info` sidecars so the profiles appear under Codex in installed apps
 - added generated-rib fiber infill density and comma-separated custom angle controls
 - added fiber-only seam placement controls: Source, Nearest, Aligned, Rear, and Random, plus aligned seam angle
 - added a validated advanced layup payload helper for building `fiber_reinforcement_payload` JSON from named templates or simple band specs

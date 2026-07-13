@@ -19,7 +19,10 @@
     "1.18"
   ],
   "filament_cost": [
-    "55"
+    "54.95"
+  ],
+  "filament_price_source": [
+    "Generic 1 kg retail average"
   ],
   "filament_flow_ratio": [
     "0.98"

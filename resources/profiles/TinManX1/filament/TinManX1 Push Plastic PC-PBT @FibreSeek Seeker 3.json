@@ -1,0 +1,24 @@
+{
+  "type": "filament",
+  "name": "TinManX1 Push Plastic PC-PBT @FibreSeek Seeker 3",
+  "inherits": "TinManX1 Push Plastic PC-PBT base",
+  "from": "system",
+  "setting_id": "TMX-FS3-Push-Plastic-PC-PBT-P",
+  "filament_id": "tinmanx1-fs3-push-plastic-pc-pbt-plastic",
+  "instantiation": "true",
+  "filament_vendor": [
+    "TinManX1"
+  ],
+  "filament_type": [
+    "Push Plastic PC-PBT"
+  ],
+  "compatible_printers": [
+    "FibreSeek Seeker 3 0.4 nozzle",
+    "FibreSeek Seeker 3 0.6 nozzle",
+    "FibreSeek Seeker 3 0.8 nozzle",
+    "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
+    "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
+    "FibreSeek Seeker 3 - Codex"
+  ]
+}

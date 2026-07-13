@@ -20,6 +20,10 @@ DEFAULT_TINMANX_APP = Path("/Applications/TinManX TinManX1.app")
 DEFAULT_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "OrcaSlicer-Codex"
 EXPECTED_BUNDLE_ID = "com.tinmanfp.TinManX1"
 EXPECTED_DISPLAY_NAME = "TinManX1"
+LAUNCHER_NAMES = (
+    "TinManX1",
+    "OrcaSlicer",
+)
 BAMBU_PLUGINS = (
     "libBambuSource.dylib",
     "libbambu_networking_02.06.00.50.dylib",
@@ -30,6 +34,7 @@ FEATURE_RESOURCES = (
     "attribution/orcaslicer_codex_feature_attribution.md",
     "sidecars/orcaslicer_codex_fiber_metadata_sidecar.py",
     "sidecars/orcaslicer_codex_strength_lens_sidecar.py",
+    "tools/repair_bambu_lan_bindings.py",
     "third_party/gpl/arc-overhang/LICENSE",
     "third_party/gpl/arc-overhang/NOTICE.md",
     "third_party/gpl/arc-overhang/requirements.txt",
@@ -83,6 +88,16 @@ def binary_strings(path: Path) -> str:
     return proc.stdout if proc.returncode == 0 else ""
 
 
+def find_launcher_pair(app: Path):
+    macos_dir = app / "Contents" / "MacOS"
+    for name in LAUNCHER_NAMES:
+        launcher = macos_dir / name
+        real = macos_dir / f"{name}.real"
+        if launcher.exists() or real.exists():
+            return launcher, real
+    return None, None
+
+
 def check_info(state: CheckState, app: Path, expected_version: str) -> None:
     info_path = app / "Contents" / "Info.plist"
     if not info_path.exists():
@@ -105,14 +120,13 @@ def check_info(state: CheckState, app: Path, expected_version: str) -> None:
 
 
 def check_launcher(state: CheckState, app: Path, app_support: Path) -> None:
-    launcher = app / "Contents" / "MacOS" / "OrcaSlicer"
-    real = app / "Contents" / "MacOS" / "OrcaSlicer.real"
+    launcher, real = find_launcher_pair(app)
 
-    if not launcher.exists():
-        state.fail(f"missing launcher: {launcher}")
+    if launcher is None or not launcher.exists():
+        state.fail(f"missing launcher in {app / 'Contents' / 'MacOS'}")
         return
-    if not real.exists():
-        state.fail(f"missing real executable: {real}")
+    if real is None or not real.exists():
+        state.fail(f"missing real executable next to launcher: {launcher}")
         return
 
     text = launcher.read_text(errors="replace")
@@ -126,6 +140,11 @@ def check_launcher(state: CheckState, app: Path, app_support: Path) -> None:
     else:
         state.warn("launcher did not expose an allow-style Bambu plugin policy")
 
+    if "repair_bambu_lan_bindings.py" in text:
+        state.ok("launcher runs Bambu LAN binding repair helper")
+    else:
+        state.fail("launcher does not run Bambu LAN binding repair helper")
+
     if real.stat().st_size > 1_000_000:
         state.ok("real executable is present and non-trivial")
     else:
@@ -133,10 +152,18 @@ def check_launcher(state: CheckState, app: Path, app_support: Path) -> None:
 
 
 def check_executable_version(state: CheckState, app: Path, expected_version: str) -> None:
-    real = app / "Contents" / "MacOS" / "OrcaSlicer.real"
+    _, real = find_launcher_pair(app)
+    if real is None or not real.exists():
+        state.fail("real executable missing; cannot check executable version")
+        return
     text = binary_strings(real)
-    expected_label = f"OrcaSlicer {expected_version}"
-    if expected_label in text or f"OrcaSlicer/{expected_version}" in text:
+    expected_labels = (
+        f"TinManX1 {expected_version}",
+        f"TinManX1/{expected_version}",
+        f"OrcaSlicer {expected_version}",
+        f"OrcaSlicer/{expected_version}",
+    )
+    if any(label in text for label in expected_labels):
         state.ok(f"executable reports {expected_version}")
     else:
         state.fail(f"executable does not report {expected_version}")
@@ -163,11 +190,11 @@ def check_config(state: CheckState, app_support: Path, expected_version: str) ->
         state.fail("config is not parseable JSON")
         return
 
-    expected_header = f"OrcaSlicer {expected_version}"
-    if data.get("header") == expected_header:
-        state.ok(f"config header reports OrcaSlicer {expected_version}")
+    expected_headers = {f"TinManX1 {expected_version}", f"OrcaSlicer {expected_version}"}
+    if data.get("header") in expected_headers:
+        state.ok(f"config header reports {data.get('header')}")
     else:
-        state.warn(f"config header does not report OrcaSlicer {expected_version}")
+        state.warn(f"config header does not report TinManX1 {expected_version}")
 
     app = data.get("app", {})
     if isinstance(app, dict) and app.get("check_stable_update_only") is True:
@@ -253,7 +280,7 @@ def main() -> int:
     parser.add_argument("--app", type=Path, default=DEFAULT_APP)
     parser.add_argument("--tinmanx-app", type=Path, default=DEFAULT_TINMANX_APP)
     parser.add_argument("--app-support", type=Path, default=DEFAULT_APP_SUPPORT)
-    parser.add_argument("--expected-version", default="2.4.1-alpha")
+    parser.add_argument("--expected-version", default="2.4.2")
     parser.add_argument("--codesign", action="store_true")
     args = parser.parse_args()
 

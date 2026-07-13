@@ -30,7 +30,7 @@ REQUIRED_FILES = [
     "checks/contracts/fiber_layup_editor_contract.json",
     "checks/golden/native_fiber_planner_golden.json",
     ".github/workflows/validate_public_helpers.yml",
-    "patches/tinmanx1-v2.4.1-houseclean-native-fiber.patch",
+    "patches/tinmanx1-v2.4.2-houseclean-native-fiber.patch",
     "resources/profiles/TinManX1.json",
     "resources/profiles/TinManX1/machine/FibreSeek Seeker 3 0.4+0.7 composite nozzle.json",
     "resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json",
