@@ -1558,7 +1558,7 @@ void PrintObject::detect_surfaces_type()
                 // 2. for normal(auto), bridge_no_support is off
                 // 3. for tree(auto), interface top layers=0, max bridge length=0, support_critical_regions_only=false (only in this way the bridge is fully supported)
                 bool bottom_is_fully_supported = this->has_support() && m_config.support_top_z_distance.value == 0 && is_auto(m_config.support_type.value);
-                if (m_config.support_type.value == stNormalAuto)
+                if (is_normal_auto_support(m_config.support_type.value))
                     bottom_is_fully_supported &= !m_config.bridge_no_support.value;
                 else if (m_config.support_type.value == stTreeAuto) {
                     bottom_is_fully_supported &= (m_config.support_interface_top_layers.value > 0 && m_config.max_bridge_length.value == 0 && m_config.support_critical_regions_only.value==false);
@@ -3568,10 +3568,19 @@ static void clamp_feature_filament_to_valid(ConfigOptionInt &opt, size_t num_ext
 PrintObjectConfig PrintObject::object_config_from_model_object(const PrintObjectConfig &default_object_config, const ModelObject &object, size_t num_extruders)
 {
     PrintObjectConfig config = default_object_config;
+    const SupportType profile_support_type = default_object_config.support_type.value;
+    const bool arc_support_from_print_profile = is_arc(profile_support_type);
     {
         DynamicPrintConfig src_normalized(object.config.get());
         src_normalized.normalize_fdm();
         config.apply(src_normalized, true);
+    }
+    // Object/project overrides should not silently downgrade an explicit Arc Overhang process.
+    if (arc_support_from_print_profile) {
+        config.enable_support.value = false;
+        config.support_type.value = profile_support_type;
+        config.tinman_support_strategy.value = TinmanSupportStrategy::Arc;
+        config.arc_support_experimental.value = true;
     }
     // Clamp invalid extruders to the default extruder (with index 1).
     clamp_exturder_to_default(config.support_filament,           num_extruders);

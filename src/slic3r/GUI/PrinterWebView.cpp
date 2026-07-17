@@ -178,13 +178,11 @@ void PrinterWebView::load_url(wxString& url, wxString apikey)
     m_apikey = apikey;
     m_apikey_sent = false;
     m_handler = create_printer_webview_handler(*this);
+    m_url_deferred = url;
 
     if (this->IsShown()) {
-        //ORCA: m_url_deferred will be cleared on load success
-        //m_url_deferred.clear();
         m_browser->LoadURL(url);
-    } else {
-        m_url_deferred = url;
+        m_url_deferred.clear();
     }
     //m_browser->SetFocus();
     UpdateState();
@@ -193,9 +191,9 @@ void PrinterWebView::load_url(wxString& url, wxString apikey)
 bool PrinterWebView::Show(bool show)
 {
     if (show && !m_url_deferred.empty()) {
-        m_browser->LoadURL(m_url_deferred);
-        //ORCA: m_url_deferred will be cleared on load success
-        //m_url_deferred.clear();
+        wxString url = m_url_deferred;
+        m_url_deferred.clear();
+        m_browser->LoadURL(url);
     }
     return wxPanel::Show(show);
 }

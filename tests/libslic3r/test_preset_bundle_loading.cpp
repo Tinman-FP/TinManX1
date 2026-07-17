@@ -73,7 +73,7 @@ struct RenameTestCollection : public PresetCollection
 {
     RenameTestCollection()
         : PresetCollection(Preset::TYPE_PRINT, Preset::print_options(),
-                           static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults()))
+                           static_print_config_ref(FullPrintConfig::defaults()))
     {}
     using PresetCollection::update_map_system_profile_renamed;
 };
@@ -463,4 +463,3 @@ TEST_CASE("Profile validator flags dangling and renamed preset references", "[Pr
         CHECK_FALSE(bundle.check_preset_references());
     }
 }
-

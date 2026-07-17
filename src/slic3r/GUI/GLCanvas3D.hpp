@@ -637,6 +637,7 @@ private:
 
     // used to show layers times on the layers slider when pre-gcode view is active
     std::vector<float> m_gcode_layers_times_cache;
+    bool m_prepare_strength_lens_enabled{ false };
 
 public:
     OrientSettings& get_orient_settings()
@@ -773,6 +774,9 @@ public:
     const bool get_dark_mode_status() { return m_is_dark; }
     void set_as_dirty() { m_dirty = true; }
     void requires_check_outside_state() { m_requires_check_outside_state = true; }
+    bool is_prepare_strength_lens_enabled() const;
+    void set_prepare_strength_lens_enabled(bool enabled);
+    void toggle_prepare_strength_lens();
 
     unsigned int get_volumes_count() const { return (unsigned int)m_volumes.volumes.size(); }
     const GLVolumeCollection& get_volumes() const { return m_volumes; }
@@ -1150,16 +1154,7 @@ public:
     void highlight_toolbar_item(const std::string& item_name);
     void highlight_gizmo(const std::string& gizmo_name);
 
-    ArrangeSettings get_arrange_settings() const {
-        const ArrangeSettings &settings = get_arrange_settings();
-        ArrangeSettings ret = settings;
-        if (&settings == &m_arrange_settings_fff_seq_print) {
-            ret.distance = std::max(ret.distance,
-                                    float(min_object_distance(*m_config)));
-        }
-
-        return ret;
-    }
+    ArrangeSettings get_arrange_settings() const;
 
     // Timestamp for FPS calculation and notification fade-outs.
     static int64_t timestamp_now() {
@@ -1267,6 +1262,8 @@ private:
 #endif // ENABLE_RENDER_SELECTION_CENTER
     void _check_and_update_toolbar_icon_scale();
     void _render_overlays();
+    void _render_prepare_strength_lens();
+    void _rotate_selection_for_strength_lens(int axis);
     void _render_style_editor();
     void _render_volumes_for_picking(const Camera& camera) const;
     void _render_current_gizmo() const;

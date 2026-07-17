@@ -1384,7 +1384,7 @@ static inline ExPolygons detect_overhangs(
     Polygons overhang_polygons;
 
     // BBS.
-    const bool   auto_normal_support = object_config.support_type.value == stNormalAuto;
+    const bool   auto_normal_support = is_normal_auto_support(object_config.support_type.value);
     const bool   buildplate_only = ! annotations.buildplate_covered.empty();
     // If user specified a custom angle threshold, convert it to radians.
     // Zero means automatic overhang detection.
@@ -1569,7 +1569,7 @@ static inline std::tuple<Polygons, Polygons, double> detect_contacts(
     Polygons enforcer_polygons;
 
     // BBS.
-    const bool   auto_normal_support = object_config.support_type.value == stNormalAuto;
+    const bool   auto_normal_support = is_normal_auto_support(object_config.support_type.value);
     const bool   buildplate_only = !annotations.buildplate_covered.empty();
     float        no_interface_offset = 0.f;
 
@@ -1748,7 +1748,7 @@ static inline std::pair<SupportGeneratorLayer*, SupportGeneratorLayer*> new_cont
     }
     else {
         // BBS: need to consider adaptive layer heights
-        if (print_config.independent_support_layer_height) {
+        if (object_config.independent_support_layer_height) {
             print_z = layer.bottom_z() - slicing_params.gap_support_object;
             height = 0;
         }
@@ -1781,13 +1781,13 @@ static inline std::pair<SupportGeneratorLayer*, SupportGeneratorLayer*> new_cont
 
         // Contact layer will be printed with a normal flow, but
         // it will support layers printed with a bridging flow.
-        if (object_config.thick_bridges && SupportMaterialInternal::has_bridging_extrusions(layer) && print_config.independent_support_layer_height) {
+        if (object_config.thick_bridges && SupportMaterialInternal::has_bridging_extrusions(layer) && object_config.independent_support_layer_height) {
             coordf_t bridging_height = 0.;
             for (const LayerRegion* region : layer.regions())
                 bridging_height += region->region().bridging_height_avg(print_config);
             bridging_height /= coordf_t(layer.regions().size());
             // BBS: align bridging height
-            if (!print_config.independent_support_layer_height)
+            if (!object_config.independent_support_layer_height)
                 bridging_height = std::ceil(bridging_height / object_config.layer_height - EPSILON) * object_config.layer_height;
             coordf_t bridging_print_z = layer.print_z - bridging_height - slicing_params.gap_support_object;
             if (bridging_print_z >= min_print_z) {
@@ -1807,7 +1807,7 @@ static inline std::pair<SupportGeneratorLayer*, SupportGeneratorLayer*> new_cont
                     } else {
                         // BBS: if independent_support_layer_height is not enabled, the support layer_height should be the same as layer height.
                         // Note that for this case, adaptive layer height must be disabled.
-                        bridging_layer->height = print_config.independent_support_layer_height ? 0. : object_config.layer_height;
+                        bridging_layer->height = object_config.independent_support_layer_height ? 0. : object_config.layer_height;
                         // Don't know the height yet.
                         bridging_layer->bottom_z = bridging_print_z - bridging_layer->height;
                     }
@@ -2103,7 +2103,7 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::top_contact_layers(
 
     // BBS: tree support is selected so normal supports need not be generated.
     // Note we still need to go through the following steps if support is disabled but raft is enabled.
-    if (m_object_config->enable_support.value && (m_object_config->support_type.value != stNormalAuto && m_object_config->support_type.value != stNormal)) {
+    if (m_object_config->enable_support.value && !is_normal_support(m_object_config->support_type.value)) {
         return SupportGeneratorLayersPtr();
     }
 
@@ -2138,6 +2138,19 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::top_contact_layers(
                     , iRun
 #endif // SLIC3R_DEBUG
                 );
+
+                if (!overhangs_per_layers[layer_id].empty() && !layer.wave_overhang_covered_polygons.empty()) {
+                    bool wave_support_gate = false;
+                    for (size_t region_id = 0; region_id < object.num_printing_regions(); ++region_id) {
+                        const PrintRegionConfig &region_config = object.printing_region(region_id).config();
+                        if (region_config.wave_overhangs.value && region_config.support_remaining_areas_after_wave_overhangs.value) {
+                            wave_support_gate = true;
+                            break;
+                        }
+                    }
+                    if (wave_support_gate)
+                        overhangs_per_layers[layer_id] = diff_ex(overhangs_per_layers[layer_id], layer.wave_overhang_covered_polygons);
+                }
 
                 if (object.print()->canceled())
                     break;
@@ -2419,7 +2432,7 @@ static inline SupportGeneratorLayer* detect_bottom_contacts(
     // with some spacing from object - it looks we don't need the actual
     // top shapes so this can be done here
     Layer* upper_layer = layer.upper_layer;
-    if (object.print()->config().independent_support_layer_height) {
+    if (object.config().independent_support_layer_height) {
         // If the layer is extruded with no bridging flow, support just the normal extrusions.
         layer_new.height = slicing_params.zero_gap_interface_bottom ?
             // Align the interface layer with the object's layer height.

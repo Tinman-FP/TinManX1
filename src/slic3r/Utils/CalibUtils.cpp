@@ -686,7 +686,7 @@ bool CalibUtils::calib_flowrate(int pass, const CalibInfo &calib_info, wxString 
 
     // apply preset
     DynamicPrintConfig full_config;
-    full_config.apply(FullPrintConfig::defaults());
+    full_config.apply(static_print_config_ref(FullPrintConfig::defaults()));
     full_config.apply(print_config);
     full_config.apply(filament_config);
     full_config.apply(printer_config);
@@ -712,7 +712,7 @@ void CalibUtils::calib_pa_pattern(const CalibInfo &calib_info, Model& model)
     DynamicPrintConfig& printer_config  = calib_info.printer_prest->config;
 
     DynamicPrintConfig full_config;
-    full_config.apply(FullPrintConfig::defaults());
+    full_config.apply(static_print_config_ref(FullPrintConfig::defaults()));
     full_config.apply(print_config);
     full_config.apply(filament_config);
     full_config.apply(printer_config);
@@ -741,7 +741,7 @@ void CalibUtils::calib_pa_pattern(const CalibInfo &calib_info, Model& model)
         new ConfigOptionEnum<BrimType>(config_pattern.brim_pair.second));
 
     //DynamicPrintConfig full_config;
-    full_config.apply(FullPrintConfig::defaults());
+    full_config.apply(static_print_config_ref(FullPrintConfig::defaults()));
     full_config.apply(print_config);
     full_config.apply(filament_config);
     full_config.apply(printer_config);
@@ -1010,7 +1010,7 @@ bool CalibUtils::calib_generic_PA(const CalibInfo &calib_info, wxString &error_m
     filament_config.set_key_value("curr_bed_type", new ConfigOptionEnum<BedType>(calib_info.bed_type));
 
     DynamicPrintConfig full_config;
-    full_config.apply(FullPrintConfig::defaults());
+    full_config.apply(static_print_config_ref(FullPrintConfig::defaults()));
     full_config.apply(print_config);
     full_config.apply(filament_config);
     full_config.apply(printer_config);
@@ -1075,7 +1075,7 @@ void CalibUtils::calib_temptue(const CalibInfo &calib_info, wxString &error_mess
 
     // apply preset
     DynamicPrintConfig full_config;
-    full_config.apply(FullPrintConfig::defaults());
+    full_config.apply(static_print_config_ref(FullPrintConfig::defaults()));
     full_config.apply(print_config);
     full_config.apply(filament_config);
     full_config.apply(printer_config);
@@ -1153,7 +1153,7 @@ void CalibUtils::calib_max_vol_speed(const CalibInfo &calib_info, wxString &erro
     new_params.step  = params.step / mm3_per_mm;
 
     DynamicPrintConfig full_config;
-    full_config.apply(FullPrintConfig::defaults());
+    full_config.apply(static_print_config_ref(FullPrintConfig::defaults()));
     full_config.apply(print_config);
     full_config.apply(filament_config);
     full_config.apply(printer_config);
@@ -1212,7 +1212,7 @@ void CalibUtils::calib_VFA(const CalibInfo &calib_info, wxString &error_message)
     }
 
     DynamicPrintConfig full_config;
-    full_config.apply(FullPrintConfig::defaults());
+    full_config.apply(static_print_config_ref(FullPrintConfig::defaults()));
     full_config.apply(print_config);
     full_config.apply(filament_config);
     full_config.apply(printer_config);
@@ -1265,7 +1265,7 @@ void CalibUtils::calib_retraction(const CalibInfo &calib_info, wxString &error_m
     }
 
     DynamicPrintConfig full_config;
-    full_config.apply(FullPrintConfig::defaults());
+    full_config.apply(static_print_config_ref(FullPrintConfig::defaults()));
     full_config.apply(print_config);
     full_config.apply(filament_config);
     full_config.apply(printer_config);

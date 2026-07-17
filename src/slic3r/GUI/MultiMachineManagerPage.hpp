@@ -7,6 +7,12 @@
 #include "Widgets/Button.hpp"
 #include "Widgets/TextInput.hpp"
 
+#include <atomic>
+#include <chrono>
+#include <map>
+#include <mutex>
+#include <thread>
+
 namespace Slic3r { 
 namespace GUI {
 
@@ -46,7 +52,7 @@ class MultiMachineManagerPage : public wxPanel
 {
 public:
     MultiMachineManagerPage(wxWindow* parent);
-    ~MultiMachineManagerPage() {};
+    ~MultiMachineManagerPage();
 
     void update_page();
     void refresh_user_device(bool clear = false);
@@ -66,6 +72,23 @@ public:
     void msw_rescale();
 
 private:
+    struct CachedLiveStatus
+    {
+        bool online{ false };
+        int state_device{ 7 };
+        std::string task_name;
+        std::string stage_text;
+        int task_progress{ -1 };
+        int left_time{ -1 };
+        std::chrono::steady_clock::time_point updated_at;
+    };
+
+    void apply_cached_live_status(DeviceItem* item);
+    bool cached_live_status_for(const std::string& dev_id, CachedLiveStatus& out) const;
+    bool cached_live_status_is_fresh(const std::string& dev_id) const;
+    void request_status_refresh(const std::vector<MachineObject*>& machines);
+    void stop_status_worker();
+
     std::vector<ObjState>          m_state_objs;
     std::vector<MultiMachineItem*> m_device_items;
     SortItem                m_sort;
@@ -109,8 +132,16 @@ private:
     wxBoxSizer*                 m_page_sizer{ nullptr };
     wxPanel*                    m_flipping_panel{ nullptr };
     wxTimer*                    m_flipping_timer{ nullptr };
+    wxTimer*                    m_status_timer{ nullptr };
     TextInput*                  m_page_num_input{ nullptr };
     Button*                     m_page_num_enter{ nullptr };
+
+    mutable std::mutex          m_live_status_mutex;
+    std::map<std::string, CachedLiveStatus> m_live_status_cache;
+    std::thread                 m_status_thread;
+    std::atomic<bool>           m_status_worker_running{ false };
+    std::atomic<bool>           m_status_stop{ false };
+    std::atomic<unsigned long long> m_status_generation{ 0 };
 };
 
 } // namespace GUI

@@ -13,8 +13,10 @@
 #include <boost/nowide/fstream.hpp>
 
 // BBS
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #ifdef WIN32
 
@@ -194,6 +196,73 @@ namespace Slic3r {
 #define L(s) (s)
 #define _(s) Slic3r::I18N::translate(s)
 
+static bool arc_support_enabled(const DynamicPrintConfig &config)
+{
+    const ConfigOption *support_type = config.option("support_type");
+    if (support_type != nullptr)
+        return is_arc(static_cast<SupportType>(support_type->getInt()));
+
+    const ConfigOption *support_strategy = config.option("tinman_support_strategy");
+    return support_strategy != nullptr &&
+        static_cast<TinmanSupportStrategy>(support_strategy->getInt()) == TinmanSupportStrategy::Arc;
+}
+
+static std::string shell_quote_path(const std::string &path)
+{
+#ifdef WIN32
+    std::string escaped;
+    escaped.reserve(path.size() + 2);
+    escaped.push_back('"');
+    for (const char c : path) {
+        if (c == '"')
+            escaped.push_back('\\');
+        escaped.push_back(c);
+    }
+    escaped.push_back('"');
+    return escaped;
+#else
+    std::string escaped;
+    escaped.reserve(path.size() + 2);
+    escaped.push_back('\'');
+    for (const char c : path) {
+        if (c == '\'')
+            escaped.append("'\\''");
+        else
+            escaped.push_back(c);
+    }
+    escaped.push_back('\'');
+    return escaped;
+#endif
+}
+
+static std::string find_arc_support_adapter_script()
+{
+    namespace fs = boost::filesystem;
+    for (const char *env_name : {"ORCASLICER_CODEX_ARC_SUPPORT_INPLACE_SCRIPT", "TINMANX_ARC_SUPPORT_INPLACE_SCRIPT"}) {
+        if (const char *env_path = std::getenv(env_name)) {
+            if (fs::exists(fs::path(env_path)))
+                return shell_quote_path(env_path);
+        }
+    }
+
+    std::vector<fs::path> candidates;
+    if (!resources_dir().empty()) {
+        const fs::path resources_path(resources_dir());
+        candidates.emplace_back(resources_path / "orcaslicer_codex" / "arc_support" / "orcaslicer_codex_arc_support_inplace_adapter.py");
+        candidates.emplace_back(resources_path.parent_path() / "scripts" / "orcaslicer_codex_arc_support_inplace_adapter.py");
+    }
+    candidates.emplace_back(fs::current_path().parent_path() / "Resources" / "orcaslicer_codex" / "arc_support" / "orcaslicer_codex_arc_support_inplace_adapter.py");
+    candidates.emplace_back(fs::current_path().parent_path() / "resources" / "orcaslicer_codex" / "arc_support" / "orcaslicer_codex_arc_support_inplace_adapter.py");
+    candidates.emplace_back(fs::current_path() / "scripts" / "orcaslicer_codex_arc_support_inplace_adapter.py");
+    candidates.emplace_back(fs::current_path().parent_path() / "scripts" / "orcaslicer_codex_arc_support_inplace_adapter.py");
+
+    for (const fs::path &candidate : candidates) {
+        if (fs::exists(candidate))
+            return shell_quote_path(candidate.string());
+    }
+    return {};
+}
+
 // BBS
 void gcode_add_line_number(const std::string& path, const DynamicPrintConfig& config)
 {
@@ -238,10 +307,18 @@ void gcode_add_line_number(const std::string& path, const DynamicPrintConfig& co
 bool run_post_process_scripts(std::string &src_path, bool make_copy, const std::string &host, std::string &output_name, const DynamicPrintConfig &config)
 {
     const auto *post_process = config.opt<ConfigOptionStrings>("post_process");
-    if (// likely running in SLA mode
-        post_process == nullptr || 
-        // no post-processing script
-        post_process->values.empty())
+    std::vector<std::string> post_process_values;
+    if (post_process != nullptr)
+        post_process_values = post_process->values;
+
+    if (arc_support_enabled(config)) {
+        const std::string arc_adapter_script = find_arc_support_adapter_script();
+        if (arc_adapter_script.empty())
+            throw Slic3r::RuntimeError("Arc Overhang selected, but the TinManX1 Arc Overhang adapter script was not found. Set ORCASLICER_CODEX_ARC_SUPPORT_INPLACE_SCRIPT or bundle resources/orcaslicer_codex/arc_support.");
+        post_process_values.insert(post_process_values.begin(), arc_adapter_script);
+    }
+
+    if (post_process_values.empty())
         return false;
 
     std::string path;
@@ -301,7 +378,7 @@ bool run_post_process_scripts(std::string &src_path, bool make_copy, const std::
     remove_output_name_file();
 
     try {
-        for (const std::string &scripts : post_process->values) {
+        for (const std::string &scripts : post_process_values) {
     		std::vector<std::string> lines;
     		boost::split(lines, scripts, boost::is_any_of("\r\n"));
             for (std::string script : lines) {

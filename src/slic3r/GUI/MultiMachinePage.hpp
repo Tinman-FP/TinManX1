@@ -17,7 +17,7 @@ namespace GUI {
 #define PICK_LEFT_PRINTABLE    40
 #define PICK_LEFT_DEV_NAME 250
 #define PICK_LEFT_DEV_STATUS 250
-#define PICK_DEVICE_MAX 6
+#define PICK_DEVICE_MAX 32
     
 class MultiMachinePage : public wxPanel
 {
@@ -90,7 +90,7 @@ public:
     ~MultiMachinePickPage();
 
     int get_selected_count();
-    void update_selected_count();
+    void update_selected_count(bool save_config = true);
     void on_dpi_changed(const wxRect& suggested_rect);
     void on_sys_color_changed();
     void refresh_user_device();

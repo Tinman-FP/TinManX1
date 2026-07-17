@@ -25,5 +25,7 @@
 	],
 	"retraction_length": [
 		"3"
-	]
+	],
+	"print_host": "192.168.50.108",
+	"print_host_webui": "192.168.50.108"
 }

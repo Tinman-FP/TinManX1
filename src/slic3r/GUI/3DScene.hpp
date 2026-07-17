@@ -442,6 +442,18 @@ private:
     Slope m_slope;
     bool m_show_sinking_contours = false;
 
+    struct StrengthLensHeatmap
+    {
+        bool active{ false };
+        std::array<float, 3> axis_strength{{ 1.0f, 1.0f, 0.55f }};
+        TinmanStrengthLoadAxis load_axis{ TinmanStrengthLoadAxis::Auto };
+        float load_span_weight{ 0.45f };
+        float surface_weight{ 0.35f };
+        float layer_penalty_weight{ 0.30f };
+    };
+
+    StrengthLensHeatmap m_strength_lens_heatmap;
+
 public:
     GLVolumePtrs volumes;
 
@@ -531,6 +543,7 @@ public:
     void set_slope_normal_z(float normal_z) { m_slope.normal_z = normal_z; }
     void set_default_slope_normal_z() { m_slope.normal_z = -::cos(Geometry::deg2rad(90.0f - 45.0f)); }
     void set_show_sinking_contours(bool show) { m_show_sinking_contours = show; }
+    void set_strength_lens_heatmap(bool active, TinmanStrengthMaterialModel material_model, TinmanStrengthLoadAxis load_axis);
 
     // returns true if all the volumes are completely contained in the print volume
     // returns the containment state in the given out_state, if non-null

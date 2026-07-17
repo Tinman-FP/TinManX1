@@ -163,6 +163,308 @@ static std::string format_number(float value)
     return oss.str();
 }
 
+static const char* strength_axis_name(int axis)
+{
+    static const char* names[] = { "X", "Y", "Z" };
+    return axis >= 0 && axis < 3 ? names[axis] : "?";
+}
+
+static std::string format_strength_value(double value, int precision = 0)
+{
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << value;
+    return oss.str();
+}
+
+static int strength_dominant_axis(const Vec3d& values)
+{
+    if (values.x() >= values.y() && values.x() >= values.z())
+        return 0;
+    if (values.y() >= values.z())
+        return 1;
+    return 2;
+}
+
+static int strength_weak_axis(const Vec3d& values)
+{
+    if (values.x() <= values.y() && values.x() <= values.z())
+        return 0;
+    if (values.y() <= values.z())
+        return 1;
+    return 2;
+}
+
+static std::string strength_material_model_label(TinmanStrengthMaterialModel model)
+{
+    switch (model) {
+    case TinmanStrengthMaterialModel::Isotropic:        return "Isotropic";
+    case TinmanStrengthMaterialModel::FdmAnisotropic:  return "FDM anisotropic";
+    case TinmanStrengthMaterialModel::ContinuousFiber: return "Continuous fiber";
+    case TinmanStrengthMaterialModel::FilamentPreset:
+    default:                                           return "Filament preset";
+    }
+}
+
+static const char* strength_material_model_description(TinmanStrengthMaterialModel model)
+{
+    switch (model) {
+    case TinmanStrengthMaterialModel::Isotropic:
+        return "Comparison view: treats the part as nearly equally strong in every direction. Useful for contrast, but it hides normal 3D-print layer weakness.";
+    case TinmanStrengthMaterialModel::ContinuousFiber:
+        return "Fiber-reinforced view: assumes fiber paths in X/Y can carry much more load, while layer bonds in Z still need caution.";
+    case TinmanStrengthMaterialModel::FdmAnisotropic:
+        return "Normal FDM view: assumes printed roads are strongest in X/Y, and the bond between layers in Z is weaker.";
+    case TinmanStrengthMaterialModel::FilamentPreset:
+    default:
+        return "Default view: follows the selected filament when Codex can, then uses normal FDM layer-strength behavior.";
+    }
+}
+
+static std::string strength_load_axis_label(TinmanStrengthLoadAxis load_axis, int resolved_axis)
+{
+    switch (load_axis) {
+    case TinmanStrengthLoadAxis::X: return "X axis";
+    case TinmanStrengthLoadAxis::Y: return "Y axis";
+    case TinmanStrengthLoadAxis::Z: return "Z axis";
+    case TinmanStrengthLoadAxis::Auto:
+    default:
+        return std::string("Auto (") + strength_axis_name(resolved_axis) + " longest span)";
+    }
+}
+
+static const char* strength_load_axis_description(TinmanStrengthLoadAxis load_axis)
+{
+    switch (load_axis) {
+    case TinmanStrengthLoadAxis::X:
+        return "Testing the part as if the important load runs left-right across the build plate.";
+    case TinmanStrengthLoadAxis::Y:
+        return "Testing the part as if the important load runs front-back across the build plate.";
+    case TinmanStrengthLoadAxis::Z:
+        return "Testing the part through the layer stack. In normal FDM this is usually the direction to be most careful with.";
+    case TinmanStrengthLoadAxis::Auto:
+    default:
+        return "Codex picks the longest direction of the selected part as the likely load path.";
+    }
+}
+
+static int strength_load_axis_index(TinmanStrengthLoadAxis load_axis, const Vec3d& dimensions)
+{
+    switch (load_axis) {
+    case TinmanStrengthLoadAxis::X: return 0;
+    case TinmanStrengthLoadAxis::Y: return 1;
+    case TinmanStrengthLoadAxis::Z: return 2;
+    case TinmanStrengthLoadAxis::Auto:
+    default:                       return strength_dominant_axis(dimensions);
+    }
+}
+
+static ImVec4 strength_lens_scale_color(float reserve)
+{
+    reserve = std::clamp(reserve, 0.0f, 1.0f);
+    const ImVec4 red    = ImVec4(0.86f, 0.10f, 0.08f, 1.0f);
+    const ImVec4 orange = ImVec4(0.96f, 0.48f, 0.10f, 1.0f);
+    const ImVec4 yellow = ImVec4(0.96f, 0.86f, 0.16f, 1.0f);
+    const ImVec4 green  = ImVec4(0.20f, 0.78f, 0.35f, 1.0f);
+    const ImVec4 blue   = ImVec4(0.10f, 0.42f, 0.96f, 1.0f);
+
+    auto mix = [](const ImVec4& a, const ImVec4& b, float t) {
+        return ImVec4(
+            a.x + (b.x - a.x) * t,
+            a.y + (b.y - a.y) * t,
+            a.z + (b.z - a.z) * t,
+            a.w + (b.w - a.w) * t);
+    };
+
+    if (reserve < 0.25f)
+        return mix(red, orange, reserve / 0.25f);
+    if (reserve < 0.50f)
+        return mix(orange, yellow, (reserve - 0.25f) / 0.25f);
+    if (reserve < 0.75f)
+        return mix(yellow, green, (reserve - 0.50f) / 0.25f);
+    return mix(green, blue, (reserve - 0.75f) / 0.25f);
+}
+
+static const DynamicPrintConfig* strength_lens_plater_config()
+{
+    return wxGetApp().plater() ? wxGetApp().plater()->config() : nullptr;
+}
+
+static const DynamicPrintConfig* strength_lens_preset_config()
+{
+    return wxGetApp().preset_bundle != nullptr ?
+        &wxGetApp().preset_bundle->prints.get_edited_preset().config : nullptr;
+}
+
+static const DynamicPrintConfig* strength_lens_print_tab_config()
+{
+    Tab* print_tab = wxGetApp().get_tab(Preset::TYPE_PRINT);
+    return print_tab != nullptr ? print_tab->get_config() : nullptr;
+}
+
+static bool strength_lens_config_bool(const DynamicPrintConfig* config, const char* key)
+{
+    return config != nullptr &&
+        config->option(key) != nullptr &&
+        config->opt_bool(key);
+}
+
+static bool strength_lens_config_enabled()
+{
+    const bool print_tab_enabled = strength_lens_config_bool(strength_lens_print_tab_config(), "strength_lens_enabled");
+    const bool plater_enabled = strength_lens_config_bool(strength_lens_plater_config(), "strength_lens_enabled");
+    const bool preset_enabled = strength_lens_config_bool(strength_lens_preset_config(), "strength_lens_enabled");
+
+    return print_tab_enabled || plater_enabled || preset_enabled;
+}
+
+static TinmanStrengthMaterialModel strength_lens_config_material_model()
+{
+    const DynamicPrintConfig* configs[] = { strength_lens_print_tab_config(), strength_lens_plater_config(), strength_lens_preset_config() };
+    for (const DynamicPrintConfig* config : configs) {
+        if (config != nullptr && config->option("strength_lens_material_model") != nullptr)
+            return config->opt_enum<TinmanStrengthMaterialModel>("strength_lens_material_model");
+    }
+    return TinmanStrengthMaterialModel::FilamentPreset;
+}
+
+static TinmanStrengthLoadAxis strength_lens_config_load_axis()
+{
+    const DynamicPrintConfig* configs[] = { strength_lens_print_tab_config(), strength_lens_plater_config(), strength_lens_preset_config() };
+    for (const DynamicPrintConfig* config : configs) {
+        if (config != nullptr && config->option("strength_lens_load_axis") != nullptr)
+            return config->opt_enum<TinmanStrengthLoadAxis>("strength_lens_load_axis");
+    }
+    return TinmanStrengthLoadAxis::Auto;
+}
+
+struct PrepareStrengthLensAnalysis
+{
+    bool has_geometry{ false };
+    bool has_selection{ false };
+    bool preset_enabled{ false };
+    Vec3d dimensions{ Vec3d::Zero() };
+    Vec3d axis_strength{ Vec3d::Ones() };
+    int load_axis{ 0 };
+    int weak_axis{ 2 };
+    double score{ 0.0 };
+    TinmanStrengthMaterialModel material_model_type{ TinmanStrengthMaterialModel::FilamentPreset };
+    TinmanStrengthLoadAxis load_axis_setting{ TinmanStrengthLoadAxis::Auto };
+    std::string target_label;
+    std::string material_model;
+    std::string load_axis_label;
+    std::string recommendation;
+};
+
+static PrepareStrengthLensAnalysis prepare_strength_lens_analysis(const GLCanvas3D& canvas)
+{
+    PrepareStrengthLensAnalysis analysis;
+    const Selection& selection = canvas.get_selection();
+
+    BoundingBoxf3 bbox;
+    if (!selection.is_empty() && selection.get_bounding_box().defined) {
+        bbox = selection.get_bounding_box();
+        analysis.has_selection = true;
+        analysis.target_label = "Selected part";
+    } else if (const Model* model = canvas.get_model(); model != nullptr) {
+        bbox = model->bounding_box_exact();
+        analysis.target_label = "Whole plate";
+    }
+
+    if (!bbox.defined) {
+        analysis.target_label = "No part loaded";
+        analysis.recommendation = "Load or select a part to analyze orientation strength before slicing.";
+        return analysis;
+    }
+
+    analysis.has_geometry = true;
+    analysis.dimensions = bbox.size();
+    analysis.load_axis_setting = strength_lens_config_load_axis();
+    analysis.load_axis = strength_load_axis_index(analysis.load_axis_setting, analysis.dimensions);
+    analysis.load_axis_label = strength_load_axis_label(analysis.load_axis_setting, analysis.load_axis);
+    analysis.weak_axis = 2;
+
+    TinmanStrengthMaterialModel material_model = strength_lens_config_material_model();
+    analysis.preset_enabled = strength_lens_config_enabled();
+    analysis.material_model_type = material_model;
+    analysis.material_model = strength_material_model_label(material_model);
+
+    double xy_strength = 1.0;
+    double z_strength = 0.55;
+    switch (material_model) {
+    case TinmanStrengthMaterialModel::Isotropic:
+        z_strength = 0.95;
+        break;
+    case TinmanStrengthMaterialModel::ContinuousFiber:
+        xy_strength = 1.30;
+        z_strength = 0.40;
+        break;
+    case TinmanStrengthMaterialModel::FdmAnisotropic:
+    case TinmanStrengthMaterialModel::FilamentPreset:
+    default:
+        z_strength = 0.55;
+        break;
+    }
+
+    analysis.axis_strength = Vec3d(xy_strength, xy_strength, z_strength);
+    analysis.weak_axis = strength_weak_axis(analysis.axis_strength);
+    const double strongest = std::max(analysis.axis_strength.x(), std::max(analysis.axis_strength.y(), analysis.axis_strength.z()));
+    analysis.score = strongest > 0.0 ? 100.0 * analysis.axis_strength(analysis.load_axis) / strongest : 0.0;
+
+    if (analysis.load_axis == 2)
+        analysis.recommendation = analysis.load_axis_setting == TinmanStrengthLoadAxis::Auto ?
+            "The longest span is standing in Z. Rotate it into X/Y to move the main load path into the stronger printed plane." :
+            "You selected Z as the load direction. Normal FDM parts are usually weakest through the layer stack, so warm colors here are expected.";
+    else if (material_model == TinmanStrengthMaterialModel::ContinuousFiber)
+        analysis.recommendation = "The selected load direction is in X/Y. For FibreSeek work, route continuous fiber along that load direction after orientation.";
+    else
+        analysis.recommendation = analysis.load_axis_setting == TinmanStrengthLoadAxis::Auto ?
+            "The longest span is already in X/Y, which keeps the main load path away from the weaker layer-bond direction." :
+            "The selected load direction is in X/Y, which usually uses stronger printed roads instead of weaker layer bonds.";
+
+    return analysis;
+}
+
+static void render_strength_lens_legend(GLCanvas3D& canvas, ImGuiWrapper* imgui, float scale)
+{
+    const Size cnv_size = canvas.get_canvas_size();
+    const float legend_width = 220.0f * scale;
+    const float x = 16.0f * scale;
+    const float y = std::max(124.0f * scale, float(cnv_size.get_height()) - 246.0f * scale);
+
+    imgui->set_next_window_pos(x, y, ImGuiCond_Always);
+    ImGuiWrapper::push_common_window_style(scale);
+    imgui->begin(_L("Strength Scale"), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+
+    imgui->text(_L("Strength color key"));
+    if (ImGui::IsItemHovered())
+        imgui->tooltip(_L("This is a guide for the colors on the part. Red/orange areas need review; green/blue areas have more strength reserve."), 300.0f * scale);
+
+    const float bar_width = legend_width - 28.0f * scale;
+    const float bar_height = 14.0f * scale;
+    ImVec2 start = ImGui::GetCursorScreenPos();
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    const float segment = bar_width / 4.0f;
+    for (int i = 0; i < 4; ++i) {
+        const float left = float(i) / 4.0f;
+        const float right = float(i + 1) / 4.0f;
+        const ImU32 c0 = ImGui::GetColorU32(strength_lens_scale_color(left));
+        const ImU32 c1 = ImGui::GetColorU32(strength_lens_scale_color(right));
+        const ImVec2 p0(start.x + segment * i, start.y);
+        const ImVec2 p1(start.x + segment * (i + 1), start.y + bar_height);
+        draw_list->AddRectFilledMultiColor(p0, p1, c0, c1, c1, c0);
+    }
+    draw_list->AddRect(start, ImVec2(start.x + bar_width, start.y + bar_height), ImGui::GetColorU32(ImVec4(0.14f, 0.14f, 0.14f, 0.75f)));
+    ImGui::Dummy(ImVec2(bar_width, bar_height + 2.0f * scale));
+
+    ImGui::TextUnformatted("Weakest");
+    ImGui::SameLine(bar_width - 60.0f * scale);
+    ImGui::TextUnformatted("Strongest");
+    imgui->text_wrapped("Red/orange: inspect or rotate. Yellow: borderline. Green/blue: better reserve.", legend_width);
+
+    imgui->end();
+    ImGuiWrapper::pop_common_window_style();
+}
+
 wxString filament_printable_error_msg;
 
 GLCanvas3D::LayersEditing::~LayersEditing()
@@ -1146,6 +1448,31 @@ GLCanvas3D::ArrangeSettings& GLCanvas3D::get_arrange_settings()
     return *ptr;
 }
 
+GLCanvas3D::ArrangeSettings GLCanvas3D::get_arrange_settings() const
+{
+    PrinterTechnology ptech = current_printer_technology();
+
+    const ArrangeSettings *settings = &m_arrange_settings_fff;
+
+    if (ptech == ptSLA) {
+        settings = &m_arrange_settings_sla;
+    }
+    else if (ptech == ptFFF) {
+        if (wxGetApp().global_print_sequence() == PrintSequence::ByObject)
+            settings = &m_arrange_settings_fff_seq_print;
+        else
+            settings = &m_arrange_settings_fff;
+    }
+
+    ArrangeSettings ret = *settings;
+    if (settings == &m_arrange_settings_fff_seq_print) {
+        ret.distance = std::max(ret.distance,
+                                float(min_object_distance(*m_config)));
+    }
+
+    return ret;
+}
+
 int GLCanvas3D::GetHoverId()
 {
     if (m_hover_plate_idxs.size() == 0) {
@@ -1926,6 +2253,25 @@ float GLCanvas3D::get_collapse_toolbar_height() const
 
 bool GLCanvas3D::make_current_for_postinit() {
     return _set_current();
+}
+
+bool GLCanvas3D::is_prepare_strength_lens_enabled() const
+{
+    return m_prepare_strength_lens_enabled || strength_lens_config_enabled();
+}
+
+void GLCanvas3D::set_prepare_strength_lens_enabled(bool enabled)
+{
+    if (m_prepare_strength_lens_enabled == enabled)
+        return;
+    m_prepare_strength_lens_enabled = enabled;
+    set_as_dirty();
+    request_extra_frame();
+}
+
+void GLCanvas3D::toggle_prepare_strength_lens()
+{
+    set_prepare_strength_lens_enabled(!m_prepare_strength_lens_enabled);
 }
 
 void GLCanvas3D::render(bool only_init)
@@ -8126,9 +8472,18 @@ void GLCanvas3D::_render_objects(GLVolumeCollection::ERenderType type, bool with
     else
         m_volumes.set_show_sinking_contours(!m_gizmos.is_hiding_instances());
 
+    TinmanStrengthMaterialModel strength_lens_material_model = strength_lens_config_material_model();
+    TinmanStrengthLoadAxis strength_lens_load_axis = strength_lens_config_load_axis();
+    const bool strength_lens_heatmap_active =
+        is_prepare_strength_lens_enabled() && m_canvas_type != ECanvasType::CanvasPreview;
+    m_volumes.set_strength_lens_heatmap(
+        strength_lens_heatmap_active,
+        strength_lens_material_model,
+        strength_lens_load_axis);
+
     const bool realistic_mode = wxGetApp().app_config != nullptr && wxGetApp().app_config->get_bool(SETTING_OPENGL_REALISTIC_MODE);
     const bool realistic_phong = wxGetApp().app_config != nullptr && wxGetApp().app_config->get_bool(SETTING_OPENGL_REALISTIC_PHONG);
-    const std::string shader_name = (realistic_mode && realistic_phong) ? "phong" : "gouraud";
+    const std::string shader_name = (!strength_lens_heatmap_active && realistic_mode && realistic_phong) ? "phong" : "gouraud";
     GLShaderProgram* shader = wxGetApp().get_shader(shader_name);
     if (shader == nullptr && shader_name != "gouraud")
         shader = wxGetApp().get_shader("gouraud");
@@ -8392,6 +8747,7 @@ void GLCanvas3D::_render_overlays()
     // BBS
     //_render_view_toolbar();
     _render_paint_toolbar();
+    _render_prepare_strength_lens();
 
     //BBS: GUI refactor: GLToolbar
     //move gizmos behind of main
@@ -8425,6 +8781,108 @@ void GLCanvas3D::_render_overlays()
     _render_3d_navigator();
 
     _render_canvas_toolbar();
+}
+
+void GLCanvas3D::_render_prepare_strength_lens()
+{
+    if (!is_prepare_strength_lens_enabled() || m_canvas_type == ECanvasType::CanvasPreview)
+        return;
+
+    ImGuiWrapper* imgui = wxGetApp().imgui();
+    if (imgui == nullptr)
+        return;
+
+    const PrepareStrengthLensAnalysis analysis = prepare_strength_lens_analysis(*this);
+    const float scale = get_scale();
+    imgui->set_next_window_pos(16.0f * scale, 92.0f * scale, ImGuiCond_Always);
+    ImGuiWrapper::push_common_window_style(scale);
+    imgui->begin(_L("Strength Lens"), ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse);
+
+    imgui->text(_L("Strength Lens"));
+    if (ImGui::IsItemHovered())
+        imgui->tooltip(_L("A quick color preview for print strength. Use it before slicing to choose a better part orientation."), 340.0f * scale);
+    ImGui::Separator();
+
+    if (!analysis.has_geometry) {
+        imgui->text(analysis.target_label);
+        imgui->text_wrapped(analysis.recommendation, 340.0f * scale);
+        if (!analysis.preset_enabled && imgui->button(_L("Hide"), _L("Closes this temporary Strength Lens panel.")))
+            set_prepare_strength_lens_enabled(false);
+        imgui->end();
+        ImGuiWrapper::pop_common_window_style();
+        return;
+    }
+
+    imgui->text("Target: " + analysis.target_label);
+    imgui->text("Material model: " + analysis.material_model);
+    imgui->text("Preset toggle: " + std::string(analysis.preset_enabled ? "On" : "Off"));
+    imgui->text(
+        "Size: " +
+        format_strength_value(analysis.dimensions.x(), 1) + " x " +
+        format_strength_value(analysis.dimensions.y(), 1) + " x " +
+        format_strength_value(analysis.dimensions.z(), 1) + " mm");
+    imgui->text("Load axis: " + analysis.load_axis_label);
+    if (ImGui::IsItemHovered())
+        imgui->tooltip(strength_load_axis_description(analysis.load_axis_setting), 340.0f * scale);
+    imgui->text(std::string("Weak axis: ") + strength_axis_name(analysis.weak_axis) + " (layer bond)");
+    imgui->text_wrapped(std::string("Model meaning: ") + strength_material_model_description(analysis.material_model_type), 340.0f * scale);
+    if (ImGui::IsItemHovered())
+        imgui->tooltip(_L("The model controls the assumptions behind the colors. FDM views treat layer bonds as weaker; fiber views assume reinforcement is strongest along planned fiber paths."), 340.0f * scale);
+    imgui->text_wrapped("Color scale: red/orange = weakest areas to inspect, yellow = borderline, green/blue = stronger reserve.", 340.0f * scale);
+    if (ImGui::IsItemHovered())
+        imgui->tooltip(_L("The colors are a guide, not a guarantee. Warm colors mark areas to inspect; cool colors are safer for this orientation."), 340.0f * scale);
+
+    const float score = static_cast<float>(std::clamp(analysis.score / 100.0, 0.0, 1.0));
+    const ImVec4 score_color = analysis.score >= 80.0 ? ImGuiWrapper::COL_ORCA :
+        (analysis.score >= 60.0 ? ImVec4(0.95f, 0.62f, 0.20f, 1.0f) : ImVec4(0.90f, 0.28f, 0.18f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, score_color);
+    ImGui::ProgressBar(score, ImVec2(340.0f * scale, 0.0f), (format_strength_value(analysis.score, 0) + "% orientation score").c_str());
+    ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered())
+        imgui->tooltip(_L("Higher is better for the assumed load direction. Rotate the selected part and watch this score change."), 340.0f * scale);
+
+    imgui->text_wrapped(analysis.recommendation, 340.0f * scale);
+
+    ImGui::Separator();
+    if (!analysis.has_selection) {
+        imgui->text_wrapped("Select a part to rotate it from this lens. Without a selection, the score is for the whole plate.", 340.0f * scale);
+    } else {
+        if (imgui->button(_L("Rotate X 90"), _L("Turns the selected part 90 degrees around the X axis, then updates the Strength Lens preview.")))
+            _rotate_selection_for_strength_lens(0);
+        ImGui::SameLine();
+        if (imgui->button(_L("Rotate Y 90"), _L("Turns the selected part 90 degrees around the Y axis, then updates the Strength Lens preview.")))
+            _rotate_selection_for_strength_lens(1);
+        ImGui::SameLine();
+        if (imgui->button(_L("Rotate Z 90"), _L("Turns the selected part 90 degrees around the Z axis, then updates the Strength Lens preview.")))
+            _rotate_selection_for_strength_lens(2);
+    }
+
+    if (!analysis.preset_enabled && imgui->button(_L("Hide"), _L("Closes this temporary Strength Lens panel.")))
+        set_prepare_strength_lens_enabled(false);
+
+    imgui->end();
+    ImGuiWrapper::pop_common_window_style();
+    render_strength_lens_legend(*this, imgui, scale);
+}
+
+void GLCanvas3D::_rotate_selection_for_strength_lens(int axis)
+{
+    if (axis < 0 || axis > 2 || m_selection.is_empty())
+        return;
+
+    TransformationType transformation_type;
+    transformation_type.set_relative();
+    if (m_selection.is_single_full_instance())
+        transformation_type.set_independent();
+
+    Vec3d rotation = Vec3d::Zero();
+    rotation(axis) = 0.5 * M_PI;
+
+    m_selection.setup_cache();
+    m_selection.rotate(rotation, transformation_type);
+    do_rotate("Strength Lens Rotate");
+    set_as_dirty();
+    request_extra_frame();
 }
 
 void GLCanvas3D::_render_style_editor()

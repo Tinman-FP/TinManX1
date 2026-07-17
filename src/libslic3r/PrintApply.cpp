@@ -3,9 +3,26 @@
 #include "Print.hpp"
 
 #include <boost/log/trivial.hpp>
+#include <algorithm>
 #include <cfloat>
 
 namespace Slic3r {
+
+static void orcaslicer_codex_enforce_arc_support(DynamicPrintConfig &config)
+{
+    const auto *support_type = config.option<ConfigOptionEnum<SupportType>>("support_type");
+    if (support_type == nullptr || !is_arc(support_type->value))
+        return;
+
+    // Arc Overhangs are supportless bridge/overhang replacement toolpaths.
+    // Keep the profile-selected arc mode as the post-processing trigger, but
+    // do not let it generate ordinary Orca support material upstream.
+    config.set_key_value("enable_support", new ConfigOptionBool(false));
+    config.set_key_value("support_type", new ConfigOptionEnum<SupportType>(support_type->value));
+    config.set_key_value("tinman_support_strategy", new ConfigOptionEnum<TinmanSupportStrategy>(TinmanSupportStrategy::Arc));
+    config.set_key_value("arc_support_experimental", new ConfigOptionBool(true));
+    BOOST_LOG_TRIVIAL(info) << "TinManX1 Arc Overhang: disabled normal supports for selected Arc process.";
+}
 
 // Add or remove support modifier ModelVolumes from model_object_dst to match the ModelVolumes of model_object_new
 // in the exact order and with the same IDs.
@@ -1137,6 +1154,7 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", i=%1%, key=%2%")%i %changed_keys[i];
         }
     }
+    orcaslicer_codex_enforce_arc_support(new_full_config);
     const ConfigOption* enable_support_option = new_full_config.option("enable_support");
     if (enable_support_option && enable_support_option->getBool())
         m_support_used = true;

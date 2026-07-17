@@ -134,7 +134,7 @@ void SLAImportJob::finalize(bool canceled, std::exception_ptr &eptr)
             }
 
         DynamicPrintConfig config = {};
-        config.apply(SLAFullPrintConfig::defaults());
+        config.apply(static_print_config_ref(SLAFullPrintConfig::defaults()));
         config += std::move(p->profile);
 
         wxGetApp().preset_bundle->load_config_model(name, std::move(config));

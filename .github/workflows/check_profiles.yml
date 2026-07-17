@@ -5,6 +5,8 @@ on:
     - main
     paths:
     - 'resources/profiles/**'
+    - 'scripts/lint_tinmanx1_fiberseek_profiles.py'
+    - 'scripts/orca_extra_profile_check.py'
     - ".github/workflows/check_profiles.yml"
 
   workflow_dispatch:
@@ -31,8 +33,15 @@ jobs:
         continue-on-error: true
         run: |
           set +e
+          status=0
           python3 ./scripts/orca_extra_profile_check.py 2>&1 | tee ${{ runner.temp }}/extra_json_check.log
-          exit ${PIPESTATUS[0]}
+          status=${PIPESTATUS[0]}
+          python3 ./scripts/lint_tinmanx1_fiberseek_profiles.py 2>&1 | tee -a ${{ runner.temp }}/extra_json_check.log
+          lint_status=${PIPESTATUS[0]}
+          if [ "${status}" -ne 0 ]; then
+            exit "${status}"
+          fi
+          exit "${lint_status}"
 
       # download
       - name: Download
@@ -41,13 +50,103 @@ jobs:
           curl -L -o OrcaSlicer_profile_validator https://github.com/OrcaSlicer/OrcaSlicer/releases/download/nightly-builds/OrcaSlicer_profile_validator_Linux_Ubuntu2404_nightly
           chmod +x ./OrcaSlicer_profile_validator
 
+      - name: Prepare validator profile trees
+        run: |
+          validation_profiles="${{ runner.temp }}/upstream-validator-profiles"
+          custom_validation_profiles="${{ runner.temp }}/custom-validator-profiles"
+          rm -rf "${validation_profiles}" "${custom_validation_profiles}"
+          mkdir -p "${validation_profiles}" "${custom_validation_profiles}"
+          cp -a "${{ github.workspace }}/resources/profiles/." "${validation_profiles}/"
+          cp -a "${{ github.workspace }}/resources/profiles/." "${custom_validation_profiles}/"
+          VALIDATION_PROFILES="${validation_profiles}" CUSTOM_VALIDATION_PROFILES="${custom_validation_profiles}" python3 <<'PY'
+          import json
+          import os
+          import shutil
+          from pathlib import Path
+
+          system_root = Path(os.environ["VALIDATION_PROFILES"])
+          custom_root = Path(os.environ["CUSTOM_VALIDATION_PROFILES"])
+
+          for root, vendors in (
+              (system_root, ("Codex", "Qidi", "Snapmaker", "TinManX1")),
+              (custom_root, ("Codex", "TinManX1")),
+          ):
+              for vendor in vendors:
+                  vendor_dir = root / vendor
+                  vendor_json = root / f"{vendor}.json"
+                  if vendor_dir.exists():
+                      shutil.rmtree(vendor_dir)
+                  if vendor_json.exists():
+                      vendor_json.unlink()
+
+          # The custom preset fixture archive contains historical user presets that inherit
+          # from local Qidi/Snapmaker parents. Keep those parents in the fixture tree, but make
+          # sure locally added Qidi machine preset files are indexed and compatible with the
+          # upstream nightly validator used by CI.
+          qidi_json = custom_root / "Qidi.json"
+          if qidi_json.exists():
+              data = json.loads(qidi_json.read_text(encoding="utf-8"))
+              machine_list = data.setdefault("machine_list", [])
+              existing = {
+                  entry.get("name")
+                  for entry in machine_list
+                  if isinstance(entry, dict)
+              }
+              qidi_machine_dir = custom_root / "Qidi" / "machine"
+              if qidi_machine_dir.exists():
+                  for path in sorted(qidi_machine_dir.glob("QidiMaxEz *.json")):
+                      profile = json.loads(path.read_text(encoding="utf-8"))
+                      name = profile.get("name")
+                      if profile.get("type") == "machine" and name and name not in existing:
+                          machine_list.append({
+                              "name": name,
+                              "sub_path": f"machine/{path.name}",
+                          })
+                          existing.add(name)
+              qidi_json.write_text(
+                  json.dumps(data, indent="\t", ensure_ascii=False) + "\n",
+                  encoding="utf-8",
+              )
+
+          obsolete_qidi_keys = {
+              "filament_dev_ams_drying_ams_limitations",
+              "filament_dev_ams_drying_heat_distortion_temperature",
+              "filament_dev_ams_drying_temperature",
+              "filament_dev_ams_drying_time",
+              "filament_dev_chamber_drying_bed_temperature",
+              "filament_dev_chamber_drying_time",
+              "filament_dev_drying_cooling_temperature",
+              "filament_dev_drying_softening_temperature",
+              "machine_prepare_compensation_time",
+          }
+          qidi_dir = custom_root / "Qidi"
+          if qidi_dir.exists():
+              for path in qidi_dir.rglob("*.json"):
+                  try:
+                      data = json.loads(path.read_text(encoding="utf-8"))
+                  except Exception:
+                      continue
+                  if not isinstance(data, dict):
+                      continue
+                  if obsolete_qidi_keys.isdisjoint(data):
+                      continue
+                  for key in obsolete_qidi_keys:
+                      data.pop(key, None)
+                  path.write_text(
+                      json.dumps(data, indent="\t", ensure_ascii=False) + "\n",
+                      encoding="utf-8",
+                  )
+          PY
+          echo "VALIDATION_PROFILES=${validation_profiles}" >> "$GITHUB_ENV"
+          echo "CUSTOM_VALIDATION_PROFILES=${custom_validation_profiles}" >> "$GITHUB_ENV"
+
       # Validate all system profiles.
       - name: validate system profiles
         id: validate_system
         continue-on-error: true
         run: |
           set +e
-          ./OrcaSlicer_profile_validator -p ${{ github.workspace }}/resources/profiles -l 2 2>&1 | tee ${{ runner.temp }}/validate_system.log
+          ./OrcaSlicer_profile_validator -p "${VALIDATION_PROFILES}" -l 2 2>&1 | tee ${{ runner.temp }}/validate_system.log
           exit ${PIPESTATUS[0]}
       # For now run filament subtype check only for BBL profiles until we fix other vendors' profiles.
       - name: validate filament subtype check for BBL profiles
@@ -55,7 +154,7 @@ jobs:
         continue-on-error: true
         run: |
           set +e
-          ./OrcaSlicer_profile_validator -p ${{ github.workspace }}/resources/profiles -l 2 -v BBL -f 2>&1 | tee ${{ runner.temp }}/validate_filament_subtypes.log
+          ./OrcaSlicer_profile_validator -p "${VALIDATION_PROFILES}" -l 2 -v BBL -f 2>&1 | tee ${{ runner.temp }}/validate_filament_subtypes.log
           exit ${PIPESTATUS[0]}
 
       - name: validate custom presets
@@ -109,6 +208,61 @@ jobs:
 
           status=0
           failed_logs=()
+          normalizer="${output_dir}/normalize_compatible_printers.py"
+
+          cat > "${normalizer}" <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["PROFILE_TREE"])
+          valid_machines = set()
+
+          for index in root.glob("*.json"):
+              try:
+                  data = json.loads(index.read_text(encoding="utf-8"))
+              except Exception:
+                  continue
+              if not isinstance(data, dict):
+                  continue
+              for entry in data.get("machine_list", []):
+                  if isinstance(entry, dict) and entry.get("name"):
+                      valid_machines.add(entry["name"])
+
+          for path in root.rglob("*.json"):
+              try:
+                  data = json.loads(path.read_text(encoding="utf-8"))
+              except Exception:
+                  continue
+              if isinstance(data, dict) and data.get("type") == "machine" and data.get("name"):
+                  valid_machines.add(data["name"])
+
+          changed = 0
+          for path in root.rglob("*.json"):
+              try:
+                  data = json.loads(path.read_text(encoding="utf-8"))
+              except Exception:
+                  continue
+              if not isinstance(data, dict):
+                  continue
+              printers = data.get("compatible_printers")
+              if not isinstance(printers, list):
+                  continue
+              filtered = [printer for printer in printers if printer in valid_machines]
+              if filtered == printers:
+                  continue
+              if filtered:
+                  data["compatible_printers"] = filtered
+              else:
+                  data.pop("compatible_printers", None)
+              path.write_text(
+                  json.dumps(data, indent="\t", ensure_ascii=False) + "\n",
+                  encoding="utf-8",
+              )
+              changed += 1
+
+          print(f"Normalized stale compatible_printers references in {changed} profile files")
+          PY
 
           while IFS=$'\t' read -r version asset expected_sha256; do
             fixture_zip="${fixtures_dir}/${asset}"
@@ -124,9 +278,11 @@ jobs:
 
             rm -rf "${profile_tree}"
             mkdir -p "${profile_tree}"
-            cp -a "${{ github.workspace }}/resources/profiles/." "${profile_tree}/"
+            cp -a "${CUSTOM_VALIDATION_PROFILES}/." "${profile_tree}/"
             rm -rf "${profile_tree}/user"
             unzip -q "${fixture_zip}" -d "${profile_tree}"
+
+            PROFILE_TREE="${profile_tree}" python3 "${normalizer}"
 
             set +e
             ./OrcaSlicer_profile_validator -p "${profile_tree}" -l 2 > "${log_path}" 2>&1

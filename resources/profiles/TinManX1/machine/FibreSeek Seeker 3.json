@@ -1,0 +1,9 @@
+{
+  "type": "machine_model",
+  "name": "FibreSeek Seeker 3",
+  "model_id": "TinManX1-FibreSeek-Seeker-3",
+  "nozzle_diameter": "0.4;0.6;0.8;0.4+0.7;0.6+0.7;0.8+0.7",
+  "machine_tech": "FFF",
+  "family": "TinManX1",
+  "default_materials": "TinManX1 PCTG @FibreSeek Seeker 3;CFC PCTG + X-CCF @FibreSeek Seeker 3;TinManX1 ABS @FibreSeek Seeker 3;CFC ABS + X-CCF @FibreSeek Seeker 3;TinManX1 PA-CF @FibreSeek Seeker 3;CFC PA-CF + X-CCF @FibreSeek Seeker 3"
+}

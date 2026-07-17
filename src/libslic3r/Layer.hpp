@@ -7,6 +7,7 @@
 #include "SurfaceCollection.hpp"
 #include "ExtrusionEntityCollection.hpp"
 #include "BoundingBox.hpp"
+#include <string>
 namespace Slic3r {
 
 class ExPolygon;
@@ -160,6 +161,12 @@ public:
     // BBS
     ExPolygons              loverhangs;
     BoundingBox             loverhangs_bbox;
+
+    // TinManX1: footprint covered by native Wave Overhang paths on this layer.
+    // Support generation subtracts this so normal/Arc support only handles
+    // residual unsupported regions.
+    Polygons                wave_overhang_covered_polygons;
+    std::vector<std::string> wave_overhang_diagnostics;
     size_t                  region_count() const { return m_regions.size(); }
     const LayerRegion*      get_region(int idx) const { return m_regions[idx]; }
     LayerRegion*            get_region(int idx) { return m_regions[idx]; }

@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <array>
+#include <map>
 #include <vector>
 #include <mutex>
 #include <string>
@@ -261,6 +262,8 @@ class Print;
         bool spiral_vase_mode;
         //BBS
         std::vector<SliceWarning> warnings;
+        std::map<std::string, std::string> arc_support_preview_metadata;
+        std::map<std::string, std::string> strength_lens_preview_metadata;
         int nozzle_hrc;
         std::vector<NozzleType> nozzle_type;
         // first key stores filaments, second keys stores the layer ranges(enclosed) that use the filaments
@@ -300,6 +303,8 @@ class Print;
             custom_gcode_per_print_z = other.custom_gcode_per_print_z;
             spiral_vase_mode = other.spiral_vase_mode;
             warnings = other.warnings;
+            arc_support_preview_metadata = other.arc_support_preview_metadata;
+            strength_lens_preview_metadata = other.strength_lens_preview_metadata;
             bed_type = other.bed_type;
             gcode_check_result = other.gcode_check_result;
             limit_filament_maps = other.limit_filament_maps;
@@ -836,6 +841,12 @@ class Print;
         unsigned int m_g1_line_id;
         unsigned int m_layer_id;
         CpColor m_cp_color;
+        int  m_orcaslicer_codex_continuous_fiber_filament_id {-1};
+        bool m_orcaslicer_codex_processing_fiber_move {false};
+        bool m_orcaslicer_codex_inside_fiber_route {false};
+        bool m_orcaslicer_codex_fiber_tail_after_cut {false};
+        float m_orcaslicer_codex_continuous_fiber_preview_width_mm {0.45f};
+        double m_orcaslicer_codex_continuous_fiber_path_length_mm {0.0};
         SeamsDetector m_seams_detector;
         OptionsZCorrector m_options_z_corrector;
         size_t m_last_default_color_id;
@@ -1153,5 +1164,3 @@ class Print;
 } /* namespace Slic3r */
 
 #endif /* slic3r_GCodeProcessor_hpp_ */
-
-

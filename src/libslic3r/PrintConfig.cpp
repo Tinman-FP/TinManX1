@@ -341,13 +341,100 @@ static t_config_enum_values s_keys_map_SupportMaterialInterfacePattern {
 };
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(SupportMaterialInterfacePattern)
 
+static t_config_enum_values s_keys_map_WaveOverhangAlgorithm {
+    { "andersons", woaAndersons },
+    { "kaiser",    woaKaiser }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(WaveOverhangAlgorithm)
+
+static t_config_enum_values s_keys_map_WaveOverhangSpacingMode {
+    { "uniform",     wosmUniform },
+    { "progressive", wosmProgressive }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(WaveOverhangSpacingMode)
+
+static t_config_enum_values s_keys_map_WaveOverhangSeamMode {
+    { "alternating", woseAlternating },
+    { "aligned",     woseAligned },
+    { "random",      woseRandom }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(WaveOverhangSeamMode)
+
+static t_config_enum_values s_keys_map_WaveOverhangPattern {
+    { "monotonic", int(WaveOverhangPattern::Monotonic) },
+    { "zigzag",    int(WaveOverhangPattern::ZigZag) },
+    { "smart",     int(WaveOverhangPattern::Smart) }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(WaveOverhangPattern)
+
 static t_config_enum_values s_keys_map_SupportType{
     { "normal(auto)",   stNormalAuto },
-    { "tree(auto)", stTreeAuto },
+    { "tree(auto)",     stTreeAuto },
     { "normal(manual)", stNormal },
-    { "tree(manual)", stTree }
+    { "tree(manual)",   stTree },
+    { "arc(auto)",      stArcAuto },
+    { "arc(manual)",    stArc }
 };
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(SupportType)
+
+static t_config_enum_values s_keys_map_TinmanSupportStrategy{
+    { "profile_default", int(TinmanSupportStrategy::ProfileDefault) },
+    { "normal",          int(TinmanSupportStrategy::Normal) },
+    { "tree",            int(TinmanSupportStrategy::Tree) },
+    { "arc",             int(TinmanSupportStrategy::Arc) }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(TinmanSupportStrategy)
+
+static t_config_enum_values s_keys_map_TinmanStrengthMaterialModel{
+    { "filament_preset",  int(TinmanStrengthMaterialModel::FilamentPreset) },
+    { "isotropic",        int(TinmanStrengthMaterialModel::Isotropic) },
+    { "fdm_anisotropic",  int(TinmanStrengthMaterialModel::FdmAnisotropic) },
+    { "continuous_fiber", int(TinmanStrengthMaterialModel::ContinuousFiber) }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(TinmanStrengthMaterialModel)
+
+static t_config_enum_values s_keys_map_TinmanStrengthLoadAxis{
+    { "auto", int(TinmanStrengthLoadAxis::Auto) },
+    { "x",    int(TinmanStrengthLoadAxis::X) },
+    { "y",    int(TinmanStrengthLoadAxis::Y) },
+    { "z",    int(TinmanStrengthLoadAxis::Z) }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(TinmanStrengthLoadAxis)
+
+static t_config_enum_values s_keys_map_FiberReinforcementMode{
+    { "light",      int(FiberReinforcementMode::Light) },
+    { "medium",     int(FiberReinforcementMode::Medium) },
+    { "heavy",      int(FiberReinforcementMode::Heavy) },
+    { "speedy",     int(FiberReinforcementMode::Light) },
+    { "reinforced", int(FiberReinforcementMode::Medium) },
+    { "fortify",    int(FiberReinforcementMode::Heavy) }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(FiberReinforcementMode)
+
+static t_config_enum_values s_keys_map_FiberInfillPattern{
+    { "solid",    int(FiberInfillPattern::Solid) },
+    { "rhombic",  int(FiberInfillPattern::Rhombic) },
+    { "isogrid",  int(FiberInfillPattern::Isogrid) },
+    { "anisogrid", int(FiberInfillPattern::Anisogrid) },
+    { "tetragrid", int(FiberInfillPattern::Tetragrid) }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(FiberInfillPattern)
+
+static t_config_enum_values s_keys_map_FiberInfillSourcePolicy{
+    { "explicit",       int(FiberInfillSourcePolicy::Explicit) },
+    { "generated_ribs", int(FiberInfillSourcePolicy::GeneratedRibs) },
+    { "plastic_traces", int(FiberInfillSourcePolicy::PlasticTraces) }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(FiberInfillSourcePolicy)
+
+static t_config_enum_values s_keys_map_FiberSeamPosition{
+    { "source",  int(FiberSeamPosition::Source) },
+    { "nearest", int(FiberSeamPosition::Nearest) },
+    { "aligned", int(FiberSeamPosition::Aligned) },
+    { "rear",    int(FiberSeamPosition::Rear) },
+    { "random",  int(FiberSeamPosition::Random) }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(FiberSeamPosition)
 
 static t_config_enum_values s_keys_map_SeamPosition {
     { "nearest",        spNearest },
@@ -2889,6 +2976,194 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBools { false });
 
+    def = this->add("composite_enabled", coBools);
+    def->label = L("Composite enabled");
+    def->tooltip = L("Lets this filament lane be used in composite or continuous-fiber print plans.");
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionBools { false });
+
+    def = this->add("fiber_name", coStrings);
+    def->label = L("Fiber name");
+    def->tooltip = L("Name shown for the fiber spool assigned to this lane.");
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionStrings { "" });
+
+    def = this->add("fiber_type", coStrings);
+    def->label = L("Fiber type");
+    def->tooltip = L("Kind of fiber in this lane, such as carbon fiber or glass fiber.");
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionStrings { "" });
+
+    def = this->add("fiber_manufacturer", coStrings);
+    def->label = L("Fiber manufacturer");
+    def->tooltip = L("Manufacturer or source family for the continuous fiber in this composite lane.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionStrings { "" });
+
+    def = this->add("fiber_diameter", coFloats);
+    def->label = L("Fiber diameter");
+    def->tooltip = L("Thickness of the fiber strand. This helps Codex plan clearances and material use.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_linear_density", coFloats);
+    def->label = L("Fiber linear density");
+    def->tooltip = L("Weight of the fiber per meter. This is used for estimates and planning.");
+    def->sidetext = L("g/m");
+    def->min = 0;
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_spool_length_km", coFloats);
+    def->label = L("Fiber spool length");
+    def->tooltip = L("How much fiber is on the spool. This helps estimate whether the print has enough fiber available.");
+    def->sidetext = L("km");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_cost", coFloats);
+    def->label = L("Fiber cost");
+    def->tooltip = L("Cost of the fiber material, used only for print cost estimates.");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_plastic_name", coStrings);
+    def->label = L("Composite plastic name");
+    def->tooltip = L("Plastic matrix name carried by this composite fiber lane.");
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionStrings { "" });
+
+    def = this->add("fiber_plastic_type", coStrings);
+    def->label = L("Composite plastic type");
+    def->tooltip = L("Plastic matrix type used with the continuous fiber, such as PETG or ABS-CF.");
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionStrings { "" });
+
+    def = this->add("fiber_plastic_manufacturer", coStrings);
+    def->label = L("Composite plastic manufacturer");
+    def->tooltip = L("Manufacturer or source family for the plastic matrix in this composite lane.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionStrings { "" });
+
+    def = this->add("fiber_plastic_diameter", coFloats);
+    def->label = L("Composite plastic diameter");
+    def->tooltip = L("Diameter of the plastic filament feeding the composite nozzle.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_plastic_density", coFloats);
+    def->label = L("Composite plastic density");
+    def->tooltip = L("Density of the plastic matrix, used for composite material estimates.");
+    def->sidetext = L("g/cm3");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_plastic_cost", coFloats);
+    def->label = L("Composite plastic cost");
+    def->tooltip = L("Cost of the plastic matrix spool used with this composite lane.");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_plastic_spool_weight", coFloats);
+    def->label = L("Composite plastic spool weight");
+    def->tooltip = L("Amount of plastic matrix material on the spool for this composite lane.");
+    def->sidetext = L("g");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_nozzle_temperature_preheat", coInts);
+    def->label = L("Composite preheat temperature");
+    def->tooltip = L("Preheat temperature for the composite nozzle while it is waiting for a fiber tool change.");
+    def->sidetext = L("degC");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInts { 0 });
+
+    def = this->add("fiber_nozzle_temperature_standby", coInts);
+    def->label = L("Composite standby temperature");
+    def->tooltip = L("Standby temperature for the inactive composite nozzle.");
+    def->sidetext = L("degC");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInts { 0 });
+
+    def = this->add("fiber_first_layers_height", coFloats);
+    def->label = L("Composite first-layer height band");
+    def->tooltip = L("Height below which first-layer composite temperature and cooling behavior should apply.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_plastic_extrusion_speed", coFloats);
+    def->label = L("Composite plastic extrusion speed");
+    def->tooltip = L("Plastic feed speed used by the composite nozzle during restart and laydown.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_extrusion_speed", coFloats);
+    def->label = L("Fiber extrusion speed");
+    def->tooltip = L("Fiber feed speed used while extruding the restart tail.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_restart_pause", coFloats);
+    def->label = L("Fiber restart pause");
+    def->tooltip = L("Pause after the fiber restart tail is laid down, used when extra adhesion time is needed.");
+    def->sidetext = L("s");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("plastic_spool_weight", coFloats);
+    def->label = L("Plastic spool weight");
+    def->tooltip = L("Amount of plastic on the spool, used for planning and estimates.");
+    def->sidetext = L("g");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_finish_ironing_distance", coFloats);
+    def->label = L("Fiber finish ironing distance");
+    def->tooltip = L("Extra smoothing distance after laying fiber. Larger values can help press the fiber down, but take more time.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_priming_line_height", coFloats);
+    def->label = L("Fiber priming line height");
+    def->tooltip = L("Height used when starting a fiber line. This helps the fiber begin cleanly.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats { 0.0 });
+
+    def = this->add("fiber_material_kind", coStrings);
+    def->label = L("Fiber material kind");
+    def->tooltip = L("Material family for this fiber. Codex uses this to choose safer strength and fiber assumptions.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionStrings { "" });
+
+    def = this->add("fiber_source_material_id", coStrings);
+    def->label = L("Fiber source material ID");
+    def->tooltip = L("Optional material ID from another system. Most users can leave this blank.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionStrings { "" });
+
     def           = this->add("filament_change_length", coFloats);
     def->label    = L("Filament ramming length");
     def->tooltip  = L("When changing the extruder, it is recommended to extrude a certain length of filament from the original extruder. This helps minimize nozzle oozing.");
@@ -3072,6 +3347,508 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Archimedean Chords"));
     def->enum_labels.push_back(L("Octagram Spiral"));
     def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipCrossHatch));
+
+    def = this->add("fiber_reinforcement_mode", coEnum);
+    def->label = L("Fiber reinforcement mode");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Chooses how much fiber reinforcement to plan. Light is lighter, Medium adds more, and Heavy favors maximum strength.");
+    def->enum_keys_map = &ConfigOptionEnum<FiberReinforcementMode>::get_enum_values();
+    def->enum_values.push_back("light");
+    def->enum_values.push_back("medium");
+    def->enum_values.push_back("heavy");
+    def->enum_labels.push_back(L("Light"));
+    def->enum_labels.push_back(L("Medium"));
+    def->enum_labels.push_back(L("Heavy"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<FiberReinforcementMode>(FiberReinforcementMode::Light));
+
+    def = this->add("fiber_generate_perimeters", coBool);
+    def->label = L("Fiber perimeters");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Allows fiber around outside walls. This can strengthen edges and holes.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("fiber_generate_infill", coBool);
+    def->label = L("Fiber infill");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Allows fiber inside the part. This can strengthen the body of the print.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("fiber_start_layer", coInt);
+    def->label = L("Fiber start layer");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("First visible layer number allowed to receive fiber. The same number is kept fiber-free at the top; for example, 4 starts fiber on layer 4 and leaves the last 4 layers without fiber. Set to 0 to start as early as the planner allows.");
+    def->sidetext = L("layer");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("fiber_print_order_code", coInt);
+    def->label = L("Fiber print order");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Advanced setting for the order fiber and plastic are planned. Most users should leave this unchanged.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("fiber_min_radius", coFloat);
+    def->label = L("Fiber minimum radius");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Selected bend-radius quality target for fiber paths. Larger values slow sharper turns and favor smoother placement, but valid shorter-radius paths may still be planned when needed.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(8.0));
+
+    def = this->add("fiber_max_arc_segment_length", coFloat);
+    def->label = L("Fiber max arc segment");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("How smoothly curved fiber paths are drawn. Smaller values make smoother curves but create more G-code.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(1.0));
+
+    def = this->add("fiber_start_length", coFloat);
+    def->label = L("Fiber start length");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Distance used to get fiber moving at the start of a fiber line.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_slow_length", coFloat);
+    def->label = L("Fiber slow length");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Distance to print slowly after starting fiber, helping the strand stick before speeding up.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_tension_length", coFloat);
+    def->label = L("Fiber tension length");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Distance used to gently tension the fiber so it lays straight.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_tension_feedrate", coFloat);
+    def->label = L("Fiber tension feedrate");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Speed used while tensioning fiber. Slower is gentler; faster saves time.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_tension_release_fraction", coFloat);
+    def->label = L("Fiber tension release");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Fraction of the fiber tension segment to release with extra feed. Set to 0 to disable release compensation.");
+    def->sidetext = L("%");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_feedrate_percent", coFloat);
+    def->label = L("Fiber feedrate");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Percent of planned fiber feed relative to path length. Lower values add tension; higher values relax the strand.");
+    def->sidetext = L("%");
+    def->min = 1;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(100.0));
+
+    def = this->add("fiber_start_max_speed", coFloat);
+    def->label = L("Fiber start max speed");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Maximum speed for the initial part of a fiber route.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_start_min_speed", coFloat);
+    def->label = L("Fiber start min speed");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Minimum curved-segment speed target for the initial part of a fiber route.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_start_min_limit_speed", coFloat);
+    def->label = L("Fiber start speed floor");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Lowest allowed speed target for the initial part of a fiber route.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_normal_max_speed", coFloat);
+    def->label = L("Fiber normal max speed");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Maximum speed for the middle of a fiber route.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_normal_min_speed", coFloat);
+    def->label = L("Fiber normal min speed");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Minimum curved-segment speed target for the middle of a fiber route.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_normal_min_limit_speed", coFloat);
+    def->label = L("Fiber normal speed floor");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Lowest allowed speed target for the middle of a fiber route.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_finish_max_speed", coFloat);
+    def->label = L("Fiber finish max speed");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Maximum speed for the last section after the fiber cut command.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_finish_min_speed", coFloat);
+    def->label = L("Fiber finish min speed");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Minimum curved-segment speed target for the last section after cut.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_finish_min_limit_speed", coFloat);
+    def->label = L("Fiber finish speed floor");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Lowest allowed speed target for the last section after cut.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_override_correction_speed", coBool);
+    def->label = L("Override correction move speed");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Use the correction move speed for fiber trajectory correction moves.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("fiber_correction_move_speed", coFloat);
+    def->label = L("Correction move speed");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Speed for short fiber trajectory correction moves.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_correction_move_feedrate_percent", coFloat);
+    def->label = L("Correction fiber feedrate");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Fiber feed percent used on trajectory correction moves.");
+    def->sidetext = L("%");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_after_cut_plastic_extrusion_multiplier", coFloat);
+    def->label = L("After-cut plastic multiplier");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Adjusts how much plastic is laid down right after fiber is cut or restarted.");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(1.0));
+
+    def = this->add("fiber_z_hop_after_cut", coBool);
+    def->label = L("Fiber Z hop after cut");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Lifts the nozzle after cutting fiber to reduce dragging across the part.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("fiber_first_layer_flow_ratio", coFloat);
+    def->label = L("Fiber first-layer flow");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Flow multiplier for fiber-related first-layer geometry.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_first_layer_line_width", coFloat);
+    def->label = L("Fiber first-layer width");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Line width for fiber-related first-layer geometry.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_first_layer_height", coFloat);
+    def->label = L("Fiber first-layer height");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Layer height for fiber-related first-layer geometry.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_first_layer_speed_ratio", coFloat);
+    def->label = L("Fiber first-layer speed");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Speed multiplier for fiber-related first-layer geometry.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_infill_pattern", coEnum);
+    def->label = L("Fiber infill pattern");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Layout used for fiber inside the part. Different layouts trade print time for strength in different directions.");
+    def->enum_keys_map = &ConfigOptionEnum<FiberInfillPattern>::get_enum_values();
+    def->enum_values.push_back("solid");
+    def->enum_values.push_back("rhombic");
+    def->enum_values.push_back("isogrid");
+    def->enum_values.push_back("anisogrid");
+    def->enum_values.push_back("tetragrid");
+    def->enum_labels.push_back(L("Solid"));
+    def->enum_labels.push_back(L("Rhombic"));
+    def->enum_labels.push_back(L("Isogrid"));
+    def->enum_labels.push_back(L("Anisogrid"));
+    def->enum_labels.push_back(L("Tetragrid"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<FiberInfillPattern>(FiberInfillPattern::Solid));
+
+    def = this->add("fiber_infill_density", coPercent);
+    def->label = L("Fiber infill density");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Density for generated continuous-fiber ribs. Set to 0 to use the spacing chosen by the reinforcement mode or Fiber infill spacing. Values above 0 derive spacing from fiber line width.");
+    def->sidetext = "%";
+    def->min = 0;
+    def->max = 100;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionPercent(0));
+
+    def = this->add("fiber_infill_angles", coString);
+    def->label = L("Fiber infill angles");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Optional comma-separated generated-rib angles in degrees. Leave blank to use the selected fiber infill pattern.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionString());
+
+    def = this->add("fiber_infill_source_policy", coEnum);
+    def->label = L("Fiber infill source");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Chooses where fiber infill paths come from. Plastic traces follows the polymer infill, generated ribs creates new clipped fiber ribs, and explicit uses existing fiber-marked paths only.");
+    def->enum_keys_map = &ConfigOptionEnum<FiberInfillSourcePolicy>::get_enum_values();
+    def->enum_values.push_back("explicit");
+    def->enum_values.push_back("generated_ribs");
+    def->enum_values.push_back("plastic_traces");
+    def->enum_labels.push_back(L("Explicit fiber paths"));
+    def->enum_labels.push_back(L("Generated ribs"));
+    def->enum_labels.push_back(L("Plastic traces"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<FiberInfillSourcePolicy>(FiberInfillSourcePolicy::PlasticTraces));
+
+    def = this->add("fiber_seam_position", coEnum);
+    def->label = L("Fiber seam position");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Controls where closed continuous-fiber routes start. Source preserves the planner's current start points, Nearest reduces travel between fiber routes, Aligned uses the fiber seam angle, Rear starts toward the back of the route, and Random scatters starts deterministically.");
+    def->enum_keys_map = &ConfigOptionEnum<FiberSeamPosition>::get_enum_values();
+    def->enum_values.push_back("source");
+    def->enum_values.push_back("nearest");
+    def->enum_values.push_back("aligned");
+    def->enum_values.push_back("rear");
+    def->enum_values.push_back("random");
+    def->enum_labels.push_back(L("Source"));
+    def->enum_labels.push_back(L("Nearest"));
+    def->enum_labels.push_back(L("Aligned"));
+    def->enum_labels.push_back(L("Rear"));
+    def->enum_labels.push_back(L("Random"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<FiberSeamPosition>(FiberSeamPosition::Source));
+
+    def = this->add("fiber_seam_angle", coFloat);
+    def->label = L("Fiber seam angle");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Angle used by Aligned fiber seam placement. Zero degrees is the right side of each route, increasing counter-clockwise.");
+    def->sidetext = L("deg");
+    def->min = -360;
+    def->max = 360;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_line_width", coFloat);
+    def->label = L("Fiber line width");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Planned width for continuous-fiber routes. This should normally match the composite path width for the fiber nozzle.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.8));
+
+    def = this->add("fiber_infill_spacing", coFloat);
+    def->label = L("Fiber infill spacing");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Spacing between generated fiber infill routes. Set to 0 to let the selected reinforcement mode choose the spacing.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_macro_layer_height", coFloat);
+    def->label = L("Fiber layer height");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Z spacing used for fiber planning. Set to 0 to let the selected reinforcement mode choose the fiber layer schedule.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_layer_step", coInt);
+    def->label = L("Fiber layer step");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Plan fiber every Nth printable layer. Set to 0 to use the selected reinforcement mode.");
+    def->sidetext = L("layer");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("fiber_min_route_length", coFloat);
+    def->label = L("Fiber minimum route length");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Minimum generated fiber route length. Set to 0 to use the planner default.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_perimeter_min_route_length", coFloat);
+    def->label = L("Fiber perimeter minimum length");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Minimum perimeter-style fiber route length.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(55.0));
+
+    def = this->add("fiber_mechanical_min_route_length", coFloat);
+    def->label = L("Fiber hardware minimum length");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Mechanical minimum fiber segment length for the cutter and feed path.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(55.0));
+
+    def = this->add("fiber_perimeter_inset", coFloat);
+    def->label = L("Fiber perimeter inset");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Inset distance used when creating fiber perimeter routes. Set to 0 to use the planner default.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_infill_inset", coFloat);
+    def->label = L("Fiber infill inset");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Distance from walls and holes used when clipping generated fiber infill. Set to 0 to use the planner default.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_print_speed", coFloat);
+    def->label = L("Fiber print speed");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Normal continuous-fiber deposition speed. Set to 0 to use the planner default.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_start_speed", coFloat);
+    def->label = L("Fiber start speed");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Speed used at the beginning of a fiber route. Set to 0 to use the planner default.");
+    def->sidetext = L("mm/s");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_max_routes_per_layer", coInt);
+    def->label = L("Fiber max routes per layer");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Safety cap for generated fiber routes on one layer. Set to 0 to use the selected reinforcement mode.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("fiber_routes_per_cut", coInt);
+    def->label = L("Fiber routes per cut");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Number of same-layer fiber routes grouped into one cut/restart cycle.");
+    def->min = 1;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(1));
+
+    def = this->add("fiber_outer_perimeter_loops", coInt);
+    def->label = L("Fiber outer loops");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Number of outside-oriented reinforced perimeter loops to request.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(1));
+
+    def = this->add("fiber_inner_perimeter_loops", coInt);
+    def->label = L("Fiber inner loops");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Number of inside or hole-oriented reinforced perimeter loops to request.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(1));
+
+    def = this->add("fiber_plastic_outer_loops_with_fiber", coInt);
+    def->label = L("Plastic loops outside fiber");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Plastic perimeter loops between the external shell and fiber perimeter.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(2));
+
+    def = this->add("fiber_plastic_inner_loops_with_fiber", coInt);
+    def->label = L("Plastic loops inside fiber");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Plastic perimeter loops between fiber perimeters and infill or holes.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("fiber_reinforcement_payload", coString);
+    def->label = L("Fiber advanced layup payload");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Serialized JSON for advanced FibreSeek planning, including layup_bands with layer/Z ranges, mode, pattern, perimeter/infill intent, spacing, route caps, priority, and optional prime_line data.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString());
 
     def           = this->add("lateral_lattice_angle_1", coFloat);
     def->label    = L("Lateral lattice angle 1");
@@ -4840,6 +5617,253 @@ void PrintConfigDef::init_fff_params()
     def->max = 100;
     def->set_default_value(new ConfigOptionFloats { 0.4 });
 
+    def = this->add("fiber_enabled", coBool);
+    def->label = L("Fiber enabled");
+    def->tooltip = L("Turns on FibreSeek planning support for this printer profile.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("fiber_shared_nozzle", coBool);
+    def->label = L("Shared fiber nozzle");
+    def->tooltip = L("Use this when plastic and fiber come through the same nozzle path.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("plastic_nozzle_diameter", coFloat);
+    def->label = L("Plastic nozzle diameter");
+    def->tooltip = L("Nozzle size used for normal plastic extrusion during fiber planning.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.4));
+
+    def = this->add("composite_nozzle_diameter", coFloat);
+    def->label = L("Composite nozzle diameter");
+    def->tooltip = L("Nozzle size used when planning composite or fiber-assisted extrusion.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.4));
+
+    def = this->add("fiber_plastic_extruder_offset_x", coFloat);
+    def->label = L("Plastic extruder X offset");
+    def->tooltip = L("X offset for the plastic-only nozzle in the FibreSeek machine contract.");
+    def->sidetext = L("mm");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_plastic_extruder_offset_y", coFloat);
+    def->label = L("Plastic extruder Y offset");
+    def->tooltip = L("Y offset for the plastic-only nozzle in the FibreSeek machine contract.");
+    def->sidetext = L("mm");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_plastic_extruder_offset_z", coFloat);
+    def->label = L("Plastic extruder Z offset");
+    def->tooltip = L("Z offset for the plastic-only nozzle in the FibreSeek machine contract.");
+    def->sidetext = L("mm");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_composite_extruder_offset_x", coFloat);
+    def->label = L("Composite extruder X offset");
+    def->tooltip = L("X offset for the composite nozzle in the FibreSeek machine contract.");
+    def->sidetext = L("mm");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_composite_extruder_offset_y", coFloat);
+    def->label = L("Composite extruder Y offset");
+    def->tooltip = L("Y offset for the composite nozzle in the FibreSeek machine contract.");
+    def->sidetext = L("mm");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_composite_extruder_offset_z", coFloat);
+    def->label = L("Composite extruder Z offset");
+    def->tooltip = L("Z offset for the composite nozzle in the FibreSeek machine contract.");
+    def->sidetext = L("mm");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_plastic_extruder_heatup_speed", coFloat);
+    def->label = L("Plastic extruder heat-up speed");
+    def->tooltip = L("Plastic nozzle heat-up rate used for FibreSeek print-time and preheat planning.");
+    def->sidetext = L("degC/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_composite_extruder_heatup_speed", coFloat);
+    def->label = L("Composite extruder heat-up speed");
+    def->tooltip = L("Composite nozzle heat-up rate used for FibreSeek print-time and preheat planning.");
+    def->sidetext = L("degC/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_plastic_extruder_has_fan", coBool);
+    def->label = L("Plastic extruder has fan");
+    def->tooltip = L("Records whether the plastic nozzle has a firmware-addressable cooling fan.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("fiber_composite_extruder_has_fan", coBool);
+    def->label = L("Composite extruder has fan");
+    def->tooltip = L("Records whether the composite nozzle has a firmware-addressable cooling fan.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("fiber_plastic_extruder_fan_index", coInt);
+    def->label = L("Plastic extruder fan index");
+    def->tooltip = L("Firmware fan index for the plastic nozzle.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("fiber_composite_extruder_fan_index", coInt);
+    def->label = L("Composite extruder fan index");
+    def->tooltip = L("Firmware fan index for the composite nozzle.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("fiber_bed_heatup_speed", coFloat);
+    def->label = L("Bed heat-up speed");
+    def->tooltip = L("Build plate heat-up rate used for FibreSeek print-time estimates.");
+    def->sidetext = L("degC/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_chamber_heatup_speed", coFloat);
+    def->label = L("Chamber heat-up speed");
+    def->tooltip = L("Chamber heat-up rate used for FibreSeek print-time estimates.");
+    def->sidetext = L("degC/s");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_motion_blocks_buffer_size", coInt);
+    def->label = L("Motion blocks buffer");
+    def->tooltip = L("Firmware motion block buffer size recorded for FibreSeek print-time estimates.");
+    def->min = 0;
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("fiber_cut_distance", coFloat);
+    def->label = L("Fiber cut distance");
+    def->tooltip = L("Distance the printer uses to cut the fiber. This must match the hardware.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_restart_length", coFloat);
+    def->label = L("Fiber restart length");
+    def->tooltip = L("Distance used to restart fiber after a cut so the next fiber line begins cleanly.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_cut_gcode", coString);
+    def->label = L("Fiber cut G-code");
+    def->tooltip = L("Printer commands used to cut fiber. Only change this if you know the printer's required cut command.");
+    def->mode = comExpert;
+    def->multiline = true;
+    def->set_default_value(new ConfigOptionString());
+
+    def = this->add("fiber_nozzle_contact_radius", coFloat);
+    def->label = L("Fiber nozzle contact radius");
+    def->tooltip = L("Estimated contact area around the nozzle while laying fiber. Used to avoid tight spaces.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_nozzle_contact_radius_extended", coFloat);
+    def->label = L("Extended fiber contact radius");
+    def->tooltip = L("Extra safety area around the nozzle for conservative fiber clearance checks.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("fiber_toolchange_gcode_before", coString);
+    def->label = L("Fiber before-toolchange G-code");
+    def->tooltip = L("Printer commands to run before a fiber tool change. Most users should leave this in the printer profile.");
+    def->mode = comExpert;
+    def->multiline = true;
+    def->set_default_value(new ConfigOptionString());
+
+    def = this->add("fiber_toolchange_gcode_after", coString);
+    def->label = L("Fiber after-toolchange G-code");
+    def->tooltip = L("Printer commands to run after a fiber tool change. Most users should leave this in the printer profile.");
+    def->mode = comExpert;
+    def->multiline = true;
+    def->set_default_value(new ConfigOptionString());
+
+    def = this->add("fiber_slot_roles", coString);
+    def->label = L("Fiber slot roles");
+    def->tooltip = L("Advanced lane map telling Codex which spool slots are plastic, composite, or fiber.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString());
+
+    def = this->add("continuous_fiber_name", coString);
+    def->label = L("Continuous fiber name");
+    def->tooltip = L("Fiber material assigned to the virtual continuous-fiber lane.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionString("Carbon fiber 0.25 mm"));
+
+    def = this->add("continuous_fiber_type", coString);
+    def->label = L("Continuous fiber type");
+    def->tooltip = L("Kind of continuous fiber assigned to the virtual fiber lane.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionString("carbon_fiber"));
+
+    def = this->add("continuous_fiber_material_kind", coString);
+    def->label = L("Continuous fiber material kind");
+    def->tooltip = L("Material family for the virtual continuous-fiber lane.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionString("continuous_fiber"));
+
+    def = this->add("continuous_fiber_source_material_id", coString);
+    def->label = L("Continuous fiber source material");
+    def->tooltip = L("Identifier for the selected continuous-fiber material.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionString("tinmanx1-carbon-025"));
+
+    def = this->add("continuous_fiber_diameter", coFloat);
+    def->label = L("Continuous fiber diameter");
+    def->tooltip = L("Thickness of the selected continuous-fiber strand.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.25));
+
+    def = this->add("continuous_fiber_linear_density", coFloat);
+    def->label = L("Continuous fiber linear density");
+    def->tooltip = L("Weight of the selected continuous fiber per kilometer.");
+    def->sidetext = L("g/km");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(102.0));
+
+    def = this->add("fiber_postprocessor_type", coInt);
+    def->label = L("Fiber postprocessor type");
+    def->tooltip = L("Advanced FibreSeek output mode. Most users should leave this unchanged.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("fiber_machine_contract_payload", coString);
+    def->label = L("Fiber machine contract");
+    def->tooltip = L("Advanced printer capability data for FibreSeek. It records what the printer can safely do.");
+    def->mode = comExpert;
+    def->multiline = true;
+    def->set_default_value(new ConfigOptionString());
+
     def = this->add("notes", coString);
     def->label = L("Configuration notes");
     def->tooltip = L("You can put here your personal notes. This text will be added to the G-code "
@@ -5005,6 +6029,388 @@ void PrintConfigDef::init_fff_params()
     def->category = L("Quality");
     def->tooltip = L("Detect the overhang percentage relative to line width and use different speed to print. "
                      "For 100%% overhang, bridge speed is used.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(true));
+
+    def = this->add("wave_overhangs", coBool);
+    def->label = L("Use wave overhangs (Experimental)");
+    def->category = L("Support");
+    def->tooltip = L("Tries to print steep overhangs with wavy toolpaths instead of regular support material. Experimental: preview the G-code before printing.");
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("wave_overhangs_instead_of_bridges", coBool);
+    def->label = L("Use wave overhangs instead of bridges");
+    def->category = L("Support");
+    def->tooltip = L("Uses wave paths on unsupported spans instead of normal straight bridge lines. Leave off if normal bridges already print well.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("wave_overhang_outer_perimeters", coInt);
+    def->label = L("Perimeters");
+    def->category = L("Support");
+    def->tooltip = L("How many normal wall lines to keep at the overhang edge before wave lines begin. More can keep the outside cleaner.");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->set_default_value(new ConfigOptionInt(1));
+
+    def = this->add("wave_overhang_perimeter_overlap", coFloat);
+    def->label = L("Perimeter overlap");
+    def->category = L("Support");
+    def->tooltip = L("How close wave lines are allowed to reach the normal walls. A little overlap helps them connect; too much can cause blobs.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.1));
+
+    def = this->add("wave_overhang_minimum_width", coFloat);
+    def->label = L("Minimum wave width");
+    def->category = L("Support");
+    def->tooltip = L("Smallest gap the wave generator will try to fill. Raise this to ignore tiny details; lower it to let waves enter narrow areas.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0.7));
+
+    def = this->add("wave_overhang_pattern", coEnum);
+    def->label = L("Pattern");
+    def->category = L("Support");
+    def->tooltip = L("Chooses the shape of the wave path. Smart tries to start from the better-supported side when possible.");
+    def->enum_keys_map = &ConfigOptionEnum<WaveOverhangPattern>::get_enum_values();
+    def->enum_values.push_back("monotonic");
+    def->enum_values.push_back("zigzag");
+    def->enum_values.push_back("smart");
+    def->enum_labels.push_back(L("Monotonic"));
+    def->enum_labels.push_back(L("Zigzag"));
+    def->enum_labels.push_back(L("Smart"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<WaveOverhangPattern>(WaveOverhangPattern::Smart));
+
+    def = this->add("wave_overhang_line_spacing", coFloat);
+    def->label = L("Line spacing");
+    def->category = L("Support");
+    def->tooltip = L("Distance between wave lines. Smaller spacing gives more support but uses more material and time.");
+    def->sidetext = L("mm");
+    def->mode = comAdvanced;
+    def->min = 0.01;
+    def->set_default_value(new ConfigOptionFloat(0.35));
+
+    def = this->add("wave_overhang_flow_mm3_per_mm", coFloat);
+    def->label = L("Wave flow");
+    def->category = L("Support");
+    def->tooltip = L("Amount of plastic in each wave line. More flow can be stronger, but too much can leave blobs.");
+    def->sidetext = L("mm3/mm");
+    def->mode = comAdvanced;
+    def->min = 0.02;
+    def->max = 1.5;
+    def->set_default_value(new ConfigOptionFloat(0.15));
+
+    def = this->add("wave_overhang_print_speed", coFloat);
+    def->label = L("Print speed");
+    def->category = L("Support");
+    def->tooltip = L("Speed used while printing wave lines. Slower usually gives the plastic more time to stick.");
+    def->sidetext = L("mm/s");
+    def->mode = comAdvanced;
+    def->min = 0.1;
+    def->set_default_value(new ConfigOptionFloat(2.0));
+
+    def = this->add("wave_overhang_perimeter_speed", coFloat);
+    def->label = L("Perimeter speed");
+    def->category = L("Support");
+    def->tooltip = L("Wall speed on layers that contain wave lines. Use 0 to keep the normal wall speed.");
+    def->sidetext = L("mm/s");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 1000;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("wave_overhang_travel_speed", coFloat);
+    def->label = L("Travel speed");
+    def->category = L("Support");
+    def->tooltip = L("Non-printing move speed near wave overhangs. Lower values can be gentler around delicate wave lines.");
+    def->sidetext = L("mm/s");
+    def->mode = comAdvanced;
+    def->min = 1.0;
+    def->set_default_value(new ConfigOptionFloat(40.0));
+
+    def = this->add("wave_overhang_fan_speed", coInt);
+    def->label = L("Fan speed");
+    def->category = L("Support");
+    def->tooltip = L("Cooling fan speed while printing wave lines. More cooling helps some plastics hold shape, but can hurt layer bonding.");
+    def->sidetext = L("%");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 100;
+    def->set_default_value(new ConfigOptionInt(100));
+
+    def = this->add("wave_overhang_nozzle_temp", coInt);
+    def->label = L("Nozzle temperature");
+    def->category = L("Support");
+    def->tooltip = L("Optional nozzle temperature for wave lines. Use 0 to keep the normal filament temperature.");
+    def->sidetext = L("C");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 350;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("wave_overhang_min_wave_time", coFloat);
+    def->label = L("Min wave time");
+    def->category = L("Support");
+    def->tooltip = L("Minimum time to spend on each wave area. This can give small wave sections time to cool. Use 0 to turn it off.");
+    def->sidetext = L("s");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 60;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("wave_overhang_min_layer_time", coFloat);
+    def->label = L("Min layer time");
+    def->category = L("Support");
+    def->tooltip = L("Minimum time for a layer that contains wave lines. This can help cooling before the next layer starts. Use 0 to turn it off.");
+    def->sidetext = L("s");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 300;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("wave_overhang_corner_taper_enable", coBool);
+    def->label = L("Enable corner-aware spacing taper");
+    def->category = L("Support");
+    def->tooltip = L("Adds extra wave support near sharp outside corners, where overhangs are more likely to curl or droop.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("wave_overhang_line_spacing_corner", coFloat);
+    def->label = L("Corner line spacing");
+    def->category = L("Support");
+    def->tooltip = L("Wave-line spacing near sharp corners. Smaller spacing adds more support in corners.");
+    def->sidetext = L("mm");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 2;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("wave_overhang_corner_taper_distance", coFloat);
+    def->label = L("Corner taper distance");
+    def->category = L("Support");
+    def->tooltip = L("How far from a sharp corner the extra wave support should extend.");
+    def->sidetext = L("mm");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 20;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("wave_overhang_corner_angle_threshold", coFloat);
+    def->label = L("Corner angle threshold");
+    def->category = L("Support");
+    def->tooltip = L("How sharp a corner must be before Codex adds extra corner support. Lower values only catch sharper corners.");
+    def->sidetext = L("degrees");
+    def->mode = comAdvanced;
+    def->min = 10;
+    def->max = 180;
+    def->set_default_value(new ConfigOptionFloat(90.0));
+
+    def = this->add("wave_overhang_end_retract_length", coFloat);
+    def->label = L("End-of-line retract");
+    def->category = L("Support");
+    def->tooltip = L("Pulls filament back at the end of each wave line to reduce stringing. Use 0 for the normal retraction behavior.");
+    def->sidetext = L("mm");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 10;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("wave_overhang_floor_layers", coInt);
+    def->label = L("Floor layers");
+    def->category = L("Support");
+    def->tooltip = L("Number of solid layers placed above wave lines. More layers can make the supported area stronger and smoother.");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 20;
+    def->set_default_value(new ConfigOptionInt(2));
+
+    def = this->add("wave_overhang_floor_use_hilbert", coBool);
+    def->label = L("Hilbert curve floor");
+    def->category = L("Support");
+    def->tooltip = L("Uses a curved Hilbert pattern for the solid layers above wave lines. It can spread strength more evenly.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("wave_overhang_floor_hilbert_layers", coInt);
+    def->label = L("Hilbert floor layer count");
+    def->category = L("Support");
+    def->tooltip = L("How many floor layers use the Hilbert pattern. Use 0 to apply it to all wave floor layers.");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 20;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("wave_overhang_floor_hilbert_density", coInt);
+    def->label = L("Hilbert floor density");
+    def->category = L("Support");
+    def->tooltip = L("How full the Hilbert floor layers are. Higher values are stronger but use more material.");
+    def->sidetext = L("%");
+    def->mode = comAdvanced;
+    def->min = 1;
+    def->max = 100;
+    def->set_default_value(new ConfigOptionInt(100));
+
+    def = this->add("wave_overhang_floor_print_speed", coFloat);
+    def->label = L("Hilbert floor print speed");
+    def->category = L("Support");
+    def->tooltip = L("Speed for Hilbert floor layers above wave lines. Use 0 to keep the normal solid-infill speed.");
+    def->sidetext = L("mm/s");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 1000;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("wave_overhang_floor_perimeter_speed", coFloat);
+    def->label = L("Floor perimeter speed");
+    def->category = L("Support");
+    def->tooltip = L("Wall speed on floor layers above wave lines. Use 0 to keep the normal wall speed.");
+    def->sidetext = L("mm/s");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 1000;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("wave_overhang_floor_fan_speed", coInt);
+    def->label = L("Hilbert floor fan speed");
+    def->category = L("Support");
+    def->tooltip = L("Fan speed for Hilbert floor layers above wave lines. Use -1 to keep the normal fan setting.");
+    def->sidetext = L("%");
+    def->mode = comAdvanced;
+    def->min = -1;
+    def->max = 100;
+    def->set_default_value(new ConfigOptionInt(-1));
+
+    def = this->add("wave_overhang_algorithm", coEnum);
+    def->label = L("Algorithm");
+    def->category = L("Support");
+    def->tooltip = L("Chooses how wave shapes are made. Andersons is the default general choice; Kaiser LaSO is an alternate ring-style generator.");
+    def->enum_keys_map = &ConfigOptionEnum<WaveOverhangAlgorithm>::get_enum_values();
+    def->enum_values.push_back("andersons");
+    def->enum_values.push_back("kaiser");
+    def->enum_labels.push_back(L("Andersons"));
+    def->enum_labels.push_back(L("Kaiser LaSO"));
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionEnum<WaveOverhangAlgorithm>(woaAndersons));
+
+    def = this->add("wave_overhang_ring_overlap", coFloat);
+    def->label = L("Ring overlap");
+    def->category = L("Support");
+    def->tooltip = L("For Kaiser LaSO only: how much neighboring wave rings overlap. More overlap can improve contact but may over-extrude.");
+    def->mode = comAdvanced;
+    def->min = 0.0;
+    def->max = 0.9;
+    def->set_default_value(new ConfigOptionFloat(0.15));
+
+    def = this->add("wave_overhang_min_angle", coFloat);
+    def->label = L("Min angle");
+    def->category = L("Support");
+    def->tooltip = L("Minimum overhang steepness to consider for wave handling. Use 0 to let Codex consider all detected overhangs.");
+    def->sidetext = L("degrees");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 90;
+    def->set_default_value(new ConfigOptionFloat(0));
+
+    def = this->add("wave_overhang_spacing_mode", coEnum);
+    def->label = L("Spacing mode");
+    def->category = L("Support");
+    def->tooltip = L("Controls whether wave spacing stays the same or changes as the wave grows across the overhang.");
+    def->enum_keys_map = &ConfigOptionEnum<WaveOverhangSpacingMode>::get_enum_values();
+    def->enum_values.push_back("uniform");
+    def->enum_values.push_back("progressive");
+    def->enum_labels.push_back(L("Uniform"));
+    def->enum_labels.push_back(L("Progressive"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<WaveOverhangSpacingMode>(wosmUniform));
+
+    def = this->add("wave_overhang_seam_mode", coEnum);
+    def->label = L("Seam mode");
+    def->category = L("Support");
+    def->tooltip = L("Controls where wave lines start and stop. Alternating spreads seams around; aligned keeps them together; random scatters them.");
+    def->enum_keys_map = &ConfigOptionEnum<WaveOverhangSeamMode>::get_enum_values();
+    def->enum_values.push_back("alternating");
+    def->enum_values.push_back("aligned");
+    def->enum_values.push_back("random");
+    def->enum_labels.push_back(L("Alternating"));
+    def->enum_labels.push_back(L("Aligned"));
+    def->enum_labels.push_back(L("Random"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<WaveOverhangSeamMode>(woseAlternating));
+
+    def = this->add("wave_overhang_debug_gcode", coBool);
+    def->label = L("Debug g-code");
+    def->category = L("Support");
+    def->tooltip = L("Adds WAVE_OVERHANG_START and WAVE_OVERHANG_END comments around wave-overhang G-code so the output is easier to inspect.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(true));
+
+    def = this->add("wave_overhang_min_length", coFloat);
+    def->label = L("Min length");
+    def->category = L("Support");
+    def->tooltip = L("Shortest overhang edge that should receive waves. Raise this to ignore tiny overhangs.");
+    def->sidetext = L("mm");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 50;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("wave_overhang_max_iterations", coInt);
+    def->label = L("Max iterations");
+    def->category = L("Support");
+    def->tooltip = L("Maximum number of wave growth steps in one overhang area. Use 0 for no limit.");
+    def->mode = comAdvanced;
+    def->min = 0;
+    def->max = 500;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("wave_overhang_min_new_area", coFloat);
+    def->label = L("Min new area");
+    def->category = L("Support");
+    def->tooltip = L("Advanced stop rule for Andersons waves. Higher values stop earlier; lower values keep growing into smaller areas.");
+    def->sidetext = L("mm2");
+    def->mode = comDevelop;
+    def->min = 0.0;
+    def->max = 100.0;
+    def->set_default_value(new ConfigOptionFloat(0.01));
+
+    def = this->add("wave_overhang_fringe_reinforcement_max_cover_to_real", coFloat);
+    def->label = L("Fringe reinforcement max cover ratio");
+    def->category = L("Support");
+    def->tooltip = L("Prevents tiny shallow ledges from turning into very large wave areas. Lower is stricter; higher allows more wave coverage.");
+    def->mode = comDevelop;
+    def->min = 0.0;
+    def->max = 500.0;
+    def->set_default_value(new ConfigOptionFloat(140.0));
+
+    def = this->add("wave_overhang_fringe_reinforcement_max_cover_area", coFloat);
+    def->label = L("Fringe reinforcement max cover area");
+    def->category = L("Support");
+    def->tooltip = L("Area limit for shallow ledge reinforcement. Larger ledge areas keep the simpler base wave behavior.");
+    def->sidetext = L("mm2");
+    def->mode = comDevelop;
+    def->min = 0.0;
+    def->max = 500.0;
+    def->set_default_value(new ConfigOptionFloat(40.5));
+
+    def = this->add("wave_overhang_fringe_contact_compensation_max_over_cap", coFloat);
+    def->label = L("Fringe contact compensation window");
+    def->category = L("Support");
+    def->tooltip = L("Adds one small contact line for shallow ledges that barely miss the safety limit. Use 0 to turn this off.");
+    def->sidetext = L("ratio");
+    def->mode = comDevelop;
+    def->min = 0.0;
+    def->max = 50.0;
+    def->set_default_value(new ConfigOptionFloat(0.0));
+
+    def = this->add("support_remaining_areas_after_wave_overhangs", coBool);
+    def->label = L("Support unfilled wave overhang areas");
+    def->category = L("Support");
+    def->tooltip = L("If waves cannot cover part of an overhang, normal supports are used only for the leftover area.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(true));
 
@@ -6061,19 +7467,106 @@ void PrintConfigDef::init_fff_params()
     def = this->add("support_type", coEnum);
     def->label = L("Type");
     def->category = L("Support");
-    def->tooltip = L("Normal (auto) and Tree (auto) are used to generate support automatically. "
-                     "If Normal (manual) or Tree (manual) is selected, only support enforcers are generated.");
+    def->tooltip = L("Normal and Tree create removable supports. Arc Overhang tries to replace support under overhangs with curved toolpaths so the part can support itself.");
     def->enum_keys_map = &ConfigOptionEnum<SupportType>::get_enum_values();
     def->enum_values.push_back("normal(auto)");
     def->enum_values.push_back("tree(auto)");
+    def->enum_values.push_back("arc(auto)");
     def->enum_values.push_back("normal(manual)");
     def->enum_values.push_back("tree(manual)");
+    def->enum_values.push_back("arc(manual)");
     def->enum_labels.push_back(L("Normal (auto)"));
     def->enum_labels.push_back(L("Tree (auto)"));
+    def->enum_labels.push_back(L("Arc Overhang (auto)"));
     def->enum_labels.push_back(L("Normal (manual)"));
     def->enum_labels.push_back(L("Tree (manual)"));
+    def->enum_labels.push_back(L("Arc Overhang (manual)"));
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionEnum<SupportType>(stNormalAuto));
+
+    def = this->add("tinman_support_strategy", coEnum);
+    def->label = L("Overhang strategy");
+    def->category = L("Support");
+    def->tooltip = L("Chooses how Codex handles steep overhangs. Profile Default follows the normal support setting; Arc Overhang tries supportless curved toolpaths.");
+    def->enum_keys_map = &ConfigOptionEnum<TinmanSupportStrategy>::get_enum_values();
+    def->enum_values.push_back("profile_default");
+    def->enum_values.push_back("normal");
+    def->enum_values.push_back("tree");
+    def->enum_values.push_back("arc");
+    def->enum_labels.push_back(L("Profile Default"));
+    def->enum_labels.push_back(L("Normal"));
+    def->enum_labels.push_back(L("Tree"));
+    def->enum_labels.push_back(L("Arc Overhang"));
+    def->mode = comSimple;
+    def->set_default_value(new ConfigOptionEnum<TinmanSupportStrategy>(TinmanSupportStrategy::ProfileDefault));
+
+    def = this->add("arc_support_payload", coString);
+    def->label = L("Arc Overhang payload");
+    def->category = L("Support");
+    def->tooltip = L("Advanced saved Arc Overhang planning data. Most users should leave this unchanged.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString());
+
+    def = this->add("arc_support_experimental", coBool);
+    def->label = L("Arc Overhang experimental mode");
+    def->category = L("Support");
+    def->tooltip = L("Keeps Arc Overhang output clearly marked as experimental while we continue validating it.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(true));
+
+    def = this->add("strength_lens_enabled", coBool);
+    def->label = L("Strength Lens");
+    def->category = L("Strength");
+    def->tooltip = L("Shows a color preview before slicing so you can rotate the part toward a stronger print orientation.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("strength_lens_material_model", coEnum);
+    def->label = L("Strength Lens material model");
+    def->category = L("Strength");
+    def->tooltip = L("Tells the Strength Lens what kind of strength pattern to expect.\n\n"
+                     "Filament preset: default choice. Uses the selected filament when Codex can, and treats the print like normal FDM plastic.\n\n"
+                     "Isotropic: assumes the part is close to equally strong in every direction. This is useful as a comparison view, but it is not how most layer-printed plastic behaves.\n\n"
+                     "FDM anisotropic: best choice for normal 3D prints. It treats X/Y printed roads as stronger and layer-to-layer Z bonding as weaker.\n\n"
+                     "Continuous fiber: use when fiber reinforcement is planned. It assumes fiber paths in X/Y can carry much more load, while Z layer bonds still need caution.");
+    def->enum_keys_map = &ConfigOptionEnum<TinmanStrengthMaterialModel>::get_enum_values();
+    def->enum_values.push_back("filament_preset");
+    def->enum_values.push_back("isotropic");
+    def->enum_values.push_back("fdm_anisotropic");
+    def->enum_values.push_back("continuous_fiber");
+    def->enum_labels.push_back(L("Filament preset"));
+    def->enum_labels.push_back(L("Isotropic"));
+    def->enum_labels.push_back(L("FDM anisotropic"));
+    def->enum_labels.push_back(L("Continuous fiber"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<TinmanStrengthMaterialModel>(TinmanStrengthMaterialModel::FilamentPreset));
+
+    def = this->add("strength_lens_load_axis", coEnum);
+    def->label = L("Strength Lens load axis");
+    def->category = L("Strength");
+    def->tooltip = L("Choose the direction you care about for strength.\n\n"
+                     "Auto: Codex uses the longest direction of the selected part.\n"
+                     "X: check strength along the printer's left-right direction.\n"
+                     "Y: check strength along the printer's front-back direction.\n"
+                     "Z: check strength through the layer stack. For normal FDM prints this is usually the weakest direction.");
+    def->enum_keys_map = &ConfigOptionEnum<TinmanStrengthLoadAxis>::get_enum_values();
+    def->enum_values.push_back("auto");
+    def->enum_values.push_back("x");
+    def->enum_values.push_back("y");
+    def->enum_values.push_back("z");
+    def->enum_labels.push_back(L("Auto (longest span)"));
+    def->enum_labels.push_back(L("X axis"));
+    def->enum_labels.push_back(L("Y axis"));
+    def->enum_labels.push_back(L("Z axis"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<TinmanStrengthLoadAxis>(TinmanStrengthLoadAxis::Auto));
+
+    def = this->add("strength_lens_payload", coString);
+    def->label = L("Strength Lens payload");
+    def->category = L("Strength");
+    def->tooltip = L("Advanced saved Strength Lens analysis data. Most users should leave this unchanged.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString());
 
     def = this->add("support_object_xy_distance", coFloat);
     def->label = L("Support/object XY distance");
@@ -8114,6 +9607,8 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         value = "normal(manual)";
     } else if (opt_key == "support_type" && value == "tree") {
         value = "tree(manual)";
+    } else if (opt_key == "support_type" && value == "arc") {
+        value = "arc(manual)";
     } else if (opt_key == "support_type" && value == "hybrid(auto)") {
         value = "tree(auto)";
     } else if (opt_key == "support_base_pattern" && value == "none") {
@@ -8476,7 +9971,7 @@ std::set<std::string> empty_options;
 
 DynamicPrintConfig DynamicPrintConfig::full_print_config()
 {
-	return DynamicPrintConfig((const PrintRegionConfig&)FullPrintConfig::defaults());
+	return DynamicPrintConfig(static_print_config_ref(FullPrintConfig::defaults()));
 }
 
 DynamicPrintConfig::DynamicPrintConfig(const StaticPrintConfig& rhs) : DynamicConfig(rhs, rhs.keys_ref())
@@ -8486,7 +9981,7 @@ DynamicPrintConfig::DynamicPrintConfig(const StaticPrintConfig& rhs) : DynamicCo
 DynamicPrintConfig* DynamicPrintConfig::new_from_defaults_keys(const std::vector<std::string> &keys)
 {
     auto *out = new DynamicPrintConfig();
-    out->apply_only(FullPrintConfig::defaults(), keys);
+    out->apply_only(static_print_config_ref(FullPrintConfig::defaults()), keys);
     return out;
 }
 
@@ -8830,7 +10325,7 @@ void DynamicPrintConfig::set_num_extruders(unsigned int num_extruders)
 {
     extend_extruder_variant(*this, num_extruders);
 
-    const auto &defaults = FullPrintConfig::defaults();
+    const auto &defaults = static_print_config_ref(FullPrintConfig::defaults());
     for (const std::string &key : print_config_def.extruder_option_keys()) {
         if (key == "default_filament_profile")
             // Don't resize this field, as it is presented to the user at the "Dependencies" page of the Printer profile and we don't want to present
@@ -8848,7 +10343,7 @@ void DynamicPrintConfig::set_num_extruders(unsigned int num_extruders)
 // BBS
 void DynamicPrintConfig::set_num_filaments(unsigned int num_filaments)
 {
-    const auto& defaults = FullPrintConfig::defaults();
+    const auto& defaults = static_print_config_ref(FullPrintConfig::defaults());
     for (const std::string& key : print_config_def.filament_option_keys()) {
         if (key == "default_filament_profile")
             // Don't resize this field, as it is presented to the user at the "Dependencies" page of the Printer profile and we don't want to present
@@ -10580,7 +12075,12 @@ std::map<std::string, std::string> validate(const FullPrintConfig &cfg, bool und
         return ret; \
     }
 PRINT_CONFIG_CACHE_INITIALIZE((
-    PrintObjectConfig, PrintRegionConfig, MachineEnvelopeConfig, GCodeConfig, PrintConfig, FullPrintConfig,
+    PrintObjectConfig, PrintRegionCoreConfig,
+    WaveOverhangCoreConfig, WaveOverhangSpeedConfig, WaveOverhangPlannerConfig, WaveOverhangFringeConfig, WaveOverhangRegionConfig, PrintRegionConfig,
+    FiberReinforcementModeConfig, FiberReinforcementMotionConfig, FiberReinforcementFinishConfig, FiberReinforcementHardwareConfig,
+    FiberReinforcementInfillConfig, FiberReinforcementSeamConfig, FiberReinforcementPatternConfig,
+    FiberReinforcementRouteLimitConfig, FiberReinforcementRouteOutputConfig, FiberReinforcementRoutingConfig, FiberReinforcementConfig,
+    MachineEnvelopeConfig, GCodeConfig, PrintConfig, FullPrintConfig,
     SLAMaterialConfig, SLAPrintConfig, SLAPrintObjectConfig, SLAPrinterConfig, SLAFullPrintConfig))
 static int print_config_static_initialized = print_config_static_initializer();
 
@@ -11395,7 +12895,8 @@ static std::map<t_custom_gcode_key, t_config_option_keys> s_CustomGcodeSpecificP
     {"machine_pause_gcode",         {}},
     {"template_custom_gcode",       {}},
     // Filament G-code
-    {"filament_start_gcode",        {"filament_extruder_id"}},
+    {"filament_start_gcode",        {"layer_num", "layer_z", "max_layer_z", "filament_extruder_id",
+                                      "long_retraction_when_cut", "retraction_distance_when_cut"}},
     {"filament_end_gcode",          {"layer_num", "layer_z", "max_layer_z", "filament_extruder_id"}},
 };
 
@@ -11424,6 +12925,9 @@ CustomGcodeSpecificConfigDef::CustomGcodeSpecificConfigDef()
     def = this->add("filament_extruder_id", coInt);
     def->label = L("Filament extruder ID");
     def->tooltip = L("The current extruder ID. The same as current_extruder.");
+
+    new_def("long_retraction_when_cut", coBool, "Long retraction when cut", "Whether long retraction is active for the current filament cut.");
+    new_def("retraction_distance_when_cut", coFloat, "Retraction distance when cut", "Retraction distance used when cutting the current filament.");
 
 // change_filament_gcode
     new_def("previous_extruder", coInt, "Previous extruder", "Index of the extruder that is being unloaded. The index is zero based (first extruder has index 0).");

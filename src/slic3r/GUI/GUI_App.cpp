@@ -305,9 +305,13 @@ public:
         m_bg_color = StateColor::darkModeColorFor(wxColour("#FFFFFF"));
         m_fg_color = StateColor::darkModeColorFor(wxColour("#6B6A6A"));
         bool dark_mode = m_fg_color != wxColour("#6B6A6A");
-        wxSize sz  = m_window->GetClientSize();
         BitmapCache bmp_cache;
-        m_logo_bmp = *bmp_cache.load_svg(dark_mode ? "splash_logo_dark" : "splash_logo", sz.GetWidth(), sz.GetHeight());
+        if (wxBitmap *logo = bmp_cache.load_png("TinManX1", FromDIP(154), FromDIP(154)))
+            m_logo_bmp = *logo;
+        if (!m_logo_bmp.IsOk()) {
+            wxSize sz  = m_window->GetClientSize();
+            m_logo_bmp = *bmp_cache.load_svg(dark_mode ? "splash_logo_dark" : "splash_logo", sz.GetWidth(), sz.GetHeight());
+        }
 
         m_window->Bind(wxEVT_PAINT, &SplashScreen::OnPaint, this);
         m_window->Refresh();
@@ -321,19 +325,27 @@ public:
 
         dc.SetBackground(wxBrush(m_bg_color));
         dc.Clear();
-        if (m_logo_bmp.IsOk())
-            dc.DrawBitmap(m_logo_bmp, 0, 0, true);
+        if (m_logo_bmp.IsOk()) {
+            const int logo_x = (c_sz.GetWidth() - m_logo_bmp.GetWidth()) / 2;
+            const int logo_y = FromDIP(78);
+            dc.DrawBitmap(m_logo_bmp, logo_x, logo_y, true);
+        }
 
         wxRect rc = wxRect(0, 0, c_sz.GetWidth(), 0);
         dc.SetTextForeground(m_fg_color);
 
+        dc.SetFont(m_font_title);
+        rc.y      = c_sz.GetHeight() * 0.50;
+        rc.height = dc.GetTextExtent(m_text_title).GetHeight();
+        dc.DrawLabel(m_text_title, rc, wxALIGN_CENTER);
+
         dc.SetFont(m_font_version);
-        rc.y      = c_sz.GetHeight() * 0.72;
+        rc.y      = c_sz.GetHeight() * 0.68;
         rc.height = dc.GetTextExtent(m_text_version).GetHeight();
         dc.DrawLabel(m_text_version, rc, wxALIGN_CENTER);
 
         dc.SetFont(m_font_action);
-        rc.y      = c_sz.GetHeight() * 0.88;
+        rc.y      = c_sz.GetHeight() * 0.84;
         rc.height = dc.GetTextExtent(m_text_action).GetHeight();
         dc.DrawLabel(m_text_action, rc, wxALIGN_CENTER);
     }
@@ -384,9 +396,11 @@ private:
     wxColour m_fg_color;
     wxColour m_bg_color;
 
-    wxString m_text_version = GUI_App::format_display_version();
+    wxString m_text_title   = _L("TinManX1");
+    wxString m_text_version = _L("Based on Orca Slicer Version ") + wxString::FromUTF8(GUI_App::format_display_version().c_str());
     wxString m_text_action  = _L("Loading configuration") + dots;
 
+    wxFont m_font_title   = Label::Head_24;
     wxFont m_font_version = Label::Body_16;
     wxFont m_font_action  = Label::Body_16;
 };
@@ -688,7 +702,7 @@ static void generic_exception_handle()
         // and terminate the app so it is at least certain to happen now.
         BOOST_LOG_TRIVIAL(error) << boost::format("std::bad_alloc exception: %1%") % ex.what();
         flush_logs();
-        wxString errmsg = wxString::Format(_L("OrcaSlicer will terminate because of running out of memory. "
+        wxString errmsg = wxString::Format(_L("TinManX1 will terminate because of running out of memory. "
                                               "It may be a bug. It will be appreciated if you report the issue to our team."));
         wxMessageBox(errmsg + "\n\n" + wxString(ex.what()), _L("Fatal error"), wxOK | wxICON_ERROR);
 
@@ -697,7 +711,7 @@ static void generic_exception_handle()
      } catch (const boost::io::bad_format_string& ex) {
      	BOOST_LOG_TRIVIAL(error) << boost::format("Uncaught exception: %1%") % ex.what();
         	flush_logs();
-        wxString errmsg = _L("OrcaSlicer will terminate because of a localization error. "
+        wxString errmsg = _L("TinManX1 will terminate because of a localization error. "
                              "It will be appreciated if you report the specific scenario this issue happened.");
         wxMessageBox(errmsg + "\n\n" + wxString(ex.what()), _L("Critical error"), wxOK | wxICON_ERROR);
         std::terminate();
@@ -705,7 +719,7 @@ static void generic_exception_handle()
     } catch (const std::exception& ex) {
         BOOST_LOG_TRIVIAL(error) << boost::format("Uncaught exception: %1%") % ex.what();
         flush_logs();
-        wxLogError(format_wxstr(_L("OrcaSlicer got an unhandled exception: %1%"), ex.what()));
+        wxLogError(format_wxstr(_L("TinManX1 got an unhandled exception: %1%"), ex.what()));
         throw;
     }
 //#endif
@@ -907,7 +921,8 @@ void GUI_App::post_init()
 
     m_show_gcode_window = app_config->get_bool("show_gcode_window");
     if (m_networking_need_update) {
-        show_network_plugin_download_dialog(false);
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__
+                                << ": network plug-in needs attention; deferring prompt until a network feature is requested";
     }
 
     // Start preset sync after project opened, otherwise we could have preset change during project opening which could cause crash 
@@ -946,33 +961,6 @@ void GUI_App::post_init()
               // this->check_privacy_version(0);
               request_user_handle(0, cloud_provider);
             }
-        });
-    }
-
-    // Orca: notify users upgrading from a pre-2.4.0 version that profile syncing
-    // moved from Bambu Cloud to Orca Cloud.
-    if (is_editor() && m_last_config_version && m_last_config_version->valid()
-        && *m_last_config_version < Semver(2, 4, 0)) {
-        CallAfter([] {
-            const wxString wiki_url = "https://www.orcaslicer.com/wiki/user_profiles/user_profiles.html#profiles-missing-after-updating-from-bambu-cloud";
-            MessageDialog dlg(nullptr,
-                _L("Since version 2.4.0, OrcaSlicer syncs user profiles through Orca Cloud instead of Bambu Cloud.\n\n"
-                   "To migrate your existing profiles, log in to Orca Cloud and they will be transferred automatically. "
-                   "To learn more about how OrcaSlicer stores and syncs your profiles, or to migrate your presets manually, check out our wiki.\n\n"
-                   "If you did not use Bambu Cloud to sync profiles, this change does not affect you and you can safely ignore this message."),
-                _L("Profile syncing change"),
-                wxOK,
-                "",
-                _L("Learn more"),
-                [wiki_url](const wxString &) { wxLaunchDefaultBrowser(wiki_url); });
-            // Hack: the "Learn more" link renders the message in a wxHtmlWindow whose
-            // height is underestimated for multi-paragraph text, leaving a scrollbar.
-            // The html sits in a proportion-1 sizer chain, so grow the dialog (never
-            // shrink it below its content width) to give the text enough room.
-            const wxSize sz = dlg.GetSize();
-            dlg.SetSize(std::max(sz.x, dlg.FromDIP(280)), std::max(sz.y, dlg.FromDIP(200)));
-            dlg.CenterOnParent();
-            dlg.ShowModal();
         });
     }
 
@@ -1898,7 +1886,7 @@ void GUI_App::remove_old_networking_plugins()
 
 int GUI_App::updating_bambu_networking()
 {
-    DownloadProgressDialog dlg(_L("Downloading Bambu Network Plug-in"));
+    DownloadProgressDialog dlg(_L("Downloading Network Plug-in"));
     dlg.ShowModal();
     return 0;
 }
@@ -2347,7 +2335,7 @@ void GUI_App::init_webview_runtime()
     }
 
     BOOST_LOG_TRIVIAL(warning) << "WebView2 runtime not found; prompting user to install.";
-    int nRet = wxMessageBox(_L("Orca Slicer requires the Microsoft WebView2 Runtime to operate certain features.\nClick Yes to install it now."),
+    int nRet = wxMessageBox(_L("TinManX1 requires the Microsoft WebView2 Runtime to operate certain features.\nClick Yes to install it now."),
                             _L("WebView2 Runtime"), wxYES_NO);
     if (nRet != wxYES) {
         BOOST_LOG_TRIVIAL(warning) << "User declined WebView2 runtime installation.";
@@ -2369,7 +2357,7 @@ void GUI_App::init_webview_runtime()
         BOOST_LOG_TRIVIAL(error) << "WebView2 runtime installation failed or still not detected.";
         wxMessageBox(_L("The Microsoft WebView2 Runtime could not be installed.\n"
                         "Some features, including the setup wizard, may appear blank until it is installed.\n"
-                        "Please install it manually from https://developer.microsoft.com/microsoft-edge/webview2/ and restart Orca Slicer."),
+                        "Please install it manually from https://developer.microsoft.com/microsoft-edge/webview2/ and restart TinManX1."),
                      _L("WebView2 Runtime"), wxOK | wxICON_WARNING);
     }
 }
@@ -2787,7 +2775,7 @@ bool GUI_App::on_init_inner()
             RichMessageDialog
                 dlg(nullptr,
                     wxString::Format(_L("%s\nDo you want to continue?"), msg),
-                    "OrcaSlicer", wxICON_QUESTION | wxYES_NO);
+                    "TinManX1", wxICON_QUESTION | wxYES_NO);
             dlg.ShowCheckBox(_L("Remember my choice"));
             if (dlg.ShowModal() != wxID_YES) return false;
 
@@ -2924,7 +2912,7 @@ bool GUI_App::on_init_inner()
                /* wxString tips = wxString::Format(_L("Click to download new version in default browser: %s"), version_info.version_str);
                 DownloadDialog dialog(this->mainframe,
                     tips,
-                    _L("New version of Orca Slicer"),
+                    _L("New upstream Orca Slicer base available"),
                     false,
                     wxCENTER | wxICON_INFORMATION);
 
@@ -2975,7 +2963,7 @@ bool GUI_App::on_init_inner()
                 wxString tips = wxString::Format(_L("Click to download new version in default browser: %s"), version_str);
                 DownloadDialog dialog(this->mainframe,
                     tips,
-                    _L("OrcaSlicer needs an update"),
+                    _L("TinManX1 needs an update"),
                     false,
                     wxCENTER | wxICON_INFORMATION);
                 dialog.SetExtendedMessage(description_text);
@@ -3234,7 +3222,7 @@ bool GUI_App::on_init_inner()
         m_config_corrupted = false;
         show_error(nullptr,
                    _u8L(
-                       "The OrcaSlicer configuration file may be corrupted and cannot be parsed.\nOrcaSlicer has attempted to recreate the "
+                       "The TinManX1 configuration file may be corrupted and cannot be parsed.\nTinManX1 has attempted to recreate the "
                        "configuration file.\nPlease note, application settings will be lost, but printer profiles will not be affected."));
     }
     return true;
@@ -3487,30 +3475,6 @@ bool GUI_App::on_init_network(bool try_backup)
         m_agent->start();
         // Orca: disable Bambu telemetry up-front (before any login) so it never starts.
         check_track_enable();
-    }
-
-    // When using Orca cloud alongside the BBL network plugin, the BBL DLL agent still
-    // needs to be created and configured (config dir, certs, country, start) so that
-    // BBLPrinterAgent can use it for LAN discovery and printer communication.
-    if (should_load_networking_plugin && !m_networking_need_update) {
-        auto& plugin = BBLNetworkPlugin::instance();
-        if (plugin.is_loaded() && !plugin.has_agent()) {
-            plugin.create_agent(data_directory);
-        }
-        if (plugin.has_agent()) {
-            BBLCloudServiceAgent bbl;
-            bbl.set_config_dir(data_directory);
-            bbl.init_log();
-            bbl.set_cert_file(resources_dir() + "/cert", "slicer_base64.cer");
-            bbl.set_country_code(app_config->get_country_code());
-            // Orca: disable Bambu telemetry before start() so the DLL never spins up tracking
-            // workers. This covers the case where the BBL plugin is loaded for LAN discovery
-            // but the user has not registered BBL_CLOUD_PROVIDER (so m_agent->track_enable
-            // would not reach this DLL instance).
-            bbl.track_enable(false);
-            bbl.track_remove_files();
-            bbl.start();
-        }
     }
 
     if (!should_load_networking_plugin) {
@@ -4266,7 +4230,7 @@ void GUI_App::ShowDownNetPluginDlg() {
         });
         if (iter != dialogStack.end())
             return;
-        DownloadProgressDialog dlg(_L("Downloading Bambu Network Plug-in"));
+        DownloadProgressDialog dlg(_L("Downloading Network Plug-in"));
         dlg.ShowModal();
     } catch (std::exception &) {
         ;
@@ -5014,7 +4978,7 @@ void GUI_App::on_http_error(wxCommandEvent &evt)
 
     // Version limit
     if (code == HttpErrorVersionLimited) {
-        MessageDialog msg_dlg(nullptr, _L("The version of Orca Slicer is too low and needs to be updated to the latest version before it can be used normally."), "", wxAPPLY | wxOK);
+        MessageDialog msg_dlg(nullptr, _L("The version of TinManX1 is too low and needs to be updated to the latest version before it can be used normally."), "", wxAPPLY | wxOK);
         if (msg_dlg.ShowModal() == wxOK) {
         }
     }
@@ -5087,11 +5051,11 @@ void GUI_App::on_http_error(wxCommandEvent &evt)
 
             switch (conflict_code) {
             case -1:
-                text = header + " " + _u8L("This preset has a newer version in OrcaCloud.\n"
+                text = header + " " + _u8L("This preset has a newer version in TinManX1 Cloud.\n"
                             "Pull downloads the cloud copy. Force push overwrites it with your local preset.");
                 break;
             case -2:
-                text = header + " " + _u8L("A preset with this name already exists in OrcaCloud.\n"
+                text = header + " " + _u8L("A preset with this name already exists in TinManX1 Cloud.\n"
                             "Pull downloads the cloud copy. Force push overwrites it with your local preset.");
                 break;
             case -3:
@@ -5781,7 +5745,7 @@ bool GUI_App::process_network_msg(std::string dev_id, std::string msg)
         else if (msg == "update_studio") {
             BOOST_LOG_TRIVIAL(info) << "process_network_msg, update_studio";
             if (!m_show_error_msgdlg) {
-                MessageDialog msg_dlg(nullptr, _L("Please try updating OrcaSlicer and then try again."), "", wxAPPLY | wxOK);
+                MessageDialog msg_dlg(nullptr, _L("Please try updating TinManX1 and then try again."), "", wxAPPLY | wxOK);
                 m_show_error_msgdlg = true;
                 msg_dlg.ShowModal();
                 m_show_error_msgdlg = false;
@@ -5791,7 +5755,7 @@ bool GUI_App::process_network_msg(std::string dev_id, std::string msg)
         else if (msg == "update_fixed_studio") {
             BOOST_LOG_TRIVIAL(info) << "process_network_msg, update_fixed_studio";
             if (!m_show_error_msgdlg) {
-                MessageDialog msg_dlg(nullptr, _L("Please try updating OrcaSlicer and then try again."), "", wxAPPLY | wxOK);
+                MessageDialog msg_dlg(nullptr, _L("Please try updating TinManX1 and then try again."), "", wxAPPLY | wxOK);
                 m_show_error_msgdlg = true;
                 msg_dlg.ShowModal();
                 m_show_error_msgdlg = false;
@@ -5801,7 +5765,7 @@ bool GUI_App::process_network_msg(std::string dev_id, std::string msg)
         else if (msg == "cert_expired") {
             BOOST_LOG_TRIVIAL(info) << "process_network_msg, cert_expired";
             if (!m_show_error_msgdlg) {
-                MessageDialog msg_dlg(nullptr, _L("The certificate has expired. Please check the time settings or update OrcaSlicer and try again."), "", wxAPPLY | wxOK);
+                MessageDialog msg_dlg(nullptr, _L("The certificate has expired. Please check the time settings or update TinManX1 and try again."), "", wxAPPLY | wxOK);
                 m_show_error_msgdlg = true;
                 msg_dlg.ShowModal();
                 m_show_error_msgdlg = false;
@@ -5821,7 +5785,7 @@ bool GUI_App::process_network_msg(std::string dev_id, std::string msg)
         else if (msg == "update_firmware_studio") {
             BOOST_LOG_TRIVIAL(info) << "process_network_msg, firmware internal error";
             if (!m_show_error_msgdlg) {
-                MessageDialog msg_dlg(nullptr, _L("Internal error. Please try upgrading the firmware and OrcaSlicer version. If the issue persists, contact support."), "", wxAPPLY | wxOK);
+                MessageDialog msg_dlg(nullptr, _L("Internal error. Please try upgrading the firmware and TinManX1 version. If the issue persists, contact support."), "", wxAPPLY | wxOK);
                 m_show_error_msgdlg = true;
                 msg_dlg.ShowModal();
                 m_show_error_msgdlg = false;
@@ -5832,12 +5796,12 @@ bool GUI_App::process_network_msg(std::string dev_id, std::string msg)
             BOOST_LOG_TRIVIAL(info) << "process_network_msg, unsigned_studio";
             MessageDialog
                 msg_dlg(nullptr,
-                        _L("To use OrcaSlicer with Bambu Lab printers, you need to enable LAN mode and Developer mode on your printer.\n\n"
+                        _L("To use TinManX1 with Bambu Lab printers, you need to enable LAN mode and Developer mode on your printer.\n\n"
                            "Please go to your printer's settings and:\n"
                            "1. Turn on LAN mode\n"
                            "2. Enable Developer mode\n\n"
                            "Developer mode allows the printer to work exclusively through local network access, "
-                           "enabling full functionality with OrcaSlicer."),
+                           "enabling full functionality with TinManX1."),
                         _L("Network Plug-in Restriction"), wxAPPLY | wxOK);
             m_show_error_msgdlg = true;
             msg_dlg.ShowModal();
@@ -6312,7 +6276,7 @@ bool GUI_App::maybe_migrate_user_presets_on_login()
     wxString source_description;
     if (source_is_bbl) {
         source_description = wxString::Format(
-            _L("your Orca Cloud profile (user ID: \"%s\")"),
+            _L("your TinManX1 Cloud profile (user ID: \"%s\")"),
             from_u8(source_dir.filename().string()));
     } else if (source_is_default) {
         source_description = _L("your default profile");
@@ -6324,7 +6288,7 @@ bool GUI_App::maybe_migrate_user_presets_on_login()
 
     wxString msg = wxString::Format(
         _L("Existing user presets were found in %s.\n"
-           "Do you want to migrate them to your OrcaCloud profile?\n"
+           "Do you want to migrate them to your TinManX1 Cloud profile?\n"
            "This will copy your presets so they are available under your new account."),
         source_description);
 
@@ -7687,22 +7651,22 @@ bool GUI_App::load_language(wxString language, bool initial)
         //}
     }
 
-	BOOST_LOG_TRIVIAL(trace) << boost::format("Switching wxLocales to %1%") % locale_language_info->CanonicalName.ToUTF8().data();
+    BOOST_LOG_TRIVIAL(trace) << boost::format("Switching wxLocales to %1%") % locale_language_info->CanonicalName.ToUTF8().data();
 
     if (!wxLocale::IsAvailable(locale_language_info->Language)) {
-    	// Loading the language dictionary failed.
-	    wxString message = "Switching Orca Slicer to language " + requested_language_code + " failed.";
+        // Loading the language dictionary failed.
+        wxString message = "Switching TinManX1 to language " + requested_language_code + " failed.";
 #if !defined(_WIN32) && !defined(__APPLE__)
         // likely some linux system
         message += "\nYou may need to reconfigure the missing locales, likely by running the \"locale-gen\" and \"dpkg-reconfigure locales\" commands.\n";
 #endif
         if (initial)
-        	message + "\n\nApplication will close.";
-        wxMessageBox(message, "Orca Slicer - Switching language failed", wxOK | wxICON_ERROR);
+            message += "\n\nApplication will close.";
+        wxMessageBox(message, "TinManX1 - Switching language failed", wxOK | wxICON_ERROR);
         if (initial)
-			std::exit(EXIT_FAILURE);
-		else
-			return false;
+            std::exit(EXIT_FAILURE);
+        else
+            return false;
     }
 
     // Release the old locales, create new locales.
@@ -9290,8 +9254,8 @@ void GUI_App::associate_files(std::wstring extend)
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L" Orca.Slicer.1";
-    std::wstring prog_desc = L"OrcaSlicer";
+    std::wstring prog_id = L"TinManX1.Slicer.1";
+    std::wstring prog_desc = L"TinManX1";
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\." + extend;
@@ -9317,8 +9281,8 @@ void GUI_App::disassociate_files(std::wstring extend)
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L" Orca.Slicer.1";
-    std::wstring prog_desc = L"OrcaSlicer";
+    std::wstring prog_id = L"TinManX1.Slicer.1";
+    std::wstring prog_desc = L"TinManX1";
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\." + extend;

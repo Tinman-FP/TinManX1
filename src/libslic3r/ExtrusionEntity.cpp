@@ -628,6 +628,8 @@ ExtrusionRole ExtrusionEntity::string_to_role(const std::string_view role)
         return erIroning;
     else if (role == L("Bridge"))
         return erBridgeInfill;
+    else if (role == L("Arc infill") || role == L("Arc overhang") || role == L("Arc support"))
+        return erBridgeInfill;
     else if (role == L("Internal Bridge"))
         return erInternalBridgeInfill;
     else if (role == L("Gap infill"))

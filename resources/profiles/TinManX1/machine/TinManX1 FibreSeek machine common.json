@@ -1,0 +1,114 @@
+{
+  "type": "machine",
+  "name": "TinManX1 FibreSeek machine common",
+  "from": "system",
+  "instantiation": "false",
+  "printer_model": "FibreSeek Seeker 3",
+  "gcode_flavor": "marlin",
+  "single_extruder_multi_material": "0",
+  "printable_area": [
+    "0x0",
+    "305x0",
+    "305x305",
+    "0x305"
+  ],
+  "printable_height": "245",
+  "machine_max_speed_x": [
+    "500"
+  ],
+  "machine_max_speed_y": [
+    "500"
+  ],
+  "machine_max_speed_z": [
+    "5"
+  ],
+  "machine_max_acceleration_x": [
+    "5000"
+  ],
+  "machine_max_acceleration_y": [
+    "5000"
+  ],
+  "machine_max_acceleration_z": [
+    "100"
+  ],
+  "machine_max_acceleration_e": [
+    "8000"
+  ],
+  "machine_max_acceleration_extruding": [
+    "5000"
+  ],
+  "machine_max_acceleration_retracting": [
+    "8000"
+  ],
+  "machine_max_acceleration_travel": [
+    "5000"
+  ],
+  "machine_max_jerk_x": [
+    "20"
+  ],
+  "machine_max_jerk_y": [
+    "20"
+  ],
+  "machine_max_jerk_z": [
+    "10"
+  ],
+  "machine_max_jerk_e": [
+    "10"
+  ],
+  "retraction_length": [
+    "1.0"
+  ],
+  "retraction_minimum_travel": [
+    "3"
+  ],
+  "retraction_speed": [
+    "30"
+  ],
+  "deretraction_speed": [
+    "30"
+  ],
+  "z_hop": [
+    "0.5"
+  ],
+  "machine_start_gcode": "G92 E0\nG0 Z10 F900\n",
+  "machine_end_gcode": "M400\nG90\nG0 X300 Y280 F6000\nG91\nG0 Z10 F900\n",
+  "before_layer_change_gcode": ";BEFORE_LAYER_CHANGE\n;[layer_z]\nG92 E0\n",
+  "layer_change_gcode": "G92 E0",
+  "use_relative_e_distances": "1",
+  "support_chamber_temp_control": "1",
+  "fiber_enabled": "0",
+  "fiber_shared_nozzle": "0",
+  "plastic_nozzle_diameter": "0.4",
+  "composite_nozzle_diameter": "0.7",
+  "fiber_plastic_extruder_offset_x": "0",
+  "fiber_plastic_extruder_offset_y": "0",
+  "fiber_plastic_extruder_offset_z": "0",
+  "fiber_composite_extruder_offset_x": "0",
+  "fiber_composite_extruder_offset_y": "0",
+  "fiber_composite_extruder_offset_z": "0",
+  "fiber_plastic_extruder_heatup_speed": "5.5",
+  "fiber_composite_extruder_heatup_speed": "3.2",
+  "fiber_plastic_extruder_has_fan": "1",
+  "fiber_composite_extruder_has_fan": "1",
+  "fiber_plastic_extruder_fan_index": "1",
+  "fiber_composite_extruder_fan_index": "2",
+  "fiber_bed_heatup_speed": "0.9",
+  "fiber_chamber_heatup_speed": "1.0",
+  "fiber_motion_blocks_buffer_size": "16",
+  "fiber_cut_distance": "58",
+  "fiber_restart_length": "55",
+  "fiber_cut_gcode": "M2800\nM400\n;CUT DISTANCE 54.8",
+  "fiber_nozzle_contact_radius": "1.2",
+  "fiber_nozzle_contact_radius_extended": "1.8",
+  "fiber_toolchange_gcode_before": "G0 Y280 F10000\nM106 P1 S255\nM400\n",
+  "fiber_toolchange_gcode_after": "SAVE_NOZZLE_TO_CLEAN\nT1\nG0 X304 Y285 F30000\nG0 Y290 F1200\nG0 Y335 F600\nG0 Y320 F10000\nG0 Y335 F10000\nG0 Y320 F10000\nG0 Y335 F10000\nG4 P1000\nG0 X289 F600\nG0 X306 F600\nG0 X289 F600\nG0 X306 F600\nG4 P2000\nG0 Y285 F1200\nM400\nRESTORE_NOZZLE_TO_PRINT\nM106 P1 S0",
+  "fiber_slot_roles": "plastic,composite",
+  "continuous_fiber_name": "X-CCF Carbon fiber 0.25 mm",
+  "continuous_fiber_type": "carbon_fiber",
+  "continuous_fiber_material_kind": "continuous_fiber",
+  "continuous_fiber_source_material_id": "tinmanx1-x-ccf-025",
+  "continuous_fiber_diameter": "0.25",
+  "continuous_fiber_linear_density": "102",
+  "fiber_postprocessor_type": "3",
+  "fiber_machine_contract_payload": "{\"composite_extruder\": {\"contact_radius\": 1.2, \"contact_radius_extended\": 1.8, \"cut_distance\": 58, \"fan_index\": 2, \"has_fan\": true, \"heatup_speed_c_per_s\": 3.2, \"nozzle_diameter\": 0.7, \"restart_length\": 55}, \"machine\": \"FibreSeek Seeker 3\", \"motion\": {\"blocks_buffer_size\": 16, \"travel_speed_xy\": 500, \"travel_speed_z\": 5}, \"plastic_extruder\": {\"fan_index\": 1, \"has_fan\": true, \"heatup_speed_c_per_s\": 5.5}, \"thermal\": {\"bed_heatup_speed_c_per_s\": 0.9, \"chamber_heatup_speed_c_per_s\": 1.0}}"
+}

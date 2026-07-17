@@ -28,11 +28,25 @@ struct SlopeDetection
     mat3 volume_world_normal_matrix;
 };
 
+struct StrengthLens
+{
+    bool enabled;
+    vec3 axis_strength;
+    vec3 bbox_min;
+    vec3 bbox_size;
+    vec3 load_axis;
+    vec3 weak_axis;
+    float load_span_weight;
+    float surface_weight;
+    float layer_penalty_weight;
+};
+
 uniform vec4 uniform_color;
 uniform bool use_color_clip_plane;
 uniform vec4 uniform_color_clip_plane_1;
 uniform vec4 uniform_color_clip_plane_2;
 uniform SlopeDetection slope;
+uniform StrengthLens strength_lens;
 
 //BBS: add outline_color
 uniform bool is_outline;
@@ -57,6 +71,7 @@ varying float color_clip_plane_dot;
 varying vec2 intensity;
 
 varying vec4 world_pos;
+varying vec3 world_normal;
 varying float world_normal_z;
 varying vec3 eye_normal;
 
@@ -125,6 +140,55 @@ float DetectSilho(vec2 fragCoord)
         );
 }
 
+vec3 strengthLensColor(float reserve)
+{
+    reserve = clamp(reserve, 0.0, 1.0);
+    vec3 red = vec3(0.86, 0.10, 0.08);
+    vec3 orange = vec3(0.96, 0.48, 0.10);
+    vec3 yellow = vec3(0.96, 0.86, 0.16);
+    vec3 green = vec3(0.20, 0.78, 0.35);
+    vec3 blue = vec3(0.10, 0.42, 0.96);
+
+    if (reserve < 0.25)
+        return mix(red, orange, reserve / 0.25);
+    if (reserve < 0.50)
+        return mix(orange, yellow, (reserve - 0.25) / 0.25);
+    if (reserve < 0.75)
+        return mix(yellow, green, (reserve - 0.50) / 0.25);
+    return mix(green, blue, (reserve - 0.75) / 0.25);
+}
+
+vec4 applyStrengthLens(vec4 base_color)
+{
+    if (!strength_lens.enabled)
+        return base_color;
+
+    vec3 axis = max(strength_lens.axis_strength, vec3(EPSILON));
+    float strongest = max(max(axis.x, axis.y), axis.z);
+    vec3 rel = clamp((world_pos.xyz - strength_lens.bbox_min) / max(strength_lens.bbox_size, vec3(EPSILON)), 0.0, 1.0);
+    vec3 normal_abs = abs(normalize(world_normal));
+    vec3 load_axis = normalize(strength_lens.load_axis);
+    vec3 weak_axis = normalize(strength_lens.weak_axis);
+
+    float directional_reserve = clamp(dot(normal_abs, axis) / strongest, 0.0, 1.0);
+    float orientation_reserve = clamp(dot(abs(load_axis), axis) / strongest, 0.0, 1.0);
+    float load_span = abs(dot(rel - vec3(0.5), load_axis)) * 2.0;
+    float edge_span = max(max(abs(rel.x - 0.5), abs(rel.y - 0.5)), abs(rel.z - 0.5)) * 2.0;
+    float span_concern = clamp(0.55 * load_span + 0.45 * edge_span, 0.0, 1.0);
+    float layer_penalty = (1.0 - axis.z / strongest) * pow(abs(dot(normalize(world_normal), weak_axis)), 1.5);
+
+    float reserve = mix(orientation_reserve, directional_reserve, 0.45);
+    reserve -= strength_lens.surface_weight * (1.0 - directional_reserve);
+    reserve -= strength_lens.load_span_weight * span_concern * (1.0 - orientation_reserve);
+    reserve -= strength_lens.layer_penalty_weight * layer_penalty;
+    reserve = clamp((reserve - 0.10) / 0.82, 0.0, 1.0);
+
+    vec3 heat = strengthLensColor(reserve);
+    base_color.rgb = mix(base_color.rgb, heat, 0.88);
+    base_color.a = max(base_color.a, 0.92);
+    return base_color;
+}
+
 void main()
 {
     if (any(lessThan(clipping_planes_dots, ZERO)))
@@ -150,6 +214,8 @@ void main()
                 color.a = 0.8;
          }
     }
+    color = applyStrengthLens(color);
+
     // if the fragment is outside the print volume -> use darker color
 	vec3 pv_check_min = ZERO;
 	vec3 pv_check_max = ZERO;

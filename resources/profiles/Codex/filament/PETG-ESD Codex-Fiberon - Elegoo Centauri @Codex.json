@@ -1,0 +1,154 @@
+{
+    "type": "filament",
+    "name": "PETG-ESD Codex-Fiberon - Elegoo Centauri @Codex",
+    "from": "system",
+    "instantiation": "true",
+    "filament_vendor": [
+        "Codex"
+    ],
+    "filament_type": [
+        "PETG-ESD"
+    ],
+    "filament_settings_id": [
+        "PETG-ESD Codex-Fiberon - Elegoo Centauri @Codex"
+    ],
+    "filament_id": "CODXA6E08FDC",
+    "setting_id": "nhork6UTGK6zlulr",
+    "default_filament_colour": [
+        "#000000"
+    ],
+    "filament_diameter": [
+        "1.75"
+    ],
+    "filament_density": [
+        "1.24"
+    ],
+    "filament_cost": [
+        "59.99"
+    ],
+    "filament_flow_ratio": [
+        "0.95"
+    ],
+    "filament_max_volumetric_speed": [
+        "12"
+    ],
+    "filament_is_support": [
+        "0"
+    ],
+    "filament_soluble": [
+        "0"
+    ],
+    "nozzle_temperature": [
+        "280"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "280"
+    ],
+    "nozzle_temperature_range_low": [
+        "250"
+    ],
+    "nozzle_temperature_range_high": [
+        "290"
+    ],
+    "cool_plate_temp": [
+        "60"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "60"
+    ],
+    "eng_plate_temp": [
+        "0"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "0"
+    ],
+    "hot_plate_temp": [
+        "80"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "80"
+    ],
+    "textured_plate_temp": [
+        "80"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "80"
+    ],
+    "chamber_temperature": [
+        "0"
+    ],
+    "activate_chamber_temp_control": [
+        "0"
+    ],
+    "fan_min_speed": [
+        "10"
+    ],
+    "fan_max_speed": [
+        "20"
+    ],
+    "overhang_fan_speed": [
+        "100"
+    ],
+    "overhang_fan_threshold": [
+        "95%"
+    ],
+    "required_nozzle_HRC": [
+        "3"
+    ],
+    "temperature_vitrification": [
+        "77"
+    ],
+    "filament_retraction_length": [
+        "1"
+    ],
+    "filament_retraction_speed": [
+        "30"
+    ],
+    "filament_deretraction_speed": [
+        "30"
+    ],
+    "compatible_printers": [
+        "Elegoo Centauri Carbon 0.4 nozzle - Codex Tinman",
+        "Elegoo Centauri Carbon 0.4 nozzle - Codex Tinman 2",
+        "Elegoo Centauri Carbon 0.4 nozzle - Copy",
+        "Elegoo Centauri Carbon 0.4 nozzle - COSMOS Tinman",
+        "Elegoo Centauri Carbon 0.4 nozzle - COSMOS Tinman 2",
+        "Elegoo Centauri Carbon 0.4 nozzle - Tinman",
+        "Elegoo Centauri Carbon 0.4 nozzle - Tinman 2",
+        "Elegoo Centauri Carbon 2 0.4 nozzle - Copy",
+        "Elegoo Centauri Carbon 0.6 nozzle - Codex Tinman",
+        "Elegoo Centauri Carbon 0.6 nozzle - Codex TinmanCC1",
+        "Elegoo Centauri Carbon 0.6 nozzle - Codex TinmanCC2",
+        "Elegoo Centauri Carbon 0.6 nozzle - COSMOS Tinman",
+        "Elegoo Centauri Carbon 0.6 nozzle - COSMOS Tinman 2",
+        "Elegoo Centauri Carbon 0.6 nozzle - TinmanCC1",
+        "Elegoo Centauri Carbon 0.6 nozzle - TinmanCC2",
+        "Elegoo Centauri Carbon 0.8 nozzle - Codex TinmanCC1",
+        "Elegoo Centauri Carbon 0.8 nozzle - Codex TinmanCC2",
+        "Elegoo Centauri Carbon 0.8 nozzle - COSMOS Tinman",
+        "Elegoo Centauri Carbon 0.8 nozzle - COSMOS Tinman 2",
+        "Elegoo Centauri Carbon 0.8 nozzle - TinmanCC1",
+        "Elegoo Centauri Carbon 0.8 nozzle - TinmanCC2"
+    ],
+    "is_custom_defined": "0",
+    "version": "2.4.2.0",
+    "description": "TinManX1 Codex Polymaker official catalog; material=Fiberon PETG-ESD; official source=preset/Fiberon PETG-ESD/Snapmaker/U1/OrcaSlicer/Fiberon PETG-ESD @Snapmaker U1.json; source updated=2026-06-17T16:06:55+08:00",
+    "filament_notes": [
+        ""
+    ],
+    "polymaker_source_material": [
+        "Fiberon PETG-ESD"
+    ],
+    "polymaker_source_preset_path": [
+        "preset/Fiberon PETG-ESD/Snapmaker/U1/OrcaSlicer/Fiberon PETG-ESD @Snapmaker U1.json"
+    ],
+    "polymaker_source_index_updated_at": [
+        "2026-07-02T08:50:28.961Z"
+    ],
+    "filament_price_source_url": [
+        "https://shop.polymaker.com/products/fiberon-petg-esd"
+    ],
+    "filament_price_source_variant": [
+        "1.75mm / 1kg / Black"
+    ]
+}

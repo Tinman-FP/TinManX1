@@ -933,12 +933,6 @@ void PartPlate::render_exclude_area(bool force_default_color) {
 	// draw exclude area
 	glsafe(::glDepthMask(GL_FALSE));
 
-	if (m_selected) {
-		glsafe(::glColor4fv(select_color.data()));
-	}
-	else {
-		glsafe(::glColor4fv(unselect_color.data()));
-	}
 
 	m_exclude_triangles.set_color(m_selected ? select_color : unselect_color);
     m_exclude_triangles.render();
@@ -2630,7 +2624,8 @@ bool PartPlate::check_outside(int obj_id, int instance_id, BoundingBoxf3* boundi
 		// Orca: For sinking object, we use a more expensive algorithm so part below build plate won't be considered
 		if (plate_box.intersects(instance_box)) {
 			// TODO: FIXME: this does not take exclusion area into account
-            const BuildVolume build_volume(get_shape(), m_plater->build_volume().printable_height(), m_extruder_areas, m_extruder_heights);
+            const double printable_height = m_plater != nullptr ? m_plater->build_volume().printable_height() : double(m_height);
+            const BuildVolume build_volume(get_shape(), printable_height, m_extruder_areas, m_extruder_heights);
 			const auto state = instance->calc_print_volume_state(build_volume);
 			outside = state == ModelInstancePVS_Partly_Outside;
 		}

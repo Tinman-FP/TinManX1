@@ -102,6 +102,22 @@ ThumbnailErrors validate_thumbnails_string(wxString& str, const wxString& def_ex
     return errors;
 }
 
+static bool enum_choice_uses_key_mapping(const std::string &opt_id)
+{
+    return opt_id == "top_surface_pattern" ||
+           opt_id == "bottom_surface_pattern" ||
+           opt_id == "internal_solid_infill_pattern" ||
+           opt_id == "sparse_infill_pattern" ||
+           opt_id == "support_type" ||
+           opt_id == "support_base_pattern" ||
+           opt_id == "support_interface_pattern" ||
+           opt_id == "ironing_pattern" ||
+           opt_id == "support_ironing_pattern" ||
+           opt_id == "support_style" ||
+           opt_id == "curr_bed_type" ||
+           opt_id == "wipe_tower_wall_type";
+}
+
 // Orca
 wxString get_formatted_tooltip_text(const ConfigOptionDef& opt, const t_config_option_key& id)
 {
@@ -1513,7 +1529,20 @@ void Choice::set_selection()
     choice_ctrl* field = dynamic_cast<choice_ctrl*>(window);
 	switch (m_opt.type) {
 	case coEnum:{
-        field->SetSelection(m_opt.default_value->getInt());
+        int val = m_opt.default_value->getInt();
+        if (enum_choice_uses_key_mapping(m_opt_id) && m_opt.enum_keys_map != nullptr && !m_opt.enum_values.empty()) {
+            std::string key;
+            const t_config_enum_values &map_names = *m_opt.enum_keys_map;
+            for (auto it : map_names)
+                if (val == it.second) {
+                    key = it.first;
+                    break;
+                }
+            auto value_it = std::find(m_opt.enum_values.begin(), m_opt.enum_values.end(), key);
+            field->SetSelection(value_it == m_opt.enum_values.end() ? 0 : int(value_it - m_opt.enum_values.begin()));
+        } else {
+            field->SetSelection(val);
+        }
 		break;
 	}
 	case coFloat:
@@ -1661,11 +1690,7 @@ void Choice::set_value(const boost::any& value, bool change_event)
             else
                 selection = val;
 
-            if (m_opt_id == "top_surface_pattern" || m_opt_id == "bottom_surface_pattern" ||
-                m_opt_id == "internal_solid_infill_pattern" || m_opt_id == "sparse_infill_pattern" ||
-                m_opt_id == "support_base_pattern" || m_opt_id == "support_interface_pattern" ||
-                m_opt_id == "ironing_pattern" || m_opt_id == "support_ironing_pattern" ||
-                m_opt_id == "support_style" || m_opt_id == "curr_bed_type" || m_opt_id == "wipe_tower_wall_type")
+            if (enum_choice_uses_key_mapping(m_opt_id))
 		{
 			std::string key;
 			const t_config_enum_values& map_names = *m_opt.enum_keys_map;
@@ -1764,11 +1789,7 @@ boost::any& Choice::get_value()
             } else
                 m_value = 0;
         }
-        else if (   m_opt_id == "top_surface_pattern" || m_opt_id == "bottom_surface_pattern" ||
-                    m_opt_id == "internal_solid_infill_pattern" || m_opt_id == "sparse_infill_pattern" ||
-                    m_opt_id == "support_base_pattern" || m_opt_id == "support_interface_pattern" ||
-                    m_opt_id == "ironing_pattern" || m_opt_id == "support_ironing_pattern" ||
-                    m_opt_id == "support_style" || m_opt_id == "curr_bed_type" || m_opt_id == "wipe_tower_wall_type")
+        else if (enum_choice_uses_key_mapping(m_opt_id))
         {
             const std::string &key = m_opt.enum_values[field->GetSelection()];
             m_value = int(m_opt.enum_keys_map->at(key));

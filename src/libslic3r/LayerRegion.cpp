@@ -11,6 +11,7 @@
 #include "Algorithm/RegionExpansion.hpp"
 
 #include <string>
+#include <iterator>
 #include <map>
 
 #include <boost/log/trivial.hpp>
@@ -139,6 +140,14 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRe
         g.process_arachne();
     else
         g.process_classic();
+
+    if (!g.out_wave_overhang_covered_polygons.empty())
+        append(this->layer()->wave_overhang_covered_polygons, std::move(g.out_wave_overhang_covered_polygons));
+    if (!g.out_wave_overhang_diagnostics.empty())
+        this->layer()->wave_overhang_diagnostics.insert(
+            this->layer()->wave_overhang_diagnostics.end(),
+            std::make_move_iterator(g.out_wave_overhang_diagnostics.begin()),
+            std::make_move_iterator(g.out_wave_overhang_diagnostics.end()));
 }
 
 #if 1

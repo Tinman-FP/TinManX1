@@ -2,6 +2,7 @@
 #define slic3r_PerimeterGenerator_hpp_
 
 #include "libslic3r.h"
+#include <string>
 #include <vector>
 #include "Layer.hpp"
 #include "Flow.hpp"
@@ -105,6 +106,12 @@ public:
     bool                                            has_fuzzy_hole = false;
     // Preserve construction order so overlap precedence remains deterministic.
     std::vector<std::pair<FuzzySkinConfig, ExPolygons>> regions_by_fuzzify;
+
+    // TinManX1: footprint covered by native Wave Overhang paths on this
+    // layer. LayerRegion forwards it so support generation can leave only
+    // residual unsupported area for normal/Arc support.
+    Polygons                                        out_wave_overhang_covered_polygons;
+    std::vector<std::string>                        out_wave_overhang_diagnostics;
     
     PerimeterGenerator(
         // Input:
@@ -153,7 +160,7 @@ public:
 private:
     std::vector<Polygons>     generate_lower_polygons_series(float width);
     void split_top_surfaces(const ExPolygons &orig_polygons, ExPolygons &top_fills, ExPolygons &non_top_polygons, ExPolygons &fill_clip) const;
-    void apply_extra_perimeters(ExPolygons& infill_area);
+    void apply_extra_perimeters(ExPolygons& infill_area, const ExPolygon& island_region);
     void process_no_bridge(Surfaces& all_surfaces, coord_t perimeter_spacing, coord_t ext_perimeter_width);
 
 private:

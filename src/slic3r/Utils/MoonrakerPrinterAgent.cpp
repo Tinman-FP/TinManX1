@@ -571,6 +571,17 @@ bool MoonrakerPrinterAgent::fetch_filament_info(std::string dev_id)
     std::vector<AmsTrayData> trays;
     int max_lane_index = 0;
 
+    // Snapmaker U1 exposes the real per-lane material through print_task_config
+    // rather than generic Moonraker lane_data. Prefer this when present so
+    // reinforced subtypes like HT-PLA-GF do not collapse to plain PLA.
+    if (fetch_snapmaker_print_task_config(trays, max_lane_index)) {
+        BOOST_LOG_TRIVIAL(info) << "MoonrakerPrinterAgent::fetch_filament_info: Detected Snapmaker print_task_config with "
+                                << (max_lane_index + 1) << " lanes";
+        int ams_count = (max_lane_index + 4) / 4;
+        build_ams_payload(ams_count, max_lane_index, trays);
+        return true;
+    }
+
     // Try Moonraker filament data (more generic, supports any filament changer
     // software that reports lane data to Moonraker like AFC and recent Happy
     // Hare as of Feb 15, 2026)
@@ -605,9 +616,99 @@ std::string MoonrakerPrinterAgent::trim_and_upper(const std::string& input)
     return result;
 }
 
+std::string MoonrakerPrinterAgent::canonical_filament_type(const std::string& input)
+{
+    std::string result = trim_and_upper(input);
+    for (char& c : result) {
+        if (c == '_' || c == '/' || std::isspace(static_cast<unsigned char>(c))) {
+            c = '-';
+        }
+    }
+    while (result.find("--") != std::string::npos) {
+        boost::replace_all(result, "--", "-");
+    }
+    boost::trim_if(result, boost::is_any_of("-"));
+    return result;
+}
+
+std::string MoonrakerPrinterAgent::resolve_filament_id_for_tray(const PresetCollection& filaments,
+                                                                const std::string&      filament_type,
+                                                                const std::string&      vendor_name,
+                                                                const std::string&      color_rgba)
+{
+    (void) color_rgba;
+
+    const std::string target_type = canonical_filament_type(filament_type);
+    if (target_type.empty()) {
+        return UNKNOWN_FILAMENT_ID;
+    }
+
+    const std::string requested_vendor = trim_and_upper(vendor_name);
+    std::string       best_match_id;
+    int               best_score = -1;
+
+    for (const auto& p : filaments.get_presets()) {
+        if (p.is_default || p.is_external) {
+            continue;
+        }
+
+        const std::string preset_type = canonical_filament_type(p.config.opt_string("filament_type", 0u));
+        if (preset_type != target_type) {
+            continue;
+        }
+
+        const std::string preset_vendor = trim_and_upper(p.config.opt_string("filament_vendor", 0u));
+        const std::string preset_name   = trim_and_upper(p.name);
+
+        int score = 100;
+        if (p.is_compatible) {
+            score += 2000;
+        }
+        if (p.is_visible) {
+            score += 400;
+        }
+        if (!requested_vendor.empty() && preset_vendor == requested_vendor) {
+            score += 1000;
+        }
+        if (!requested_vendor.empty() && preset_name.find(requested_vendor) != std::string::npos) {
+            score += 300;
+        }
+        if (preset_vendor == "CODEX" || preset_name.find("CODEX") != std::string::npos || p.filament_id.rfind("CODX", 0) == 0) {
+            score += 700;
+        }
+        if (preset_name.find(target_type) != std::string::npos) {
+            score += 100;
+        }
+        if (filaments.get_preset_base(p) == &p) {
+            score += 50;
+        }
+        if (p.is_system) {
+            score += 10;
+        }
+
+        if (score > best_score) {
+            best_score    = score;
+            best_match_id = p.filament_id;
+        }
+    }
+
+    if (!best_match_id.empty()) {
+        return best_match_id;
+    }
+
+    const std::string generic_id = map_filament_type_to_generic_id(filament_type);
+    if (!generic_id.empty() && generic_id != UNKNOWN_FILAMENT_ID) {
+        return generic_id;
+    }
+
+    BOOST_LOG_TRIVIAL(warning) << "MoonrakerPrinterAgent::resolve_filament_id_for_tray: no compatible profile for filament type '"
+                               << filament_type << "' vendor '" << vendor_name << "'";
+    return UNKNOWN_FILAMENT_ID;
+}
+
 std::string MoonrakerPrinterAgent::map_filament_type_to_generic_id(const std::string& filament_type)
 {
-    const std::string upper = trim_and_upper(filament_type);
+    const std::string upper = canonical_filament_type(filament_type);
 
     // Map to OrcaFilamentLibrary preset IDs (compatible with all printers)
     // Source: resources/profiles/OrcaFilamentLibrary/filament/
@@ -615,8 +716,8 @@ std::string MoonrakerPrinterAgent::map_filament_type_to_generic_id(const std::st
     // PLA variants
     if (upper == "PLA")           return "OGFL99";
     if (upper == "PLA-CF")        return "OGFL98";
-    if (upper == "PLA SILK" || upper == "PLA-SILK") return "OGFL96";
-    if (upper == "PLA HIGH SPEED" || upper == "PLA-HS" || upper == "PLA HS") return "OGFL95";
+    if (upper == "PLA-SILK")    return "OGFL96";
+    if (upper == "PLA-HIGH-SPEED" || upper == "PLA-HS") return "OGFL95";
 
     // ABS/ASA variants
     if (upper == "ABS")           return "OGFB99";
@@ -723,6 +824,137 @@ std::string MoonrakerPrinterAgent::normalize_color_value(const std::string& colo
     return normalized;
 }
 
+bool MoonrakerPrinterAgent::fetch_snapmaker_print_task_config(std::vector<AmsTrayData>& trays, int& max_lane_index)
+{
+    std::string url = join_url(device_info.base_url, "/printer/objects/query?print_task_config&save_variables&filament_detect");
+
+    std::string response_body;
+    bool        success = false;
+    std::string http_error;
+
+    auto http = Http::get(url);
+    if (!device_info.api_key.empty()) {
+        http.header("X-Api-Key", device_info.api_key);
+    }
+    http.timeout_connect(5)
+        .timeout_max(10)
+        .on_complete([&](std::string body, unsigned status) {
+            if (status == 200) {
+                response_body = body;
+                success       = true;
+            } else {
+                http_error = "HTTP error: " + std::to_string(status);
+            }
+        })
+        .on_error([&](std::string body, std::string err, unsigned status) {
+            http_error = err;
+            if (status > 0) {
+                http_error += " (HTTP " + std::to_string(status) + ")";
+            }
+        })
+        .perform_sync();
+
+    if (!success) {
+        BOOST_LOG_TRIVIAL(debug) << "MoonrakerPrinterAgent::fetch_snapmaker_print_task_config: HTTP request failed: " << http_error;
+        return false;
+    }
+
+    auto json = nlohmann::json::parse(response_body, nullptr, false, true);
+    if (json.is_discarded() || !json.contains("result") || !json["result"].contains("status") ||
+        !json["result"]["status"].contains("print_task_config")) {
+        return false;
+    }
+
+    const auto& status = json["result"]["status"];
+    const auto& ptc    = status["print_task_config"];
+    if (!ptc.is_object() || !ptc.contains("filament_type") || !ptc["filament_type"].is_array()) {
+        return false;
+    }
+
+    const auto& filament_type      = ptc["filament_type"];
+    const auto& filament_sub_type  = ptc.contains("filament_sub_type") && ptc["filament_sub_type"].is_array() ? ptc["filament_sub_type"] : nlohmann::json::array();
+    const auto& filament_exist     = ptc.contains("filament_exist") && ptc["filament_exist"].is_array() ? ptc["filament_exist"] : nlohmann::json::array();
+    const auto& filament_color     = ptc.contains("filament_color_rgba") && ptc["filament_color_rgba"].is_array() ? ptc["filament_color_rgba"] : nlohmann::json::array();
+    const auto& filament_vendor    = ptc.contains("filament_vendor") && ptc["filament_vendor"].is_array() ? ptc["filament_vendor"] : nlohmann::json::array();
+    const auto& save_variables     = status.contains("save_variables") && status["save_variables"].contains("variables") && status["save_variables"]["variables"].is_object()
+                                       ? status["save_variables"]["variables"]
+                                       : nlohmann::json::object();
+
+    auto array_bool = [](const nlohmann::json& arr, int idx, bool fallback) {
+        if (arr.is_array() && idx >= 0 && idx < static_cast<int>(arr.size()) && arr[idx].is_boolean())
+            return arr[idx].get<bool>();
+        return fallback;
+    };
+
+    auto combine_type = [](const std::string& type, const std::string& sub_type) {
+        const std::string base = trim_and_upper(type);
+        const std::string sub  = trim_and_upper(sub_type);
+
+        if (base.empty())
+            return sub.empty() ? std::string("PLA") : sub;
+        if (sub.empty() || sub == "NONE")
+            return base;
+        if (sub.rfind("HT-", 0) == 0 || sub.find(base + "-") != std::string::npos)
+            return sub;
+        if (sub == "CF")
+            return base + "-CF";
+        if (sub == "GF")
+            return base + "-GF";
+        if (sub == "SNAPSPEED" || sub == "HS")
+            return base + " HIGH SPEED";
+        if (sub == "SILK")
+            return base + " SILK";
+        if (sub == "WOOD")
+            return base + " WOOD";
+        if (sub == "MATTE")
+            return base + " MATTE";
+        if (sub == "MARBLE")
+            return base + " MARBLE";
+        return base;
+    };
+
+    trays.clear();
+    max_lane_index = -1;
+
+    const int slot_count = static_cast<int>(filament_type.size());
+    for (int i = 0; i < slot_count; ++i) {
+        const std::string saved_key      = "u1_t" + std::to_string(i) + "_filament";
+        const std::string saved_material = save_variables.value(saved_key, std::string());
+        const std::string base_type      = safe_array_string(filament_type, i);
+        const std::string sub_type       = safe_array_string(filament_sub_type, i);
+        const std::string material       = !saved_material.empty() ? trim_and_upper(saved_material) : combine_type(base_type, sub_type);
+        const bool        exists         = array_bool(filament_exist, i, !material.empty());
+
+        if (!exists || material.empty()) {
+            continue;
+        }
+
+        AmsTrayData tray;
+        tray.slot_index    = i;
+        tray.has_filament  = true;
+        tray.tray_type     = material;
+        tray.tray_color    = safe_array_string(filament_color, i);
+        const std::string vendor = safe_array_string(filament_vendor, i);
+
+        auto* bundle = GUI::wxGetApp().preset_bundle;
+        tray.tray_info_idx = bundle
+            ? resolve_filament_id_for_tray(bundle->filaments, tray.tray_type, vendor, tray.tray_color)
+            : map_filament_type_to_generic_id(tray.tray_type);
+
+        BOOST_LOG_TRIVIAL(info) << "MoonrakerPrinterAgent::fetch_snapmaker_print_task_config: slot " << i
+                                << " base " << base_type
+                                << " subtype " << sub_type
+                                << " saved " << saved_material
+                                << " resolved_type " << tray.tray_type
+                                << " filament_id " << tray.tray_info_idx;
+
+        max_lane_index = std::max(max_lane_index, i);
+        trays.push_back(std::move(tray));
+    }
+
+    return !trays.empty();
+}
+
 // Fetch filament info from moonraker database
 bool MoonrakerPrinterAgent::fetch_moonraker_filament_data(std::vector<AmsTrayData>& trays, int& max_lane_index)
 {
@@ -806,7 +1038,7 @@ bool MoonrakerPrinterAgent::fetch_moonraker_filament_data(std::vector<AmsTrayDat
         tray.has_filament = !tray.tray_type.empty();
         auto* bundle = GUI::wxGetApp().preset_bundle;
         tray.tray_info_idx = bundle
-            ? bundle->filaments.filament_id_by_type(tray.tray_type)
+            ? resolve_filament_id_for_tray(bundle->filaments, tray.tray_type)
             : map_filament_type_to_generic_id(tray.tray_type);
 
         max_lane_index = std::max(max_lane_index, lane_index);
@@ -934,7 +1166,7 @@ bool MoonrakerPrinterAgent::fetch_hh_filament_info(std::vector<AmsTrayData>& tra
 
         auto* bundle = GUI::wxGetApp().preset_bundle;
         tray.tray_info_idx = bundle
-            ? bundle->filaments.filament_id_by_type(tray.tray_type)
+            ? resolve_filament_id_for_tray(bundle->filaments, tray.tray_type)
             : map_filament_type_to_generic_id(tray.tray_type);
 
         max_lane_index = std::max(max_lane_index, gate_idx);
@@ -2081,19 +2313,23 @@ void MoonrakerPrinterAgent::perform_connection_async(const std::string& dev_id, 
             device_info.klippy_state = fetched_info.klippy_state;
         }
 
-// Orca todo: disable websocket for now, as we don't use MonitorPanel for Moonraker printers yet
-#if 0
         // Query initial status
         nlohmann::json initial_status;
         if (query_printer_status(base_url, api_key, initial_status, error_msg)) {
+            update_status_cache(initial_status);
+            nlohmann::json payload;
             {
-                update_status_cache(initial_status);
+                std::lock_guard<std::recursive_mutex> lock(payload_mutex);
+                payload = build_print_payload_locked();
             }
+            dispatch_message(dev_id, payload.dump());
             BOOST_LOG_TRIVIAL(info) << "MoonrakerPrinterAgent: Initial status queried successfully";
         } else {
             BOOST_LOG_TRIVIAL(warning) << "MoonrakerPrinterAgent: Initial status query failed: " << error_msg;
         }
 
+// Orca todo: disable websocket for now, as we don't use MonitorPanel for Moonraker printers yet
+#if 0
         // Start WebSocket status stream
         start_status_stream(dev_id, base_url, api_key);
 #endif

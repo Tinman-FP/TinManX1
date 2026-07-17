@@ -61,6 +61,7 @@ static SettingsFactory::Bundle FREQ_SETTINGS_BUNDLE_FFF =
     { L("Infill")               , { "sparse_infill_density", "sparse_infill_pattern" } },
     // BBS
     { L("Support")     , { "enable_support", "support_type", "support_threshold_angle", "support_threshold_overlap",
+                                    "tinman_support_strategy", "arc_support_experimental",
                                     "support_base_pattern", "support_on_build_plate_only","support_critical_regions_only",
                                     "support_remove_small_overhang",
                                     "support_base_pattern_spacing", "support_expansion"}},
@@ -86,13 +87,13 @@ std::map<std::string, std::vector<SimpleSettingData>>  SettingsFactory::OBJECT_C
                     {"precise_z_height", "",10}
                     }},
     { L("Support"), {{"brim_type", "",1},{"brim_width", "",2},{"brim_object_gap", "",3},{"brim_flow_ratio", "",4},{"brim_use_efc_outline", "",5},
-                    {"enable_support", "",6},{"support_type", "",7},{"support_threshold_angle", "",8}, {"support_threshold_overlap", "",9}, {"support_on_build_plate_only", "",10},
-                    {"support_filament", "",11},{"support_interface_filament", "",12},{"support_expansion", "",13},{"support_style", "",14},
-                    {"tree_support_brim_width", "",15}, {"tree_support_branch_angle", "",16},{"tree_support_branch_angle_organic","",17}, {"tree_support_wall_count", "",18},{"tree_support_branch_diameter_angle", "",19},//tree support
-                    {"support_bottom_z_distance", "",20},{"support_top_z_distance", "",21},{"support_base_pattern", "",22},{"support_base_pattern_spacing", "",23},
-                    {"support_interface_top_layers", "",24},{"support_interface_bottom_layers", "",25},{"support_interface_spacing", "",26},{"support_bottom_interface_spacing", "",27},
-                    {"support_object_xy_distance", "",28}, {"bridge_no_support", "",29},{"max_bridge_length", "",30},{"support_critical_regions_only", "",31},{"support_remove_small_overhang","",32},
-                    {"support_object_first_layer_gap","",33}
+                    {"enable_support", "",6},{"support_type", "",7},{"tinman_support_strategy", "",8},{"arc_support_experimental", "",9},{"support_threshold_angle", "",10}, {"support_threshold_overlap", "",11}, {"support_on_build_plate_only", "",12},
+                    {"support_filament", "",13},{"support_interface_filament", "",14},{"support_expansion", "",15},{"support_style", "",16},
+                    {"tree_support_brim_width", "",17}, {"tree_support_branch_angle", "",18},{"tree_support_branch_angle_organic","",19}, {"tree_support_wall_count", "",20},{"tree_support_branch_diameter_angle", "",21},//tree support
+                    {"support_bottom_z_distance", "",22},{"support_top_z_distance", "",23},{"support_base_pattern", "",24},{"support_base_pattern_spacing", "",25},
+                    {"support_interface_top_layers", "",26},{"support_interface_bottom_layers", "",27},{"support_interface_spacing", "",28},{"support_bottom_interface_spacing", "",29},
+                    {"support_object_xy_distance", "",30}, {"bridge_no_support", "",31},{"max_bridge_length", "",32},{"support_critical_regions_only", "",33},{"support_remove_small_overhang","",34},
+                    {"support_object_first_layer_gap","",35}
                     }},
     { L("Speed"), {{"support_speed", "",12}, {"support_interface_speed", "",13}
                   }}
@@ -113,7 +114,27 @@ std::map<std::string, std::vector<SimpleSettingData>> SettingsFactory::PART_CATE
        {"zaa_dont_alternate_fill_direction", "", 3},
        {"zaa_min_z", "", 4}}},
      {L("Strength"),
-      {{"wall_loops", "", 1},
+      {{"strength_lens_enabled", "", 1},
+       {"strength_lens_material_model", "", 1},
+       {"strength_lens_load_axis", "", 1},
+       {"fiber_reinforcement_mode", "", 1},
+       {"fiber_generate_perimeters", "", 1},
+       {"fiber_generate_infill", "", 1},
+       {"fiber_start_layer", "", 1},
+       {"fiber_min_radius", "", 1},
+       {"fiber_infill_pattern", "", 1},
+       {"fiber_infill_density", "", 1},
+       {"fiber_infill_angles", "", 1},
+       {"fiber_infill_source_policy", "", 1},
+       {"fiber_seam_position", "", 1},
+       {"fiber_seam_angle", "", 1},
+       {"fiber_line_width", "", 1},
+       {"fiber_infill_spacing", "", 1},
+       {"fiber_layer_step", "", 1},
+       {"fiber_min_route_length", "", 1},
+       {"fiber_print_speed", "", 1},
+       {"fiber_start_speed", "", 1},
+       {"wall_loops", "", 1},
        {"top_shell_layers", L("Top Solid Layers"), 1},
        {"top_shell_thickness", L("Top Minimum Shell Thickness"), 1},
        {"top_surface_density", L("Top Surface Density"), 1},

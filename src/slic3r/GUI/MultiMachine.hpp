@@ -4,6 +4,7 @@
 #include "GUI_Utils.hpp"
 #include "DeviceManager.hpp"
 #include <functional>
+#include <string>
 
 namespace Slic3r {
 namespace GUI {
@@ -29,11 +30,16 @@ public:
     int             state_printable{ 0 }; //0-idle 1-finish 2-failed 3-printing 4-upgrading 5-preset incompatible  6-unknown
     int             state_selected{ 0 };  //0-selected 1-unselected 2-un selectable
     int             state_enable_ams{ 0 };//0-no ams 1-enabled ams 2-not enabled ams
-    int             state_device{ 0 };   //0-idle 1-finish 2-failed 3-running 4-pause  5-prepare  6-slicing 7-removed
+    int             state_device{ 0 };   //0-idle 1-finish 2-failed 3-running 4-pause 5-prepare 6-slicing 7-syncing 8-online 9-offline
     int             state_local_task{ 0 };  //0-padding  1-sending 2-sending finish  3-sending cancel  4-sending failed 5-TS_PRINT_SUCCESS 6- TS_PRINT_FAILED 7-TS_REMOVED 8-TS_IDLE
     int             state_cloud_task{ 0 };  //0-printing 1-printing finish 2-printing failed
     int             state_optional{0}; //0-Not optional 1-Optional
     std::string     m_send_time;
+    bool            state_has_live_status{ false };
+    std::string     state_task_name;
+    std::string     state_stage_text;
+    int             state_task_progress{ -1 };
+    int             state_left_time{ -1 };
 
 public:
     
@@ -61,9 +67,17 @@ public:
     void unselected();
     bool is_blocking_printing(MachineObject* obj_);
     void update_item(const DeviceItem* item);
+    void apply_live_status(bool has_live_status,
+                           bool online,
+                           int device_state,
+                           const std::string& task_name,
+                           int task_progress,
+                           int left_time,
+                           const std::string& stage_text);
 };
 
 std::vector<DeviceItem*> selected_machines(const std::vector<DeviceItem*>& dev_item_list, std::string search_text);
+int multi_device_state_from_machine(MachineObject* obj);
 
 struct ObjState
 {

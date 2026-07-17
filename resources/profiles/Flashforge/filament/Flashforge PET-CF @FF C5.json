@@ -1,106 +1,121 @@
 {
-	"type": "filament",
-	"name": "Flashforge PET-CF @FF C5",
-	"inherits": "Generic PETG-CF @System",
-	"from": "system",
-	"setting_id": "3bguiaEtUsS8ULHW",
-	"instantiation": "true",
-	"compatible_printers": [
-		"Flashforge Creator 5 0.4 nozzle",
-		"Flashforge Creator 5 0.6 nozzle",
-		"Flashforge Creator 5 0.8 nozzle"
-	],
-	"complete_print_exhaust_fan_speed": [
-		"40"
-	],
-	"cool_plate_temp": [
-		"0"
-	],
-	"cool_plate_temp_initial_layer": [
-		"0"
-	],
-	"during_print_exhaust_fan_speed": [
-		"40"
-	],
-	"enable_pressure_advance": [
-		"1"
-	],
-	"eng_plate_temp": [
-		"100"
-	],
-	"eng_plate_temp_initial_layer": [
-		"100"
-	],
-	"fan_cooling_layer_time": [
-		"5"
-	],
-	"fan_max_speed": [
-		"30"
-	],
-	"fan_min_speed": [
-		"10"
-	],
-	"filament_density": [
-		"1.29"
-	],
-	"filament_max_volumetric_speed": [
-		"7"
-	],
-	"filament_settings_id": [
-		"Flashforge PET-CF @FF C5"
-	],
-	"filament_start_gcode": [
-		"; filament start gcode"
-	],
-	"filament_type": [
-		"PET-CF"
-	],
-	"hot_plate_temp": [
-		"100"
-	],
-	"hot_plate_temp_initial_layer": [
-		"100"
-	],
-	"nozzle_temperature": [
-		"270"
-	],
-	"nozzle_temperature_initial_layer": [
-		"270"
-	],
-	"nozzle_temperature_range_high": [
-		"290"
-	],
-	"nozzle_temperature_range_low": [
-		"260"
-	],
-	"overhang_fan_speed": [
-		"40"
-	],
-	"overhang_fan_threshold": [
-		"0%"
-	],
-	"pressure_advance": [
-		"0.0325"
-	],
-	"slow_down_layer_time": [
-		"2"
-	],
-	"supertack_plate_temp": [
-		"80"
-	],
-	"supertack_plate_temp_initial_layer": [
-		"80"
-	],
-	"textured_cool_plate_temp": [
-		"0"
-	],
-	"textured_cool_plate_temp_initial_layer": [
-		"0"
-	],
-	"textured_plate_temp": [
-		"100"
-	],
-	"textured_plate_temp_initial_layer": [
-		"100"
-	]
+    "type": "filament",
+    "name": "Flashforge PET-CF @FF C5",
+    "inherits": "Generic PETG-CF @System",
+    "from": "system",
+    "setting_id": "3bguiaEtUsS8ULHW",
+    "instantiation": "true",
+    "compatible_printers": [
+        "Flashforge Creator 5 0.4 nozzle",
+        "Flashforge Creator 5 0.6 nozzle",
+        "Flashforge Creator 5 0.8 nozzle"
+    ],
+    "complete_print_exhaust_fan_speed": [
+        "40"
+    ],
+    "cool_plate_temp": [
+        "0"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "0"
+    ],
+    "during_print_exhaust_fan_speed": [
+        "40"
+    ],
+    "enable_pressure_advance": [
+        "1"
+    ],
+    "eng_plate_temp": [
+        "80"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "80"
+    ],
+    "fan_cooling_layer_time": [
+        "5"
+    ],
+    "fan_max_speed": [
+        "0"
+    ],
+    "fan_min_speed": [
+        "0"
+    ],
+    "filament_density": [
+        "1.29"
+    ],
+    "filament_max_volumetric_speed": [
+        "4"
+    ],
+    "filament_settings_id": [
+        "Flashforge PET-CF @FF C5"
+    ],
+    "filament_start_gcode": [
+        "; filament start gcode"
+    ],
+    "filament_type": [
+        "PET-CF"
+    ],
+    "hot_plate_temp": [
+        "80"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "80"
+    ],
+    "nozzle_temperature": [
+        "300"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "300"
+    ],
+    "nozzle_temperature_range_high": [
+        "300"
+    ],
+    "nozzle_temperature_range_low": [
+        "270"
+    ],
+    "overhang_fan_speed": [
+        "0"
+    ],
+    "overhang_fan_threshold": [
+        "0%"
+    ],
+    "pressure_advance": [
+        "0.0325"
+    ],
+    "slow_down_layer_time": [
+        "20"
+    ],
+    "supertack_plate_temp": [
+        "80"
+    ],
+    "supertack_plate_temp_initial_layer": [
+        "80"
+    ],
+    "textured_cool_plate_temp": [
+        "0"
+    ],
+    "textured_cool_plate_temp_initial_layer": [
+        "0"
+    ],
+    "textured_plate_temp": [
+        "80"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "80"
+    ],
+    "filament_flow_ratio": [
+        "1.08"
+    ],
+    "slow_down_min_speed": [
+        "8"
+    ],
+    "filament_retraction_length": [
+        "0.8"
+    ],
+    "filament_notes": [
+        "TinManX1 PET-CF rescue tune 2026-07-11: after repeated porous PET-CF test prints, use 300C nozzle, 80C bed, fan off, max volumetric 4 mm3/s, flow 1.08, slowdown enabled, and pressure advance enabled. Dry filament and inspect hardened nozzle if voids persist."
+    ],
+    "tinmanx_petcf_rescue_tune": [
+        "2026-07-11 all PET-CF rescue tune with pressure advance"
+    ]
 }

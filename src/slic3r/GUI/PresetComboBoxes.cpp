@@ -1,6 +1,7 @@
 #include "PresetComboBoxes.hpp"
 
 #include <cstddef>
+#include <cctype>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -59,6 +60,234 @@ namespace Slic3r {
 namespace GUI {
 
 #define BORDER_W 10
+
+namespace {
+
+static std::string tinmanx_serialized_option(const DynamicConfig& config, const char* key)
+{
+    const ConfigOption* option = config.option(key);
+    if (option == nullptr)
+        return {};
+
+    std::string value = option->serialize();
+    boost::algorithm::trim(value);
+    return value;
+}
+
+static std::string tinmanx_lower_string(std::string value)
+{
+    std::transform(value.begin(), value.end(), value.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return value;
+}
+
+static std::string tinmanx_lower_option(const DynamicConfig& config, const char* key)
+{
+    std::string value = tinmanx_serialized_option(config, key);
+    return tinmanx_lower_string(value);
+}
+
+static bool tinmanx_truthy_option(const DynamicConfig& config, const char* key)
+{
+    const std::string value = tinmanx_lower_option(config, key);
+    if (value.empty() || value == "0" || value == "false" || value == "no" || value == "off" || value == "null")
+        return false;
+    if (value == "1" || value == "true" || value == "yes" || value == "on")
+        return true;
+
+    try {
+        size_t parsed = 0;
+        return std::stod(value, &parsed) != 0.0 && parsed > 0;
+    } catch (...) {
+        return false;
+    }
+}
+
+static bool tinmanx_positive_option(const DynamicConfig& config, const char* key)
+{
+    const std::string value = tinmanx_lower_option(config, key);
+    if (value.empty())
+        return false;
+
+    try {
+        size_t parsed = 0;
+        return std::stod(value, &parsed) > 0.0 && parsed > 0;
+    } catch (...) {
+        return false;
+    }
+}
+
+static bool tinmanx_payload_option(const DynamicConfig& config, const char* key)
+{
+    const std::string value = tinmanx_lower_option(config, key);
+    return !value.empty() && value != "{}" && value != "[]" && value != "null";
+}
+
+static bool tinmanx_text_matches_fiberseek_seeker3(const std::string& text)
+{
+    const std::string value = tinmanx_lower_string(text);
+    if (value.empty())
+        return false;
+
+    const bool has_fiberseek = value.find("fibreseek") != std::string::npos ||
+                               value.find("fiberseek") != std::string::npos;
+    const bool has_seeker3 = value.find("seeker 3") != std::string::npos;
+    return (has_fiberseek && has_seeker3) || value == "seeker 3";
+}
+
+static bool tinmanx_selected_printer_matches_fiberseek(const PresetBundle* bundle)
+{
+    if (bundle == nullptr)
+        return false;
+
+    const Preset& printer = bundle->printers.get_edited_preset();
+    return tinmanx_text_matches_fiberseek_seeker3(Preset::remove_suffix_modified(printer.name)) ||
+           tinmanx_text_matches_fiberseek_seeker3(tinmanx_serialized_option(printer.config, "printer_model")) ||
+           tinmanx_text_matches_fiberseek_seeker3(tinmanx_serialized_option(printer.config, "printer_settings_id"));
+}
+
+static bool tinmanx_selected_printer_supports_continuous_fiber(const PresetBundle* bundle)
+{
+    if (bundle == nullptr)
+        return false;
+
+    const DynamicConfig& config = bundle->printers.get_edited_preset().config;
+    return tinmanx_truthy_option(config, "fiber_enabled") ||
+           tinmanx_payload_option(config, "fiber_cut_gcode") ||
+           (tinmanx_positive_option(config, "fiber_cut_distance") &&
+            tinmanx_positive_option(config, "composite_nozzle_diameter")) ||
+           tinmanx_selected_printer_matches_fiberseek(bundle);
+}
+
+static bool tinmanx_process_preset_uses_continuous_fiber(const Preset& preset)
+{
+    const DynamicConfig& config = preset.config;
+    if (tinmanx_truthy_option(config, "fiber_generate_perimeters") ||
+        tinmanx_truthy_option(config, "fiber_generate_infill") ||
+        tinmanx_truthy_option(config, "fiber_enabled") ||
+        tinmanx_payload_option(config, "fiber_reinforcement_payload"))
+        return true;
+
+    std::string name = preset.name;
+    std::transform(name.begin(), name.end(), name.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return name.find("continuous fiber") != std::string::npos ||
+           name.find("composite fiber") != std::string::npos ||
+           name.find("x-ccf") != std::string::npos;
+}
+
+static bool tinmanx_filament_preset_is_cfc_slot_profile(const Preset& preset)
+{
+    std::string name = get_preset_bare_name(Preset::remove_suffix_modified(preset.name));
+    boost::algorithm::trim(name);
+    return boost::starts_with(name, "CFC ");
+}
+
+static size_t tinmanx_count_cfc_slot_profiles(const PresetCollection* collection)
+{
+    if (collection == nullptr)
+        return 0;
+
+    size_t count = 0;
+    for (const Preset& preset : collection->get_presets())
+        if (tinmanx_filament_preset_is_cfc_slot_profile(preset))
+            ++count;
+    return count;
+}
+
+static bool tinmanx_filament_preset_allowed_for_slot(const PresetBundle* bundle, int filament_idx, const Preset& preset)
+{
+    if (bundle == nullptr || filament_idx < 0 || !tinmanx_selected_printer_supports_continuous_fiber(bundle))
+        return true;
+
+    const bool cfc_profile = tinmanx_filament_preset_is_cfc_slot_profile(preset);
+    if (filament_idx == 0)
+        return !cfc_profile;
+    if (filament_idx == 1)
+        return cfc_profile;
+
+    return true;
+}
+
+static ConfigOptionStrings* tinmanx_clone_project_string_option(DynamicPrintConfig* config, const char* key, size_t min_size)
+{
+    if (config == nullptr || !config->has(key))
+        return nullptr;
+
+    auto* source = dynamic_cast<const ConfigOptionStrings*>(config->option(key));
+    if (source == nullptr)
+        return nullptr;
+
+    auto* cloned = static_cast<ConfigOptionStrings*>(source->clone());
+    if (cloned->values.size() < min_size)
+        cloned->values.resize(min_size);
+    return cloned;
+}
+
+static const Preset* tinmanx_find_preset_by_name_or_alias(PresetCollection* collection, const std::string& preset_name)
+{
+    if (collection == nullptr || preset_name.empty())
+        return nullptr;
+
+    auto matches_loaded_preset = [](const Preset& preset, const std::string& name) {
+        const std::string clean_name      = Preset::remove_suffix_modified(name);
+        const std::string candidate_name  = Preset::remove_suffix_modified(preset.name);
+        const std::string candidate_alias = Preset::remove_suffix_modified(preset.alias);
+        const std::string candidate_bare  = get_preset_bare_name(candidate_name);
+        return candidate_name == clean_name ||
+               candidate_bare == clean_name ||
+               (!candidate_alias.empty() && candidate_alias == clean_name);
+    };
+
+    for (const Preset& preset : collection->get_presets()) {
+        if (matches_loaded_preset(preset, preset_name))
+            return &preset;
+    }
+
+    if (Preset* preset = collection->find_preset(preset_name, false))
+        return preset;
+
+    const std::string clean_name = Preset::remove_suffix_modified(preset_name);
+    if (clean_name != preset_name) {
+        if (Preset* preset = collection->find_preset(clean_name, false))
+            return preset;
+    }
+
+    const std::string resolved_name = collection->get_preset_name_by_alias(clean_name);
+    if (!resolved_name.empty() && resolved_name != clean_name) {
+        for (const Preset& preset : collection->get_presets()) {
+            if (matches_loaded_preset(preset, resolved_name))
+                return &preset;
+        }
+        if (Preset* preset = collection->find_preset(resolved_name, false))
+            return preset;
+    }
+
+    return nullptr;
+}
+
+static std::string tinmanx_nonempty_preset_label(const Preset& preset, bool no_alias = false)
+{
+    std::string label = preset.label(no_alias);
+    boost::algorithm::trim(label);
+    if (!label.empty())
+        return label;
+
+    label = Preset::remove_suffix_modified(preset.name);
+    boost::algorithm::trim(label);
+    return label.empty() ? preset.name : label;
+}
+
+static wxString tinmanx_process_family_group(const Preset& preset, bool selected_printer_supports_fiber)
+{
+    if (!selected_printer_supports_fiber)
+        return wxString();
+    return tinmanx_process_preset_uses_continuous_fiber(preset) ?
+        _L("Plastic + Continuous Fiber") :
+        _L("Plastic Only");
+}
+
+} // namespace
 
 // ---------------------------------
 // ***  PresetComboBox  ***
@@ -190,14 +419,21 @@ void PresetComboBox::update_selection()
     if (m_last_selected == INT_MAX)
         m_last_selected = 1;
 
+    if (m_last_selected < 0 || m_last_selected >= static_cast<int>(GetCount()))
+        m_last_selected = GetCount() > 0 ? 0 : -1;
+    if (m_last_selected < 0)
+        return;
+
+    const wxString selected_label = GetString(m_last_selected);
     SetSelection(m_last_selected);
+    SetLabel(selected_label);
 #ifdef __WXMSW__
     // From the Windows 2004 the tooltip for preset combobox doesn't work after next call of SetTooltip()
     // (There was an issue, when tooltip doesn't appears after changing of the preset selection)
     // But this workaround seems to work: We should to kill tooltip and than set new tooltip value
     SetToolTip(NULL);
 #endif
-    SetToolTip(GetString(m_last_selected));
+    SetToolTip(selected_label);
 
 // A workaround for a set of issues related to text fitting into gtk widgets:
 #if defined(__WXGTK20__) || defined(__WXGTK3__)
@@ -247,7 +483,7 @@ int PresetComboBox::update_ams_color()
         }
         if (name.empty())
             name = m_collection->get_preset_name_by_alias(Preset::remove_suffix_modified(GetValue().ToUTF8().data()));
-        auto *preset = m_collection->find_preset(name);
+        const Preset *preset = tinmanx_find_preset_by_name_or_alias(m_collection, name);
         if (preset)
             color = preset->config.opt_string("default_filament_colour", 0u);
         if (color.empty()) return -1;
@@ -260,12 +496,22 @@ int PresetComboBox::update_ams_color()
         }
         color = iter->second.opt_string("filament_colour", 0u);
         ctype = iter->second.opt_string("filament_colour_type", 0u);
-        colors = iter->second.opt<ConfigOptionStrings>("filament_multi_colour")->values;
+        if (const auto* multi_colour = dynamic_cast<const ConfigOptionStrings*>(iter->second.option("filament_multi_colour")))
+            colors = multi_colour->values;
     }
     DynamicPrintConfig *cfg        = &wxGetApp().preset_bundle->project_config;
-    auto color_head = static_cast<ConfigOptionStrings*>(cfg->option("filament_colour")->clone()); // single color (the first color if multi-color filament)
-    auto color_pack = static_cast<ConfigOptionStrings *>(cfg->option("filament_multi_colour")->clone()); // multi color (all colors in all kinds of filament)
-    auto color_type = static_cast<ConfigOptionStrings*>(cfg->option("filament_colour_type")->clone()); // color type
+    const size_t target_size = static_cast<size_t>(m_filament_idx) + 1;
+    auto color_head = tinmanx_clone_project_string_option(cfg, "filament_colour", target_size); // single color (the first color if multi-color filament)
+    auto color_pack = tinmanx_clone_project_string_option(cfg, "filament_multi_colour", target_size); // multi color (all colors in all kinds of filament)
+    auto color_type = tinmanx_clone_project_string_option(cfg, "filament_colour_type", target_size); // color type
+
+    if (color_head == nullptr || color_pack == nullptr || color_type == nullptr) {
+        delete color_head;
+        delete color_pack;
+        delete color_type;
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": missing or invalid filament color project config";
+        return -1;
+    }
 
     color_head->values[m_filament_idx] = color;
     color_type->values[m_filament_idx] = ctype;
@@ -397,15 +643,30 @@ void PresetComboBox::update(std::string select_preset_name)
 
     std::map<wxString, std::pair<wxBitmap*, bool>>  nonsys_presets;
     std::map<wxString, wxBitmap*>                   incomp_presets;
+    std::map<wxString, wxString>                    preset_process_groups;
+    const bool group_process_presets_by_fiber = m_type == Preset::TYPE_PRINT &&
+        tinmanx_selected_printer_supports_continuous_fiber(m_preset_bundle);
 
     wxString selected = "";
     if (!presets.front().is_visible)
         set_label_marker(Append(_L("System presets"), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
 
+    auto append_preset_with_process_family = [this, &preset_process_groups](const wxString& name, wxBitmap& bitmap) {
+        auto group = preset_process_groups.find(name);
+        return group != preset_process_groups.end() && !group->second.empty() ?
+            Append(name, bitmap, group->second, nullptr, 0) :
+            Append(name, bitmap);
+    };
+
     for (size_t i = presets.front().is_visible ? 0 : m_collection->num_default_presets(); i < presets.size(); ++i)
     {
         const Preset& preset = presets[i];
-        if (!m_show_all && (!preset.is_visible || !preset.is_compatible))
+        if (m_type == Preset::TYPE_FILAMENT &&
+            !tinmanx_filament_preset_allowed_for_slot(m_preset_bundle, m_filament_idx, preset))
+            continue;
+
+        const bool is_selected = preset.name == select_preset_name;
+        if (!m_show_all && !is_selected && (!preset.is_visible || !preset.is_compatible))
             continue;
 
         // marker used for disable incompatible printer models for the selected physical printer
@@ -415,19 +676,22 @@ void PresetComboBox::update(std::string select_preset_name)
 
         wxBitmap* bmp = get_bmp(preset);
         assert(bmp);
+        const wxString name = get_preset_name(preset);
+        if (group_process_presets_by_fiber)
+            preset_process_groups[name] = tinmanx_process_family_group(preset, true);
 
         if (!is_enabled)
-            incomp_presets.emplace(get_preset_name(preset), bmp);
+            incomp_presets.emplace(name, bmp);
         else if (preset.is_default || preset.is_system)
         {
-            Append(get_preset_name(preset), *bmp);
+            append_preset_with_process_family(name, *bmp);
             validate_selection(preset.name == select_preset_name);
         }
         else
         {
-            nonsys_presets.emplace(get_preset_name(preset), std::pair<wxBitmap*, bool>(bmp, is_enabled));
+            nonsys_presets.emplace(name, std::pair<wxBitmap*, bool>(bmp, is_enabled));
             if (preset.name == select_preset_name || (select_preset_name.empty() && is_enabled))
-                selected = get_preset_name(preset);
+                selected = name;
         }
         if (i + 1 == m_collection->num_default_presets())
             set_label_marker(Append(_L("System presets"), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
@@ -436,7 +700,7 @@ void PresetComboBox::update(std::string select_preset_name)
     {
         set_label_marker(Append(_L("User presets"), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
         for (std::map<wxString, std::pair<wxBitmap*, bool>>::iterator it = nonsys_presets.begin(); it != nonsys_presets.end(); ++it) {
-            int item_id = Append(it->first, *it->second.first);
+            int item_id = append_preset_with_process_family(it->first, *it->second.first);
             bool is_enabled = it->second.second;
             if (!is_enabled)
                 set_label_marker(item_id, LABEL_ITEM_DISABLED);
@@ -447,7 +711,7 @@ void PresetComboBox::update(std::string select_preset_name)
     {
         set_label_marker(Append(_L("Incompatible presets"), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
         for (std::map<wxString, wxBitmap*>::iterator it = incomp_presets.begin(); it != incomp_presets.end(); ++it) {
-            set_label_marker(Append(it->first, *it->second), LABEL_ITEM_DISABLED);
+            set_label_marker(append_preset_with_process_family(it->first, *it->second), LABEL_ITEM_DISABLED);
         }
     }
 
@@ -551,7 +815,6 @@ bool PresetComboBox::add_ams_filaments(std::string selected, bool alias_name)
             }
             const_cast<Preset&>(*iter).is_visible = true;
             auto color = tray.opt_string("filament_colour", 0u);
-            auto multi_color = tray.opt<ConfigOptionStrings>("filament_multi_colour")->values;
             wxBitmap bmp(*get_extruder_color_icon(color, name, icon_width, 16));
             auto text = get_preset_name(*iter);
             int      item_id = Append(text, bmp.ConvertToImage(), &m_first_ams_filament + entry.first);
@@ -984,10 +1247,26 @@ bool PlaterPresetComboBox::switch_to_tab()
     const Preset* selected_filament_preset = nullptr;
     if (m_type == Preset::TYPE_FILAMENT)
     {
-        const std::string& selected_preset = GetString(GetSelection()).ToUTF8().data();
+        std::string selected_preset;
+        if (m_filament_idx >= 0 &&
+            m_filament_idx < static_cast<int>(wxGetApp().preset_bundle->filament_presets.size()))
+            selected_preset = wxGetApp().preset_bundle->filament_presets[m_filament_idx];
+        else
+            selected_preset = GetString(GetSelection()).ToUTF8().data();
+
         if (!boost::algorithm::starts_with(selected_preset, Preset::suffix_modified()))
         {
-            const std::string& preset_name = wxGetApp().preset_bundle->filaments.get_preset_name_by_alias(selected_preset);
+            std::string preset_name;
+            if (const Preset* resolved = tinmanx_find_preset_by_name_or_alias(&wxGetApp().preset_bundle->filaments, selected_preset)) {
+                preset_name = resolved->name;
+                if (m_filament_idx == 1 &&
+                    tinmanx_selected_printer_supports_continuous_fiber(wxGetApp().preset_bundle))
+                    const_cast<Preset*>(resolved)->is_visible = true;
+            } else {
+                preset_name = wxGetApp().preset_bundle->filaments.get_preset_name_by_alias(selected_preset);
+                if (preset_name.empty() || preset_name == selected_preset)
+                    preset_name = Preset::remove_suffix_modified(selected_preset);
+            }
             if (wxGetApp().get_tab(m_type)->select_preset(preset_name))
                 wxGetApp().get_tab(m_type)->get_combo_box()->set_filament_idx(m_filament_idx);
             else {
@@ -1097,7 +1376,7 @@ void PlaterPresetComboBox::show_edit_menu()
 
 wxString PlaterPresetComboBox::get_preset_name(const Preset& preset)
 {
-    return from_u8(preset.label(false));
+    return from_u8(tinmanx_nonempty_preset_label(preset));
 }
 
 // Only the compatible presets are shown.
@@ -1115,6 +1394,8 @@ void PlaterPresetComboBox::update()
     invalidate_selection();
 
     const Preset* selected_filament_preset = nullptr;
+    std::string selected_filament_name;
+    std::string selected_filament_clean;
     if (m_type == Preset::TYPE_FILAMENT)
     {
         std::vector<wxBitmap *> bitmaps = get_extruder_color_icons(true);
@@ -1125,13 +1406,28 @@ void PlaterPresetComboBox::update()
         }
 #ifdef __WXOSX__
         clr_picker->SetLabel(clr_picker->GetLabel()); // Let setBezelStyle: be called
-        clr_picker->Refresh();
+            clr_picker->Refresh();
 #endif
-        selected_filament_preset = m_collection->find_preset(m_preset_bundle->filament_presets[m_filament_idx]);
+        selected_filament_name = m_preset_bundle->filament_presets[m_filament_idx];
+        selected_filament_clean = Preset::remove_suffix_modified(selected_filament_name);
+        selected_filament_preset = tinmanx_find_preset_by_name_or_alias(m_collection, selected_filament_name);
+        if (!selected_filament_preset &&
+            m_filament_idx == 1 &&
+            tinmanx_selected_printer_supports_continuous_fiber(m_preset_bundle)) {
+            selected_filament_preset = tinmanx_find_preset_by_name_or_alias(&wxGetApp().preset_bundle->filaments, selected_filament_name);
+        }
         if (!selected_filament_preset) {
-            //can not find this filament, should be caused by project embedded presets, will be updated later
-            Thaw();
-            return;
+            if (m_filament_idx == 1 &&
+                tinmanx_selected_printer_supports_continuous_fiber(m_preset_bundle)) {
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__
+                    << boost::format(": slot 2 selected CFC preset is not resolved yet: %1%") % selected_filament_name;
+            } else {
+            // Can not find this filament, should be caused by project embedded presets,
+            // will be updated later. Keep a non-empty label visible meanwhile.
+                SetValue(from_u8(Preset::remove_suffix_modified(selected_filament_name)));
+                Thaw();
+                return;
+            }
         }
         //assert(selected_filament_preset);
     }
@@ -1156,27 +1452,61 @@ void PlaterPresetComboBox::update()
     std::map<wxString, std::string> preset_aliases; // ORCA
     std::map<wxString, std::string> preset_bundle_ids;
     std::map<wxString, std::string> preset_bundle_names;
+    std::map<wxString, wxString>   preset_process_groups;
+    const bool group_process_presets_by_fiber = m_type == Preset::TYPE_PRINT &&
+        tinmanx_selected_printer_supports_continuous_fiber(m_preset_bundle);
+    const bool flat_tinmanx_fiber_slot_filaments = m_type == Preset::TYPE_FILAMENT &&
+        m_filament_idx == 1 &&
+        tinmanx_selected_printer_supports_continuous_fiber(m_preset_bundle);
+    PresetCollection* list_collection = m_collection;
+    if (flat_tinmanx_fiber_slot_filaments &&
+        tinmanx_count_cfc_slot_profiles(list_collection) == 0 &&
+        tinmanx_count_cfc_slot_profiles(&wxGetApp().preset_bundle->filaments) > 0) {
+        list_collection = &wxGetApp().preset_bundle->filaments;
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__
+            << ": using global filament collection for FibreSeek slot 2 CFC profiles";
+    }
     //BBS:  move system to the end
     wxString selected_system_preset;
     wxString selected_user_preset;
     wxString selected_bundle_preset;
     wxString tooltip;
-    const std::deque<Preset>& presets = m_collection->get_presets();
+    const std::deque<Preset>& presets = list_collection->get_presets();
+    size_t tinmanx_fiber_slot_profile_count = 0;
 
     //BBS:  move system to the end
     /*if (!presets.front().is_visible)
         this->set_label_marker(this->Append(separator(L("System presets")), wxNullBitmap));*/
 
-    for (size_t i = presets.front().is_visible ? 0 : m_collection->num_default_presets(); i < presets.size(); ++i)
+    for (size_t i = presets.front().is_visible ? 0 : list_collection->num_default_presets(); i < presets.size(); ++i)
     {
         const Preset& preset = presets[i];
+        const bool force_show_tinmanx_fiber_slot_preset =
+            flat_tinmanx_fiber_slot_filaments &&
+            tinmanx_filament_preset_is_cfc_slot_profile(preset);
+        if (force_show_tinmanx_fiber_slot_preset) {
+            ++tinmanx_fiber_slot_profile_count;
+            const_cast<Preset&>(preset).is_visible = true;
+        }
+        const std::string selected_filament_resolved_name = selected_filament_preset ? selected_filament_preset->name : std::string();
+        const std::string preset_clean_name = Preset::remove_suffix_modified(preset.name);
+        const std::string preset_clean_alias = Preset::remove_suffix_modified(preset.alias);
         bool is_selected =  m_type == Preset::TYPE_FILAMENT ?
-                            m_preset_bundle->filament_presets[m_filament_idx] == preset.name :
+                            (!selected_filament_resolved_name.empty() ?
+                                selected_filament_resolved_name == preset.name :
+                                (!selected_filament_clean.empty() &&
+                                    (preset_clean_name == selected_filament_clean ||
+                                     get_preset_bare_name(preset_clean_name) == selected_filament_clean ||
+                                     (!preset_clean_alias.empty() && preset_clean_alias == selected_filament_clean)))) :
                             // The case, when some physical printer is selected
                             m_type == Preset::TYPE_PRINTER && m_preset_bundle->physical_printers.has_selection() ? false :
                             i == m_collection->get_selected_idx();
 
-        if (!is_selected && !preset.is_visible)
+        if (m_type == Preset::TYPE_FILAMENT &&
+            !tinmanx_filament_preset_allowed_for_slot(m_preset_bundle, m_filament_idx, preset))
+            continue;
+
+        if (!is_selected && !preset.is_visible && !force_show_tinmanx_fiber_slot_preset)
         {
             continue;
         }
@@ -1189,6 +1519,8 @@ void PlaterPresetComboBox::update()
         bool single_bar = false;
         wxString name = from_u8(preset.name);
         preset_aliases[name] = get_preset_name(preset).utf8_string(); // ORCA
+        if (group_process_presets_by_fiber)
+            preset_process_groups[name] = tinmanx_process_family_group(preset, true);
 
         // Track bundle names for bundled presets
         if (preset.is_from_bundle()) {
@@ -1230,12 +1562,12 @@ void PlaterPresetComboBox::update()
 
         preset_descriptions.emplace(name, from_u8(preset.description));
 
-        if (!preset.is_compatible) {
+        if (!preset.is_compatible && !is_selected && !force_show_tinmanx_fiber_slot_preset) {
             if (boost::ends_with(name, " template"))
                 continue;
             uncompatible_presets.emplace(name, bmp);
         }
-        else if (preset.is_default || preset.is_system) {
+        else if (preset.is_default || preset.is_system || force_show_tinmanx_fiber_slot_preset) {
             //BBS: move system to the end
             if (m_type == Preset::TYPE_PRINTER) {
                 auto printer_model = preset.config.opt_string("printer_model");
@@ -1314,13 +1646,32 @@ void PlaterPresetComboBox::update()
                                                 "Bambu PLA Galaxy", "Bambu PLA Metal", "Bambu PLA Marble", "Bambu PETG-CF", "Bambu PETG Translucent", "Bambu ABS-GF"};
     std::vector<std::string> first_vendors     = {"", "Bambu", "Generic"}; // Empty vendor for non-system presets
     std::vector<std::string> first_types     = {"PLA", "PETG", "ABS", "TPU"};
-    auto  add_presets       = [this, &preset_descriptions, &filament_orders, &preset_filament_vendors, &first_vendors, &preset_filament_types, &preset_aliases, &preset_bundle_ids, &preset_bundle_names, &first_types, &selected_in_ams]
+    auto  add_presets       = [this, &preset_descriptions, &filament_orders, &preset_filament_vendors, &first_vendors, &preset_filament_types, &preset_aliases, &preset_bundle_ids, &preset_bundle_names, &preset_process_groups, &first_types, &selected_in_ams, flat_tinmanx_fiber_slot_filaments]
             (std::map<wxString, wxBitmap *> const &presets, wxString const &selected, std::string const &group, wxString const &groupName) {
         if (!presets.empty()) {
             set_label_marker(Append(_L(group), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
             if (m_type == Preset::TYPE_FILAMENT || m_type == Preset::TYPE_PRINTER) {
                 std::vector<std::map<wxString, wxBitmap *>::value_type const*> list(presets.size(), nullptr);
                 std::transform(presets.begin(), presets.end(), list.begin(), [](auto & pair) { return &pair; });
+                if (flat_tinmanx_fiber_slot_filaments) {
+                    std::sort(list.begin(), list.end(), [&preset_aliases](auto *l, auto *r) {
+                        return preset_aliases[l->first] < preset_aliases[r->first];
+                    });
+                    for (auto it : list) {
+                        const bool unsupported = group == "Unsupported presets";
+                        int index = Append(from_u8(preset_aliases[it->first]), *it->second,
+                                           unsupported ? DD_ITEM_STYLE_DISABLED : 0);
+                        SetItemAlias(index, it->first);
+                        SetItemTooltip(index, preset_descriptions[it->first]);
+                        if (unsupported)
+                            set_label_marker(index, LABEL_ITEM_DISABLED);
+                        bool is_selected = it->first == selected;
+                        validate_selection(is_selected);
+                        if (is_selected && selected_in_ams)
+                            SetFlag(GetCount() - 1, (int) FilamentAMSType::FROM_AMS);
+                    }
+                    return;
+                }
                 bool groupByGroup = group != "System presets";
                 //if (groupByGroup) {
                 //    if (GetCount() == 1) Clear();
@@ -1395,7 +1746,11 @@ void PlaterPresetComboBox::update()
                 }
             } else {
                 for (std::map<wxString, wxBitmap *>::const_iterator it = presets.begin(); it != presets.end(); ++it) {
-                    int index = Append(from_u8(preset_aliases[it->first]), *it->second);
+                    auto process_group = preset_process_groups.find(it->first);
+                    int index = process_group != preset_process_groups.end() && !process_group->second.empty() ?
+                        Append(from_u8(preset_aliases[it->first]), *it->second, process_group->second, nullptr,
+                               group == "Unsupported presets" ? DD_ITEM_STYLE_DISABLED : 0) :
+                        Append(from_u8(preset_aliases[it->first]), *it->second);
                     SetItemAlias(index, it->first);
                     SetItemTooltip(index, preset_descriptions[it->first]);
                     if (group == "System presets")
@@ -1405,6 +1760,13 @@ void PlaterPresetComboBox::update()
             }
         }
     };
+
+    //BBS: add project embedded preset logic
+    if (flat_tinmanx_fiber_slot_filaments) {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__
+            << boost::format(": FibreSeek slot 2 CFC dropdown profiles %1%, selected '%2%'")
+            % tinmanx_fiber_slot_profile_count % selected_filament_name;
+    }
 
     //BBS: add project embedded preset logic
     add_presets(project_embedded_presets, selected_user_preset, L("Project-inside presets"), _L("Project") + " ");
@@ -1559,15 +1921,24 @@ void PlaterPresetComboBox::show_default_color_picker()
 void PlaterPresetComboBox::sync_colour_config(const std::vector<std::string> &clrs, bool is_gradient)
 {
     DynamicPrintConfig *cfg = &wxGetApp().preset_bundle->project_config;
+    if (cfg == nullptr || m_filament_idx < 0 || clrs.empty()) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": invalid color sync state";
+        return;
+    }
 
     // Clone the string vector and patch the value at current extruder index.
-    auto multi_colour_opt = static_cast<ConfigOptionStrings *>(cfg->option("filament_multi_colour")->clone());
-    auto colour_type_opt = static_cast<ConfigOptionStrings *>(cfg->option("filament_colour_type")->clone());
-    auto colour_opt = static_cast<ConfigOptionStrings *>(cfg->option("filament_colour")->clone());
+    const size_t target_size = static_cast<size_t>(m_filament_idx) + 1;
+    auto multi_colour_opt = tinmanx_clone_project_string_option(cfg, "filament_multi_colour", target_size);
+    auto colour_type_opt = tinmanx_clone_project_string_option(cfg, "filament_colour_type", target_size);
+    auto colour_opt = tinmanx_clone_project_string_option(cfg, "filament_colour", target_size);
 
-    if (m_filament_idx >= multi_colour_opt->values.size()) multi_colour_opt->values.resize(m_filament_idx + 1);
-    if (m_filament_idx >= colour_type_opt->values.size()) colour_type_opt->values.resize(m_filament_idx + 1);
-    if (m_filament_idx >= colour_opt->values.size()) colour_opt->values.resize(m_filament_idx + 1);
+    if (multi_colour_opt == nullptr || colour_type_opt == nullptr || colour_opt == nullptr) {
+        delete multi_colour_opt;
+        delete colour_type_opt;
+        delete colour_opt;
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": missing or invalid filament color project config";
+        return;
+    }
 
     std::string clr_str = "";
     for(auto &clr : clrs) {
@@ -1645,9 +2016,9 @@ void TabPresetComboBox::OnSelect(wxCommandEvent &evt)
 wxString TabPresetComboBox::get_preset_name(const Preset& preset)
 {
     if (preset.is_from_bundle())
-        return from_u8(preset.label(false));
+        return from_u8(tinmanx_nonempty_preset_label(preset, false));
     else
-        return from_u8(preset.label(true));
+        return from_u8(tinmanx_nonempty_preset_label(preset, true));
 }
 
 // Update the choice UI from the list of presets.
@@ -1672,6 +2043,9 @@ void TabPresetComboBox::update()
     std::map<wxString, std::string>                 preset_aliases; // ORCA
     std::map<wxString, std::string>                 preset_bundle_ids;
     std::map<wxString, std::string>                 preset_bundle_names;
+    std::map<wxString, wxString>                    preset_process_groups;
+    const bool group_process_presets_by_fiber = m_type == Preset::TYPE_PRINT &&
+        tinmanx_selected_printer_supports_continuous_fiber(m_preset_bundle);
 
     wxString selected = "";
     //BBS:  move system to the end
@@ -1700,6 +2074,8 @@ void TabPresetComboBox::update()
 
         const wxString name = from_u8(preset.name);
         preset_aliases[name] = get_preset_name(preset).utf8_string();
+        if (group_process_presets_by_fiber)
+            preset_process_groups[name] = tinmanx_process_family_group(preset, true);
         if (preset.is_system)
             preset_descriptions.emplace(name, from_u8(preset.description));
 
@@ -1755,12 +2131,19 @@ void TabPresetComboBox::update()
     if (m_type == Preset::TYPE_FILAMENT && m_preset_bundle->is_bbl_vendor())
         add_ams_filaments(into_u8(selected));
 
+    auto append_preset_with_process_family = [this, &preset_aliases, &preset_process_groups](const wxString& name, wxBitmap& bitmap) {
+        auto group = preset_process_groups.find(name);
+        return group != preset_process_groups.end() && !group->second.empty() ?
+            Append(from_u8(preset_aliases[name]), bitmap, group->second, nullptr, 0) :
+            Append(from_u8(preset_aliases[name]), bitmap);
+    };
+
     //BBS: add project embedded preset logic
     if (!project_embedded_presets.empty())
     {
         set_label_marker(Append(_L("Project-inside presets"), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
         for (std::map<wxString, std::pair<wxBitmap*, bool>>::iterator it = project_embedded_presets.begin(); it != project_embedded_presets.end(); ++it) {
-            int item_id = Append(it->first, *it->second.first);
+            int item_id = append_preset_with_process_family(it->first, *it->second.first);
             SetItemTooltip(item_id, preset_descriptions[it->first]);
             bool is_enabled = it->second.second;
             if (!is_enabled)
@@ -1772,7 +2155,7 @@ void TabPresetComboBox::update()
     {
         set_label_marker(Append(_L("User presets"), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
         for (std::map<wxString, std::pair<wxBitmap*, bool>>::iterator it = nonsys_presets.begin(); it != nonsys_presets.end(); ++it) {
-            int item_id = Append(it->first, *it->second.first);
+            int item_id = append_preset_with_process_family(it->first, *it->second.first);
             SetItemAlias(item_id, it->first);
             SetItemTooltip(item_id, preset_descriptions[it->first]);
             bool is_enabled = it->second.second;
@@ -1792,7 +2175,9 @@ void TabPresetComboBox::update()
                 bundle_name = from_u8(preset_bundle_names[it->first]);
             }
             // Use Append with group parameter for sub-dropdown grouping
-            int item_id = Append(from_u8(preset_aliases[it->first]), *it->second.first, from_u8(preset_bundle_ids[it->first]), bundle_name);
+            int item_id = group_process_presets_by_fiber ?
+                append_preset_with_process_family(it->first, *it->second.first) :
+                Append(from_u8(preset_aliases[it->first]), *it->second.first, from_u8(preset_bundle_ids[it->first]), bundle_name);
             SetItemAlias(item_id, it->first);
             SetItemTooltip(item_id, preset_descriptions[it->first]);
             bool is_enabled = it->second.second;
@@ -1806,7 +2191,7 @@ void TabPresetComboBox::update()
     {
         set_label_marker(Append(_L("System presets"), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
         for (std::map<wxString, std::pair<wxBitmap*, bool>>::iterator it = system_presets.begin(); it != system_presets.end(); ++it) {
-            int item_id = Append(it->first, *it->second.first);
+            int item_id = append_preset_with_process_family(it->first, *it->second.first);
             SetItemAlias(item_id, it->first);
             SetItemTooltip(item_id, preset_descriptions[it->first]);
             bool is_enabled = it->second.second;

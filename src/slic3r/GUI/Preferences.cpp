@@ -1314,7 +1314,7 @@ wxBoxSizer *PreferencesDialog::create_item_network_plugin_version(wxString title
 wxBoxSizer* PreferencesDialog::create_item_link_association( wxString url_prefix, wxString website_name)
 {
     wxString title = _L("Associate") + (boost::format(" %1%://") % url_prefix.c_str()).str();
-    wxString tooltip = _L("Associate") + " " + url_prefix + ":// " + _L("with OrcaSlicer so that Orca can open models from") + " " + website_name;
+    wxString tooltip = _L("Associate") + " " + url_prefix + ":// " + _L("with TinManX1 so it can open models from") + " " + website_name;
 
     std::wstring registered_bin; // not used, just here to provide a ref to check fn
     bool reg_to_current_instance = wxGetApp().check_url_association(url_prefix.ToStdWstring(), registered_bin);
@@ -1551,12 +1551,12 @@ void PreferencesDialog::create_items()
     g_sizer->Add(item_darkmode);
 #endif
 
-    auto item_single_instance  = create_item_checkbox(_L("Allow only one OrcaSlicer instance"),
+    auto item_single_instance  = create_item_checkbox(_L("Allow only one TinManX1 instance"),
     #if __APPLE__
             _L("On OSX there is always only one instance of app running by default. However it is allowed to run multiple instances "
                 "of same app from the command line. In such case this settings will allow only one instance."),
     #else
-            _L("If this is enabled, when starting OrcaSlicer and another instance of the same OrcaSlicer is already running, that instance will be reactivated instead."),
+            _L("If this is enabled, when starting TinManX1 and another TinManX1 instance is already running, that instance will be reactivated instead."),
     #endif
             "single_instance");
     g_sizer->Add(item_single_instance);
@@ -1624,7 +1624,7 @@ void PreferencesDialog::create_items()
     //// GENERAL > Preset
     g_sizer->Add(create_item_title(_L("Preset")), 1, wxEXPAND);
 
-    auto item_remember_printer = create_item_checkbox(_L("Remember printer configuration"), _L("If enabled, Orca will remember and switch filament/process configuration for each printer automatically."), "remember_printer_config");
+    auto item_remember_printer = create_item_checkbox(_L("Remember printer configuration"), _L("If enabled, TinManX1 will remember and switch filament/process configuration for each printer automatically."), "remember_printer_config");
     g_sizer->Add(item_remember_printer);
 
     auto item_filament_preset_grouping = create_item_combobox(_L("Group user filament presets"), _L("Group user filament presets based on selection"),
@@ -1684,7 +1684,7 @@ void PreferencesDialog::create_items()
 
     auto item_auto_reslice = create_item_auto_reslice(
         _L("Auto slice after changes"),
-        _L("If enabled, OrcaSlicer will re-slice automatically whenever slicing-related settings change."),
+        _L("If enabled, TinManX1 will re-slice automatically whenever slicing-related settings change."),
         _L("Delay in seconds before auto slicing starts, allowing multiple edits to be grouped. Use 0 to slice immediately."));
     g_sizer->Add(item_auto_reslice);
 
@@ -1844,7 +1844,7 @@ void PreferencesDialog::create_items()
     auto item_region           = create_item_region_combobox(_L("Login region"), "");
     g_sizer->Add(item_region);
  
-    auto item_stealth_mode     = create_item_checkbox(_L("Stealth mode"), _L("This disables all cloud features, including Orca Cloud profile syncing. Users who prefer to work entirely offline can enable this option.\nNote: When Stealth Mode is enabled, your user profiles will not be backed up to Orca Cloud."), "stealth_mode");
+    auto item_stealth_mode     = create_item_checkbox(_L("Stealth mode"), _L("This disables all cloud features, including TinManX1 Cloud profile syncing. Users who prefer to work entirely offline can enable this option.\nNote: When Stealth Mode is enabled, your user profiles will not be backed up to TinManX1 Cloud."), "stealth_mode");
     g_sizer->Add(item_stealth_mode);
 
     auto item_hide_login_side_panel = create_item_checkbox(_L("Hide login side panel"), _L("Hide the login side panel on the home page."), "hide_login_side_panel");
@@ -1859,7 +1859,7 @@ void PreferencesDialog::create_items()
     //// ONLINE > Cloud Providers
     g_sizer->Add(create_item_title(_L("Cloud Providers")), 1, wxEXPAND);
 
-    auto item_bambu_cloud     = create_item_bambu_cloud(_L("Enable Bambu Cloud"), _L("Allow logging into Bambu Cloud alongside Orca Cloud. When enabled, a Bambu login section appears on the homepage."));
+    auto item_bambu_cloud     = create_item_bambu_cloud(_L("Enable Bambu Cloud"), _L("Allow logging into Bambu Cloud alongside TinManX1 Cloud. When enabled, a Bambu login section appears on the homepage."));
     g_sizer->Add(item_bambu_cloud);
 
     //// ONLINE > Update & sync
@@ -1916,7 +1916,7 @@ void PreferencesDialog::create_items()
         g_sizer = f_sizers.back();
         g_sizer->AddGrowableCol(0, 1);
 
-        g_sizer->Add(create_item_title(_L("Associate files to OrcaSlicer")), 1, wxEXPAND);
+        g_sizer->Add(create_item_title(_L("Associate files to TinManX1")), 1, wxEXPAND);
 
         auto item_open_default_apps = create_item_button(
             _L("File associations for the Microsoft Store version are managed by Windows Settings."),
@@ -1933,22 +1933,22 @@ void PreferencesDialog::create_items()
     g_sizer->AddGrowableCol(0, 1);
 
     //// ASSOCIATE > Extensions
-    g_sizer->Add(create_item_title(_L("Associate files to OrcaSlicer")), 1, wxEXPAND);
+    g_sizer->Add(create_item_title(_L("Associate files to TinManX1")), 1, wxEXPAND);
 
-    auto item_associate_3mf    = create_item_checkbox(_L("Associate 3MF files to OrcaSlicer"), _L("If enabled, sets OrcaSlicer as default application to open 3MF files.") , "associate_3mf");
+    auto item_associate_3mf    = create_item_checkbox(_L("Associate 3MF files to TinManX1"), _L("If enabled, sets TinManX1 as default application to open 3MF files.") , "associate_3mf");
     g_sizer->Add(item_associate_3mf);
 
-    auto item_associate_drc = create_item_checkbox(_L("Associate DRC files to OrcaSlicer"), _L("If enabled, sets OrcaSlicer as default application to open DRC files."), "associate_drc");
+    auto item_associate_drc = create_item_checkbox(_L("Associate DRC files to TinManX1"), _L("If enabled, sets TinManX1 as default application to open DRC files."), "associate_drc");
     g_sizer->Add(item_associate_drc);
 
-    auto item_associate_stl    = create_item_checkbox(_L("Associate STL files to OrcaSlicer"), _L("If enabled, sets OrcaSlicer as default application to open STL files.") , "associate_stl");
+    auto item_associate_stl    = create_item_checkbox(_L("Associate STL files to TinManX1"), _L("If enabled, sets TinManX1 as default application to open STL files.") , "associate_stl");
     g_sizer->Add(item_associate_stl);
 
-    auto item_associate_step   = create_item_checkbox(_L("Associate STEP files to OrcaSlicer"), _L("If enabled, sets OrcaSlicer as default application to open STEP files."), "associate_step");
+    auto item_associate_step   = create_item_checkbox(_L("Associate STEP files to TinManX1"), _L("If enabled, sets TinManX1 as default application to open STEP files."), "associate_step");
     g_sizer->Add(item_associate_step);
 
     //// ASSOCIATE > WebLinks
-    g_sizer->Add(create_item_title(_L("Associate web links to OrcaSlicer")), 1, wxEXPAND);
+    g_sizer->Add(create_item_title(_L("Associate web links to TinManX1")), 1, wxEXPAND);
 
     auto associate_url_prusa   = create_item_link_association(L"prusaslicer", "Printables.com");
     g_sizer->Add(associate_url_prusa);

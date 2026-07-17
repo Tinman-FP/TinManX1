@@ -20,6 +20,8 @@
 
 #include <float.h>
 #include <assert.h>
+#include <algorithm>
+#include <array>
 #include <regex>
 #include <charconv>
 #include <string>
@@ -52,6 +54,139 @@ static const float DEFAULT_FILAMENT_DENSITY = 1.245f;
 static const float DEFAULT_FILAMENT_COST = 29.99f;
 static const int   DEFAULT_FILAMENT_VITRIFICATION_TEMPERATURE = 0;
 static const Slic3r::Vec3f DEFAULT_EXTRUDER_OFFSET = Slic3r::Vec3f::Zero();
+
+static std::string_view trim_ascii_whitespace(const std::string_view value)
+{
+    size_t start = 0;
+    while (start < value.size() && (value[start] == ' ' || value[start] == '\t'))
+        ++start;
+
+    size_t end = value.size();
+    while (end > start && (value[end - 1] == ' ' || value[end - 1] == '\t' ||
+                           value[end - 1] == '\r' || value[end - 1] == '\n'))
+        --end;
+
+    return value.substr(start, end - start);
+}
+
+static bool orcaslicer_codex_config_bool_option(const Slic3r::DynamicPrintConfig& config, const char *key)
+{
+    const Slic3r::ConfigOptionBool *option = config.option<Slic3r::ConfigOptionBool>(key);
+    return option != nullptr && option->value;
+}
+
+static float orcaslicer_codex_config_float_option(const Slic3r::DynamicPrintConfig& config, const char *key, float fallback)
+{
+    const Slic3r::ConfigOptionFloat *option = config.option<Slic3r::ConfigOptionFloat>(key);
+    return option != nullptr ? static_cast<float>(option->value) : fallback;
+}
+
+static std::string orcaslicer_codex_config_string_option(const Slic3r::DynamicPrintConfig& config, const char *key)
+{
+    const Slic3r::ConfigOptionString *option = config.option<Slic3r::ConfigOptionString>(key);
+    if (option == nullptr)
+        return {};
+
+    const std::string_view trimmed = trim_ascii_whitespace(option->value);
+    return std::string(trimmed);
+}
+
+static bool orcaslicer_codex_config_nonempty_string_option(const Slic3r::DynamicPrintConfig& config, const char *key)
+{
+    return !orcaslicer_codex_config_string_option(config, key).empty();
+}
+
+static float orcaslicer_codex_continuous_fiber_density(float diameter_mm, float linear_density_g_per_km)
+{
+    if (diameter_mm <= 1e-6f || linear_density_g_per_km <= 1e-6f)
+        return DEFAULT_FILAMENT_DENSITY;
+
+    const float area_mm2 = static_cast<float>(M_PI) * 0.25f * diameter_mm * diameter_mm;
+    return area_mm2 > 1e-6f ? linear_density_g_per_km / (area_mm2 * 1000.0f) : DEFAULT_FILAMENT_DENSITY;
+}
+
+static bool parse_arc_support_preview_marker(
+    const std::string_view comment, std::string &key, std::string &value)
+{
+    constexpr std::string_view codex_prefix  = "orcaslicer_codex_arc_support_";
+    constexpr std::string_view legacy_prefix = "tinmanx_arc_support_";
+
+    const std::string_view trimmed = trim_ascii_whitespace(comment);
+    std::string_view prefix;
+    if (boost::starts_with(trimmed, codex_prefix))
+        prefix = codex_prefix;
+    else if (boost::starts_with(trimmed, legacy_prefix))
+        prefix = legacy_prefix;
+    else
+        return false;
+
+    const size_t separator = trimmed.find('=');
+    if (separator == std::string_view::npos || separator <= prefix.size())
+        return false;
+
+    key.assign(trimmed.substr(prefix.size(), separator - prefix.size()));
+    value.assign(trimmed.substr(separator + 1));
+    return true;
+}
+
+static bool parse_strength_lens_preview_marker(
+    const std::string_view comment, std::string &key, std::string &value)
+{
+    static constexpr std::array<std::string_view, 7> tracked_keys = {
+        "strength_lens_enabled",
+        "strength_lens_material_model",
+        "strength_lens_load_axis",
+        "strength_lens_payload",
+        "fiber_reinforcement_mode",
+        "filament_type",
+        "sparse_infill_density",
+    };
+
+    const std::string_view trimmed = trim_ascii_whitespace(comment);
+    const size_t separator = trimmed.find('=');
+    if (separator == std::string_view::npos)
+        return false;
+
+    const std::string_view raw_key = trim_ascii_whitespace(trimmed.substr(0, separator));
+    const auto it = std::find(tracked_keys.begin(), tracked_keys.end(), raw_key);
+    if (it == tracked_keys.end())
+        return false;
+
+    key.assign(raw_key);
+    value.assign(trim_ascii_whitespace(trimmed.substr(separator + 1)));
+    return true;
+}
+
+static bool parse_arc_support_role_marker(const std::string_view comment)
+{
+    constexpr std::string_view type_prefix    = "TYPE:";
+    constexpr std::string_view feature_prefix = "FEATURE:";
+
+    const std::string_view trimmed = trim_ascii_whitespace(comment);
+    std::string_view       role;
+    if (boost::starts_with(trimmed, type_prefix))
+        role = trim_ascii_whitespace(trimmed.substr(type_prefix.size()));
+    else if (boost::starts_with(trimmed, feature_prefix))
+        role = trim_ascii_whitespace(trimmed.substr(feature_prefix.size()));
+    else
+        return false;
+
+    return role == "Arc infill" || role == "Arc overhang" || role == "Arc support" || role == "Arc Support";
+}
+
+static bool starts_with_trimmed_comment(const std::string_view comment, const std::string_view marker)
+{
+    return boost::starts_with(trim_ascii_whitespace(comment), marker);
+}
+
+static double orcaslicer_codex_continuous_fiber_volume_mm3(double length_mm, float diameter_mm)
+{
+    if (length_mm <= 0.0 || diameter_mm <= 1e-6f)
+        return 0.0;
+
+    const double radius = 0.5 * static_cast<double>(diameter_mm);
+    return length_mm * M_PI * radius * radius;
+}
 
 namespace Slic3r {
 
@@ -1681,6 +1816,8 @@ void GCodeProcessorResult::reset() {
     optimal_assignment.clear();
     filament_change_count_map.clear();
     warnings.clear();
+    arc_support_preview_metadata.clear();
+    strength_lens_preview_metadata.clear();
 
     //BBS: add mutex for protection of gcode result
     unlock();
@@ -2338,6 +2475,51 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
             m_result.extruder_colors[i] = "#FF8000";
     }
 
+    const bool continuous_fiber_requested =
+        orcaslicer_codex_config_bool_option(config, "fiber_enabled") ||
+        orcaslicer_codex_config_bool_option(config, "fiber_generate_perimeters") ||
+        orcaslicer_codex_config_bool_option(config, "fiber_generate_infill") ||
+        orcaslicer_codex_config_nonempty_string_option(config, "fiber_reinforcement_payload");
+    if (continuous_fiber_requested) {
+        const float fiber_diameter = std::max(
+            orcaslicer_codex_config_float_option(
+                config,
+                "continuous_fiber_diameter",
+                orcaslicer_codex_config_float_option(config, "fiber_diameter", 0.25f)),
+            0.001f);
+        const float fiber_linear_density = orcaslicer_codex_config_float_option(
+            config,
+            "continuous_fiber_linear_density",
+            orcaslicer_codex_config_float_option(config, "fiber_linear_density", 102.0f));
+        const std::string fiber_name = orcaslicer_codex_config_string_option(config, "continuous_fiber_name");
+        const float configured_fiber_line_width = orcaslicer_codex_config_float_option(config, "fiber_line_width", fiber_diameter * 2.0f);
+        m_orcaslicer_codex_continuous_fiber_preview_width_mm = std::clamp(
+            configured_fiber_line_width > 0.0f ? configured_fiber_line_width : fiber_diameter * 2.0f,
+            0.25f,
+            0.65f);
+
+        m_orcaslicer_codex_continuous_fiber_filament_id = static_cast<int>(m_result.filaments_count);
+        ++m_result.filaments_count;
+        m_result.filament_diameters.emplace_back(fiber_diameter);
+        m_result.required_nozzle_HRC.emplace_back(DEFAULT_FILAMENT_HRC);
+        m_result.filament_densities.emplace_back(orcaslicer_codex_continuous_fiber_density(fiber_diameter, fiber_linear_density));
+        m_result.filament_costs.emplace_back(DEFAULT_FILAMENT_COST);
+        m_result.filament_vitrification_temperature.emplace_back(DEFAULT_FILAMENT_VITRIFICATION_TEMPERATURE);
+        m_result.extruder_colors.emplace_back("#000000");
+        if (m_result.nozzle_type.size() < m_result.filaments_count)
+            m_result.nozzle_type.emplace_back(NozzleType::ntUndefine);
+        if (!fiber_name.empty()) {
+            if (m_result.settings_ids.filament.size() < m_result.filaments_count - 1)
+                m_result.settings_ids.filament.resize(m_result.filaments_count - 1);
+            m_result.settings_ids.filament.emplace_back(fiber_name);
+        }
+        m_extruder_offsets.emplace_back(m_extruder_offsets.empty() ? DEFAULT_EXTRUDER_OFFSET : m_extruder_offsets.front());
+        if (m_filament_maps.size() < m_result.filaments_count)
+            m_filament_maps.resize(m_result.filaments_count, 0);
+    } else {
+        m_orcaslicer_codex_continuous_fiber_filament_id = -1;
+    }
+
     m_extruder_colors.resize(m_result.extruder_colors.size());
     for (size_t i = 0; i < m_result.extruder_colors.size(); ++i) {
         m_extruder_colors[i] = static_cast<unsigned char>(i);
@@ -2547,6 +2729,12 @@ void GCodeProcessor::reset()
     m_g1_line_id = 0;
     m_layer_id = 0;
     m_cp_color.reset();
+    m_orcaslicer_codex_continuous_fiber_filament_id = -1;
+    m_orcaslicer_codex_processing_fiber_move = false;
+    m_orcaslicer_codex_inside_fiber_route = false;
+    m_orcaslicer_codex_fiber_tail_after_cut = false;
+    m_orcaslicer_codex_continuous_fiber_preview_width_mm = 0.45f;
+    m_orcaslicer_codex_continuous_fiber_path_length_mm = 0.0;
 
     m_producer = EProducer::Unknown;
 
@@ -2619,7 +2807,7 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
         // extract the config from it
         if (m_producer == EProducer::OrcaSlicer || m_producer == EProducer::Slic3rPE || m_producer == EProducer::Slic3r) {
             DynamicPrintConfig config;
-            config.apply(FullPrintConfig::defaults());
+            config.apply(static_print_config_ref(FullPrintConfig::defaults()));
             // Silently substitute unknown values by new ones for loading configurations from OrcaSlicer's own G-code.
             // Showing substitution log or errors may make sense, but we are not really reading many values from the G-code config,
             // thus a probability of incorrect substitution is low and the G-code viewer is a consumer-only anyways.
@@ -2777,7 +2965,7 @@ ConfigSubstitutions load_from_superslicer_gcode_file(const std::string& filename
 void GCodeProcessor::apply_config_superslicer(const std::string& filename)
 {
     DynamicPrintConfig config;
-    config.apply(FullPrintConfig::defaults());
+    config.apply(static_print_config_ref(FullPrintConfig::defaults()));
     load_from_superslicer_gcode_file(filename, config, ForwardCompatibilitySubstitutionRule::EnableSilent);
     apply_config(config);
 }
@@ -2913,6 +3101,8 @@ void GCodeProcessor::process_gcode_line(const GCodeReader::GCodeLine& line, bool
         {
             std::string comment_content = comment.substr(1); // only format like ";V{cmd}" is valid
             if (comment_content[0] == 'V' || comment_content[0] == 'v') {
+                if (m_orcaslicer_codex_inside_fiber_route && starts_with_trimmed_comment(comment_content, "VG1"))
+                    return;
                 GCodeReader reader;
                 GCodeReader::GCodeLine new_line;
                 reader.parse_line(comment_content, [&new_line](const auto& greader, const auto& gline) {
@@ -3112,6 +3302,42 @@ bool GCodeProcessor::get_last_position_from_gcode(const std::string &gcode_str, 
 
 void GCodeProcessor::process_tags(const std::string_view comment, bool producers_enabled)
 {
+    if (starts_with_trimmed_comment(comment, "ORCA_CODEX_FIBER_ROUTE")) {
+        m_orcaslicer_codex_inside_fiber_route = true;
+        m_orcaslicer_codex_fiber_tail_after_cut = false;
+        return;
+    }
+
+    if (m_orcaslicer_codex_inside_fiber_route && starts_with_trimmed_comment(comment, "CUT DISTANCE")) {
+        m_orcaslicer_codex_fiber_tail_after_cut = true;
+        return;
+    }
+
+    if (m_orcaslicer_codex_inside_fiber_route && starts_with_trimmed_comment(comment, "Cutting completed")) {
+        m_orcaslicer_codex_inside_fiber_route = false;
+        m_orcaslicer_codex_fiber_tail_after_cut = false;
+        return;
+    }
+
+    std::string arc_support_key;
+    std::string arc_support_value;
+    if (parse_arc_support_preview_marker(comment, arc_support_key, arc_support_value)) {
+        m_result.arc_support_preview_metadata[arc_support_key] = arc_support_value;
+        return;
+    }
+
+    std::string strength_lens_key;
+    std::string strength_lens_value;
+    if (parse_strength_lens_preview_marker(comment, strength_lens_key, strength_lens_value)) {
+        m_result.strength_lens_preview_metadata[strength_lens_key] = strength_lens_value;
+        return;
+    }
+
+    if (parse_arc_support_role_marker(comment)) {
+        set_extrusion_role(erBridgeInfill);
+        return;
+    }
+
     // producers tags
     if (producers_enabled && process_producers_tags(comment))
         return;
@@ -3813,12 +4039,100 @@ void GCodeProcessor::process_G0(const GCodeReader::GCodeLine& line)
 void GCodeProcessor::process_G1(const GCodeReader::GCodeLine& line, const std::optional<unsigned int>& remaining_internal_g1_lines)
 {
     std::array<std::optional<double>, 4> g1_axes = { std::nullopt, std::nullopt, std::nullopt, std::nullopt };
+    bool process_as_continuous_fiber = false;
+    double continuous_fiber_effective_length = 0.0;
     if (line.has_x()) g1_axes[X] = (double)line.x();
     if (line.has_y()) g1_axes[Y] = (double)line.y();
     if (line.has_z()) g1_axes[Z] = (double)line.z();
-    if (line.has_e()) g1_axes[E] = (double)line.e();
+    if (line.has_e()) {
+        g1_axes[E] = (double)line.e();
+    } else {
+        float fiber_feed_volume = 0.0f;
+        float fiber_feed_length = 0.0f;
+        float fiber_area = 0.0f;
+        const bool has_fiber_feed_contract = line.has_value('U', fiber_feed_length) && line.has_value('P', fiber_area);
+        if (has_fiber_feed_contract && !line.has_value('V', fiber_feed_volume))
+            fiber_feed_volume = fiber_feed_length * fiber_area;
+
+        if (has_fiber_feed_contract && fiber_feed_length != 0.0f && fiber_feed_volume != 0.0f &&
+            m_orcaslicer_codex_continuous_fiber_filament_id >= 0 &&
+            static_cast<size_t>(m_orcaslicer_codex_continuous_fiber_filament_id) < m_result.filaments_count) {
+            g1_axes[E] = double(fiber_feed_length);
+            process_as_continuous_fiber = true;
+            continuous_fiber_effective_length = std::max<double>(fiber_feed_length, 0.0);
+        } else {
+            float fiber_tail_feed = 0.0f;
+            const bool has_fiber_tail_move =
+                !has_fiber_feed_contract &&
+                m_orcaslicer_codex_inside_fiber_route &&
+                m_orcaslicer_codex_fiber_tail_after_cut &&
+                line.has_value('V', fiber_tail_feed) &&
+                fiber_tail_feed > 0.0f &&
+                (line.has_x() || line.has_y() || line.has_z()) &&
+                m_orcaslicer_codex_continuous_fiber_filament_id >= 0 &&
+                static_cast<size_t>(m_orcaslicer_codex_continuous_fiber_filament_id) < m_result.filaments_count;
+            if (has_fiber_tail_move) {
+                const double lengths_scale_factor = (m_units == EUnits::Inches) ? double(INCHES_TO_MM) : 1.0;
+                const bool is_relative = (m_global_positioning_type == EPositioningType::Relative);
+                const auto target_position = [&](Axis axis, std::optional<double> value) {
+                    if (!value.has_value())
+                        return m_start_position[axis];
+                    const double scaled_value = *value * lengths_scale_factor;
+                    return is_relative ? m_start_position[axis] + scaled_value : m_origin[axis] + scaled_value;
+                };
+                const double target_x = target_position(X, g1_axes[X]);
+                const double target_y = target_position(Y, g1_axes[Y]);
+                const double target_z = target_position(Z, g1_axes[Z]);
+                const double delta_x = target_x - m_start_position[X];
+                const double delta_y = target_y - m_start_position[Y];
+                const double delta_z = target_z - m_start_position[Z];
+                const double tail_length = std::sqrt(sqr(delta_x) + sqr(delta_y) + sqr(delta_z));
+                if (tail_length > EPSILON) {
+                    g1_axes[E] = tail_length;
+                    process_as_continuous_fiber = true;
+                    continuous_fiber_effective_length = tail_length;
+                }
+            }
+        }
+    }
     std::optional<double> g1_feedrate = std::nullopt;
     if (line.has_f()) g1_feedrate = (double)line.f();
+
+    if (process_as_continuous_fiber) {
+        const int extruder_id = get_extruder_id();
+        if (extruder_id >= 0 && static_cast<size_t>(extruder_id) < m_filament_id.size()) {
+            const unsigned char previous_filament_id = m_filament_id[extruder_id];
+            const unsigned char previous_cp_color = m_cp_color.current;
+            const ExtrusionRole previous_extrusion_role = m_extrusion_role;
+            const float previous_forced_width = m_forced_width;
+            const float previous_forced_height = m_forced_height;
+            const EPositioningType previous_e_positioning_type = m_e_local_positioning_type;
+            const double previous_start_e = m_start_position[E];
+            const double previous_end_e = m_end_position[E];
+            m_used_filaments.process_caches(this);
+            m_orcaslicer_codex_processing_fiber_move = true;
+            m_filament_id[extruder_id] = static_cast<unsigned char>(m_orcaslicer_codex_continuous_fiber_filament_id);
+            m_cp_color.current = m_extruder_colors[static_cast<size_t>(m_orcaslicer_codex_continuous_fiber_filament_id)];
+            m_extrusion_role = erCustom;
+            m_forced_width = m_orcaslicer_codex_continuous_fiber_preview_width_mm;
+            m_forced_height = std::max(m_forced_height, 0.16f);
+            m_e_local_positioning_type = EPositioningType::Relative;
+            process_G1(g1_axes, g1_feedrate);
+            m_orcaslicer_codex_continuous_fiber_path_length_mm += continuous_fiber_effective_length;
+            m_used_filaments.process_caches(this);
+            m_e_local_positioning_type = previous_e_positioning_type;
+            m_start_position[E] = previous_start_e;
+            m_end_position[E] = previous_end_e;
+            m_forced_width = previous_forced_width;
+            m_forced_height = previous_forced_height;
+            m_extrusion_role = previous_extrusion_role;
+            m_filament_id[extruder_id] = previous_filament_id;
+            m_cp_color.current = previous_cp_color;
+            m_orcaslicer_codex_processing_fiber_move = false;
+            return;
+        }
+    }
+
     process_G1(g1_axes, g1_feedrate);
 }
 
@@ -5670,6 +5984,7 @@ void GCodeProcessor::store_move_vertex(EMoveType type, EMovePathType path_type, 
         m_result.print_statistics.total_travel_distance += m_travel_dist;
     }
 
+    const float orcaslicer_codex_fiber_preview_lift = m_orcaslicer_codex_processing_fiber_move ? 0.18f : 0.0f;
     m_result.moves.push_back({
         m_last_line_id,
         type,
@@ -5677,7 +5992,11 @@ void GCodeProcessor::store_move_vertex(EMoveType type, EMovePathType path_type, 
         static_cast<unsigned char>(filament_id),
         m_cp_color.current,
         //BBS: add plate's offset to the rendering vertices
-        Vec3f(m_end_position[X] + m_x_offset, m_end_position[Y] + m_y_offset, m_processing_start_custom_gcode ? m_first_layer_height : m_end_position[Z]- m_z_offset) + m_extruder_offsets[filament_id],
+        Vec3f(
+            m_end_position[X] + m_x_offset,
+            m_end_position[Y] + m_y_offset,
+            (m_processing_start_custom_gcode ? m_first_layer_height : m_end_position[Z] - m_z_offset) + orcaslicer_codex_fiber_preview_lift
+        ) + m_extruder_offsets[filament_id],
         static_cast<float>(m_end_position[E] - m_start_position[E]),
         m_feedrate,
         0.0f, // actual feedrate
@@ -6035,6 +6354,25 @@ void GCodeProcessor::update_estimated_times_stats()
     m_result.print_statistics.flush_per_filament      = m_used_filaments.flush_per_filament;
     m_result.print_statistics.used_filaments_per_role   = m_used_filaments.filaments_per_role;
     m_result.print_statistics.total_volumes_per_extruder = m_used_filaments.total_volumes_per_filament;
+
+    if (m_orcaslicer_codex_continuous_fiber_filament_id >= 0 &&
+        static_cast<size_t>(m_orcaslicer_codex_continuous_fiber_filament_id) < m_result.filament_diameters.size() &&
+        static_cast<size_t>(m_orcaslicer_codex_continuous_fiber_filament_id) < m_result.filament_densities.size() &&
+        m_orcaslicer_codex_continuous_fiber_path_length_mm > 0.0) {
+        const size_t fiber_filament_id = static_cast<size_t>(m_orcaslicer_codex_continuous_fiber_filament_id);
+        const double fiber_volume = orcaslicer_codex_continuous_fiber_volume_mm3(
+            m_orcaslicer_codex_continuous_fiber_path_length_mm,
+            m_result.filament_diameters[fiber_filament_id]);
+        m_result.print_statistics.model_volumes_per_extruder[fiber_filament_id] = fiber_volume;
+        m_result.print_statistics.total_volumes_per_extruder[fiber_filament_id] = fiber_volume;
+        m_result.print_statistics.support_volumes_per_extruder.erase(fiber_filament_id);
+        m_result.print_statistics.wipe_tower_volumes_per_extruder.erase(fiber_filament_id);
+        m_result.print_statistics.flush_per_filament.erase(fiber_filament_id);
+        m_result.print_statistics.used_filaments_per_role[erCustom] = {
+            m_orcaslicer_codex_continuous_fiber_path_length_mm * 0.001,
+            fiber_volume * m_result.filament_densities[fiber_filament_id] * 0.001
+        };
+    }
 }
 
 double GCodeProcessor::extract_absolute_position_on_axis(Axis axis, const GCodeReader::GCodeLine& line, double area_filament_cross_section)

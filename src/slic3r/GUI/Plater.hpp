@@ -77,6 +77,7 @@ class DailyTipsWindow;
 struct Camera;
 class GLToolbar;
 class PlaterPresetComboBox;
+struct SidebarContinuousFiberMaterial;
 class PartPlateList;
 class SyncNozzleAndAmsDialog;
 class FinishSyncAmsDialog;
@@ -160,6 +161,10 @@ public:
     void on_change_color_mode(bool is_dark);
     void create_printer_preset();
     void init_filament_combo(PlaterPresetComboBox **combo, const int filament_idx);
+    void init_continuous_fiber_combo();
+    void refresh_continuous_fiber_slot_choice();
+    bool apply_continuous_fiber_material_to_slot(const SidebarContinuousFiberMaterial& material, bool notify_plater = true);
+    bool sync_continuous_fiber_selector_from_filament_preset(const std::string& preset_name, bool notify_plater = true);
     void remove_unused_filament_combos(const size_t current_extruder_count);
     void update_all_preset_comboboxes();
     //void update_partplate(PartPlateList& list);

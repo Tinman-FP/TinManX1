@@ -25,6 +25,7 @@
 #include "libslic3r/libslic3r.h"
 
 #include <cassert>
+#include <algorithm>
 #include <stdexcept>
 #include <cctype>
 
@@ -38,6 +39,38 @@
 #include "slic3r/GUI/Plater.hpp"
 
 namespace Slic3r {
+
+static bool orcaslicer_codex_arc_support_preview_reload_requested(const DynamicPrintConfig& config)
+{
+	const ConfigOption* support_type = config.option("support_type");
+	if (support_type != nullptr)
+		return is_arc(static_cast<SupportType>(support_type->getInt()));
+
+	const ConfigOption* strategy = config.option("tinman_support_strategy");
+	if (strategy != nullptr && static_cast<TinmanSupportStrategy>(strategy->getInt()) == TinmanSupportStrategy::Arc)
+		return true;
+
+	return false;
+}
+
+static bool exported_gcode_has_arc_support_transform(const GCodeProcessorResult& result)
+{
+	auto find_metadata = [&result](const char* short_key, const char* full_key) {
+		auto it = result.arc_support_preview_metadata.find(short_key);
+		if (it == result.arc_support_preview_metadata.end())
+			it = result.arc_support_preview_metadata.find(full_key);
+		return it;
+	};
+
+	const auto status = find_metadata("transform_status", "orcaslicer_codex_arc_support_transform_status");
+	const auto legacy_status = find_metadata("transform_status", "tinmanx_arc_support_transform_status");
+	const auto strategy = find_metadata("strategy", "orcaslicer_codex_arc_support_strategy");
+	const auto legacy_strategy = find_metadata("strategy", "tinmanx_arc_support_strategy");
+	return ((status != result.arc_support_preview_metadata.end() && status->second == "ok") ||
+	        (legacy_status != result.arc_support_preview_metadata.end() && legacy_status->second == "ok")) &&
+		((strategy != result.arc_support_preview_metadata.end() && strategy->second == "arc") ||
+		 (legacy_strategy != result.arc_support_preview_metadata.end() && legacy_strategy->second == "arc"));
+}
 
 bool SlicingProcessCompletedEvent::critical_error() const
 {
@@ -242,8 +275,12 @@ void BackgroundSlicingProcess::process_fff()
 		//BBS: add plate index into render params
 		m_temp_output_path = this->get_current_plate()->get_tmp_gcode_path();
 		m_fff_print->export_gcode(m_temp_output_path, m_gcode_result, [this](const ThumbnailsParams& params) { return this->render_thumbnails(params); });
-		if(m_fff_print->is_BBL_printer())
-			run_post_process_scripts(m_temp_output_path, false, "File", m_temp_output_path, m_fff_print->full_print_config());
+		if(m_fff_print->is_BBL_printer()) {
+			if (run_post_process_scripts(m_temp_output_path, false, "File", m_temp_output_path, m_fff_print->full_print_config()))
+				reload_arc_support_preview_from_gcode(m_temp_output_path);
+		}
+		else if (m_export_path.empty() && m_upload_job.empty())
+			prepare_arc_support_preview_gcode();
 
 		BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": export gcode finished");
 	}
@@ -848,7 +885,63 @@ void BackgroundSlicingProcess::finalize_gcode()
 		break;
 	}
 
+	reload_arc_support_preview_from_gcode(export_path);
 	m_print->set_status(100, GUI::format(_L("G-code file exported to %1%"), export_path));
+}
+
+void BackgroundSlicingProcess::prepare_arc_support_preview_gcode()
+{
+	if (m_fff_print == nullptr || !orcaslicer_codex_arc_support_preview_reload_requested(m_fff_print->full_print_config()))
+		return;
+
+	std::string preview_path = m_temp_output_path;
+	std::string output_name = m_temp_output_path;
+	try {
+		if (run_post_process_scripts(preview_path, true, "File", output_name, m_fff_print->full_print_config()))
+			reload_arc_support_preview_from_gcode(preview_path);
+	} catch (CanceledException&) {
+		throw;
+	} catch (const std::exception& ex) {
+		BOOST_LOG_TRIVIAL(warning) << "TinManX1 Arc Overhang preview post-process skipped; leaving unprocessed slice preview: " << ex.what();
+		if (preview_path != m_temp_output_path) {
+			boost::system::error_code ec;
+			boost::filesystem::remove(preview_path, ec);
+		}
+	} catch (...) {
+		BOOST_LOG_TRIVIAL(warning) << "TinManX1 Arc Overhang preview post-process skipped; leaving unprocessed slice preview due to an unknown error.";
+		if (preview_path != m_temp_output_path) {
+			boost::system::error_code ec;
+			boost::filesystem::remove(preview_path, ec);
+		}
+	}
+}
+
+void BackgroundSlicingProcess::reload_arc_support_preview_from_gcode(const std::string& gcode_path)
+{
+	if (m_gcode_result == nullptr || m_fff_print == nullptr)
+		return;
+
+	try {
+		GCodeProcessor processor;
+		GCodeProcessor::s_IsBBLPrinter = m_fff_print->is_BBL_printer();
+		processor.process_file(gcode_path, [this]() { this->throw_if_canceled(); });
+		const GCodeProcessorResult& exported_result = processor.get_result();
+		if (!exported_gcode_has_arc_support_transform(exported_result)) {
+			BOOST_LOG_TRIVIAL(warning) << "TinManX1 Arc Overhang preview reload skipped: G-code has no successful arc transform metadata at " << gcode_path;
+			return;
+		}
+
+		{
+			std::lock_guard<std::mutex> lock(m_gcode_result->result_mutex);
+			*m_gcode_result = exported_result;
+		}
+		wxCommandEvent evt(m_event_slicing_completed_id);
+		evt.SetInt((int)(m_fff_print->step_state_with_timestamp(PrintStep::psSlicingFinished).timestamp));
+		wxQueueEvent(GUI::wxGetApp().mainframe->m_plater, evt.Clone());
+		BOOST_LOG_TRIVIAL(info) << "TinManX1 Arc Overhang preview reloaded from post-processed G-code " << gcode_path;
+	} catch (const std::exception& ex) {
+		BOOST_LOG_TRIVIAL(error) << "TinManX1 Arc Overhang preview reload failed for " << gcode_path << ": " << ex.what();
+	}
 }
 
 // G-code is generated in m_temp_output_path.

@@ -459,6 +459,11 @@ def check_conflict_keys(profiles_dir, vendor_name):
 # formula.
 SETTING_ID_FORMULA_EXEMPT_VENDORS = {"BBL"}
 PROFILE_SUBDIRS = ("filament", "process", "machine")
+DISALLOWED_PROFILE_KEYS = {
+    # Filament presets expose their swatch through default_filament_colour. The
+    # project-level filament_colour key is stripped by Orca's preset validator.
+    "filament": {"filament_colour"},
+}
 
 
 def check_setting_id_uniqueness(profiles_dir):
@@ -547,6 +552,72 @@ def check_setting_id_uniqueness(profiles_dir):
     return errors
 
 
+def check_disallowed_profile_keys(profiles_dir):
+    errors = 0
+    for vendor_dir in sorted(profiles_dir.iterdir()):
+        if not vendor_dir.is_dir():
+            continue
+        for sub, disallowed_keys in DISALLOWED_PROFILE_KEYS.items():
+            base = vendor_dir / sub
+            if not base.is_dir():
+                continue
+            for file_path in base.rglob("*.json"):
+                try:
+                    data = json.loads(file_path.read_bytes())
+                except (ValueError, OSError):
+                    continue
+                if not isinstance(data, dict):
+                    continue
+                rel = file_path.relative_to(profiles_dir)
+                for key in sorted(disallowed_keys.intersection(data)):
+                    errors += 1
+                    print_error(
+                        f'profile {rel} contains disallowed {sub} key "{key}"; '
+                        f"use default_filament_colour for filament preset color"
+                    )
+    return errors
+
+
+def check_instantiated_renamed_from_uniqueness(profiles_dir):
+    """
+    Orca uses renamed_from aliases to migrate old profile names to new profile names.
+    A single old name cannot point to multiple instantiated presets of the same type.
+    Base/template profiles are ignored because they are not selectable migration targets.
+    """
+    errors = 0
+    owners = {}
+    for vendor_dir in sorted(profiles_dir.iterdir()):
+        if not vendor_dir.is_dir():
+            continue
+        for sub in PROFILE_SUBDIRS:
+            base = vendor_dir / sub
+            if not base.is_dir():
+                continue
+            for file_path in base.rglob("*.json"):
+                try:
+                    data = json.loads(file_path.read_bytes())
+                except (ValueError, OSError):
+                    continue
+                if not isinstance(data, dict) or data.get("instantiation") != "true":
+                    continue
+                renamed_from = data.get("renamed_from")
+                if not renamed_from:
+                    continue
+                rel = file_path.relative_to(profiles_dir)
+                for alias in [item.strip() for item in str(renamed_from).split(";") if item.strip()]:
+                    owners.setdefault((sub, alias), []).append(rel)
+
+    for (sub, alias), locs in sorted(owners.items()):
+        if len(locs) < 2:
+            continue
+        errors += 1
+        print_error(
+            f'{sub} renamed_from alias "{alias}" points to {len(locs)} instantiated profiles '
+            f"({sorted(map(str, locs))}); migration aliases must be unique"
+        )
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Check 3D printer profiles for common issues",
@@ -605,6 +676,8 @@ def main():
     # Global (cross-vendor) check: setting_id must be unique and stay in-namespace.
     # Runs once over the whole tree regardless of the --vendor filter.
     errors_found += check_setting_id_uniqueness(profiles_dir)
+    errors_found += check_disallowed_profile_keys(profiles_dir)
+    errors_found += check_instantiated_renamed_from_uniqueness(profiles_dir)
 
     # ✨ Output finale in stile "compilatore"
     print("\n==================== SUMMARY ====================")

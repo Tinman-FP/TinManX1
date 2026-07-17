@@ -19,50 +19,6 @@ T safe_at(const std::vector<T>& vec, int index, const T& fallback)
     return (index >= 0 && index < static_cast<int>(vec.size())) ? vec[index] : fallback;
 }
 
-std::string find_closest_color_preset_by_vendor_and_type(const PresetCollection& filaments,
-                                                         const std::string&      vendor_name,
-                                                         const std::string&      filament_type,
-                                                         const std::string&      color_rgba)
-{
-    std::string best_match_id       = "";
-    int         best_color_distance = 0xffffffff;
-
-    for (const auto& p : filaments.get_presets()) {
-        if (p.is_visible && p.is_compatible &&
-            // Filament profile must be detached from parent to be considered for matching
-            filaments.get_preset_base(p) == &p && p.config.opt_string("filament_vendor", 0u) == vendor_name &&
-            p.config.opt_string("filament_type", 0u) == filament_type) {
-            // The printer returns RGBA in the format RRGGBBAA, but profiles store color as #RRGGBB,
-            // so we must remove # and ignore alpha channel for distance calculation
-            unsigned int target_color_value = std::stoul(color_rgba.substr(0, color_rgba.length() - 2), nullptr, 16);
-
-            std::string  p_color = p.config.opt_string("default_filament_colour", 0u);
-            unsigned int p_color_value;
-            if (!p_color.empty()) {
-                unsigned int hash_pos = p_color.find("#");
-                p_color_value         = std::stoul(p_color.substr(hash_pos != std::string::npos ? hash_pos + 1 : 0), nullptr, 16);
-            } else {
-                // Default to black if no color specified in profile. Assume other profiles might be a closer color match.
-                // Could be a problem if the target color is also black and there exist a specific profile for that type, vendor and color
-                // combination.
-                p_color_value = 0;
-            }
-
-            // Calculate Euclidean color distance in RGB space
-            int dr = ((target_color_value & 0xff) - (p_color_value & 0xff));
-            int dg = (((target_color_value >> 8) & 0xff) - ((p_color_value >> 8) & 0xff));
-            int db = (((target_color_value >> 16) & 0xff) - ((p_color_value >> 16) & 0xff));
-            unsigned int distance = dr * dr + dg * dg + db * db;
-
-            if (distance < best_color_distance) {
-                best_color_distance = distance;
-                best_match_id       = p.filament_id;
-            }
-        }
-    }
-    return best_match_id;
-}
-
 } // anonymous namespace
 
 SnapmakerPrinterAgent::SnapmakerPrinterAgent(std::string log_dir) : MoonrakerPrinterAgent(std::move(log_dir)) {}
@@ -82,6 +38,13 @@ std::string SnapmakerPrinterAgent::combine_filament_type(const std::string& type
 
     if (sub.empty() || sub == "NONE")
         return base;
+
+    // Snapmaker reports premium variants as a base material plus a full subtype
+    // (for example base PLA, subtype HT-PLA-GF). Preserve the full material
+    // identity so AMS sync can select the matching Codex profile.
+    if (sub.rfind("HT-", 0) == 0 || sub.find(base + "-") != std::string::npos) {
+        return sub;
+    }
 
     if (sub == "CF")
         return base + "-CF";
@@ -189,20 +152,11 @@ bool SnapmakerPrinterAgent::fetch_filament_info(std::string dev_id)
             tray.tray_color    = safe_at(filament_color, i, default_color);
 
             auto* bundle = GUI::wxGetApp().preset_bundle;
-            // Try to find a matching preset for this filament based on vendor, type and color.
-            // If not found, default to traditional search by type only or generic type mapping.
+            // Resolve by exact material identity first; never let an unmatched specialty
+            // material fall through to the first visible preset.
             if (bundle) {
                 std::string vendor      = safe_at(filament_vendor, i, empty_str);
-                std::string filament_id = find_closest_color_preset_by_vendor_and_type(bundle->filaments, vendor, tray.tray_type,
-                                                                                       tray.tray_color);
-
-                if (!filament_id.empty()) {
-                    tray.tray_info_idx = filament_id;
-                    BOOST_LOG_TRIVIAL(warning) << "Filament sync: Found manufacturer-specific profile for slot " << i << ": "
-                                               << filament_id;
-                } else {
-                    tray.tray_info_idx = bundle->filaments.filament_id_by_type(tray.tray_type);
-                }
+                tray.tray_info_idx      = resolve_filament_id_for_tray(bundle->filaments, tray.tray_type, vendor, tray.tray_color);
             } else {
                 tray.tray_info_idx = map_filament_type_to_generic_id(tray.tray_type);
             }

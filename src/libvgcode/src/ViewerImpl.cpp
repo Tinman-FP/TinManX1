@@ -1133,6 +1133,7 @@ void ViewerImpl::update_enabled_entities()
         return;
 
     std::vector<uint32_t> enabled_segments;
+    std::vector<uint32_t> enabled_custom_extrusions;
     std::vector<uint32_t> enabled_options;
     Interval range = m_view_range.get_visible();
 
@@ -1179,9 +1180,13 @@ void ViewerImpl::update_enabled_entities()
 
         if (v.is_option())
             enabled_options.push_back(static_cast<uint32_t>(i));
+        else if (v.is_extrusion() && v.role == EGCodeExtrusionRole::Custom)
+            enabled_custom_extrusions.push_back(static_cast<uint32_t>(i));
         else
             enabled_segments.push_back(static_cast<uint32_t>(i));
     }
+
+    enabled_segments.insert(enabled_segments.end(), enabled_custom_extrusions.begin(), enabled_custom_extrusions.end());
 
 #ifdef ENABLE_OPENGL_ES
     m_texture_data.set_enabled_segments(enabled_segments);

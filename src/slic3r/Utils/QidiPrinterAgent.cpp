@@ -13,13 +13,16 @@ namespace Slic3r {
 
 namespace {
 
-// Check whether any visible, compatible base preset in the collection has the given filament_id.
-bool has_visible_base_preset(const PresetCollection& filaments, const std::string& filament_id)
+// Qidi's firmware reports stable per-series filament IDs such as QD_0_1_37.
+// The selected Codex preset may be a user/non-base preset, so keep this check
+// aligned with the AMS sync matcher instead of requiring visible system bases.
+bool has_usable_preset_id(const PresetCollection& filaments, const std::string& filament_id)
 {
+    if (filament_id.empty())
+        return false;
+
     for (const auto& p : filaments.get_presets()) {
-        if (p.is_visible && p.is_compatible
-            && filaments.get_preset_base(p) == &p
-            && p.filament_id == filament_id)
+        if (!p.is_default && !p.is_external && p.filament_id == filament_id)
             return true;
     }
     return false;
@@ -137,6 +140,10 @@ bool QidiPrinterAgent::fetch_slot_info(const std::string&        base_url,
     if (box_count < 0) {
         box_count = 0;
     }
+    if (box_count == 0 || (variables.contains("enable_box") && variables.value("enable_box", 0) == 0)) {
+        error = "Qidi box/MMU is disabled or not present";
+        return false;
+    }
 
     const int max_slots = box_count * 4;
     trays.clear();
@@ -160,6 +167,15 @@ bool QidiPrinterAgent::fetch_slot_info(const std::string&        base_url,
         const int filament_type   = variables.value("filament_slot" + std::to_string(i), 1);
         const int vendor_type     = variables.value("vendor_slot" + std::to_string(i), 0);
 
+        // Look up color before resolving, so the payload and fallback matching
+        // keep the machine-side lane color together with the material.
+        auto color_it = dict.colors.find(color_index);
+        if (color_it != dict.colors.end()) {
+            tray.tray_color = color_it->second;
+        } else {
+            tray.tray_color = "FFFFFFFF";
+        }
+
         // Check filament presence via runout sensor
         std::string box_stepper_key = "box_stepper slot" + std::to_string(i);
         tray.has_filament = false;
@@ -169,6 +185,8 @@ bool QidiPrinterAgent::fetch_slot_info(const std::string&        base_url,
                 int runout_button = box_stepper["runout_button"].template get<int>();
                 tray.has_filament = (runout_button == 0);
             }
+        } else {
+            tray.has_filament = variables.value("slot" + std::to_string(i), 0) != 0;
         }
 
         if (tray.has_filament) {
@@ -185,19 +203,23 @@ bool QidiPrinterAgent::fetch_slot_info(const std::string&        base_url,
             auto* bundle = GUI::wxGetApp().preset_bundle;
             if (!bundle) {
                 tray.tray_info_idx = setting_id;
-            } else if (!setting_id.empty() && has_visible_base_preset(bundle->filaments, setting_id)) {
+            } else if (!setting_id.empty() && has_usable_preset_id(bundle->filaments, setting_id)) {
                 tray.tray_info_idx = setting_id;
             } else {
-                tray.tray_info_idx = bundle->filaments.filament_id_by_type(tray.tray_type);
+                tray.tray_info_idx = resolve_filament_id_for_tray(bundle->filaments,
+                                                                  tray.tray_type,
+                                                                  vendor_type == 1 ? "QIDI" : "",
+                                                                  tray.tray_color);
             }
 
-            // Look up color from dictionary
-            auto color_it = dict.colors.find(color_index);
-            if (color_it != dict.colors.end()) {
-                tray.tray_color = color_it->second;
-            } else {
-                tray.tray_color = "FFFFFFFF";
-            }
+            BOOST_LOG_TRIVIAL(info) << "QidiPrinterAgent::fetch_slot_info: slot " << i
+                                    << " raw_filament " << filament_type
+                                    << " raw_vendor " << vendor_type
+                                    << " filament_name '" << filament_name << "'"
+                                    << " resolved_type " << tray.tray_type
+                                    << " color " << tray.tray_color
+                                    << " setting_id " << setting_id
+                                    << " tray_info_idx " << tray.tray_info_idx;
         }
 
         trays.push_back(tray);
@@ -380,7 +402,40 @@ std::string QidiPrinterAgent::infer_series_id(const std::string& model_id, const
 
 std::string QidiPrinterAgent::normalize_filament_type(const std::string& filament_type)
 {
-    const std::string upper = trim_and_upper(filament_type);
+    const std::string upper = canonical_filament_type(filament_type);
+
+    auto has = [&](const std::string& token) {
+        return upper.find(token) != std::string::npos;
+    };
+
+    // Preserve reinforced and specialty material families before checking their base material.
+    if (has("HT-PLA-GF")) return "HT-PLA-GF";
+    if (has("HT-PLA-CF")) return "HT-PLA-CF";
+    if (has("PLA-GF"))    return "PLA-GF";
+    if (has("PLA-CF"))    return "PLA-CF";
+
+    if (has("ABS-GF")) return "ABS-GF";
+    if (has("ABS-CF")) return "ABS-CF";
+    if (has("ASA-GF")) return "ASA-GF";
+    if (has("ASA-CF")) return "ASA-CF";
+
+    if (has("PCTG-CF")) return "PCTG-CF";
+    if (has("PETG-CF")) return "PETG-CF";
+    if (has("PET-CF"))  return "PET-CF";
+    if (has("PET-CG"))  return "PET-CF";
+    if (has("PCTG"))    return "PCTG";
+
+    if (has("PPS-CF"))  return "PPS-CF";
+    if (has("PPS-GF"))  return "PPS-GF";
+    if (has("PPA-CF"))  return "PPA-CF";
+    if (has("PPA-GF"))  return "PPA-GF";
+    if (has("PA12-CF")) return "PA-CF";
+    if (has("PA6-CF"))  return "PA-CF";
+    if (has("PA-CF"))   return "PA-CF";
+    if (has("PA-GF"))   return "PA-GF";
+
+    if (has("PC-CF"))   return "PC-CF";
+    if (has("PC-GF"))   return "PC-GF";
 
     if (upper.find("PLA") != std::string::npos)
         return "PLA";

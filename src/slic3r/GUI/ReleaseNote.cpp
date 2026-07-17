@@ -60,7 +60,7 @@ ReleaseNoteDialog::ReleaseNoteDialog(Plater *plater /*= nullptr*/)
 
     m_sizer_body->Add(0, 0, 0, wxLEFT, FromDIP(38));
 
-    auto sm = create_scaled_bitmap("OrcaSlicer", nullptr,  70);
+    auto sm = create_scaled_bitmap("TinManX1", nullptr,  70);
     auto brand = new wxStaticBitmap(this, wxID_ANY, sm, wxDefaultPosition, wxSize(FromDIP(70), FromDIP(70)));
 
     m_sizer_body->Add(brand, 0, wxALL, 0);
@@ -127,7 +127,7 @@ UpdatePluginDialog::UpdatePluginDialog(wxWindow* parent /*= nullptr*/)
 
 
 
-    auto sm = create_scaled_bitmap("OrcaSlicer", nullptr, 55);
+    auto sm = create_scaled_bitmap("TinManX1", nullptr, 55);
     auto brand = new wxStaticBitmap(this, wxID_ANY, sm, wxDefaultPosition, wxSize(FromDIP(55), FromDIP(55)));
 
     wxBoxSizer* m_sizer_right = new wxBoxSizer(wxVERTICAL);
@@ -236,7 +236,7 @@ void UpdatePluginDialog::update_info(std::string json_path)
 }
 
 UpdateVersionDialog::UpdateVersionDialog(wxWindow *parent)
-    : DPIDialog(parent, wxID_ANY, _L("New version of Orca Slicer"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER)
+    : DPIDialog(parent, wxID_ANY, _L("New upstream Orca Slicer base available"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER)
 {
     SetBackgroundColour(*wxWHITE);
 
@@ -247,7 +247,7 @@ UpdateVersionDialog::UpdateVersionDialog(wxWindow *parent)
     wxBoxSizer *m_sizer_top  = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer *m_sizer_desc = new wxBoxSizer(wxVERTICAL);
 
-    auto sm    = create_scaled_bitmap("OrcaSlicer", nullptr, 64);
+    auto sm    = create_scaled_bitmap("TinManX1", nullptr, 64);
     m_brand = new wxStaticBitmap(this, wxID_ANY, sm, wxDefaultPosition, FromDIP(wxSize(64, 64)));
 
     m_text_up_info = new Label(this, Label::Head_14, wxEmptyString, LB_AUTO_WRAP);

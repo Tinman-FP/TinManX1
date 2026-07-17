@@ -493,9 +493,11 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
     if (config->opt_bool("enable_support")) {
         auto   support_type = config->opt_enum<SupportType>("support_type");
         auto   support_style = config->opt_enum<SupportMaterialStyle>("support_style");
+        const bool tinman_arc_support = is_arc(support_type);
+        std::set<int> enum_set_arc    = { smsDefault, smsGrid, smsSnug };
         std::set<int> enum_set_normal = { smsDefault, smsGrid, smsSnug };
         std::set<int> enum_set_tree   = { smsDefault, smsTreeSlim, smsTreeStrong, smsTreeHybrid, smsTreeOrganic };
-        auto &           set             = is_tree(support_type) ? enum_set_tree : enum_set_normal;
+        const std::set<int> &set      = tinman_arc_support ? enum_set_arc : (is_tree(support_type) ? enum_set_tree : enum_set_normal);
         if (set.find(support_style) == set.end()) {
             DynamicPrintConfig new_conf = *config;
             new_conf.set_key_value("support_style", new ConfigOptionEnum<SupportMaterialStyle>(smsDefault));
@@ -764,6 +766,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
     bool have_support_material = config->opt_bool("enable_support") || have_raft;
 
     SupportType support_type = config->opt_enum<SupportType>("support_type");
+    const bool tinman_arc_support = is_arc(support_type);
+    const bool auto_support_threshold_available = is_auto(support_type) || tinman_arc_support;
     bool have_support_interface = config->opt_int("support_interface_top_layers") > 0 || config->opt_int("support_interface_bottom_layers") > 0;
     bool have_support_soluble = have_support_material && config->opt_float("support_top_z_distance") == 0;
     auto support_style = config->opt_enum<SupportMaterialStyle>("support_style");
@@ -774,8 +778,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
         "support_type", "support_on_build_plate_only", "support_critical_regions_only", "support_interface_not_for_body",
         "support_object_xy_distance", "support_object_first_layer_gap", "independent_support_layer_height"})
         toggle_field(el, have_support_material);
-    toggle_field("support_threshold_angle", have_support_material && is_auto(support_type));
-    toggle_field("support_threshold_overlap", config->opt_int("support_threshold_angle") == 0 && have_support_material && is_auto(support_type));
+    toggle_field("support_threshold_angle", have_support_material && auto_support_threshold_available);
+    toggle_field("support_threshold_overlap", config->opt_int("support_threshold_angle") == 0 && have_support_material && auto_support_threshold_available);
     //toggle_field("support_closing_radius", have_support_material && support_style == smsSnug);
 
     bool support_is_tree = config->opt_bool("enable_support") && is_tree(support_type);
@@ -1012,6 +1016,72 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
 
     std::string printer_type = wxGetApp().preset_bundle->printers.get_edited_preset().get_printer_type(wxGetApp().preset_bundle);
     toggle_line("enable_wrapping_detection", DevPrinterConfigUtil::support_wrapping_detection(printer_type));
+
+    if (config->has("wave_overhangs") && config->has("wave_overhang_algorithm")) {
+        const bool wo_enabled = config->opt_bool("wave_overhangs");
+        const auto wo_algo = config->opt_enum<WaveOverhangAlgorithm>("wave_overhang_algorithm");
+        const bool wo_andersons = wo_algo == woaAndersons;
+        const bool wo_kaiser = wo_algo == woaKaiser;
+
+        for (const std::string &k : {
+            std::string("wave_overhangs_instead_of_bridges"),
+            std::string("wave_overhang_algorithm"),
+            std::string("wave_overhang_outer_perimeters"),
+            std::string("wave_overhang_flow_mm3_per_mm"),
+            std::string("wave_overhang_end_retract_length"),
+            std::string("wave_overhang_print_speed"),
+            std::string("wave_overhang_perimeter_speed"),
+            std::string("wave_overhang_travel_speed"),
+            std::string("wave_overhang_fan_speed"),
+            std::string("wave_overhang_nozzle_temp"),
+            std::string("wave_overhang_min_wave_time"),
+            std::string("wave_overhang_min_layer_time"),
+            std::string("wave_overhang_floor_layers"),
+            std::string("wave_overhang_floor_perimeter_speed"),
+            std::string("wave_overhang_floor_use_hilbert"),
+            std::string("wave_overhang_min_angle"),
+            std::string("wave_overhang_min_length"),
+            std::string("wave_overhang_max_iterations"),
+            std::string("wave_overhang_seam_mode"),
+            std::string("wave_overhang_debug_gcode"),
+            std::string("support_remaining_areas_after_wave_overhangs"),
+        })
+            toggle_line(k, wo_enabled);
+
+        for (const std::string &k : {
+            std::string("wave_overhang_pattern"),
+            std::string("wave_overhang_perimeter_overlap"),
+            std::string("wave_overhang_minimum_width"),
+            std::string("wave_overhang_line_spacing"),
+            std::string("wave_overhang_spacing_mode"),
+            std::string("wave_overhang_min_new_area"),
+            std::string("wave_overhang_fringe_reinforcement_max_cover_to_real"),
+            std::string("wave_overhang_fringe_reinforcement_max_cover_area"),
+            std::string("wave_overhang_fringe_contact_compensation_max_over_cap"),
+            std::string("wave_overhang_corner_taper_enable"),
+        })
+            toggle_line(k, wo_enabled && wo_andersons);
+
+        const bool wo_corner_taper = wo_enabled && wo_andersons
+            && config->opt_bool("wave_overhang_corner_taper_enable");
+        for (const std::string &k : {
+            std::string("wave_overhang_line_spacing_corner"),
+            std::string("wave_overhang_corner_taper_distance"),
+            std::string("wave_overhang_corner_angle_threshold"),
+        })
+            toggle_line(k, wo_corner_taper);
+
+        const bool wo_floor_hilbert = wo_enabled && config->opt_bool("wave_overhang_floor_use_hilbert");
+        for (const std::string &k : {
+            std::string("wave_overhang_floor_hilbert_layers"),
+            std::string("wave_overhang_floor_hilbert_density"),
+            std::string("wave_overhang_floor_print_speed"),
+            std::string("wave_overhang_floor_fan_speed"),
+        })
+            toggle_line(k, wo_floor_hilbert);
+
+        toggle_line("wave_overhang_ring_overlap", wo_enabled && wo_kaiser);
+    }
 }
 
 void ConfigManipulation::update_print_sla_config(DynamicPrintConfig* config, const bool is_global_config/* = false*/)

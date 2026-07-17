@@ -193,16 +193,35 @@ GCodeInputData convert(const Slic3r::GCodeProcessorResult& result, const std::ve
 {
     GCodeInputData ret;
 
+    auto merged_result_colors = [](const std::vector<std::string>& colors, const std::vector<std::string>& result_colors) {
+        std::vector<std::string> merged = colors;
+        if (merged.size() < result_colors.size())
+            merged.resize(result_colors.size());
+        for (size_t i = 0; i < result_colors.size(); ++i) {
+            if (merged[i].empty() && !result_colors[i].empty())
+                merged[i] = result_colors[i];
+        }
+        for (std::string& color : merged) {
+            if (color.empty())
+                color = "#FF8000";
+        }
+        return merged;
+    };
+
+    const std::vector<std::string> tool_colors = merged_result_colors(str_tool_colors, result.extruder_colors);
+
     // collect tool colors
-    ret.tools_colors.reserve(str_tool_colors.size());
-    for (const std::string& color : str_tool_colors) {
+    ret.tools_colors.reserve(tool_colors.size());
+    for (const std::string& color : tool_colors) {
         ret.tools_colors.emplace_back(convert(color));
     }
 
     // collect color print colors
-    const std::vector<std::string>& str_colors = str_color_print_colors.empty() ? str_tool_colors : str_color_print_colors;
-    ret.color_print_colors.reserve(str_colors.size());
-    for (const std::string& color : str_colors) {
+    const std::vector<std::string> color_print_colors = merged_result_colors(
+        str_color_print_colors.empty() ? str_tool_colors : str_color_print_colors,
+        result.extruder_colors);
+    ret.color_print_colors.reserve(color_print_colors.size());
+    for (const std::string& color : color_print_colors) {
         ret.color_print_colors.emplace_back(convert(color));
     }
 
@@ -830,4 +849,3 @@ GCodeInputData convert(const Slic3r::Print& print, const std::vector<std::string
 }
 
 } // namespace libvgcode
-

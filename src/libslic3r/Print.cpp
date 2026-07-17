@@ -28,11 +28,17 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/format.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/process.hpp>
 #include <boost/regex.hpp>
 #include <boost/nowide/fstream.hpp>
 
 #include <tbb/blocked_range.h>
 #include <tbb/parallel_for.h>
+
+#include <cctype>
+#include <cstdlib>
+#include <mutex>
+#include <sstream>
 
 //BBS: add json support
 #include "nlohmann/json.hpp"
@@ -48,6 +54,348 @@ using namespace nlohmann;
 #define L(s) Slic3r::I18N::translate(s)
 
 namespace Slic3r {
+
+namespace {
+
+namespace process = boost::process;
+
+static std::string codex_lower_ascii(std::string value)
+{
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+    return value;
+}
+
+static bool codex_truthy_env(const char *name)
+{
+    const char *value = std::getenv(name);
+    if (value == nullptr)
+        return false;
+    const std::string text = codex_lower_ascii(value);
+    return text == "1" || text == "true" || text == "yes" || text == "on";
+}
+
+static bool orcaslicer_codex_fiberseek_profile_matches(const DynamicPrintConfig& config)
+{
+    bool postprocessor_matches = false;
+    if (const ConfigOption *postprocessor = config.option("fiber_postprocessor_type"))
+        postprocessor_matches = postprocessor->getInt() == 3;
+
+    std::string identity;
+    for (const char *key : {"printer_settings_id", "printer_model", "printer_variant", "printer_notes"}) {
+        if (config.has(key))
+            identity += " " + config.opt_string(key);
+    }
+    const std::string identity_lower = codex_lower_ascii(identity);
+    const bool profile_matches = identity_lower.find("fibreseek") != std::string::npos ||
+                                 identity_lower.find("fiberseek") != std::string::npos ||
+                                 identity_lower.find("seeker 3") != std::string::npos;
+    return postprocessor_matches || profile_matches;
+}
+
+static bool orcaslicer_codex_bool_option(const DynamicPrintConfig& config, const char *key)
+{
+    if (const ConfigOptionBool *option = config.opt<ConfigOptionBool>(key))
+        return option->value;
+    return false;
+}
+
+static bool orcaslicer_codex_nonempty_string_option(const DynamicPrintConfig& config, const char *key)
+{
+    if (const ConfigOptionString *option = config.opt<ConfigOptionString>(key))
+        return !option->value.empty();
+    return false;
+}
+
+static std::string orcaslicer_codex_config_string_value(const DynamicPrintConfig& config, const char *key)
+{
+    if (const ConfigOptionString *option = config.opt<ConfigOptionString>(key))
+        return option->value;
+    return {};
+}
+
+static bool orcaslicer_codex_continuous_fiber_requested(const DynamicPrintConfig& config)
+{
+    return orcaslicer_codex_bool_option(config, "fiber_enabled") ||
+           orcaslicer_codex_bool_option(config, "fiber_generate_perimeters") ||
+           orcaslicer_codex_bool_option(config, "fiber_generate_infill") ||
+           orcaslicer_codex_nonempty_string_option(config, "fiber_reinforcement_payload");
+}
+
+static int orcaslicer_codex_config_int_value(const DynamicPrintConfig& config, const char *key, int default_value)
+{
+    if (const ConfigOption *option = config.option(key))
+        return option->getInt();
+    return default_value;
+}
+
+static double orcaslicer_codex_config_float_value(const DynamicPrintConfig& config, const char *key, double default_value)
+{
+    if (const ConfigOption *option = config.option(key))
+        return option->getFloat();
+    return default_value;
+}
+
+static std::string orcaslicer_codex_bool_arg(bool value)
+{
+    return value ? "1" : "0";
+}
+
+static std::string orcaslicer_codex_native_fiber_mode_arg(const DynamicPrintConfig& config)
+{
+    const int value = orcaslicer_codex_config_int_value(config, "fiber_reinforcement_mode", int(FiberReinforcementMode::Light));
+    if (value == int(FiberReinforcementMode::Medium))
+        return "medium";
+    if (value == int(FiberReinforcementMode::Heavy))
+        return "heavy";
+    return "light";
+}
+
+static std::string orcaslicer_codex_native_fiber_pattern_arg(const DynamicPrintConfig& config)
+{
+    const int value = orcaslicer_codex_config_int_value(config, "fiber_infill_pattern", int(FiberInfillPattern::Solid));
+    if (value == int(FiberInfillPattern::Rhombic))
+        return "rhombic";
+    if (value == int(FiberInfillPattern::Isogrid))
+        return "isogrid";
+    if (value == int(FiberInfillPattern::Anisogrid))
+        return "anisogrid";
+    if (value == int(FiberInfillPattern::Tetragrid))
+        return "tetragrid";
+    return "solid";
+}
+
+static std::string orcaslicer_codex_native_fiber_infill_source_arg(const DynamicPrintConfig& config)
+{
+    if (!orcaslicer_codex_bool_option(config, "fiber_generate_infill"))
+        return "explicit";
+    if (const ConfigOption *option = config.option("fiber_infill_source_policy")) {
+        const int value = option->getInt();
+        if (value == 1)
+            return "generated-ribs";
+        if (value == 2)
+            return "plastic-traces";
+    }
+    return "plastic-traces";
+}
+
+static std::string orcaslicer_codex_native_fiber_seam_position_arg(const DynamicPrintConfig& config)
+{
+    const int value = orcaslicer_codex_config_int_value(config, "fiber_seam_position", int(FiberSeamPosition::Source));
+    if (value == int(FiberSeamPosition::Nearest))
+        return "nearest";
+    if (value == int(FiberSeamPosition::Aligned))
+        return "aligned";
+    if (value == int(FiberSeamPosition::Rear))
+        return "rear";
+    if (value == int(FiberSeamPosition::Random))
+        return "random";
+    return "source";
+}
+
+static bool orcaslicer_codex_native_fiber_planner_requested(const DynamicPrintConfig& config)
+{
+    if (codex_truthy_env("ORCASLICER_CODEX_DISABLE_NATIVE_FIBER_PLANNER"))
+        return false;
+    if (!orcaslicer_codex_continuous_fiber_requested(config))
+        return false;
+
+    if (const char *env_value = std::getenv("ORCASLICER_CODEX_NATIVE_FIBER_PLANNER"))
+        return codex_truthy_env("ORCASLICER_CODEX_NATIVE_FIBER_PLANNER");
+
+    if (!orcaslicer_codex_fiberseek_profile_matches(config))
+        return false;
+
+    return true;
+}
+
+static boost::filesystem::path orcaslicer_codex_native_fiber_planner_script()
+{
+    namespace fs = boost::filesystem;
+    const char *filename = "orcaslicer_codex_native_fiber_planner.py";
+    if (const char *env_path = std::getenv("ORCASLICER_CODEX_NATIVE_FIBER_PLANNER_SCRIPT")) {
+        fs::path candidate(env_path);
+        if (fs::exists(candidate))
+            return candidate;
+    }
+
+    std::vector<fs::path> candidates;
+    if (!resources_dir().empty()) {
+        const fs::path resources_path(resources_dir());
+        candidates.emplace_back(resources_path / "orcaslicer_codex" / "fiber_planner" / filename);
+        candidates.emplace_back(resources_path / "orcaslicer_codex" / "sidecars" / filename);
+        candidates.emplace_back(resources_path.parent_path() / "scripts" / filename);
+    }
+    candidates.emplace_back(fs::current_path() / "scripts" / filename);
+    candidates.emplace_back(fs::current_path().parent_path() / "scripts" / filename);
+    candidates.emplace_back(fs::current_path().parent_path() / "Resources" / "orcaslicer_codex" / "fiber_planner" / filename);
+
+    for (const fs::path &candidate : candidates)
+        if (fs::exists(candidate))
+            return candidate;
+    return {};
+}
+
+static boost::filesystem::path orcaslicer_codex_python()
+{
+    namespace fs = boost::filesystem;
+    if (const char *env_path = std::getenv("ORCASLICER_CODEX_PYTHON")) {
+        fs::path candidate(env_path);
+        if (fs::exists(candidate))
+            return candidate;
+    }
+    for (const fs::path &candidate : {fs::path("/usr/bin/python3"), fs::path("/opt/homebrew/bin/python3"), fs::path("/usr/local/bin/python3")})
+        if (fs::exists(candidate))
+            return candidate;
+    return fs::path("python3");
+}
+
+static bool run_orcaslicer_codex_native_fiber_planner(const Print& print, const std::string& gcode_path)
+{
+    const DynamicPrintConfig config = print.full_print_config();
+    if (!orcaslicer_codex_native_fiber_planner_requested(config))
+        return false;
+
+    namespace fs = boost::filesystem;
+    const fs::path planner_script = orcaslicer_codex_native_fiber_planner_script();
+    if (planner_script.empty())
+        throw Slic3r::RuntimeError("FibreSeek native planner is enabled, but orcaslicer_codex_native_fiber_planner.py was not found in app resources or scripts.");
+
+    const fs::path summary_path(gcode_path + ".native_fiber.summary.json");
+    const std::string emit_mode = []() {
+        if (const char *env_value = std::getenv("ORCASLICER_CODEX_NATIVE_FIBER_EMIT_MODE"))
+            return std::string(env_value);
+        return std::string("append-after-layer");
+    }();
+    const std::string fiber_mode = orcaslicer_codex_native_fiber_mode_arg(config);
+    const std::string fiber_pattern = orcaslicer_codex_native_fiber_pattern_arg(config);
+    const std::string fiber_infill_source = orcaslicer_codex_native_fiber_infill_source_arg(config);
+    const std::string fiber_seam_position = orcaslicer_codex_native_fiber_seam_position_arg(config);
+    const int fiber_start_layer = std::max(0, orcaslicer_codex_config_int_value(config, "fiber_start_layer", 0));
+    const int routes_per_cut = std::max(1, orcaslicer_codex_config_int_value(config, "fiber_routes_per_cut", 1));
+    const bool generate_perimeters = orcaslicer_codex_bool_option(config, "fiber_generate_perimeters");
+    const bool generate_infill = orcaslicer_codex_bool_option(config, "fiber_generate_infill");
+    const double fiber_infill_spacing = orcaslicer_codex_config_float_value(config, "fiber_infill_spacing", 0.0);
+    const double fiber_infill_density = orcaslicer_codex_config_float_value(config, "fiber_infill_density", 0.0);
+    const std::string fiber_infill_angles = orcaslicer_codex_config_string_value(config, "fiber_infill_angles");
+    const double fiber_seam_angle = orcaslicer_codex_config_float_value(config, "fiber_seam_angle", 0.0);
+    const int fiber_layer_step = orcaslicer_codex_config_int_value(config, "fiber_layer_step", 0);
+    const double fiber_min_route_length = orcaslicer_codex_config_float_value(config, "fiber_min_route_length", 0.0);
+    const double fiber_line_width = orcaslicer_codex_config_float_value(config, "fiber_line_width", 0.0);
+    const double fiber_perimeter_inset = orcaslicer_codex_config_float_value(config, "fiber_perimeter_inset", 0.0);
+    const double fiber_infill_inset = orcaslicer_codex_config_float_value(config, "fiber_infill_inset", 0.0);
+    const double fiber_print_speed = orcaslicer_codex_config_float_value(config, "fiber_print_speed", 0.0);
+    const double fiber_start_speed = orcaslicer_codex_config_float_value(config, "fiber_start_speed", 0.0);
+    const int fiber_max_routes_per_layer = orcaslicer_codex_config_int_value(config, "fiber_max_routes_per_layer", 0);
+
+    BOOST_LOG_TRIVIAL(info) << "TinManX1 FibreSeek native planner processing " << gcode_path
+                            << " with emit mode " << emit_mode
+                            << ", mode " << fiber_mode
+                            << ", perimeters " << generate_perimeters
+                            << ", infill " << generate_infill
+                            << ", pattern " << fiber_pattern
+                            << ", infill source " << fiber_infill_source
+                            << ", fiber start layer " << fiber_start_layer
+                            << ", routes per cut " << routes_per_cut;
+
+    std::vector<std::string> planner_args {
+        planner_script.string(),
+        "--in-gcode", gcode_path,
+        "--out", gcode_path,
+        "--summary-out", summary_path.string(),
+        "--emit-mode", emit_mode,
+        "--fiber-reinforcement-mode", fiber_mode,
+        "--fiber-generate-perimeters", orcaslicer_codex_bool_arg(generate_perimeters),
+        "--fiber-generate-infill", orcaslicer_codex_bool_arg(generate_infill),
+        "--fiber-infill-pattern", fiber_pattern,
+        "--fiber-infill-source", fiber_infill_source,
+        "--fiber-seam-position", fiber_seam_position,
+        "--fiber-seam-angle", std::to_string(fiber_seam_angle),
+        "--fiber-start-layer", std::to_string(fiber_start_layer),
+        "--fiber-routes-per-cut", std::to_string(routes_per_cut),
+    };
+    auto append_positive_float_arg = [&planner_args](const char *name, double value) {
+        if (value > 0.0) {
+            planner_args.emplace_back(name);
+            planner_args.emplace_back(std::to_string(value));
+        }
+    };
+    auto append_positive_int_arg = [&planner_args](const char *name, int value) {
+        if (value > 0) {
+            planner_args.emplace_back(name);
+            planner_args.emplace_back(std::to_string(value));
+        }
+    };
+    append_positive_float_arg("--spacing", fiber_infill_spacing);
+    append_positive_float_arg("--density", fiber_infill_density);
+    if (!fiber_infill_angles.empty()) {
+        planner_args.emplace_back("--angles");
+        planner_args.emplace_back(fiber_infill_angles);
+    }
+    append_positive_int_arg("--layer-step", fiber_layer_step);
+    append_positive_float_arg("--min-route-length", fiber_min_route_length);
+    append_positive_float_arg("--line-width", fiber_line_width);
+    append_positive_float_arg("--perimeter-inset", fiber_perimeter_inset);
+    append_positive_float_arg("--infill-inset", fiber_infill_inset);
+    append_positive_float_arg("--fiber-print-speed", fiber_print_speed);
+    append_positive_float_arg("--fiber-start-speed", fiber_start_speed);
+    append_positive_int_arg("--max-routes-per-layer", fiber_max_routes_per_layer);
+
+    std::string std_err;
+    process::ipstream err_stream;
+#ifdef _WIN32
+    process::child child(
+        orcaslicer_codex_python().string(),
+        process::args(planner_args),
+        process::std_err > err_stream);
+#else
+    std::vector<std::string> sanitized_python_args {
+        "-u", "PYTHONHOME",
+        "-u", "PYTHONPATH",
+        orcaslicer_codex_python().string()
+    };
+    sanitized_python_args.insert(sanitized_python_args.end(), planner_args.begin(), planner_args.end());
+    BOOST_LOG_TRIVIAL(info) << "TinManX1 FibreSeek native planner launching Python through /usr/bin/env with sanitized PYTHONHOME/PYTHONPATH";
+    process::child child(
+        "/usr/bin/env",
+        process::args(sanitized_python_args),
+        process::std_err > err_stream);
+#endif
+
+    std::string line;
+    while (err_stream && std::getline(err_stream, line))
+        std_err += line + "\n";
+    child.wait();
+
+    if (child.exit_code() != 0) {
+        std::ostringstream message;
+        message << "FibreSeek native planner failed with exit code " << child.exit_code();
+        if (!std_err.empty())
+            message << ":\n" << std_err;
+        throw Slic3r::RuntimeError(message.str());
+    }
+
+    BOOST_LOG_TRIVIAL(info) << "TinManX1 FibreSeek native planner wrote " << gcode_path
+                            << " and " << summary_path.string();
+    return true;
+}
+
+static void reload_orcaslicer_codex_native_fiber_preview_result(const Print& print, const std::string& gcode_path, GCodeProcessorResult *result)
+{
+    if (result == nullptr)
+        return;
+
+    GCodeProcessor processor;
+    GCodeProcessor::s_IsBBLPrinter = print.is_BBL_printer();
+    processor.process_file(gcode_path);
+
+    {
+        std::lock_guard<std::mutex> lock(result->result_mutex);
+        *result = processor.get_result();
+    }
+    BOOST_LOG_TRIVIAL(info) << "TinManX1 FibreSeek native planner reloaded preview result from " << gcode_path;
+}
+
+} // namespace
 
 template class PrintState<PrintStep, psCount>;
 template class PrintState<PrintObjectStep, posCount>;
@@ -2636,6 +2984,11 @@ std::string Print::export_gcode(const std::string& path_template, GCodeProcessor
     const Vec3d origin = this->get_plate_origin();
     gcode.set_gcode_offset(origin(0), origin(1));
     gcode.do_export(this, path.c_str(), result, thumbnail_cb);
+    const bool native_fiber_planner_ran = run_orcaslicer_codex_native_fiber_planner(*this, path);
+    if (native_fiber_planner_ran && result != nullptr) {
+        BOOST_LOG_TRIVIAL(info) << "TinManX1 FibreSeek native planner rewrote the G-code output after preview generation for " << path;
+        reload_orcaslicer_codex_native_fiber_preview_result(*this, path, result);
+    }
     gcode.export_layer_filaments(result);
     //BBS
     if (result != nullptr)

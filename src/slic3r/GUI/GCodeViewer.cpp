@@ -43,8 +43,10 @@
 
 #include <array>
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <chrono>
+#include <map>
 
 
 namespace Slic3r {
@@ -101,6 +103,31 @@ static std::string get_view_type_string(libvgcode::EViewType view_type)
     else if (view_type == libvgcode::EViewType::PressureAdvance)
         return _u8L("Pressure Advance");
     return "";
+}
+
+static bool tinmanx_has_continuous_fiber_preview(const GCodeProcessorResult& result, const Print& print)
+{
+    size_t configured_filaments = 0;
+    if (const ConfigOptionFloats* filament_diameters = print.config().option<ConfigOptionFloats>("filament_diameter");
+        filament_diameters != nullptr) {
+        configured_filaments = filament_diameters->values.size();
+    }
+    if (configured_filaments == 0)
+        configured_filaments = result.settings_ids.filament.size();
+
+    if (configured_filaments == 0 || result.filaments_count <= configured_filaments)
+        return false;
+
+    for (const GCodeProcessorResult::MoveVertex& move : result.moves) {
+        if (move.internal_only ||
+            move.type != EMoveType::Extrude ||
+            move.extrusion_role != erCustom)
+            continue;
+        if (static_cast<size_t>(move.extruder_id) >= configured_filaments)
+            return true;
+    }
+
+    return false;
 }
 
 // Find an index of a value in a sorted vector, which is in <z-eps, z+eps>.
@@ -319,6 +346,82 @@ static std::string to_string(libvgcode::EGCodeExtrusionRole role)
     case libvgcode::EGCodeExtrusionRole::SupportTransition:        { return _u8L("Support transition"); }
     case libvgcode::EGCodeExtrusionRole::Mixed:                    { return _u8L("Mixed"); }
     default:                                                       { return _u8L("Unknown"); }
+    }
+}
+
+static bool arc_support_preview_active(const std::map<std::string, std::string>& metadata)
+{
+    auto find_metadata = [&metadata](const char* short_key, const char* full_key) {
+        auto it = metadata.find(short_key);
+        if (it == metadata.end())
+            it = metadata.find(full_key);
+        return it;
+    };
+
+    const auto status = find_metadata("transform_status", "orcaslicer_codex_arc_support_transform_status");
+    const auto legacy_status = find_metadata("transform_status", "tinmanx_arc_support_transform_status");
+    const auto strategy = find_metadata("strategy", "orcaslicer_codex_arc_support_strategy");
+    const auto legacy_strategy = find_metadata("strategy", "tinmanx_arc_support_strategy");
+    return ((status != metadata.end() && status->second == "ok") ||
+            (legacy_status != metadata.end() && legacy_status->second == "ok")) &&
+        ((strategy != metadata.end() && strategy->second == "arc") ||
+         (legacy_strategy != metadata.end() && legacy_strategy->second == "arc"));
+}
+
+static libvgcode::Color strength_lens_role_color(libvgcode::EGCodeExtrusionRole role)
+{
+    switch (role) {
+    case libvgcode::EGCodeExtrusionRole::ExternalPerimeter:
+    case libvgcode::EGCodeExtrusionRole::Perimeter:
+    case libvgcode::EGCodeExtrusionRole::BottomSurface:
+        return { 42, 181, 142 };
+    case libvgcode::EGCodeExtrusionRole::TopSolidInfill:
+    case libvgcode::EGCodeExtrusionRole::SolidInfill:
+        return { 58, 134, 255 };
+    case libvgcode::EGCodeExtrusionRole::InternalInfill:
+    case libvgcode::EGCodeExtrusionRole::Mixed:
+        return { 242, 190, 78 };
+    case libvgcode::EGCodeExtrusionRole::OverhangPerimeter:
+    case libvgcode::EGCodeExtrusionRole::BridgeInfill:
+    case libvgcode::EGCodeExtrusionRole::InternalBridgeInfill:
+        return { 230, 86, 118 };
+    case libvgcode::EGCodeExtrusionRole::GapFill:
+        return { 202, 82, 220 };
+    case libvgcode::EGCodeExtrusionRole::Ironing:
+        return { 132, 165, 184 };
+    case libvgcode::EGCodeExtrusionRole::SupportMaterial:
+    case libvgcode::EGCodeExtrusionRole::SupportMaterialInterface:
+    case libvgcode::EGCodeExtrusionRole::SupportTransition:
+        return { 140, 148, 160 };
+    case libvgcode::EGCodeExtrusionRole::Skirt:
+    case libvgcode::EGCodeExtrusionRole::Brim:
+    case libvgcode::EGCodeExtrusionRole::WipeTower:
+    case libvgcode::EGCodeExtrusionRole::Custom:
+    default:
+        return { 150, 150, 150 };
+    }
+}
+
+static std::string strength_lens_role_label(libvgcode::EGCodeExtrusionRole role, const std::string& default_label)
+{
+    switch (role) {
+    case libvgcode::EGCodeExtrusionRole::ExternalPerimeter: return _u8L("Outer wall - strongest shell");
+    case libvgcode::EGCodeExtrusionRole::Perimeter: return _u8L("Inner wall - shell continuity");
+    case libvgcode::EGCodeExtrusionRole::BottomSurface: return _u8L("Bottom shell - compression face");
+    case libvgcode::EGCodeExtrusionRole::TopSolidInfill: return _u8L("Top shell - solid cap");
+    case libvgcode::EGCodeExtrusionRole::SolidInfill: return _u8L("Solid infill - load spread");
+    case libvgcode::EGCodeExtrusionRole::InternalInfill: return _u8L("Sparse infill - load sharing");
+    case libvgcode::EGCodeExtrusionRole::Mixed: return _u8L("Mixed extrusion - review");
+    case libvgcode::EGCodeExtrusionRole::OverhangPerimeter: return _u8L("Overhang wall - review");
+    case libvgcode::EGCodeExtrusionRole::BridgeInfill: return _u8L("Bridge/Arc infill - review");
+    case libvgcode::EGCodeExtrusionRole::InternalBridgeInfill: return _u8L("Internal bridge - review");
+    case libvgcode::EGCodeExtrusionRole::GapFill: return _u8L("Gap fill - stress riser");
+    case libvgcode::EGCodeExtrusionRole::SupportMaterial:
+    case libvgcode::EGCodeExtrusionRole::SupportMaterialInterface:
+    case libvgcode::EGCodeExtrusionRole::SupportTransition:
+        return _u8L("Support - not model strength");
+    default:
+        return default_label;
     }
 }
 
@@ -1101,6 +1204,10 @@ void GCodeViewer::update_by_mode(ConfigOptionMode mode)
 
     // BBS for first layer inspection
     view_type_items.push_back(libvgcode::EViewType::Tool);
+    view_type_items_str.push_back(_u8L("Tool"));
+
+    view_type_items.push_back(libvgcode::EViewType::FeatureType);
+    view_type_items_str.push_back(_u8L("Strength Lens"));
 
     options_items.push_back(EMoveType::Travel);
     options_items.push_back(EMoveType::Retract);
@@ -1111,6 +1218,51 @@ void GCodeViewer::update_by_mode(ConfigOptionMode mode)
     //}
     //BBS: seam is not real move and extrusion, put at last line
     options_items.push_back(EMoveType::Seam);
+}
+
+bool GCodeViewer::is_strength_lens_view_item(size_t index) const
+{
+    return index < view_type_items_str.size() && view_type_items_str[index] == _u8L("Strength Lens");
+}
+
+bool GCodeViewer::sliced_strength_lens_enabled() const
+{
+    auto it = m_strength_lens_preview_metadata.find("strength_lens_enabled");
+    return it != m_strength_lens_preview_metadata.end() &&
+        (it->second == "1" || it->second == "true" || it->second == "True" || it->second == "yes");
+}
+
+void GCodeViewer::apply_strength_lens_role_colors()
+{
+    if (!m_strength_lens_view_active) {
+        if (!m_strength_lens_saved_role_colors.empty()) {
+            for (const auto& [role, color] : m_strength_lens_saved_role_colors)
+                m_viewer.set_extrusion_role_color(role, color);
+            m_strength_lens_saved_role_colors.clear();
+        }
+        return;
+    }
+
+    const auto roles = m_viewer.get_extrusion_roles();
+    for (libvgcode::EGCodeExtrusionRole role : roles) {
+        if (m_strength_lens_saved_role_colors.find(role) == m_strength_lens_saved_role_colors.end())
+            m_strength_lens_saved_role_colors.emplace(role, m_viewer.get_extrusion_role_color(role));
+        m_viewer.set_extrusion_role_color(role, strength_lens_role_color(role));
+    }
+}
+
+void GCodeViewer::select_strength_lens_view()
+{
+    for (size_t index = 0; index < view_type_items_str.size(); ++index) {
+        if (is_strength_lens_view_item(index)) {
+            m_view_type_sel = static_cast<int>(index);
+            m_strength_lens_view_active = true;
+            set_view_type(libvgcode::EViewType::FeatureType);
+            reset_visible(libvgcode::EViewType::FeatureType);
+            apply_strength_lens_role_colors();
+            return;
+        }
+    }
 }
 
 std::vector<int> GCodeViewer::get_plater_extruder()
@@ -1130,6 +1282,26 @@ void GCodeViewer::load_as_gcode(const GCodeProcessorResult& gcode_result, const 
     if (current_top_layer_only != required_top_layer_only)
         m_viewer.toggle_top_layer_only_view_range();
 
+    auto merged_preview_colors = [](const std::vector<std::string>& colors, const std::vector<std::string>& result_colors) {
+        std::vector<std::string> merged = colors;
+        if (merged.size() < result_colors.size())
+            merged.resize(result_colors.size());
+        for (size_t i = 0; i < result_colors.size(); ++i) {
+            if (merged[i].empty() && !result_colors[i].empty())
+                merged[i] = result_colors[i];
+        }
+        for (std::string& color : merged) {
+            if (color.empty())
+                color = "#FF8000";
+        }
+        return merged;
+    };
+
+    const std::vector<std::string> preview_tool_colors = merged_preview_colors(str_tool_colors, gcode_result.extruder_colors);
+    const std::vector<std::string> preview_color_print_colors = merged_preview_colors(
+        str_color_print_colors.empty() ? str_tool_colors : str_color_print_colors,
+        gcode_result.extruder_colors);
+
     // avoid processing if called with the same gcode_result
     if (m_last_result_id == gcode_result.id && wxGetApp().is_editor()) {
         //BBS: add logs
@@ -1137,17 +1309,16 @@ void GCodeViewer::load_as_gcode(const GCodeProcessorResult& gcode_result, const 
 
         // collect tool colors
         libvgcode::Palette tools_colors;
-        tools_colors.reserve(str_tool_colors.size());
-        for (const std::string& color : str_tool_colors) {
+        tools_colors.reserve(preview_tool_colors.size());
+        for (const std::string& color : preview_tool_colors) {
             tools_colors.emplace_back(libvgcode::convert(color));
         }
         m_viewer.set_tool_colors(tools_colors);
 
         // collect color print colors
         libvgcode::Palette color_print_colors;
-        const std::vector<std::string>& str_colors = str_color_print_colors.empty() ? str_tool_colors : str_color_print_colors;
-        color_print_colors.reserve(str_colors.size());
-        for (const std::string& color : str_colors) {
+        color_print_colors.reserve(preview_color_print_colors.size());
+        for (const std::string& color : preview_color_print_colors) {
             color_print_colors.emplace_back(libvgcode::convert(color));
         }
         m_viewer.set_color_print_colors(color_print_colors);
@@ -1173,7 +1344,7 @@ void GCodeViewer::load_as_gcode(const GCodeProcessorResult& gcode_result, const 
     }
 
     // convert data from PrusaSlicer format to libvgcode format
-    libvgcode::GCodeInputData data = libvgcode::convert(gcode_result, str_tool_colors, str_color_print_colors, m_viewer);
+    libvgcode::GCodeInputData data = libvgcode::convert(gcode_result, preview_tool_colors, preview_color_print_colors, m_viewer);
 
 //#define ENABLE_DATA_EXPORT 1
 //#if ENABLE_DATA_EXPORT
@@ -1269,6 +1440,7 @@ void GCodeViewer::load_as_gcode(const GCodeProcessorResult& gcode_result, const 
 
     // send data to the viewer
     m_viewer.reset_default_extrusion_roles_colors();
+    m_strength_lens_saved_role_colors.clear();
     m_viewer.load(std::move(data));
 
 // #if !VGCODE_ENABLE_COG_AND_TOOL_MARKERS
@@ -1344,26 +1516,21 @@ void GCodeViewer::load_as_gcode(const GCodeProcessorResult& gcode_result, const 
 
     // load_toolpaths(gcode_result, build_volume, exclude_bounding_box);
     
-    // ORCA: Apply smart default view type when extruder count changes.
-    // Multi-color: ColorPrint (Filament), Single-color: FeatureType (Line Type).
-    // User selections persist within same extruder count, defaults reapply on count change.
-    int current_count = m_viewer.get_used_extruders_count();
-    if (current_count > 1) {
-        if (m_last_extruder_count_default_applied != 2) {
-            auto it = std::find(view_type_items.begin(), view_type_items.end(), libvgcode::EViewType::ColorPrint);
-            if (it != view_type_items.end())
-                m_view_type_sel = std::distance(view_type_items.begin(), it);
-            set_view_type(libvgcode::EViewType::ColorPrint);
-            m_last_extruder_count_default_applied = 2;
-        }
-    } else {
-        if (m_last_extruder_count_default_applied != 1) {
-            auto it = std::find(view_type_items.begin(), view_type_items.end(), libvgcode::EViewType::FeatureType);
-            if (it != view_type_items.end())
-                m_view_type_sel = std::distance(view_type_items.begin(), it);
-            set_view_type(libvgcode::EViewType::FeatureType);
-            m_last_extruder_count_default_applied = 1;
-        }
+    // ORCA: Apply smart default view type when the rendered channel family changes.
+    // Multi-color stays in Filament view, while FibreSeek composite jobs start in Line Type
+    // so the synthetic black fiber channel does not overpaint the whole plastic path.
+    const int current_count = m_viewer.get_used_extruders_count();
+    const bool has_continuous_fiber_preview = tinmanx_has_continuous_fiber_preview(gcode_result, print);
+    const libvgcode::EViewType default_view_type = has_continuous_fiber_preview || current_count <= 1 ?
+        libvgcode::EViewType::FeatureType :
+        libvgcode::EViewType::ColorPrint;
+    const int default_key = has_continuous_fiber_preview ? 3 : (current_count > 1 ? 2 : 1);
+    if (m_last_extruder_count_default_applied != default_key) {
+        auto it = std::find(view_type_items.begin(), view_type_items.end(), default_view_type);
+        if (it != view_type_items.end())
+            m_view_type_sel = std::distance(view_type_items.begin(), it);
+        set_view_type(default_view_type);
+        m_last_extruder_count_default_applied = default_key;
     }
 
     // BBS: data for rendering color arrangement recommendation
@@ -1375,10 +1542,18 @@ void GCodeViewer::load_as_gcode(const GCodeProcessorResult& gcode_result, const 
     std::vector<std::string> type_opt      = print.config().option<ConfigOptionStrings>("filament_type")->values;
     std::vector<unsigned char> support_filament_opt = print.config().option<ConfigOptionBools>("filament_is_support")->values;
     for (auto extruder_id : m_viewer.get_used_extruders_ids()) {
-        if (filament_maps[extruder_id] == 1) {
-            m_left_extruder_filament.push_back({type_opt[extruder_id], color_opt[extruder_id], extruder_id, (bool)(support_filament_opt[extruder_id])});
+        const size_t filament_id = static_cast<size_t>(extruder_id);
+        const int filament_map = filament_id < filament_maps.size() ? filament_maps[filament_id] : 1;
+        const std::string filament_type = filament_id < type_opt.size() ? type_opt[filament_id] : std::string("Continuous fiber");
+        const std::string filament_color =
+            filament_id < color_opt.size() ? color_opt[filament_id] :
+            filament_id < preview_tool_colors.size() ? preview_tool_colors[filament_id] :
+            std::string("#000000");
+        const bool support_filament = filament_id < support_filament_opt.size() && support_filament_opt[filament_id];
+        if (filament_map == 1) {
+            m_left_extruder_filament.push_back({filament_type, filament_color, extruder_id, support_filament});
         } else {
-            m_right_extruder_filament.push_back({type_opt[extruder_id], color_opt[extruder_id], extruder_id, (bool)(support_filament_opt[extruder_id])});
+            m_right_extruder_filament.push_back({filament_type, filament_color, extruder_id, support_filament});
         }
     }
 
@@ -1454,6 +1629,8 @@ void GCodeViewer::load_as_gcode(const GCodeProcessorResult& gcode_result, const 
     }
 
     m_print_statistics = gcode_result.print_statistics;
+    m_arc_support_preview_metadata = gcode_result.arc_support_preview_metadata;
+    m_strength_lens_preview_metadata = gcode_result.strength_lens_preview_metadata;
 
     PrintEstimatedStatistics::ETimeMode time_mode = convert(m_viewer.get_time_mode());
     if (m_viewer.get_time_mode() != libvgcode::ETimeMode::Normal) {
@@ -1462,6 +1639,11 @@ void GCodeViewer::load_as_gcode(const GCodeProcessorResult& gcode_result, const 
             short_time(get_time_dhms(time)) == short_time(get_time_dhms(m_print_statistics.modes[static_cast<size_t>(PrintEstimatedStatistics::ETimeMode::Normal)].time)))
             m_viewer.set_time_mode(libvgcode::convert(PrintEstimatedStatistics::ETimeMode::Normal));
     }
+
+    if (sliced_strength_lens_enabled() || m_strength_lens_view_active)
+        select_strength_lens_view();
+    else
+        apply_strength_lens_role_colors();
 
     bool only_gcode_3mf = false;
     PartPlate* current_plate = wxGetApp().plater()->get_partplate_list().get_curr_plate();
@@ -1518,7 +1700,10 @@ void GCodeViewer::load_as_preview(libvgcode::GCodeInputData&& data)
     m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::InternalInfill,           { 255, 127, 127 });
     m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::SolidInfill,              { 255, 127, 127 });
     m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::WipeTower,                { 127, 255, 127 });
+    m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::Custom,                   { 10, 10, 10 });
+    m_strength_lens_saved_role_colors.clear();
     m_viewer.load(std::move(data));
+    apply_strength_lens_role_colors();
 
     const libvgcode::AABox bbox = m_viewer.get_extrusion_bounding_box();
     const BoundingBoxf3 paths_bounding_box(libvgcode::convert(bbox[0]).cast<double>(), libvgcode::convert(bbox[1]).cast<double>());
@@ -1563,6 +1748,10 @@ void GCodeViewer::reset()
         move_type_times.fill(0.0f);
     m_move_type_distances.fill(0.0f);
     m_print_statistics.reset();
+    m_arc_support_preview_metadata.clear();
+    m_strength_lens_preview_metadata.clear();
+    m_strength_lens_saved_role_colors.clear();
+    m_strength_lens_view_active = false;
     m_custom_gcode_per_print_z = std::vector<CustomGCode::Item>();
     m_left_extruder_filament.clear();
     m_right_extruder_filament.clear();
@@ -3487,8 +3676,10 @@ void GCodeViewer::render_legend(float &legend_height, int canvas_width, int canv
             if (ImGui::BBLSelectable(view_type_items_str[i].c_str(), is_selected)) {
                 m_fold = false;
                 m_view_type_sel = i;
+                m_strength_lens_view_active = is_strength_lens_view_item(static_cast<size_t>(m_view_type_sel));
                 set_view_type(view_type_items[m_view_type_sel]);
                 reset_visible(view_type_items[m_view_type_sel]);
+                apply_strength_lens_role_colors();
                 update_moves_slider();
             #if ENABLE_ENHANCED_IMGUI_SLIDER_FLOAT
                 imgui.set_requires_extra_frame();
@@ -3636,11 +3827,18 @@ void GCodeViewer::render_legend(float &legend_height, int canvas_width, int canv
     {
         // calculate offsets to align time/percentage data
         char buffer[64];
+        const bool arc_preview_active = arc_support_preview_active(m_arc_support_preview_metadata);
+        const bool strength_lens_active = m_strength_lens_view_active;
         const std::vector<libvgcode::EGCodeExtrusionRole>& roles = m_viewer.get_extrusion_roles();
         for (libvgcode::EGCodeExtrusionRole role : roles) {
             assert(static_cast<size_t>(role) < libvgcode::GCODE_EXTRUSION_ROLES_COUNT);
             if (static_cast<size_t>(role) < libvgcode::GCODE_EXTRUSION_ROLES_COUNT) {
-                labels.push_back(_u8L(ExtrusionEntity::role_to_string(convert(role))));
+                if (strength_lens_active)
+                    labels.push_back(strength_lens_role_label(role, _u8L(ExtrusionEntity::role_to_string(convert(role)))));
+                else if (arc_preview_active && role == libvgcode::EGCodeExtrusionRole::BridgeInfill)
+                    labels.push_back(_u8L("Arc Overhang"));
+                else
+                    labels.push_back(_u8L(ExtrusionEntity::role_to_string(convert(role))));
                 auto [time, percent] = role_time_and_percent(role);
                 times.push_back((time > 0.0f) ? short_time(get_time_dhms(time)) : "");
                 if (percent == 0) // ORCA remove % symbol from rows
@@ -4415,6 +4613,111 @@ void GCodeViewer::render_legend(float &legend_height, int canvas_width, int canv
     //    add_option(EMoveType::Custom_GCode, EOptionsColors::CustomGCodes, _u8L("Custom G-codes"));
     //}
 
+    if (!m_arc_support_preview_metadata.empty()) {
+        auto arc_metadata_value = [this](const std::string& key) -> const std::string& {
+            static const std::string empty;
+            const auto it = m_arc_support_preview_metadata.find(key);
+            return it == m_arc_support_preview_metadata.end() ? empty : it->second;
+        };
+        auto append_arc_metadata_row = [&imgui](const std::string& label, const std::string& value, float offset) {
+            if (value.empty())
+                return;
+            imgui.text(label + ":");
+            ImGui::SameLine(offset);
+            imgui.text(value);
+        };
+        auto format_arc_metadata_value = [](std::string value) {
+            if (value == "comment_metadata_only_no_machine_commands")
+                return std::string("Comment metadata only; no machine commands.");
+            if (value == "replace_orca_normal_support_after_arc_generation")
+                return std::string("Legacy support replacement");
+            if (value == "replace_bridge_infill_with_arc_overhangs")
+                return std::string("Replace bridge infill with Arc Overhangs");
+            if (value == "after_orca_normal_support_generation")
+                return std::string("Legacy support-generation stage");
+            if (value == "orca_overhang_generation")
+                return std::string("Legacy support source");
+            if (value == "bridge_overhang_generation")
+                return std::string("Bridge/overhang source geometry");
+            if (value == "arc_overhang_model_toolpath_no_support_material")
+                return std::string("Arc overhang toolpath; no support material");
+            if (value == "guarded_preview")
+                return std::string("Guarded preview");
+            if (value == "true")
+                return std::string("Yes");
+            if (value == "false")
+                return std::string("No");
+            std::replace(value.begin(), value.end(), '_', ' ');
+            if (!value.empty())
+                value.front() = static_cast<char>(std::toupper(static_cast<unsigned char>(value.front())));
+            return value;
+        };
+
+        const std::string status = format_arc_metadata_value(arc_metadata_value("status"));
+        const std::string transform_status = format_arc_metadata_value(arc_metadata_value("transform_status"));
+        const std::string note = format_arc_metadata_value(arc_metadata_value("preview_note"));
+        std::string display_status = status.empty() ? transform_status : status;
+        if (!transform_status.empty() && !status.empty() && transform_status != status)
+            display_status += " / " + transform_status;
+
+        float offset = ImGui::CalcTextSize("Guarded transform:").x + 2.0f * ImGui::GetStyle().ItemSpacing.x;
+        offset = std::max(offset, ImGui::CalcTextSize("Strategy:").x + 2.0f * ImGui::GetStyle().ItemSpacing.x);
+        offset = std::max(offset, ImGui::CalcTextSize("Base path:").x + 2.0f * ImGui::GetStyle().ItemSpacing.x);
+        offset = std::max(offset, ImGui::CalcTextSize("Stage:").x + 2.0f * ImGui::GetStyle().ItemSpacing.x);
+        offset = std::max(offset, ImGui::CalcTextSize("Note:").x + 2.0f * ImGui::GetStyle().ItemSpacing.x);
+
+        ImGui::Spacing();
+        imgui.title("TinManX1 Arc Overhang");
+        append_arc_metadata_row("Status", display_status, offset);
+        append_arc_metadata_row("Strategy", format_arc_metadata_value(arc_metadata_value("strategy")), offset);
+        append_arc_metadata_row("Base path", format_arc_metadata_value(arc_metadata_value("base_path")), offset);
+        append_arc_metadata_row("Stage", format_arc_metadata_value(arc_metadata_value("postprocess_stage")), offset);
+        append_arc_metadata_row("Guarded transform", format_arc_metadata_value(arc_metadata_value("guarded_transform_required")), offset);
+        append_arc_metadata_row("Preview role", "Arc infill is shown as bridge/overhang toolpath.", offset);
+        append_arc_metadata_row("Note", note, offset);
+    }
+
+    if (m_strength_lens_view_active) {
+        auto strength_metadata_value = [this](const std::string& key) -> const std::string& {
+            static const std::string empty;
+            const auto it = m_strength_lens_preview_metadata.find(key);
+            return it == m_strength_lens_preview_metadata.end() ? empty : it->second;
+        };
+        auto format_strength_metadata_value = [](std::string value) {
+            if (value == "1")
+                return std::string("Enabled");
+            if (value == "0")
+                return std::string("Manual preview");
+            if (value.empty())
+                return std::string("Not recorded");
+            std::replace(value.begin(), value.end(), '_', ' ');
+            if (!value.empty())
+                value.front() = static_cast<char>(std::toupper(static_cast<unsigned char>(value.front())));
+            return value;
+        };
+        auto append_strength_row = [&imgui](const std::string& label, const std::string& value, float offset) {
+            if (value.empty())
+                return;
+            imgui.text(label + ":");
+            ImGui::SameLine(offset);
+            imgui.text(value);
+        };
+
+        float offset = ImGui::CalcTextSize("Material model:").x + 2.0f * ImGui::GetStyle().ItemSpacing.x;
+        offset = std::max(offset, ImGui::CalcTextSize("Load axis:").x + 2.0f * ImGui::GetStyle().ItemSpacing.x);
+        offset = std::max(offset, ImGui::CalcTextSize("Status:").x + 2.0f * ImGui::GetStyle().ItemSpacing.x);
+        offset = std::max(offset, ImGui::CalcTextSize("Palette:").x + 2.0f * ImGui::GetStyle().ItemSpacing.x);
+        offset = std::max(offset, ImGui::CalcTextSize("Note:").x + 2.0f * ImGui::GetStyle().ItemSpacing.x);
+
+        ImGui::Spacing();
+        imgui.title("TinManX1 Strength Lens");
+        append_strength_row("Status", format_strength_metadata_value(strength_metadata_value("strength_lens_enabled")), offset);
+        append_strength_row("Material model", format_strength_metadata_value(strength_metadata_value("strength_lens_material_model")), offset);
+        append_strength_row("Load axis", format_strength_metadata_value(strength_metadata_value("strength_lens_load_axis")), offset);
+        append_strength_row("Filament", strength_metadata_value("filament_type"), offset);
+        append_strength_row("Palette", "Shells / solid / infill / review risk", offset);
+        append_strength_row("Note", "Advisory preview only; not certified FEA.", offset);
+    }
 
     // settings section
     bool has_settings = false;
@@ -4716,4 +5019,3 @@ void GCodeViewer::render_slider(int canvas_width, int canvas_height) {
 
 } // namespace GUI
 } // namespace Slic3r
-

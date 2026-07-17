@@ -139,6 +139,7 @@ filament_vendors = [
     'SnoLabs',
     'Spectrum',
     'SUNLU',
+    'TinManX1',
     'TTYT3D',
     'Tianse',
     'UltiMaker',

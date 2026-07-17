@@ -77,7 +77,7 @@ DynamicPrintConfig PresetBundle::construct_full_config(
     DynamicPrintConfig &print_config   = in_print_preset.config;
 
     DynamicPrintConfig out;
-    out.apply(FullPrintConfig::defaults());
+    out.apply(static_print_config_ref(FullPrintConfig::defaults()));
     out.apply(printer_config);
     out.apply(print_config);
     out.apply(project_config);
@@ -320,11 +320,11 @@ std::string PresetBundle::find_preset_vendor(const std::string &preset_name, Pre
 }
 
 PresetBundle::PresetBundle()
-    : prints(Preset::TYPE_PRINT, Preset::print_options(), static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults()))
-    , filaments(Preset::TYPE_FILAMENT, Preset::filament_options(), static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults()), ORCA_DEFAULT_FILAMENT_PLACEHOLDER)
+    : prints(Preset::TYPE_PRINT, Preset::print_options(), static_print_config_ref(FullPrintConfig::defaults()))
+    , filaments(Preset::TYPE_FILAMENT, Preset::filament_options(), static_print_config_ref(static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults())), ORCA_DEFAULT_FILAMENT_PLACEHOLDER)
     , sla_materials(Preset::TYPE_SLA_MATERIAL, Preset::sla_material_options(), static_cast<const SLAMaterialConfig &>(SLAFullPrintConfig::defaults()))
     , sla_prints(Preset::TYPE_SLA_PRINT, Preset::sla_print_options(), static_cast<const SLAPrintObjectConfig &>(SLAFullPrintConfig::defaults()))
-    , printers(Preset::TYPE_PRINTER, Preset::printer_options(), static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults()), "Default Printer")
+    , printers(Preset::TYPE_PRINTER, Preset::printer_options(), static_print_config_ref(static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults())), "Default Printer")
     , physical_printers(PhysicalPrinter::printer_options())
 {
     // The following keys are handled by the UI, they do not have a counterpart in any StaticPrintConfig derived classes,
@@ -388,7 +388,7 @@ PresetBundle::PresetBundle()
     this->sla_materials.select_preset(0);
     this->printers.select_preset(0);
 
-    this->project_config.apply_only(FullPrintConfig::defaults(), s_project_options);
+    this->project_config.apply_only(static_print_config_ref(FullPrintConfig::defaults()), s_project_options);
 }
 
 PresetBundle::PresetBundle(const PresetBundle &rhs)
@@ -2979,7 +2979,12 @@ void PresetBundle::export_selections(AppConfig &config)
     //config.set("presets", "sla_material", sla_materials.get_selected_preset_name());
     //config.set("presets", "physical_printer", physical_printers.get_selected_full_printer_name());
     //BBS: add config related log
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": printer %1%, print %2%, filaments[0] %3% ")%printers.get_selected_preset_name() % prints.get_selected_preset_name() %filament_presets[0];
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__
+        << boost::format(": printer %1%, print %2%, filaments[%3%] %4%")
+        % printers.get_selected_preset_name()
+        % prints.get_selected_preset_name()
+        % filament_presets.size()
+        % boost::algorithm::join(filament_presets, " | ");
 }
 
 // BBS
@@ -3130,14 +3135,42 @@ void PresetBundle::get_ams_cobox_infos(AMSComboInfo& combox_info)
             continue;
         }
         auto iter = std::find_if(filaments.begin(), filaments.end(),
-                                 [this, &filament_id](auto &f) { return f.is_compatible && filaments.get_preset_base(f) == &f && f.filament_id == filament_id; });
+                                 [&filament_id](auto &f) { return !f.is_default && !f.is_external && f.filament_id == filament_id; });
         if (iter == filaments.end()) {
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": filament_id %1% not found or system or compatible") % filament_id;
             auto filament_type = ams.opt_string("filament_type", 0u);
             if (!filament_type.empty()) {
-                filament_type = "Generic " + filament_type;
-                iter          = std::find_if(filaments.begin(), filaments.end(),
-                                    [&filament_type](auto &f) { return f.is_compatible && f.is_system && boost::algorithm::starts_with(f.name, filament_type); });
+                auto exact_iter = filaments.end();
+                int  exact_score = -1;
+                for (auto it = filaments.begin(); it != filaments.end(); ++it) {
+                    if (it->is_default || it->is_external || it->config.opt_string("filament_type", 0u) != filament_type)
+                        continue;
+                    const std::string upper_name = boost::to_upper_copy(it->name);
+                    int score = 0;
+                    if (it->filament_id == filament_id)
+                        score += 2000;
+                    if (it->is_compatible)
+                        score += 1000;
+                    if (it->is_visible)
+                        score += 400;
+                    if (upper_name.find("SNAPMAKER U1") != std::string::npos)
+                        score += 500;
+                    if (upper_name.find("CODEX") != std::string::npos || it->filament_id.rfind("CODX", 0) == 0)
+                        score += 250;
+                    if (filaments.get_preset_base(*it) == &*it)
+                        score += 50;
+                    if (score > exact_score) {
+                        exact_score = score;
+                        exact_iter = it;
+                    }
+                }
+                if (exact_iter != filaments.end()) {
+                    iter = exact_iter;
+                } else {
+                    filament_type = "Generic " + filament_type;
+                    iter          = std::find_if(filaments.begin(), filaments.end(),
+                                        [&filament_type](auto &f) { return f.is_compatible && f.is_system && boost::algorithm::starts_with(f.name, filament_type); });
+                }
             }
             if (iter == filaments.end()) {
                 // Prefer old selection
@@ -3230,18 +3263,47 @@ unsigned int PresetBundle::sync_ams_list(std::vector<std::pair<DynamicPrintConfi
         }
         bool has_type = false;
         auto filament_type = ams.opt_string("filament_type", 0u);
-        auto iter = std::find_if(filaments.begin(), filaments.end(), [this, &filament_id, &has_type, filament_type](auto &f) {
+        auto iter = std::find_if(filaments.begin(), filaments.end(), [&filament_id, &has_type, filament_type](auto &f) {
             has_type |= f.config.opt_string("filament_type", 0u) == filament_type;
-            return f.is_compatible && filaments.get_preset_base(f) == &f && f.filament_id == filament_id; });
+            return !f.is_default && !f.is_external && f.filament_id == filament_id; });
         if (iter == filaments.end()) {
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": filament_id %1% not found or system or compatible") % filament_id;
             if (!filament_type.empty()) {
                 auto original_type = filament_type;
-                filament_type = "Generic " + filament_type;
-                iter = std::find_if(filaments.begin(), filaments.end(), [&filament_type](auto &f) {
-                    return f.is_compatible && f.is_system
-                        && boost::algorithm::starts_with(f.name, filament_type);
-                });
+                auto exact_iter = filaments.end();
+                int  exact_score = -1;
+                for (auto it = filaments.begin(); it != filaments.end(); ++it) {
+                    has_type |= it->config.opt_string("filament_type", 0u) == original_type;
+                    if (it->is_default || it->is_external || it->config.opt_string("filament_type", 0u) != original_type)
+                        continue;
+                    const std::string upper_name = boost::to_upper_copy(it->name);
+                    int score = 0;
+                    if (it->filament_id == filament_id)
+                        score += 2000;
+                    if (it->is_compatible)
+                        score += 1000;
+                    if (it->is_visible)
+                        score += 400;
+                    if (upper_name.find("SNAPMAKER U1") != std::string::npos)
+                        score += 500;
+                    if (upper_name.find("CODEX") != std::string::npos || it->filament_id.rfind("CODX", 0) == 0)
+                        score += 250;
+                    if (filaments.get_preset_base(*it) == &*it)
+                        score += 50;
+                    if (score > exact_score) {
+                        exact_score = score;
+                        exact_iter = it;
+                    }
+                }
+                if (exact_iter != filaments.end()) {
+                    iter = exact_iter;
+                } else {
+                    filament_type = "Generic " + filament_type;
+                    iter = std::find_if(filaments.begin(), filaments.end(), [&filament_type](auto &f) {
+                        return f.is_compatible && f.is_system
+                            && boost::algorithm::starts_with(f.name, filament_type);
+                    });
+                }
                 if (iter == filaments.end()) {
                     // Similarity fallback: find a generic preset whose filament_type
                     // appears as a whole word in the AMS type (e.g. "ASA" in "ASA Sparkle").
@@ -3884,7 +3946,7 @@ const std::set<std::string> ignore_settings_list ={
 DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optional<std::vector<int>> filament_maps_new) const
 {
     DynamicPrintConfig out;
-    out.apply(FullPrintConfig::defaults());
+    out.apply(static_print_config_ref(FullPrintConfig::defaults()));
     out.apply(this->prints.get_edited_preset().config);
     // Add the default filament preset to have the "filament_preset_id" defined.
 	out.apply(this->filaments.default_preset().config);
@@ -4168,7 +4230,7 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
 DynamicPrintConfig PresetBundle::full_sla_config() const
 {
     DynamicPrintConfig out;
-    out.apply(SLAFullPrintConfig::defaults());
+    out.apply(static_print_config_ref(SLAFullPrintConfig::defaults()));
     out.apply(this->sla_prints.get_edited_preset().config);
     out.apply(this->sla_materials.get_edited_preset().config);
     out.apply(this->printers.get_edited_preset().config);
@@ -4226,7 +4288,7 @@ ConfigSubstitutions PresetBundle::load_config_file(const std::string &path, Forw
 		DynamicPrintConfig config;
         //BBS: add config related logs
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(" enter, gcodefile %1%, compatibility_rule %2%")%path %compatibility_rule;
-		config.apply(FullPrintConfig::defaults());
+			config.apply(static_print_config_ref(FullPrintConfig::defaults()));
         ConfigSubstitutions config_substitutions = config.load_from_gcode_file(path, compatibility_rule);
         Preset::normalize(config);
 		load_config_file_config(path, true, std::move(config));

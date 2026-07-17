@@ -358,7 +358,7 @@ int MultiMachinePickPage::get_selected_count()
     return count;
 }
 
-void MultiMachinePickPage::update_selected_count()
+void MultiMachinePickPage::update_selected_count(bool save_config)
 {
     std::vector<std::string> selected_multi_devices;
 
@@ -371,7 +371,7 @@ void MultiMachinePickPage::update_selected_count()
     }
 
     m_selected_count = count;
-    m_label->SetLabel(wxString::Format(_L("Select Connected Printers (%d/6)"), m_selected_count));
+    m_label->SetLabel(wxString::Format(_L("Select Connected Printers (%d/%d)"), m_selected_count, PICK_DEVICE_MAX));
 
     if (m_selected_count > PICK_DEVICE_MAX) {
         MessageDialog msg_wingow(nullptr, wxString::Format(_L("The maximum number of printers that can be selected is %d"), PICK_DEVICE_MAX), "", wxAPPLY | wxOK);
@@ -380,14 +380,16 @@ void MultiMachinePickPage::update_selected_count()
         }
     }
 
-    for (int i = 0; i < PICK_DEVICE_MAX; i++) {
-        app_config->erase("multi_devices",std::to_string(i));
-    }
+    if (save_config) {
+        for (int i = 0; i < PICK_DEVICE_MAX; i++) {
+            app_config->erase("multi_devices", std::to_string(i));
+        }
 
-    for (int j = 0; j < selected_multi_devices.size(); j++) {
-        app_config->set_str("multi_devices",  std::to_string(j), selected_multi_devices[j]);
+        for (int j = 0; j < selected_multi_devices.size(); j++) {
+            app_config->set_str("multi_devices", std::to_string(j), selected_multi_devices[j]);
+        }
+        app_config->save();
     }
-    app_config->save();
 }
 
 void MultiMachinePickPage::on_dpi_changed(const wxRect& suggested_rect)
@@ -409,6 +411,10 @@ void MultiMachinePickPage::refresh_user_device()
        selected_multi_devices.push_back(dev_id);
    }
 
+    for (auto it = m_device_items.begin(); it != m_device_items.end(); ++it) {
+        it->second->Destroy();
+    }
+    m_device_items.clear();
     sizer_machine_list->Clear(false);
     Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) {
@@ -419,15 +425,13 @@ void MultiMachinePickPage::refresh_user_device()
         return;
     }
 
-    auto user_machine = dev->get_my_cloud_machine_list();
+    // Multi Device is for the user's whole connected fleet, including saved LAN printers.
+    auto user_machine = dev->get_my_machine_list();
     auto task_manager = wxGetApp().getTaskManager();
 
     std::vector<std::string> subscribe_list;
 
     for (auto it = user_machine.begin(); it != user_machine.end(); ++it) {
-        if (it->second->GetExtderSystem()->GetTotalExtderCount() > 1) { continue; }
-        if (it->second->printer_type == "O1D") { continue;} /*maybe total_extder_count is not valid, hard codes here. to be moved to printers json*/
-
         DevicePickItem* di = new DevicePickItem(scroll_macine_list, it->second);
 
         di->Bind(EVT_MULTI_DEVICE_SELECTED_FINHSH, [this, di](auto& e) {
@@ -478,7 +482,7 @@ bool MultiMachinePickPage::Show(bool show)
 {
     if (show) {
         refresh_user_device();
-        update_selected_count();
+        update_selected_count(false);
         //m_refresh_timer->Stop();
         //m_refresh_timer->SetOwner(this);
         //m_refresh_timer->Start(4000);

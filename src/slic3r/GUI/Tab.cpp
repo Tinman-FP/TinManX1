@@ -33,6 +33,7 @@
 
 #include "GUI_App.hpp"
 #include "GUI_ObjectList.hpp"
+#include "GLCanvas3D.hpp"
 #include "slic3r/Utils/PresetUpdater.hpp"
 #include "Plater.hpp"
 #include "MainFrame.hpp"
@@ -1498,6 +1499,29 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
         return;
     }
 
+    if (opt_key == "strength_lens_enabled" || opt_key == "strength_lens_material_model" || opt_key == "strength_lens_load_axis") {
+        bool enabled = false;
+        if (opt_key == "strength_lens_enabled")
+            enabled = boost::any_cast<bool>(value);
+        else if (const ConfigOptionBool* opt = m_config->option<ConfigOptionBool>("strength_lens_enabled"))
+            enabled = opt->value;
+
+        auto refresh_strength_lens_canvas = [&](GLCanvas3D* canvas) {
+            if (canvas == nullptr)
+                return;
+            if (opt_key == "strength_lens_enabled")
+                canvas->set_prepare_strength_lens_enabled(enabled);
+            canvas->set_as_dirty();
+            canvas->request_extra_frame();
+        };
+
+        GLCanvas3D* current_canvas = wxGetApp().plater()->canvas3D();
+        GLCanvas3D* view_canvas = wxGetApp().plater()->get_view3D_canvas3D();
+        refresh_strength_lens_canvas(current_canvas);
+        if (view_canvas != current_canvas)
+            refresh_strength_lens_canvas(view_canvas);
+    }
+
     if (opt_key == "gcode_flavor" && m_type == Preset::TYPE_PRINTER) {
         if (auto printer_tab = dynamic_cast<TabPrinter*>(this))
             printer_tab->on_gcode_flavor_changed();
@@ -1684,7 +1708,19 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
     // Orca: do this only in simple mode
     if (opt_key == "support_type" && m_mode == comSimple) {
         DynamicPrintConfig new_conf = *m_config;
-        new_conf.set_key_value("support_style", new ConfigOptionEnum<SupportMaterialStyle>(smsDefault));
+        const SupportType support_type = m_config->opt_enum<SupportType>("support_type");
+        const SupportMaterialStyle support_style = m_config->opt_enum<SupportMaterialStyle>("support_style");
+        if (is_arc(support_type)) {
+            if (!is_arc_compatible_support_style(support_style))
+                new_conf.set_key_value("support_style", new ConfigOptionEnum<SupportMaterialStyle>(smsSnug));
+        } else {
+            new_conf.set_key_value("support_style", new ConfigOptionEnum<SupportMaterialStyle>(smsDefault));
+        }
+        const TinmanSupportStrategy strategy =
+            is_arc(support_type) ? TinmanSupportStrategy::Arc :
+            is_tree(support_type) ? TinmanSupportStrategy::Tree :
+            TinmanSupportStrategy::Normal;
+        new_conf.set_key_value("tinman_support_strategy", new ConfigOptionEnum<TinmanSupportStrategy>(strategy));
         m_config_manipulation.apply(m_config, &new_conf);
     }
 
@@ -2447,7 +2483,132 @@ void TabPrint::build()
         optgroup->append_single_option_line("overhang_reverse_internal_only", "quality_settings_overhangs#reverse-internal-only");
         optgroup->append_single_option_line("overhang_reverse_threshold", "quality_settings_overhangs#reverse-threshold");
 
+    if (m_type == Preset::TYPE_PRINT) {
+        for (const char *opt_key : {
+            "wave_overhangs",
+            "wave_overhangs_instead_of_bridges",
+            "wave_overhang_algorithm",
+            "support_remaining_areas_after_wave_overhangs",
+            "wave_overhang_min_angle",
+            "wave_overhang_min_length",
+            "wave_overhang_max_iterations",
+            "wave_overhang_pattern",
+            "wave_overhang_seam_mode",
+            "wave_overhang_outer_perimeters",
+            "wave_overhang_line_spacing",
+            "wave_overhang_spacing_mode",
+            "wave_overhang_perimeter_overlap",
+            "wave_overhang_minimum_width",
+            "wave_overhang_min_new_area",
+            "wave_overhang_flow_mm3_per_mm",
+            "wave_overhang_ring_overlap",
+            "wave_overhang_fringe_reinforcement_max_cover_to_real",
+            "wave_overhang_fringe_reinforcement_max_cover_area",
+            "wave_overhang_fringe_contact_compensation_max_over_cap",
+            "wave_overhang_corner_taper_enable",
+            "wave_overhang_line_spacing_corner",
+            "wave_overhang_corner_taper_distance",
+            "wave_overhang_corner_angle_threshold",
+            "wave_overhang_print_speed",
+            "wave_overhang_perimeter_speed",
+            "wave_overhang_travel_speed",
+            "wave_overhang_end_retract_length",
+            "wave_overhang_fan_speed",
+            "wave_overhang_nozzle_temp",
+            "wave_overhang_min_wave_time",
+            "wave_overhang_min_layer_time",
+            "wave_overhang_floor_layers",
+            "wave_overhang_floor_use_hilbert",
+            "wave_overhang_floor_hilbert_layers",
+            "wave_overhang_floor_hilbert_density",
+            "wave_overhang_floor_print_speed",
+            "wave_overhang_floor_perimeter_speed",
+            "wave_overhang_floor_fan_speed",
+            "wave_overhang_debug_gcode",
+        }) {
+            if (!m_config->has(opt_key)) {
+                if (const ConfigOptionDef *def = m_config->def()->get(opt_key))
+                    m_config->set_key_value(opt_key, def->create_default_option());
+            }
+        }
+
+    page = add_options_page(L("Fiber Settings"), "custom-gcode_strength");
+        optgroup = page->new_optgroup(L("Planning"), L"custom-gcode_strength");
+        optgroup->append_single_option_line("fiber_generate_perimeters");
+        optgroup->append_single_option_line("fiber_generate_infill");
+        optgroup->append_single_option_line("fiber_reinforcement_mode");
+        optgroup->append_single_option_line("fiber_start_layer");
+        optgroup->append_single_option_line("fiber_infill_pattern");
+        optgroup->append_single_option_line("fiber_infill_density");
+        optgroup->append_single_option_line("fiber_infill_angles");
+        optgroup->append_single_option_line("fiber_infill_source_policy");
+        optgroup->append_single_option_line("fiber_seam_position");
+        optgroup->append_single_option_line("fiber_seam_angle");
+        optgroup->append_single_option_line("fiber_print_order_code");
+
+        optgroup = page->new_optgroup(L("Geometry"), L"param_advanced");
+        optgroup->append_single_option_line("fiber_line_width");
+        optgroup->append_single_option_line("fiber_infill_spacing");
+        optgroup->append_single_option_line("fiber_macro_layer_height");
+        optgroup->append_single_option_line("fiber_layer_step");
+        optgroup->append_single_option_line("fiber_min_radius");
+        optgroup->append_single_option_line("fiber_max_arc_segment_length");
+        optgroup->append_single_option_line("fiber_min_route_length");
+        optgroup->append_single_option_line("fiber_perimeter_min_route_length");
+        optgroup->append_single_option_line("fiber_mechanical_min_route_length");
+        optgroup->append_single_option_line("fiber_perimeter_inset");
+        optgroup->append_single_option_line("fiber_infill_inset");
+
+        optgroup = page->new_optgroup(L("Feed and motion"), L"param_speed");
+        optgroup->append_single_option_line("fiber_print_speed");
+        optgroup->append_single_option_line("fiber_start_speed");
+        optgroup->append_single_option_line("fiber_start_max_speed");
+        optgroup->append_single_option_line("fiber_normal_max_speed");
+        optgroup->append_single_option_line("fiber_finish_max_speed");
+        optgroup->append_single_option_line("fiber_start_length");
+        optgroup->append_single_option_line("fiber_slow_length");
+        optgroup->append_single_option_line("fiber_tension_length");
+        optgroup->append_single_option_line("fiber_tension_feedrate");
+        optgroup->append_single_option_line("fiber_tension_release_fraction");
+        optgroup->append_single_option_line("fiber_feedrate_percent");
+        optgroup->append_single_option_line("fiber_after_cut_plastic_extrusion_multiplier");
+        optgroup->append_single_option_line("fiber_z_hop_after_cut");
+
+        optgroup = page->new_optgroup(L("Advanced feed phases"), L"param_speed");
+        optgroup->append_single_option_line("fiber_start_min_speed");
+        optgroup->append_single_option_line("fiber_start_min_limit_speed");
+        optgroup->append_single_option_line("fiber_normal_min_speed");
+        optgroup->append_single_option_line("fiber_normal_min_limit_speed");
+        optgroup->append_single_option_line("fiber_finish_min_speed");
+        optgroup->append_single_option_line("fiber_finish_min_limit_speed");
+        optgroup->append_single_option_line("fiber_override_correction_speed");
+        optgroup->append_single_option_line("fiber_correction_move_speed");
+        optgroup->append_single_option_line("fiber_correction_move_feedrate_percent");
+
+        optgroup = page->new_optgroup(L("Fiber first layer"), L"param_layer_height");
+        optgroup->append_single_option_line("fiber_first_layer_flow_ratio");
+        optgroup->append_single_option_line("fiber_first_layer_line_width");
+        optgroup->append_single_option_line("fiber_first_layer_height");
+        optgroup->append_single_option_line("fiber_first_layer_speed_ratio");
+
+        optgroup = page->new_optgroup(L("Planner limits"), L"param_advanced");
+        optgroup->append_single_option_line("fiber_max_routes_per_layer");
+        optgroup->append_single_option_line("fiber_routes_per_cut");
+        optgroup->append_single_option_line("fiber_outer_perimeter_loops");
+        optgroup->append_single_option_line("fiber_inner_perimeter_loops");
+        optgroup->append_single_option_line("fiber_plastic_outer_loops_with_fiber");
+        optgroup->append_single_option_line("fiber_plastic_inner_loops_with_fiber");
+
+        optgroup = page->new_optgroup(L("Advanced layup payload"), L"param_advanced");
+        optgroup->append_single_option_line("fiber_reinforcement_payload");
+    }
+
     page = add_options_page(L("Strength"), "custom-gcode_strength"); // ORCA: icon only visible on placeholders
+        optgroup = page->new_optgroup(L("Strength Lens"), L"custom-gcode_strength");
+        optgroup->append_single_option_line("strength_lens_enabled");
+        optgroup->append_single_option_line("strength_lens_material_model");
+        optgroup->append_single_option_line("strength_lens_load_axis");
+
         optgroup = page->new_optgroup(L("Walls"), L"param_wall");
         optgroup->append_single_option_line("wall_loops", "strength_settings_walls#wall-loops");
         optgroup->append_single_option_line("alternate_extra_wall", "strength_settings_walls#alternate-extra-wall");
@@ -2605,6 +2766,66 @@ void TabPrint::build()
         optgroup->append_single_option_line("support_ironing_pattern", "support_settings_ironing#pattern");
         optgroup->append_single_option_line("support_ironing_flow", "support_settings_ironing#flow");
         optgroup->append_single_option_line("support_ironing_spacing", "support_settings_ironing#line-spacing");
+
+        if (m_type == Preset::TYPE_PRINT) {
+            optgroup = page->new_optgroup(L("Wave overhangs"), L"param_overhang");
+            optgroup->append_single_option_line("wave_overhangs");
+            optgroup->append_single_option_line("wave_overhangs_instead_of_bridges");
+            optgroup->append_single_option_line("wave_overhang_algorithm");
+            optgroup->append_single_option_line("support_remaining_areas_after_wave_overhangs");
+
+            optgroup = page->new_optgroup(L("Wave detection"), L"param_overhang");
+            optgroup->append_single_option_line("wave_overhang_min_angle");
+            optgroup->append_single_option_line("wave_overhang_min_length");
+            optgroup->append_single_option_line("wave_overhang_max_iterations");
+
+            optgroup = page->new_optgroup(L("Wave pattern"), L"param_overhang");
+            optgroup->append_single_option_line("wave_overhang_pattern");
+            optgroup->append_single_option_line("wave_overhang_seam_mode");
+            optgroup->append_single_option_line("wave_overhang_outer_perimeters");
+            optgroup->append_single_option_line("wave_overhang_line_spacing");
+            optgroup->append_single_option_line("wave_overhang_spacing_mode");
+            optgroup->append_single_option_line("wave_overhang_perimeter_overlap");
+            optgroup->append_single_option_line("wave_overhang_minimum_width");
+            optgroup->append_single_option_line("wave_overhang_min_new_area");
+            optgroup->append_single_option_line("wave_overhang_flow_mm3_per_mm");
+            optgroup->append_single_option_line("wave_overhang_ring_overlap");
+
+            optgroup = page->new_optgroup(L("Wave fringe reinforcement"), L"param_overhang");
+            optgroup->append_single_option_line("wave_overhang_fringe_reinforcement_max_cover_to_real");
+            optgroup->append_single_option_line("wave_overhang_fringe_reinforcement_max_cover_area");
+            optgroup->append_single_option_line("wave_overhang_fringe_contact_compensation_max_over_cap");
+
+            optgroup = page->new_optgroup(L("Wave corner reinforcement"), L"param_overhang");
+            optgroup->append_single_option_line("wave_overhang_corner_taper_enable");
+            optgroup->append_single_option_line("wave_overhang_line_spacing_corner");
+            optgroup->append_single_option_line("wave_overhang_corner_taper_distance");
+            optgroup->append_single_option_line("wave_overhang_corner_angle_threshold");
+
+            optgroup = page->new_optgroup(L("Wave motion"), L"param_speed");
+            optgroup->append_single_option_line("wave_overhang_print_speed");
+            optgroup->append_single_option_line("wave_overhang_perimeter_speed");
+            optgroup->append_single_option_line("wave_overhang_travel_speed");
+            optgroup->append_single_option_line("wave_overhang_end_retract_length");
+
+            optgroup = page->new_optgroup(L("Wave cooling"), L"param_cooling");
+            optgroup->append_single_option_line("wave_overhang_fan_speed");
+            optgroup->append_single_option_line("wave_overhang_nozzle_temp");
+            optgroup->append_single_option_line("wave_overhang_min_wave_time");
+            optgroup->append_single_option_line("wave_overhang_min_layer_time");
+
+            optgroup = page->new_optgroup(L("Wave floor layers"), L"param_overhang");
+            optgroup->append_single_option_line("wave_overhang_floor_layers");
+            optgroup->append_single_option_line("wave_overhang_floor_use_hilbert");
+            optgroup->append_single_option_line("wave_overhang_floor_hilbert_layers");
+            optgroup->append_single_option_line("wave_overhang_floor_hilbert_density");
+            optgroup->append_single_option_line("wave_overhang_floor_print_speed");
+            optgroup->append_single_option_line("wave_overhang_floor_perimeter_speed");
+            optgroup->append_single_option_line("wave_overhang_floor_fan_speed");
+
+            optgroup = page->new_optgroup(L("Wave debug"), L"param_overhang");
+            optgroup->append_single_option_line("wave_overhang_debug_gcode");
+        }
 
         //optgroup = page->new_optgroup(L("Options for support material and raft"));
 
@@ -2839,12 +3060,19 @@ void TabPrint::toggle_options()
     auto   support_type = m_config->opt_enum<SupportType>("support_type");
     if (auto choice = dynamic_cast<Choice*>(field)) {
         auto def = print_config_def.get("support_style");
+        std::vector<int> enum_set_arc    = { smsDefault, smsGrid, smsSnug };
         std::vector<int> enum_set_normal = {smsDefault, smsGrid, smsSnug };
         std::vector<int> enum_set_tree   = { smsDefault, smsTreeSlim, smsTreeStrong, smsTreeHybrid, smsTreeOrganic };
-        auto &           set             = is_tree(support_type) ? enum_set_tree : enum_set_normal;
+        auto &           set             = is_arc(support_type) ? enum_set_arc : (is_tree(support_type) ? enum_set_tree : enum_set_normal);
         auto &           opt             = const_cast<ConfigOptionDef &>(field->m_opt);
         auto             cb              = dynamic_cast<ComboBox *>(choice->window);
-        auto             n               = cb->GetValue();
+        const SupportMaterialStyle support_style = m_config->opt_enum<SupportMaterialStyle>("support_style");
+        int selected_style =
+            is_arc(support_type) && !is_arc_compatible_support_style(support_style) ?
+            smsSnug : static_cast<int>(support_style);
+        if (std::find(set.begin(), set.end(), selected_style) == set.end())
+            selected_style = is_arc(support_type) ? smsSnug : set.front();
+        auto             n               = _(def->enum_labels[selected_style]);
         opt.enum_values.clear();
         opt.enum_labels.clear();
         cb->Clear();
@@ -2953,7 +3181,7 @@ static std::vector<std::string> substruct(std::vector<std::string> const& l, std
 TabPrintModel::TabPrintModel(ParamsPanel* parent, std::vector<std::string> const & keys)
     : TabPrint(parent, Preset::TYPE_MODEL)
     , m_keys(intersect(Preset::print_options(), keys))
-    , m_prints(Preset::TYPE_MODEL, Preset::print_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults()))
+    , m_prints(Preset::TYPE_MODEL, Preset::print_options(), static_print_config_ref(FullPrintConfig::defaults()))
 {
     m_opt_status_value = osInitValue | osSystemValue;
     m_is_default_preset = true;
@@ -3922,18 +4150,45 @@ void TabFilament::build()
         line.append_option(optgroup->get_option("nozzle_temperature_range_high"));
         optgroup->append_line(line);
 
-        optgroup->m_on_change = [this, optgroup](t_config_option_key opt_key, boost::any value) {
-            DynamicPrintConfig &filament_config = m_preset_bundle->filaments.get_edited_preset().config;
+	        optgroup->m_on_change = [this, optgroup](t_config_option_key opt_key, boost::any value) {
+	            DynamicPrintConfig &filament_config = m_preset_bundle->filaments.get_edited_preset().config;
 
-            update_dirty();
-            if (!m_postpone_update_ui && (opt_key == "nozzle_temperature_range_low" || opt_key == "nozzle_temperature_range_high")) {
+	            update_dirty();
+	            if (!m_postpone_update_ui && (opt_key == "nozzle_temperature_range_low" || opt_key == "nozzle_temperature_range_high")) {
                 m_config_manipulation.check_nozzle_recommended_temperature_range(&filament_config);
             }
-            on_value_change(opt_key, value);
-        };
+	            on_value_change(opt_key, value);
+	        };
 
-        // Orca: New section to focus on flow rate and PA to declutter general section
-        optgroup = page->new_optgroup(L("Flow ratio and Pressure Advance"), L"param_flow_ratio_and_pressure_advance");
+	        optgroup = page->new_optgroup(L("Continuous fiber"), L"custom-gcode_strength");
+	        optgroup->append_single_option_line("composite_enabled");
+	        optgroup->append_single_option_line("fiber_name");
+	        optgroup->append_single_option_line("fiber_type");
+	        optgroup->append_single_option_line("fiber_manufacturer");
+	        optgroup->append_single_option_line("fiber_diameter");
+	        optgroup->append_single_option_line("fiber_linear_density");
+	        optgroup->append_single_option_line("fiber_spool_length_km");
+	        optgroup->append_single_option_line("fiber_cost");
+	        optgroup->append_single_option_line("fiber_plastic_name");
+	        optgroup->append_single_option_line("fiber_plastic_type");
+	        optgroup->append_single_option_line("fiber_plastic_manufacturer");
+	        optgroup->append_single_option_line("fiber_plastic_diameter");
+	        optgroup->append_single_option_line("fiber_plastic_density");
+	        optgroup->append_single_option_line("fiber_plastic_cost");
+	        optgroup->append_single_option_line("fiber_plastic_spool_weight");
+	        optgroup->append_single_option_line("fiber_nozzle_temperature_preheat");
+	        optgroup->append_single_option_line("fiber_nozzle_temperature_standby");
+	        optgroup->append_single_option_line("fiber_first_layers_height");
+	        optgroup->append_single_option_line("fiber_plastic_extrusion_speed");
+	        optgroup->append_single_option_line("fiber_extrusion_speed");
+	        optgroup->append_single_option_line("fiber_restart_pause");
+	        optgroup->append_single_option_line("fiber_finish_ironing_distance");
+	        optgroup->append_single_option_line("fiber_priming_line_height");
+	        optgroup->append_single_option_line("fiber_material_kind");
+	        optgroup->append_single_option_line("fiber_source_material_id");
+
+	        // Orca: New section to focus on flow rate and PA to declutter general section
+	        optgroup = page->new_optgroup(L("Flow ratio and Pressure Advance"), L"param_flow_ratio_and_pressure_advance");
         optgroup->append_single_option_line("pellet_flow_coefficient", "printer_basic_information_advanced#pellet-modded-printer");
         optgroup->append_single_option_line("filament_flow_ratio", "material_flow_ratio_and_pressure_advance#flow-ratio", 0);
 
@@ -4575,6 +4830,67 @@ void TabPrinter::build_fff()
         optgroup->append_single_option_line("auxiliary_fan", "printer_basic_information_accessory#auxiliary-part-cooling-fan");
         optgroup->append_single_option_line("support_chamber_temp_control", "printer_basic_information_accessory#support-controlling-chamber-temperature");
         optgroup->append_single_option_line("support_air_filtration", "printer_basic_information_accessory#support-air-filtration");
+
+    page = add_options_page(L("FibreSeek"), "custom-gcode_strength");
+        optgroup = page->new_optgroup(L("Machine contract"), L"param_advanced");
+        optgroup->append_single_option_line("fiber_enabled");
+        optgroup->append_single_option_line("fiber_shared_nozzle");
+        optgroup->append_single_option_line("plastic_nozzle_diameter");
+        optgroup->append_single_option_line("composite_nozzle_diameter");
+        optgroup->append_single_option_line("fiber_postprocessor_type");
+
+        optgroup = page->new_optgroup(L("Extruder contract"), L"custom-gcode_extruder");
+        optgroup->append_single_option_line("fiber_plastic_extruder_offset_x");
+        optgroup->append_single_option_line("fiber_plastic_extruder_offset_y");
+        optgroup->append_single_option_line("fiber_plastic_extruder_offset_z");
+        optgroup->append_single_option_line("fiber_composite_extruder_offset_x");
+        optgroup->append_single_option_line("fiber_composite_extruder_offset_y");
+        optgroup->append_single_option_line("fiber_composite_extruder_offset_z");
+        optgroup->append_single_option_line("fiber_plastic_extruder_heatup_speed");
+        optgroup->append_single_option_line("fiber_composite_extruder_heatup_speed");
+        optgroup->append_single_option_line("fiber_plastic_extruder_has_fan");
+        optgroup->append_single_option_line("fiber_composite_extruder_has_fan");
+        optgroup->append_single_option_line("fiber_plastic_extruder_fan_index");
+        optgroup->append_single_option_line("fiber_composite_extruder_fan_index");
+
+        optgroup = page->new_optgroup(L("Thermal and timing"), L"param_temperature");
+        optgroup->append_single_option_line("fiber_bed_heatup_speed");
+        optgroup->append_single_option_line("fiber_chamber_heatup_speed");
+        optgroup->append_single_option_line("fiber_motion_blocks_buffer_size");
+
+        optgroup = page->new_optgroup(L("Cut and contact"), L"param_advanced");
+        optgroup->append_single_option_line("fiber_cut_distance");
+        optgroup->append_single_option_line("fiber_restart_length");
+        optgroup->append_single_option_line("fiber_nozzle_contact_radius");
+        optgroup->append_single_option_line("fiber_nozzle_contact_radius_extended");
+        optgroup->append_single_option_line("fiber_slot_roles");
+        option = optgroup->get_option("fiber_cut_gcode");
+        option.opt.full_width = true;
+        option.opt.is_code = true;
+        option.opt.height = 8;
+        optgroup->append_single_option_line(option);
+        option = optgroup->get_option("fiber_toolchange_gcode_before");
+        option.opt.full_width = true;
+        option.opt.is_code = true;
+        option.opt.height = 8;
+        optgroup->append_single_option_line(option);
+        option = optgroup->get_option("fiber_toolchange_gcode_after");
+        option.opt.full_width = true;
+        option.opt.is_code = true;
+        option.opt.height = 8;
+        optgroup->append_single_option_line(option);
+        option = optgroup->get_option("fiber_machine_contract_payload");
+        option.opt.full_width = true;
+        option.opt.height = 8;
+        optgroup->append_single_option_line(option);
+
+        optgroup = page->new_optgroup(L("Continuous fiber lane"), L"custom-gcode_strength");
+        optgroup->append_single_option_line("continuous_fiber_name");
+        optgroup->append_single_option_line("continuous_fiber_type");
+        optgroup->append_single_option_line("continuous_fiber_material_kind");
+        optgroup->append_single_option_line("continuous_fiber_source_material_id");
+        optgroup->append_single_option_line("continuous_fiber_diameter");
+        optgroup->append_single_option_line("continuous_fiber_linear_density");
 
         auto edit_custom_gcode_fn = [this](const t_config_option_key& opt_key) { edit_custom_gcode(opt_key); };
 

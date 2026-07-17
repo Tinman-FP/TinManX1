@@ -14,6 +14,8 @@
 
 namespace Slic3r {
 
+class PresetCollection;
+
 class MoonrakerPrinterAgent : public IPrinterAgent
 {
 public:
@@ -117,6 +119,15 @@ protected:
     // Trim whitespace and convert to uppercase
     static std::string trim_and_upper(const std::string& input);
 
+    // Normalize material names for exact profile lookup without losing reinforced/specialty suffixes.
+    static std::string canonical_filament_type(const std::string& input);
+
+    // Resolve a material to a compatible TinmanX1 filament profile without falling back to an unrelated first-visible profile.
+    static std::string resolve_filament_id_for_tray(const PresetCollection& filaments,
+                                                    const std::string&      filament_type,
+                                                    const std::string&      vendor_name = "",
+                                                    const std::string&      color_rgba = "");
+
     // Map filament type to OrcaFilamentLibrary preset ID for AMS sync compatibility
     static std::string map_filament_type_to_generic_id(const std::string& filament_type);
 
@@ -161,6 +172,7 @@ private:
                                    uint64_t generation);
 
     // System-specific filament fetch methods
+    bool fetch_snapmaker_print_task_config(std::vector<AmsTrayData>& trays, int& max_lane_index);
     bool fetch_hh_filament_info(std::vector<AmsTrayData>& trays, int& max_lane_index);
     bool fetch_moonraker_filament_data(std::vector<AmsTrayData>& trays, int& max_lane_index);
 

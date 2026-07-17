@@ -180,7 +180,7 @@ struct SupportParameters {
         support_extrusion_width        = object_config.support_line_width.get_abs_value(nozzle_diameter);
         support_extrusion_width        = support_extrusion_width > 0 ? support_extrusion_width : extrusion_width;
 
-        independent_layer_height = print_config.independent_support_layer_height;
+        independent_layer_height = object_config.independent_support_layer_height;
 
         // force double walls everywhere if wall count is larger than 1        
         tree_branch_diameter_double_wall_area_scaled = object_config.tree_support_wall_count.value > 1  ? 0.1 :

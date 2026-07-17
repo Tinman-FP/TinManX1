@@ -51,13 +51,13 @@ TEST_CASE("extract_suffix", "[BambuNetworking]") {
 
 TEST_CASE("NetworkLibraryVersionInfo::from_static", "[BambuNetworking]") {
     SECTION("converts static version info correctly") {
-        NetworkLibraryVersion static_ver{"02.03.00.62", "02.03.00.62", nullptr, true, nullptr};
+        NetworkLibraryVersion static_ver{"02.06.00.50", "02.06.00.50", nullptr, true, nullptr};
         auto info = NetworkLibraryVersionInfo::from_static(static_ver);
 
-        REQUIRE(info.version == "02.03.00.62");
-        REQUIRE(info.base_version == "02.03.00.62");
+        REQUIRE(info.version == "02.06.00.50");
+        REQUIRE(info.base_version == "02.06.00.50");
         REQUIRE(info.suffix == "");
-        REQUIRE(info.display_name == "02.03.00.62");
+        REQUIRE(info.display_name == "02.06.00.50");
         REQUIRE(info.url_override == "");
         REQUIRE(info.is_latest == true);
         REQUIRE(info.warning == "");
@@ -79,6 +79,12 @@ TEST_CASE("NetworkLibraryVersionInfo::from_static", "[BambuNetworking]") {
         auto info = NetworkLibraryVersionInfo::from_static(static_ver);
 
         REQUIRE(info.url_override == "https://custom.url/plugin.zip");
+    }
+}
+
+TEST_CASE("get_latest_network_version", "[BambuNetworking]") {
+    SECTION("uses the current supported Bambu networking plug-in") {
+        REQUIRE(std::string(get_latest_network_version()) == "02.06.00.50");
     }
 }
 

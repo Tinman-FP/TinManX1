@@ -3,6 +3,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <atomic>
+#include <cstdio>
+#include <cstdlib>
+#include <exception>
+#include <mutex>
 #include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
@@ -16,6 +21,40 @@
 namespace Slic3r {
 
 #define BAMBU_SOURCE_LIBRARY "BambuSource"
+
+#if defined(__APPLE__)
+namespace {
+
+std::once_flag            s_bambu_exit_guard_once;
+std::atomic_bool          s_process_exiting_after_bambu_load{false};
+std::terminate_handler    s_previous_terminate_handler = nullptr;
+
+void install_bambu_networking_exit_guard()
+{
+    if (std::getenv("TINMANX1_DISABLE_BAMBU_EXIT_GUARD"))
+        return;
+
+    std::call_once(s_bambu_exit_guard_once, [] {
+        s_previous_terminate_handler = std::set_terminate([] {
+            if (s_process_exiting_after_bambu_load.load(std::memory_order_acquire)) {
+                std::fflush(nullptr);
+                std::_Exit(0);
+            }
+
+            if (s_previous_terminate_handler)
+                s_previous_terminate_handler();
+
+            std::abort();
+        });
+
+        std::atexit([] {
+            s_process_exiting_after_bambu_load.store(true, std::memory_order_release);
+        });
+    });
+}
+
+} // namespace
+#endif
 
 // ============================================================================
 // Singleton Implementation
@@ -145,7 +184,7 @@ int BBLNetworkPlugin::initialize(bool using_backup, const std::string& version)
     }
 #endif
 
-    if (!m_networking_module) {
+	if (!m_networking_module) {
         if (!m_load_error.has_error) {
             set_load_error(
                 "Network library failed to load",
@@ -155,6 +194,10 @@ int BBLNetworkPlugin::initialize(bool using_backup, const std::string& version)
         }
         return -1;
     }
+
+#if defined(__APPLE__)
+    install_bambu_networking_exit_guard();
+#endif
 
     // Load file transfer interface
     InitFTModule(m_networking_module);
@@ -199,6 +242,21 @@ int BBLNetworkPlugin::unload()
         m_source_module = NULL;
     }
 #else
+#if defined(__APPLE__)
+    // libbambu_networking_02.06.00.50.dylib has been observed to throw from
+    // static teardown on macOS when it is dlclose'd or finalized during quit.
+    // Keep the image resident and let the exit-time terminate guard above handle
+    // the process-finalizer path. This trades a tiny process-lifetime leak for a
+    // clean quit and avoids user-visible crash reports.
+    if (m_networking_module) {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": keeping Bambu networking dylib resident on macOS";
+        m_networking_module = NULL;
+    }
+    if (m_source_module) {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": keeping Bambu source dylib resident on macOS";
+        m_source_module = NULL;
+    }
+#else
     if (m_networking_module) {
         dlclose(m_networking_module);
         m_networking_module = NULL;
@@ -207,6 +265,7 @@ int BBLNetworkPlugin::unload()
         dlclose(m_source_module);
         m_source_module = NULL;
     }
+#endif
 #endif
 
     clear_all_function_pointers();

@@ -66,6 +66,7 @@
 #include "FilamentMapDialog.hpp"
 
 #include "DeviceCore/DevManager.h"
+#include "../Utils/NetworkAgentFactory.hpp"
 
 #ifdef _WIN32
 #include <dbt.h>
@@ -98,6 +99,197 @@ wxDEFINE_EVENT(EVT_UPDATE_PRESET_CB, SimpleEvent);
 wxDEFINE_EVENT(EVT_BACKUP_POST, wxCommandEvent);
 wxDEFINE_EVENT(EVT_LOAD_URL, wxCommandEvent);
 wxDEFINE_EVENT(EVT_LOAD_PRINTER_URL, LoadPrinterViewEvent);
+
+static std::string authority_from_url(std::string url)
+{
+    const size_t scheme = url.find("://");
+    if (scheme != std::string::npos)
+        url = url.substr(scheme + 3);
+
+    const size_t at = url.rfind('@');
+    if (at != std::string::npos)
+        url = url.substr(at + 1);
+
+    const size_t path = url.find_first_of("/?#");
+    if (path != std::string::npos)
+        url = url.substr(0, path);
+
+    return url;
+}
+
+static std::string host_from_url(const std::string& url)
+{
+    std::string authority = authority_from_url(url);
+    if (!authority.empty() && authority.front() == '[') {
+        const size_t end = authority.find(']');
+        if (end != std::string::npos)
+            return authority.substr(1, end - 1);
+    }
+
+    const size_t port = authority.find(':');
+    return port == std::string::npos ? authority : authority.substr(0, port);
+}
+
+static bool address_matches_machine(const std::string& address, const MachineObject* obj)
+{
+    if (address.empty() || obj == nullptr)
+        return false;
+
+    const std::string dev_ip = obj->get_dev_ip();
+    const std::string dev_id = obj->get_dev_id();
+    if (address == dev_ip || address == dev_id)
+        return true;
+
+    const std::string address_authority = authority_from_url(address);
+    const std::string address_host      = host_from_url(address);
+    const std::string dev_ip_authority  = authority_from_url(dev_ip);
+    const std::string dev_id_authority  = authority_from_url(dev_id);
+
+    return (!dev_ip.empty() && (address_authority == dev_ip_authority || address_host == host_from_url(dev_ip))) ||
+           (!dev_id.empty() && (address_authority == dev_id_authority || address_host == host_from_url(dev_id)));
+}
+
+static bool config_matches_machine(const DynamicPrintConfig& cfg, const MachineObject* obj)
+{
+    const std::string print_host       = cfg.has("print_host") ? cfg.opt_string("print_host") : std::string();
+    const std::string print_host_webui = cfg.has("print_host_webui") ? cfg.opt_string("print_host_webui") : std::string();
+    return address_matches_machine(print_host, obj) || address_matches_machine(print_host_webui, obj);
+}
+
+static std::string ensure_http_url(std::string url)
+{
+    if (url.empty())
+        return url;
+
+    const bool has_http_scheme = boost::algorithm::istarts_with(url, "http");
+    const bool has_file_scheme = boost::algorithm::istarts_with(url, "file:");
+    if (!has_http_scheme && !has_file_scheme)
+        url = "http://" + url;
+    return url;
+}
+
+static std::string printer_web_url_for_machine(MachineObject* obj)
+{
+    if (obj == nullptr)
+        return {};
+
+    if (PresetBundle* preset_bundle = wxGetApp().preset_bundle) {
+        for (const PhysicalPrinter& printer : preset_bundle->physical_printers) {
+            if (config_matches_machine(printer.config, obj)) {
+                DynamicPrintConfig cfg = printer.config;
+                std::string url = PrintHost::get_print_host_webui(&cfg);
+                if (!url.empty())
+                    return url;
+            }
+        }
+
+        for (const Preset& printer : preset_bundle->printers) {
+            if (config_matches_machine(printer.config, obj)) {
+                DynamicPrintConfig cfg = printer.config;
+                std::string url = PrintHost::get_print_host_webui(&cfg);
+                if (!url.empty())
+                    return url;
+            }
+        }
+    }
+
+    const std::string url = obj->get_dev_ip().empty() ? obj->get_dev_id() : obj->get_dev_ip();
+    return ensure_http_url(url);
+}
+
+static bool is_bambu_monitor_device(const MachineObject* obj)
+{
+    if (obj == nullptr)
+        return false;
+
+    return obj->is_series_x() || obj->is_series_p() || obj->is_series_n() || obj->is_series_o() ||
+           obj->printer_type == "O1D" || boost::algorithm::istarts_with(obj->printer_type, "BL-");
+}
+
+static std::string configured_agent_for_machine(MachineObject* obj)
+{
+    if (obj == nullptr)
+        return {};
+
+    if (PresetBundle* preset_bundle = wxGetApp().preset_bundle) {
+        for (const PhysicalPrinter& printer : preset_bundle->physical_printers) {
+            if (config_matches_machine(printer.config, obj) && printer.config.has("printer_agent")) {
+                const std::string agent_id = printer.config.opt_string("printer_agent");
+                if (!agent_id.empty())
+                    return agent_id;
+            }
+        }
+
+        for (const Preset& printer : preset_bundle->printers) {
+            if (config_matches_machine(printer.config, obj) && printer.config.has("printer_agent")) {
+                const std::string agent_id = printer.config.opt_string("printer_agent");
+                if (!agent_id.empty())
+                    return agent_id;
+            }
+        }
+    }
+
+    return {};
+}
+
+static std::string agent_id_for_machine(MachineObject* obj)
+{
+    if (is_bambu_monitor_device(obj))
+        return BBL_PRINTER_AGENT_ID;
+
+    if (std::string agent_id = configured_agent_for_machine(obj); !agent_id.empty())
+        return agent_id;
+
+    const std::string type = obj ? obj->printer_type : std::string();
+    const std::string name = obj ? obj->get_dev_name() : std::string();
+    const std::string key  = type + " " + name;
+
+    if (boost::algorithm::icontains(key, "qidi"))
+        return "qidi";
+    if (boost::algorithm::icontains(key, "snapmaker"))
+        return "snapmaker";
+    if (boost::algorithm::icontains(key, "creality") || boost::algorithm::icontains(key, "k2"))
+        return "crealityprint";
+    if (boost::algorithm::icontains(key, "v-core") || boost::algorithm::icontains(key, "ratrig") ||
+        boost::algorithm::icontains(key, "prusa") || boost::algorithm::icontains(key, "sovol"))
+        return "moonraker";
+
+    return ORCA_PRINTER_AGENT_ID;
+}
+
+static bool ensure_printer_agent_for_machine(MachineObject* obj)
+{
+    const std::string agent_id = agent_id_for_machine(obj);
+    if (agent_id.empty())
+        return false;
+
+    NetworkAgent* agent = wxGetApp().getAgent();
+    if (!agent)
+        return false;
+
+    if (auto current_agent = agent->get_printer_agent()) {
+        if (current_agent->get_agent_info().id == agent_id)
+            return true;
+    }
+
+    if (!NetworkAgentFactory::is_printer_agent_registered(agent_id)) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": unregistered agent ID '" << agent_id << "'";
+        return false;
+    }
+
+    const std::string cloud_agent_id = agent_id == BBL_PRINTER_AGENT_ID ? BBL_CLOUD_PROVIDER : ORCA_CLOUD_PROVIDER;
+    auto              cloud_agent    = agent->get_cloud_agent(cloud_agent_id);
+    auto              printer_agent  = NetworkAgentFactory::create_printer_agent_by_id(agent_id, cloud_agent, data_dir());
+    if (!printer_agent) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": failed to create agent '" << agent_id << "'";
+        return false;
+    }
+
+    agent->set_printer_agent(printer_agent);
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": switched printer agent to " << agent_id
+                            << " for " << (obj ? obj->get_dev_id() : std::string());
+    return true;
+}
 
 enum class ERescaleTarget
 {
@@ -267,7 +459,7 @@ static wxIcon main_frame_icon(GUI_App::EAppMode app_mode)
     }
     return wxIcon(path, wxBITMAP_TYPE_ICO);
 #else // _WIN32
-    return wxIcon(Slic3r::var("OrcaSlicer_128px.png"), wxBITMAP_TYPE_PNG);
+    return wxIcon(Slic3r::var("TinManX1_128px.png"), wxBITMAP_TYPE_PNG);
 #endif // _WIN32
 }
 
@@ -394,7 +586,7 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
     default:
     case GUI_App::EAppMode::Editor:
         m_taskbar_icon = std::make_unique<OrcaSlicerTaskBarIcon>(wxTBI_DOCK);
-        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("OrcaSlicer-mac_256px.ico"), wxBITMAP_TYPE_ICO), "OrcaSlicer");
+        m_taskbar_icon->SetIcon(wxIcon(Slic3r::var("TinManX1-mac_256px.ico"), wxBITMAP_TYPE_ICO), "TinManX1");
         break;
     case GUI_App::EAppMode::GCodeViewer:
         break;
@@ -1370,23 +1562,20 @@ void MainFrame::init_tabpanel() {
 void MainFrame::show_device(bool bBBLPrinter) {
     auto idx = -1;
     if (bBBLPrinter) {
-        if (m_tabpanel->FindPage(m_monitor) != wxNOT_FOUND) {
-            fit_tab_labels(); // ORCA on printer change - same button layout
-            return;
-        }
-        // Remove printer view
-        if ((idx = m_tabpanel->FindPage(m_printer_view)) != wxNOT_FOUND) {
-            m_printer_view->Show(false);
-            m_tabpanel->RemovePage(idx);
-        }
-
-        // Create/insert monitor page
         if (!m_monitor) {
             m_monitor = new MonitorPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
             m_monitor->SetBackgroundColour(*wxWHITE);
         }
-        m_monitor->Show(false);
-        m_tabpanel->InsertPage(tpMonitor, m_monitor, _L("Device"), std::string("tab_monitor_active"), std::string("tab_monitor_active"));
+
+        if (m_tabpanel->FindPage(m_monitor) == wxNOT_FOUND) {
+            if ((idx = m_tabpanel->FindPage(m_printer_view)) != wxNOT_FOUND) {
+                m_printer_view->Show(false);
+                m_tabpanel->RemovePage(idx);
+            }
+
+            m_monitor->Show(false);
+            m_tabpanel->InsertPage(tpMonitor, m_monitor, _L("Device"), std::string("tab_monitor_active"), std::string("tab_monitor_active"));
+        }
 
         if (wxGetApp().is_enable_multi_machine()) {
             if (!m_multi_machine) {
@@ -1394,19 +1583,23 @@ void MainFrame::show_device(bool bBBLPrinter) {
                 m_multi_machine->SetBackgroundColour(*wxWHITE);
             }
             // TODO: change the bitmap
-            m_multi_machine->Show(false);
-            m_tabpanel->InsertPage(tpMultiDevice, m_multi_machine, _L("Multi-device"), std::string("tab_multi_active"),
-                                   std::string("tab_multi_active"), false);
+            if (m_tabpanel->FindPage(m_multi_machine) == wxNOT_FOUND) {
+                m_multi_machine->Show(false);
+                m_tabpanel->InsertPage(tpMultiDevice, m_multi_machine, _L("Multi-device"), std::string("tab_multi_active"),
+                                       std::string("tab_multi_active"), false);
+            }
         }
         if (!m_calibration) {
             m_calibration = new CalibrationPanel(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
             m_calibration->SetBackgroundColour(*wxWHITE);
         }
-        m_calibration->Show(false);
-        // Calibration is always the last page, so don't use InsertPage here. Otherwise, if multi_machine page is not enabled,
-        // the calibration tab won't be properly added as well, due to the TabPosition::tpCalibration no longer matches the real tab position.
-        m_tabpanel->AddPage(m_calibration, _L("Calibration"), std::string("tab_calibration_active"),
-                               std::string("tab_calibration_active"), false);
+        if (m_tabpanel->FindPage(m_calibration) == wxNOT_FOUND) {
+            m_calibration->Show(false);
+            // Calibration is always the last page, so don't use InsertPage here. Otherwise, if multi_machine page is not enabled,
+            // the calibration tab won't be properly added as well, due to the TabPosition::tpCalibration no longer matches the real tab position.
+            m_tabpanel->AddPage(m_calibration, _L("Calibration"), std::string("tab_calibration_active"),
+                                   std::string("tab_calibration_active"), false);
+        }
 
 #ifdef _MSW_DARK_MODE
         wxGetApp().UpdateDarkUIWin(this);
@@ -1419,10 +1612,6 @@ void MainFrame::show_device(bool bBBLPrinter) {
         }
         if ((idx = m_tabpanel->FindPage(m_calibration)) != wxNOT_FOUND) {
             m_calibration->Show(false);
-            m_tabpanel->RemovePage(idx);
-        }
-        if ((idx = m_tabpanel->FindPage(m_multi_machine)) != wxNOT_FOUND) {
-            m_multi_machine->Show(false);
             m_tabpanel->RemovePage(idx);
         }
         if ((idx = m_tabpanel->FindPage(m_monitor)) != wxNOT_FOUND) {
@@ -1441,6 +1630,21 @@ void MainFrame::show_device(bool bBBLPrinter) {
         m_printer_view->Show(false);
         m_tabpanel->InsertPage(tpMonitor, m_printer_view, _L("Device"), std::string("tab_monitor_active"),
                                std::string("tab_monitor_active"));
+
+        if (wxGetApp().is_enable_multi_machine()) {
+            if (!m_multi_machine) {
+                m_multi_machine = new MultiMachinePage(m_tabpanel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+                m_multi_machine->SetBackgroundColour(*wxWHITE);
+            }
+            if (m_tabpanel->FindPage(m_multi_machine) == wxNOT_FOUND) {
+                m_multi_machine->Show(false);
+                m_tabpanel->InsertPage(tpMultiDevice, m_multi_machine, _L("Multi-device"), std::string("tab_multi_active"),
+                                       std::string("tab_multi_active"), false);
+            }
+        } else if (m_multi_machine && (idx = m_tabpanel->FindPage(m_multi_machine)) != wxNOT_FOUND) {
+            m_multi_machine->Show(false);
+            m_tabpanel->RemovePage(idx);
+        }
     }
     fit_tab_labels(); // ORCA on printer change
 }
@@ -2809,7 +3013,7 @@ void MainFrame::init_menubar_as_editor()
         append_submenu(fileMenu, export_menu, wxID_ANY, _L("Export"), "");
 
         fileMenu->AppendSeparator();
-        append_menu_item(fileMenu, wxID_ANY, _L("Sync Presets"), _L("Pull and apply the latest presets from OrcaCloud"),
+        append_menu_item(fileMenu, wxID_ANY, _L("Sync Presets"), _L("Pull and apply the latest presets from TinManX1 Cloud"),
             [this](wxCommandEvent&) {
                 if (!wxGetApp().is_user_login()) {
                     MessageDialog info_dlg(this, _L("You must be logged in to sync presets from cloud."),
@@ -3299,7 +3503,7 @@ void MainFrame::init_menubar_as_editor()
         "", nullptr, []() { return true; }, this);
 
     append_menu_item(
-        m_topbar->GetTopMenu(), wxID_ANY, _L("Sync Presets"), _L("Pull and apply the latest presets from OrcaCloud"),
+        m_topbar->GetTopMenu(), wxID_ANY, _L("Sync Presets"), _L("Pull and apply the latest presets from TinManX1 Cloud"),
         [this](wxCommandEvent&) {
             if (!wxGetApp().is_user_login()) {
                 MessageDialog info_dlg(this, _L("You must be logged in to sync presets from cloud."),
@@ -3908,12 +4112,61 @@ void MainFrame::select_tab(wxPanel* panel)
 //BBS
 void MainFrame::jump_to_monitor(std::string dev_id)
 {
-    if(!m_monitor)
-        return;
-    m_tabpanel->SetSelection(tpMonitor);
+    Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
+    MachineObject*         obj = nullptr;
+
     if (!dev_id.empty()) {
-        ((MonitorPanel*)m_monitor)->select_machine(dev_id);
+        if (dev)
+            obj = dev->get_my_machine(dev_id);
     }
+
+    if (is_bambu_monitor_device(obj)) {
+        auto select_monitor_machine = [this, dev_id]() {
+            Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
+            MachineObject*         obj = dev && !dev_id.empty() ? dev->get_my_machine(dev_id) : nullptr;
+            ensure_printer_agent_for_machine(obj);
+
+            const bool already_selected =
+                dev && dev->get_selected_machine() && dev->get_selected_machine()->get_dev_id() == dev_id;
+            if (dev && obj && !dev_id.empty() && !already_selected)
+                dev->set_selected_machine(dev_id);
+
+            show_device(true);
+
+            const int monitor_idx = m_monitor ? m_tabpanel->FindPage(m_monitor) : wxNOT_FOUND;
+            if (monitor_idx != wxNOT_FOUND) {
+                m_tabpanel->SetSelection(monitor_idx);
+                if (m_monitor)
+                    ((MonitorPanel*)m_monitor)->update_all();
+            }
+        };
+
+        select_monitor_machine();
+        return;
+    }
+
+    const std::string url = printer_web_url_for_machine(obj);
+    wxString wx_url = from_u8(url);
+
+    if (!dev_id.empty() && dev) {
+        ensure_printer_agent_for_machine(obj);
+        dev->set_selected_machine(dev_id);
+    }
+
+    auto select_printer_webview = [this, dev_id, wx_url]() mutable {
+        show_device(false);
+
+        const int printer_view_idx = m_printer_view ? m_tabpanel->FindPage(m_printer_view) : wxNOT_FOUND;
+        if (printer_view_idx != wxNOT_FOUND) {
+            m_tabpanel->SetSelection(printer_view_idx);
+            if (!wx_url.empty())
+                m_printer_view->load_url(wx_url);
+        }
+    };
+
+    select_printer_webview();
+    CallAfter(select_printer_webview);
+    return;
 }
 
 void MainFrame::jump_to_multipage()
@@ -4304,7 +4557,7 @@ void MainFrame::update_side_preset_ui()
 void MainFrame::on_select_default_preset(SimpleEvent& evt)
 {
     MessageDialog dialog(this,
-                    _L("Do you want to synchronize your personal data from Orca Cloud?\n"
+                    _L("Do you want to synchronize your personal data from TinManX1 Cloud?\n"
                         "It contains the following information:\n"
                         "1. The Process presets\n"
                         "2. The Filament presets\n"
@@ -4381,7 +4634,7 @@ SettingsDialog::SettingsDialog(MainFrame* mainframe)
         SetIcon(wxIcon(szExeFileName, wxBITMAP_TYPE_ICO));
     }
 #else
-    SetIcon(wxIcon(var("OrcaSlicer_128px.png"), wxBITMAP_TYPE_PNG));
+    SetIcon(wxIcon(var("TinManX1_128px.png"), wxBITMAP_TYPE_PNG));
 #endif // _WIN32
 
     //just hide the Frame on closing
@@ -4437,4 +4690,3 @@ void SettingsDialog::on_dpi_changed(const wxRect& suggested_rect)
 
 } // GUI
 } // Slic3r
-

@@ -1017,6 +1017,27 @@ float GLVolumeCollection::get_selection_support_normal_z() const
     return static_cast<float>(-std::cos(std::clamp(angle_rad, 0.0, Geometry::deg2rad(89.0))));
 }
 
+static std::array<float, 3> strength_lens_axis_strengths(TinmanStrengthMaterialModel material_model)
+{
+    switch (material_model) {
+    case TinmanStrengthMaterialModel::Isotropic:
+        return {{ 1.0f, 1.0f, 1.0f }};
+    case TinmanStrengthMaterialModel::ContinuousFiber:
+        return {{ 1.40f, 1.40f, 0.45f }};
+    case TinmanStrengthMaterialModel::FdmAnisotropic:
+    case TinmanStrengthMaterialModel::FilamentPreset:
+    default:
+        return {{ 1.0f, 1.0f, 0.75f }};
+    }
+}
+
+void GLVolumeCollection::set_strength_lens_heatmap(bool active, TinmanStrengthMaterialModel material_model, TinmanStrengthLoadAxis load_axis)
+{
+    m_strength_lens_heatmap.active = active;
+    m_strength_lens_heatmap.axis_strength = strength_lens_axis_strengths(material_model);
+    m_strength_lens_heatmap.load_axis = load_axis;
+}
+
 //BBS: add outline drawing logic
 void GLVolumeCollection::render(GLVolumeCollection::ERenderType       type,
                                 bool                                  disable_cullface,
@@ -1113,6 +1134,53 @@ void GLVolumeCollection::render(GLVolumeCollection::ERenderType       type,
         shader->set_uniform("slope.actived", m_slope.isGlobalActive && !volume.first->is_modifier && !volume.first->is_wipe_tower);
         shader->set_uniform("slope.volume_world_normal_matrix", static_cast<Matrix3f>(volume.first->world_matrix().matrix().block(0, 0, 3, 3).inverse().transpose().cast<float>()));
         shader->set_uniform("slope.normal_z", support_normal_z);
+
+        shader->set_uniform("strength_lens.enabled", false);
+        const bool strength_lens_active =
+            m_strength_lens_heatmap.active &&
+            !volume.first->is_modifier &&
+            !volume.first->is_wipe_tower &&
+            !volume.first->is_extrusion_path &&
+            volume.first->composite_id.object_id >= 0 &&
+            volume.first->composite_id.volume_id >= 0;
+        if (strength_lens_active) {
+            const BoundingBoxf3& bbox = volume.first->transformed_convex_hull_bounding_box();
+            const Vec3d size = bbox.size();
+            if (bbox.defined && size.x() > 1e-6 && size.y() > 1e-6 && size.z() > 1e-6) {
+                int load_axis_idx = 0;
+                switch (m_strength_lens_heatmap.load_axis) {
+                case TinmanStrengthLoadAxis::X:
+                    load_axis_idx = 0;
+                    break;
+                case TinmanStrengthLoadAxis::Y:
+                    load_axis_idx = 1;
+                    break;
+                case TinmanStrengthLoadAxis::Z:
+                    load_axis_idx = 2;
+                    break;
+                case TinmanStrengthLoadAxis::Auto:
+                default:
+                    if (size.y() >= size.x() && size.y() >= size.z())
+                        load_axis_idx = 1;
+                    else if (size.z() >= size.x() && size.z() >= size.y())
+                        load_axis_idx = 2;
+                    break;
+                }
+
+                Vec3f load_axis = Vec3f::Zero();
+                load_axis(load_axis_idx) = 1.0f;
+
+                shader->set_uniform("strength_lens.enabled", true);
+                shader->set_uniform("strength_lens.axis_strength", m_strength_lens_heatmap.axis_strength);
+                shader->set_uniform("strength_lens.bbox_min", Vec3f(float(bbox.min.x()), float(bbox.min.y()), float(bbox.min.z())));
+                shader->set_uniform("strength_lens.bbox_size", Vec3f(float(size.x()), float(size.y()), float(size.z())));
+                shader->set_uniform("strength_lens.load_axis", load_axis);
+                shader->set_uniform("strength_lens.weak_axis", Vec3f(0.0f, 0.0f, 1.0f));
+                shader->set_uniform("strength_lens.load_span_weight", m_strength_lens_heatmap.load_span_weight);
+                shader->set_uniform("strength_lens.surface_weight", m_strength_lens_heatmap.surface_weight);
+                shader->set_uniform("strength_lens.layer_penalty_weight", m_strength_lens_heatmap.layer_penalty_weight);
+            }
+        }
 
 #if ENABLE_ENVIRONMENT_MAP
         unsigned int environment_texture_id = GUI::wxGetApp().plater()->get_environment_texture_id();

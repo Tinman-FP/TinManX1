@@ -17,6 +17,7 @@
 #include <array>
 #include <cstdint>
 #include <float.h>
+#include <map>
 #include <set>
 #include <unordered_set>
 
@@ -234,6 +235,10 @@ private:
 
     float m_legend_height;
     PrintEstimatedStatistics m_print_statistics;
+    std::map<std::string, std::string> m_arc_support_preview_metadata;
+    std::map<std::string, std::string> m_strength_lens_preview_metadata;
+    std::map<libvgcode::EGCodeExtrusionRole, libvgcode::Color> m_strength_lens_saved_role_colors;
+    bool m_strength_lens_view_active{ false };
     std::array<float, 2> m_detected_point_sizes = { 0.0f, 0.0f };
     GCodeProcessorResult::SettingsIds m_settings_ids;
 
@@ -354,6 +359,10 @@ public:
 #endif // VGCODE_ENABLE_COG_AND_TOOL_MARKERS
 
 private:
+    void apply_strength_lens_role_colors();
+    bool is_strength_lens_view_item(size_t index) const;
+    void select_strength_lens_view();
+    bool sliced_strength_lens_enabled() const;
     //BBS: always load shell at preview
     //void load_shells(const Print& print);
     void render_toolpaths();
@@ -369,4 +378,3 @@ private:
 } // namespace Slic3r
 
 #endif // slic3r_GCodeViewer_hpp_
-

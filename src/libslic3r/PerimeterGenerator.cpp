@@ -9,12 +9,17 @@
 #include "ShortestPath.hpp"
 #include "VariableWidth.hpp"
 #include "Arachne/WallToolPaths.hpp"
+#include "WaveOverhangs/WaveOverhangs.hpp"
+#include "WaveOverhangs/AndersonsGenerator.hpp"
+#include "WaveOverhangs/KaiserGenerator.hpp"
 #include "Geometry/ConvexHull.hpp"
 #include "ExPolygonCollection.hpp"
 #include "Geometry.hpp"
 #include "Line.hpp"
 #include <cmath>
 #include <cassert>
+#include <iomanip>
+#include <sstream>
 #include <unordered_set>
 #include <thread>
 #include "libslic3r/AABBTreeLines.hpp"
@@ -1084,31 +1089,370 @@ std::tuple<std::vector<ExtrusionPaths>, Polygons> generate_extra_perimeters_over
     return {extra_perims, diff(inset_overhang_area, inset_overhang_area_left_unfilled)};
 }
 
-void PerimeterGenerator::apply_extra_perimeters(ExPolygons &infill_area)
+static std::tuple<std::vector<ExtrusionPaths>, Polygons, WaveOverhangs::GenerationDiagnostics> generate_wave_overhang_paths(
+    ExPolygons               infill_area,
+    const Polygons          &lower_slices_polygons,
+    int                      perimeter_count,
+    const PrintRegionConfig &region_config,
+    const Flow              &overhang_flow,
+    double                   scaled_resolution)
 {
-    if (!m_spiral_vase && this->lower_slices != nullptr && this->config->detect_overhang_wall && this->config->extra_perimeters_on_overhangs &&
+    if (infill_area.empty())
+        return { {}, {}, {} };
+
+    WaveOverhangs::CommonParams params;
+    params.perimeter_count        = perimeter_count;
+    params.additional_shell_count = 0;
+    params.line_spacing           = region_config.wave_overhang_line_spacing.value;
+    params.line_width             = overhang_flow.nozzle_diameter();
+    params.overhang_flow          = overhang_flow;
+    params.scaled_resolution      = scaled_resolution;
+    params.spacing_mode           = region_config.wave_overhang_spacing_mode == wosmProgressive
+        ? WaveOverhangs::SpacingMode::Progressive
+        : WaveOverhangs::SpacingMode::Uniform;
+    switch (region_config.wave_overhang_seam_mode.value) {
+    case woseAligned: params.seam_mode = WaveOverhangs::SeamMode::Aligned; break;
+    case woseRandom:  params.seam_mode = WaveOverhangs::SeamMode::Random;  break;
+    case woseAlternating:
+    default:          params.seam_mode = WaveOverhangs::SeamMode::Alternating; break;
+    }
+    params.min_length_mm          = region_config.wave_overhang_min_length.value;
+    params.max_iterations         = region_config.wave_overhang_max_iterations.value;
+    params.perimeter_overlap      = region_config.wave_overhang_perimeter_overlap.value;
+    params.minimum_wave_width     = region_config.wave_overhang_minimum_width.value;
+    params.pattern                = region_config.wave_overhang_pattern.value;
+    params.min_new_area           = region_config.wave_overhang_min_new_area.value;
+    params.use_instead_of_bridges = region_config.wave_overhangs_instead_of_bridges.value;
+    params.fringe_reinforcement_max_cover_to_real = region_config.wave_overhang_fringe_reinforcement_max_cover_to_real.value;
+    params.fringe_reinforcement_max_cover_area_mm2 = region_config.wave_overhang_fringe_reinforcement_max_cover_area.value;
+    params.fringe_contact_compensation_max_over_cap = region_config.wave_overhang_fringe_contact_compensation_max_over_cap.value;
+    params.corner_taper_enable    = region_config.wave_overhang_corner_taper_enable.value;
+    params.line_spacing_corner    = region_config.wave_overhang_line_spacing_corner.value;
+    params.corner_taper_distance  = region_config.wave_overhang_corner_taper_distance.value;
+    params.corner_angle_threshold = region_config.wave_overhang_corner_angle_threshold.value;
+
+    WaveOverhangs::GenerateResult result;
+    if (region_config.wave_overhang_algorithm == woaKaiser) {
+        WaveOverhangs::KaiserGenerator generator;
+        generator.overlap = region_config.wave_overhang_ring_overlap.value;
+        result = generator.generate(infill_area, lower_slices_polygons, params);
+    } else {
+        WaveOverhangs::AndersonsGenerator generator;
+        result = generator.generate(infill_area, lower_slices_polygons, params);
+    }
+
+    return { std::move(result.paths), std::move(result.residual), result.diagnostics };
+}
+
+static Polygons wave_support_style_lower_mask(
+    const ExPolygons         *lower_slices,
+    const Polygons           &fallback_lower_mask,
+    int                       layer_id,
+    double                    layer_height,
+    const PrintObjectConfig  &object_config,
+    const Flow               &external_perimeter_flow)
+{
+    if (lower_slices == nullptr || lower_slices->empty())
+        return fallback_lower_mask;
+
+    const bool support_auto = is_normal_auto_support(object_config.support_type.value);
+    if (!support_auto && object_config.support_threshold_angle.value <= 0)
+        return fallback_lower_mask;
+
+    const float fw = float(external_perimeter_flow.scaled_width());
+    double thresh_angle = object_config.support_threshold_angle.value > 0 ?
+        object_config.support_threshold_angle.value + 1. :
+        0.;
+    thresh_angle = std::min(thresh_angle, 89.);
+    const double threshold_rad = Geometry::deg2rad(thresh_angle);
+    const float lower_layer_offset =
+        (layer_id < object_config.enforce_support_layers.value) ?
+            0.f :
+        (threshold_rad > 0.) ?
+            float(scale_(layer_height / tan(threshold_rad))) :
+            fw - float(scale_(object_config.support_threshold_overlap.get_abs_value(unscale_(fw))));
+
+    Polygons lower_layer_polygons = to_polygons(*lower_slices);
+    return lower_layer_offset == 0.f ?
+        lower_layer_polygons :
+        expand(lower_layer_polygons, lower_layer_offset, ClipperLib::jtSquare, 0.);
+}
+
+static ExPolygons wave_support_style_candidate_area(
+    const ExPolygon &island_region,
+    const Polygons  &support_style_lower_mask,
+    coord_t          anchor_window)
+{
+    const Polygons island_polys = to_polygons(ExPolygons{ island_region });
+    const Polygons unsupported  = diff(island_polys, support_style_lower_mask);
+    if (unsupported.empty())
+        return {};
+
+    return union_ex(intersection(island_polys, expand(unsupported, anchor_window, jtRound, 0.)));
+}
+
+static size_t count_extrusion_paths(const std::vector<ExtrusionPaths> &regions)
+{
+    size_t count = 0;
+    for (const ExtrusionPaths &paths : regions)
+        count += paths.size();
+    return count;
+}
+
+static std::string format_wave_overhang_diagnostic(
+    int                                      layer_id,
+    const PrintRegionConfig                &region_config,
+    const WaveOverhangs::GenerationDiagnostics &diagnostics,
+    const std::vector<ExtrusionPaths>      &paths)
+{
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(3)
+       << "; WAVE_OVERHANG_DIAG"
+       << " layer=" << layer_id
+       << " algo=" << (region_config.wave_overhang_algorithm.value == woaKaiser ? "kaiser" : "andersons")
+       << " candidates=" << diagnostics.candidate_regions
+       << " real_empty=" << diagnostics.real_overhang_empty
+       << " bridge_skip=" << diagnostics.bridgeable_skipped
+       << " fringe_filtered=" << diagnostics.fringe_filtered_regions
+       << " fringe_reinforced=" << diagnostics.fringe_reinforced_regions
+       << " fringe_reinforcement_rejected=" << diagnostics.fringe_reinforcement_rejected_regions
+       << " fringe_contact_compensated=" << diagnostics.fringe_contact_compensated_regions
+       << " fringe_contact_compensation_fronts=" << diagnostics.fringe_contact_compensation_fronts
+       << " covers=" << diagnostics.wave_cover_components
+       << " splits=" << diagnostics.split_cover_components
+       << " seed_empty=" << diagnostics.seed_empty_splits
+       << " accumulated_empty=" << diagnostics.accumulated_empty_splits
+       << " front_empty=" << diagnostics.front_empty_splits
+       << " front_levels=" << diagnostics.front_levels
+       << " fronts=" << diagnostics.front_polylines
+       << " emitted_paths=" << diagnostics.emitted_paths
+       << " actual_paths=" << count_extrusion_paths(paths)
+       << " path_regions=" << diagnostics.path_regions
+       << " overhang_area_mm2=" << diagnostics.overhang_area_mm2
+       << " real_overhang_area_mm2=" << diagnostics.real_overhang_area_mm2
+       << " wave_cover_area_mm2=" << diagnostics.wave_cover_area_mm2
+       << " filled_area_mm2=" << diagnostics.filled_area_mm2
+       << " instead_of_bridges=" << (region_config.wave_overhangs_instead_of_bridges.value ? 1 : 0)
+       << " min_new_area_mm2=" << region_config.wave_overhang_min_new_area.value
+       << " max_iterations=" << region_config.wave_overhang_max_iterations.value
+       << "\n";
+    for (const WaveOverhangs::GenerationDiagnostics::Component &component : diagnostics.components) {
+        const double filled_to_cover = component.wave_cover_area_mm2 > 0. ?
+            component.filled_area_mm2 / component.wave_cover_area_mm2 : 0.;
+        const double cover_to_real = component.real_overhang_area_mm2 > 0. ?
+            component.wave_cover_area_mm2 / component.real_overhang_area_mm2 : 0.;
+        ss << "; WAVE_OVERHANG_COMPONENT"
+           << " layer=" << layer_id
+           << " candidate=" << component.candidate_index
+           << " covers=" << component.wave_cover_components
+           << " emitted_paths=" << component.emitted_paths
+           << " fringe_filter=" << (component.fringe_filter_applied ? 1 : 0)
+           << " fringe_reinforce=" << (component.fringe_reinforced ? 1 : 0)
+           << " fringe_reject=" << (component.fringe_reinforcement_rejected ? 1 : 0)
+           << " fringe_compensate=" << (component.fringe_contact_compensated ? 1 : 0)
+           << " fringe_compensation_fronts=" << component.fringe_contact_compensation_fronts
+           << " real_overhang_area_mm2=" << component.real_overhang_area_mm2
+           << " wave_cover_area_mm2=" << component.wave_cover_area_mm2
+           << " filled_area_mm2=" << component.filled_area_mm2
+           << " filled_to_cover=" << filled_to_cover
+           << " cover_to_real=" << cover_to_real
+           << "\n";
+    }
+    return ss.str();
+}
+
+static ExtrusionEntityCollection clip_inner_perimeters_in_zone(
+    const ExtrusionEntityCollection &src,
+    const Polygons                  &clip_region,
+    int                              preserve_outer_count)
+{
+    ExtrusionEntityCollection out;
+    out.no_sort = src.no_sort;
+    if (clip_region.empty()) {
+        out.append(src.entities);
+        return out;
+    }
+
+    BoundingBox clip_bbox = get_extents(clip_region);
+    clip_bbox.offset(SCALED_EPSILON);
+
+    auto disjoint = [&](const ExtrusionEntity *entity) {
+        Points points;
+        entity->collect_points(points);
+        if (points.empty())
+            return true;
+        return !clip_bbox.overlap(BoundingBox(points));
+    };
+
+    auto clip_paths = [&](const ExtrusionPaths &src_paths, ExtrusionPaths &dst_paths) {
+        dst_paths.reserve(dst_paths.size() + src_paths.size());
+        for (const ExtrusionPath &path : src_paths) {
+            Polylines kept = diff_pl(Polylines{ path.polyline.to_polyline() }, clip_region);
+            const double half_width = scale_(double(path.width) * 0.5);
+            const double min_length = 2.0 * half_width + double(SCALED_EPSILON);
+            for (Polyline &polyline : kept) {
+                if (polyline.points.size() < 2)
+                    continue;
+                if (half_width > 0. && polyline.length() <= min_length)
+                    continue;
+                polyline.clip_start(half_width);
+                if (polyline.points.size() < 2)
+                    continue;
+                polyline.clip_end(half_width);
+                if (polyline.points.size() < 2)
+                    continue;
+                ExtrusionPath clipped(path);
+                clipped.polyline = Polyline3(polyline);
+                dst_paths.emplace_back(std::move(clipped));
+            }
+        }
+    };
+
+    for (const ExtrusionEntity *entity : src.entities) {
+        if (!entity)
+            continue;
+        if (entity->inset_idx >= 0 && entity->inset_idx < preserve_outer_count) {
+            out.append(*entity);
+            continue;
+        }
+        if (disjoint(entity)) {
+            out.append(*entity);
+            continue;
+        }
+        if (const ExtrusionLoop *loop = dynamic_cast<const ExtrusionLoop*>(entity)) {
+            ExtrusionPaths kept_paths;
+            clip_paths(loop->paths, kept_paths);
+            if (!kept_paths.empty()) {
+                ExtrusionMultiPath multipath(std::move(kept_paths));
+                multipath.inset_idx = entity->inset_idx;
+                out.append(std::move(multipath));
+            }
+        } else if (const ExtrusionMultiPath *multipath = dynamic_cast<const ExtrusionMultiPath*>(entity)) {
+            ExtrusionPaths kept_paths;
+            clip_paths(multipath->paths, kept_paths);
+            if (!kept_paths.empty()) {
+                ExtrusionMultiPath clipped_multipath(std::move(kept_paths));
+                clipped_multipath.inset_idx = entity->inset_idx;
+                out.append(std::move(clipped_multipath));
+            }
+        } else if (const ExtrusionPath *path = dynamic_cast<const ExtrusionPath*>(entity)) {
+            Polylines kept = diff_pl(Polylines{ path->polyline.to_polyline() }, clip_region);
+            for (Polyline &polyline : kept) {
+                if (polyline.points.size() < 2)
+                    continue;
+                ExtrusionPath clipped(*path);
+                clipped.polyline = Polyline3(polyline);
+                clipped.inset_idx = entity->inset_idx;
+                out.append(std::move(clipped));
+            }
+        } else if (const ExtrusionEntityCollection *collection = dynamic_cast<const ExtrusionEntityCollection*>(entity)) {
+            ExtrusionEntityCollection clipped = clip_inner_perimeters_in_zone(*collection, clip_region, preserve_outer_count);
+            if (!clipped.empty())
+                out.append(std::move(clipped));
+        } else {
+            out.append(*entity);
+        }
+    }
+
+    return out;
+}
+
+void PerimeterGenerator::apply_extra_perimeters(ExPolygons &infill_area, const ExPolygon &island_region)
+{
+    const bool use_wave_overhangs = this->config->wave_overhangs.value;
+    const bool use_extra_overhang_perimeters = this->config->extra_perimeters_on_overhangs.value || use_wave_overhangs;
+    if (!m_spiral_vase && this->lower_slices != nullptr && this->config->detect_overhang_wall && use_extra_overhang_perimeters &&
         this->config->wall_loops > 0 && this->layer_id > this->object_config->raft_layers) {
-        // Generate extra perimeters on overhang areas, and cut them to these parts only, to save print time and material
-        auto [extra_perimeters, filled_area] = generate_extra_perimeters_over_overhangs(infill_area, this->lower_slices_polygons(),
-                                                                                        this->config->wall_loops, this->overhang_flow,
-                                                                                        this->m_scaled_resolution, *this->object_config,
-                                                                                        *this->print_config);
+        ExPolygons wave_infill = infill_area;
+        const int wave_outer = std::max(0, this->config->wave_overhang_outer_perimeters.value);
+        Polygons wave_lower_mask;
+        if (use_wave_overhangs) {
+            wave_lower_mask = wave_support_style_lower_mask(
+                this->lower_slices, this->lower_slices_polygons(), this->layer_id,
+                this->layer_height, *this->object_config,
+                this->ext_perimeter_flow);
+            // Detect Wave overhangs from a support-style source window, not
+            // from the whole island. The window preserves nearby anchors for
+            // seed generation while preventing tiny support-style overhangs
+            // from expanding into a broad connected-island Wave fill.
+            const coord_t flow_window = std::max<coord_t>(
+                this->overhang_flow.scaled_spacing() * coord_t(2),
+                this->overhang_flow.scaled_width() * coord_t(2));
+            const coord_t wave_window = coord_t(scale_(std::max(1.0, this->config->wave_overhang_line_spacing.value * 2.0)));
+            wave_infill = wave_support_style_candidate_area(
+                island_region, wave_lower_mask, std::max(flow_window, wave_window));
+        }
+
+        std::vector<ExtrusionPaths> extra_perimeters;
+        Polygons                    filled_area;
+        WaveOverhangs::GenerationDiagnostics wave_diagnostics;
+        if (use_wave_overhangs) {
+            std::tie(extra_perimeters, filled_area, wave_diagnostics) =
+                generate_wave_overhang_paths(wave_infill, wave_lower_mask,
+                                             this->config->wall_loops, *this->config,
+                                             this->overhang_flow, this->m_scaled_resolution);
+            if (this->config->wave_overhang_debug_gcode.value)
+                this->out_wave_overhang_diagnostics.push_back(
+                    format_wave_overhang_diagnostic(this->layer_id, *this->config, wave_diagnostics, extra_perimeters));
+        } else {
+            std::tie(extra_perimeters, filled_area) =
+                generate_extra_perimeters_over_overhangs(infill_area, this->lower_slices_polygons(),
+                                                         this->config->wall_loops, this->overhang_flow,
+                                                         this->m_scaled_resolution, *this->object_config,
+                                                         *this->print_config);
+        }
+
+        if (use_wave_overhangs) {
+            const double wave_mm3_per_mm = this->config->wave_overhang_flow_mm3_per_mm.value;
+            if (wave_mm3_per_mm > 0.)
+                for (ExtrusionPaths &region : extra_perimeters)
+                    for (ExtrusionPath &path : region)
+                        if (path.wave_overhang)
+                            path.mm3_per_mm = wave_mm3_per_mm;
+        }
+
         if (!extra_perimeters.empty()) {
             ExtrusionEntityCollection *this_islands_perimeters = static_cast<ExtrusionEntityCollection *>(this->loops->entities.back());
             ExtrusionEntityCollection  new_perimeters{};
             new_perimeters.no_sort = this_islands_perimeters->no_sort;
-            for (const ExtrusionPaths &paths : extra_perimeters) {
+            for (const ExtrusionPaths &paths : extra_perimeters)
                 new_perimeters.append(paths);
+
+            Polygons fill_carve = filled_area;
+            Polygons wave_support_coverage;
+            if (use_wave_overhangs && !filled_area.empty()) {
+                const Polygons island_polys = to_polygons(ExPolygons{ island_region });
+                wave_support_coverage = intersection(filled_area, island_polys);
+                const Polygons overhang_zone = diff(island_polys, wave_lower_mask.empty() ? this->lower_slices_polygons() : wave_lower_mask);
+                const coord_t anchor_margin = coord_t(this->perimeter_flow.scaled_spacing() * 1.5);
+                ExtrusionEntityCollection clipped =
+                    clip_inner_perimeters_in_zone(*this_islands_perimeters, expand(overhang_zone, anchor_margin, jtRound, 0.), wave_outer);
+                new_perimeters.append(std::move(clipped.entities));
+
+                if (!overhang_zone.empty()) {
+                    const coord_t fill_overshoot_compensation = coord_t(this->overhang_flow.scaled_width() * 1.25);
+                    append(fill_carve, expand(overhang_zone, fill_overshoot_compensation, jtRound, 0.));
+                    fill_carve = union_(fill_carve);
+                }
+            } else {
+                new_perimeters.append(this_islands_perimeters->entities);
             }
-            new_perimeters.append(this_islands_perimeters->entities);
             this_islands_perimeters->swap(new_perimeters);
+
+            if (use_wave_overhangs && !fill_carve.empty()) {
+                append(wave_support_coverage, fill_carve);
+                wave_support_coverage = union_(wave_support_coverage);
+            }
 
             SurfaceCollection orig_surfaces = *this->fill_surfaces;
             this->fill_surfaces->clear();
             for (const auto &surface : orig_surfaces.surfaces) {
-                auto new_surfaces = diff_ex({surface.expolygon}, filled_area);
+                auto new_surfaces = diff_ex({ surface.expolygon }, fill_carve);
                 this->fill_surfaces->append(new_surfaces, surface);
             }
+
+            if (use_wave_overhangs && !wave_support_coverage.empty())
+                append(this->out_wave_overhang_covered_polygons, wave_support_coverage);
         }
     }
 }
@@ -1669,7 +2013,7 @@ void PerimeterGenerator::process_classic()
         }
         this->fill_surfaces->append(infill_exp, stInternal);
 
-        apply_extra_perimeters(infill_exp);
+        apply_extra_perimeters(infill_exp, surface.expolygon);
 
         // BBS: get the no-overlap infill expolygons
         {
@@ -2518,7 +2862,7 @@ void PerimeterGenerator::process_arachne()
         }
         this->fill_surfaces->append(infill_exp, stInternal);
 
-        apply_extra_perimeters(infill_exp);
+        apply_extra_perimeters(infill_exp, surface.expolygon);
 
         // BBS: get the no-overlap infill expolygons
         {

@@ -99,5 +99,7 @@
 	"default_filament_profile": [
 		"Qidi Generic PLA @Qidi X-Plus 4 0.4 nozzle"
 	],
-	"printer_agent": "qidi"
+	"printer_agent": "qidi",
+	"print_host": "192.168.50.108",
+	"print_host_webui": "192.168.50.108"
 }
