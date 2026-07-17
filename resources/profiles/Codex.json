@@ -1,0 +1,1819 @@
+{
+    "name": "Codex",
+    "version": "00.00.02.00",
+    "force_update": "1",
+    "description": "TinManX Codex filament presets",
+    "machine_model_list": [],
+    "process_list": [],
+    "filament_list": [
+        {
+            "name": "ABS Codex-Bambu - Bambu @Codex",
+            "sub_path": "filament/ABS Codex-Bambu - Bambu @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Bambu - Creality K2 Plus @Codex",
+            "sub_path": "filament/ABS Codex-Bambu - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Bambu - Elegoo Centauri @Codex",
+            "sub_path": "filament/ABS Codex-Bambu - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Bambu - Prusa Core One @Codex",
+            "sub_path": "filament/ABS Codex-Bambu - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Bambu - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/ABS Codex-Bambu - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Bambu - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/ABS Codex-Bambu - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Bambu - Snapmaker U1 @Codex",
+            "sub_path": "filament/ABS Codex-Bambu - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Bambu - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/ABS Codex-Bambu - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Inland - Elegoo Centauri @Codex",
+            "sub_path": "filament/ABS Codex-Inland - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Inland - Prusa Core One @Codex",
+            "sub_path": "filament/ABS Codex-Inland - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/ABS Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/ABS Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/ABS Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/ABS Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/ABS Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/ABS Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/ABS Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/ABS Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "ABS Codex-RatRig Punk - Bambu @Codex",
+            "sub_path": "filament/ABS Codex-RatRig Punk - Bambu @Codex.json"
+        },
+        {
+            "name": "ABS Codex-RatRig Punk - Creality K2 Plus @Codex",
+            "sub_path": "filament/ABS Codex-RatRig Punk - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "ABS Codex-RatRig Punk - Elegoo Centauri @Codex",
+            "sub_path": "filament/ABS Codex-RatRig Punk - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "ABS Codex-RatRig Punk - Prusa Core One @Codex",
+            "sub_path": "filament/ABS Codex-RatRig Punk - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "ABS Codex-RatRig Punk - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/ABS Codex-RatRig Punk - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "ABS Codex-RatRig Punk - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/ABS Codex-RatRig Punk - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "ABS Codex-RatRig Punk - Snapmaker U1 @Codex",
+            "sub_path": "filament/ABS Codex-RatRig Punk - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "ABS Codex-RatRig Punk - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/ABS Codex-RatRig Punk - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "ABS-CF Codex-Generic - Bambu @Codex",
+            "sub_path": "filament/ABS-CF Codex-Generic - Bambu @Codex.json"
+        },
+        {
+            "name": "ABS-CF Codex-Generic - Creality K2 Plus @Codex",
+            "sub_path": "filament/ABS-CF Codex-Generic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "ABS-CF Codex-Generic - Elegoo Centauri @Codex",
+            "sub_path": "filament/ABS-CF Codex-Generic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "ABS-CF Codex-Generic - Prusa Core One @Codex",
+            "sub_path": "filament/ABS-CF Codex-Generic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "ABS-CF Codex-Generic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/ABS-CF Codex-Generic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "ABS-CF Codex-Generic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/ABS-CF Codex-Generic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "ABS-CF Codex-Generic - Snapmaker U1 @Codex",
+            "sub_path": "filament/ABS-CF Codex-Generic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "ABS-CF Codex-Generic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/ABS-CF Codex-Generic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "ABS-GF Codex-Bambu - Creality K2 Plus @Codex",
+            "sub_path": "filament/ABS-GF Codex-Bambu - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "ABS-GF Codex-Bambu - Elegoo Centauri @Codex",
+            "sub_path": "filament/ABS-GF Codex-Bambu - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "ABS-GF Codex-Bambu - Prusa Core One @Codex",
+            "sub_path": "filament/ABS-GF Codex-Bambu - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "ABS-GF Codex-Bambu - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/ABS-GF Codex-Bambu - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "ABS-GF Codex-Bambu - Snapmaker U1 @Codex",
+            "sub_path": "filament/ABS-GF Codex-Bambu - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "ABS-GF Codex-Bambu - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/ABS-GF Codex-Bambu - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "ABS-GF Codex-QIDI - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/ABS-GF Codex-QIDI - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Generic - Bambu @Codex",
+            "sub_path": "filament/ASA Codex-Generic - Bambu @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Generic - Creality K2 Plus @Codex",
+            "sub_path": "filament/ASA Codex-Generic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Generic - Elegoo Centauri @Codex",
+            "sub_path": "filament/ASA Codex-Generic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Generic - Prusa Core One @Codex",
+            "sub_path": "filament/ASA Codex-Generic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Generic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/ASA Codex-Generic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Generic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/ASA Codex-Generic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Generic - Snapmaker U1 @Codex",
+            "sub_path": "filament/ASA Codex-Generic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Generic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/ASA Codex-Generic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/ASA Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/ASA Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/ASA Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/ASA Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/ASA Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/ASA Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/ASA Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/ASA Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Bambu - Bambu @Codex",
+            "sub_path": "filament/ASA-CF Codex-Bambu - Bambu @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Bambu - Creality K2 Plus @Codex",
+            "sub_path": "filament/ASA-CF Codex-Bambu - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Bambu - Elegoo Centauri @Codex",
+            "sub_path": "filament/ASA-CF Codex-Bambu - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Bambu - Prusa Core One @Codex",
+            "sub_path": "filament/ASA-CF Codex-Bambu - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Bambu - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/ASA-CF Codex-Bambu - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Bambu - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/ASA-CF Codex-Bambu - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Bambu - Snapmaker U1 @Codex",
+            "sub_path": "filament/ASA-CF Codex-Bambu - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Bambu - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/ASA-CF Codex-Bambu - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/ASA-CF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/ASA-CF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/ASA-CF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/ASA-CF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/ASA-CF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/ASA-CF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/ASA-CF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/ASA-CF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "HIPS Codex-Generic - Bambu @Codex",
+            "sub_path": "filament/HIPS Codex-Generic - Bambu @Codex.json"
+        },
+        {
+            "name": "HIPS Codex-Generic - Creality K2 Plus @Codex",
+            "sub_path": "filament/HIPS Codex-Generic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "HIPS Codex-Generic - Elegoo Centauri @Codex",
+            "sub_path": "filament/HIPS Codex-Generic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "HIPS Codex-Generic - Prusa Core One @Codex",
+            "sub_path": "filament/HIPS Codex-Generic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "HIPS Codex-Generic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/HIPS Codex-Generic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "HIPS Codex-Generic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/HIPS Codex-Generic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "HIPS Codex-Generic - Snapmaker U1 @Codex",
+            "sub_path": "filament/HIPS Codex-Generic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "HIPS Codex-Generic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/HIPS Codex-Generic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "HT-PLA-CF Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/HT-PLA-CF Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "HT-PLA-CF Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/HT-PLA-CF Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "HT-PLA-CF Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/HT-PLA-CF Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "HT-PLA-CF Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/HT-PLA-CF Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "HT-PLA-CF Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/HT-PLA-CF Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "HT-PLA-CF Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/HT-PLA-CF Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "HT-PLA-CF Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/HT-PLA-CF Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "HT-PLA-CF Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/HT-PLA-CF Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "HT-PLA-GF Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/HT-PLA-GF Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "HT-PLA-GF Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/HT-PLA-GF Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "HT-PLA-GF Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/HT-PLA-GF Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "HT-PLA-GF Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/HT-PLA-GF Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "HT-PLA-GF Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/HT-PLA-GF Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "HT-PLA-GF Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/HT-PLA-GF Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "HT-PLA-GF Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/HT-PLA-GF Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "HT-PLA-GF Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/HT-PLA-GF Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA Codex-Generic - Bambu @Codex",
+            "sub_path": "filament/PA Codex-Generic - Bambu @Codex.json"
+        },
+        {
+            "name": "PA Codex-Generic - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA Codex-Generic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA Codex-Generic - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA Codex-Generic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA Codex-Generic - Prusa Core One @Codex",
+            "sub_path": "filament/PA Codex-Generic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA Codex-Generic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA Codex-Generic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA Codex-Generic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA Codex-Generic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA Codex-Generic - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA Codex-Generic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA Codex-Generic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA Codex-Generic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/PA Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "PA Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/PA Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA-CF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PA-CF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PA-CF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA-CF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA-CF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA-CF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA-CF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PA-CF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA-CF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA-CF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA-CF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA-CF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA-CF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA-CF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA-CF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA-CF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA-GF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PA-GF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PA-GF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA-GF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA-GF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA-GF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA-GF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PA-GF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA-GF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA-GF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA-GF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA-GF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA-GF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA-GF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA-GF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA-GF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fila Matrix - Bambu @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fila Matrix - Bambu @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fila Matrix - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fila Matrix - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fila Matrix - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fila Matrix - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fila Matrix - Prusa Core One @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fila Matrix - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fila Matrix - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fila Matrix - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fila Matrix - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fila Matrix - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fila Matrix - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fila Matrix - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fila Matrix - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fila Matrix - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/PA12-CF Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA12-CF Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA12-CF Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/PA12-CF Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA12-CF Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA12-CF Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA12-CF Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA12-CF Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PA6-CF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA6-CF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA6-CF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PA6-CF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA6-CF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA6-CF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA6-CF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA6-CF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/PA6-CF Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA6-CF Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA6-CF Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/PA6-CF Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA6-CF Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA6-CF Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA6-CF Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA6-CF Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA6-GF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PA6-GF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PA6-GF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA6-GF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA6-GF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA6-GF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA6-GF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PA6-GF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA6-GF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA6-GF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA6-GF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA6-GF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA6-GF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA6-GF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA6-GF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA6-GF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA612-CF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PA612-CF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PA612-CF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA612-CF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA612-CF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA612-CF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA612-CF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PA612-CF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA612-CF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA612-CF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA612-CF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA612-CF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA612-CF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA612-CF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA612-CF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA612-CF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PA612-ESD Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PA612-ESD Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PA612-ESD Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PA612-ESD Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PA612-ESD Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PA612-ESD Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PA612-ESD Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PA612-ESD Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PA612-ESD Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PA612-ESD Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PA612-ESD Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PA612-ESD Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PA612-ESD Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PA612-ESD Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PA612-ESD Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PA612-ESD Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Bambu - Bambu @Codex",
+            "sub_path": "filament/PAHT Codex-Bambu - Bambu @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Bambu - Creality K2 Plus @Codex",
+            "sub_path": "filament/PAHT Codex-Bambu - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Bambu - Elegoo Centauri @Codex",
+            "sub_path": "filament/PAHT Codex-Bambu - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Bambu - Prusa Core One @Codex",
+            "sub_path": "filament/PAHT Codex-Bambu - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Bambu - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PAHT Codex-Bambu - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Bambu - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PAHT Codex-Bambu - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Bambu - Snapmaker U1 @Codex",
+            "sub_path": "filament/PAHT Codex-Bambu - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Bambu - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PAHT Codex-Bambu - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Generic - Creality K2 Plus @Codex",
+            "sub_path": "filament/PAHT Codex-Generic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Generic - Elegoo Centauri @Codex",
+            "sub_path": "filament/PAHT Codex-Generic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Generic - Prusa Core One @Codex",
+            "sub_path": "filament/PAHT Codex-Generic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Generic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PAHT Codex-Generic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Generic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PAHT Codex-Generic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Generic - Snapmaker U1 @Codex",
+            "sub_path": "filament/PAHT Codex-Generic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Generic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PAHT Codex-Generic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PAHT-CF Codex-Bambu - Bambu @Codex",
+            "sub_path": "filament/PAHT-CF Codex-Bambu - Bambu @Codex.json"
+        },
+        {
+            "name": "PAHT-CF Codex-Bambu - Creality K2 Plus @Codex",
+            "sub_path": "filament/PAHT-CF Codex-Bambu - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PAHT-CF Codex-Bambu - Elegoo Centauri @Codex",
+            "sub_path": "filament/PAHT-CF Codex-Bambu - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PAHT-CF Codex-Bambu - Prusa Core One @Codex",
+            "sub_path": "filament/PAHT-CF Codex-Bambu - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PAHT-CF Codex-Bambu - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PAHT-CF Codex-Bambu - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PAHT-CF Codex-Bambu - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PAHT-CF Codex-Bambu - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PAHT-CF Codex-Bambu - Snapmaker U1 @Codex",
+            "sub_path": "filament/PAHT-CF Codex-Bambu - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PAHT-CF Codex-Bambu - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PAHT-CF Codex-Bambu - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PAKV Codex-Filamatrix - Bambu @Codex",
+            "sub_path": "filament/PAKV Codex-Filamatrix - Bambu @Codex.json"
+        },
+        {
+            "name": "PAKV Codex-Filamatrix - Creality K2 Plus @Codex",
+            "sub_path": "filament/PAKV Codex-Filamatrix - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PAKV Codex-Filamatrix - Elegoo Centauri @Codex",
+            "sub_path": "filament/PAKV Codex-Filamatrix - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PAKV Codex-Filamatrix - Prusa Core One @Codex",
+            "sub_path": "filament/PAKV Codex-Filamatrix - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PAKV Codex-Filamatrix - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PAKV Codex-Filamatrix - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PAKV Codex-Filamatrix - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PAKV Codex-Filamatrix - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PAKV Codex-Filamatrix - Snapmaker U1 @Codex",
+            "sub_path": "filament/PAKV Codex-Filamatrix - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PAKV Codex-Filamatrix - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PAKV Codex-Filamatrix - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PC Codex-Generic - Bambu @Codex",
+            "sub_path": "filament/PC Codex-Generic - Bambu @Codex.json"
+        },
+        {
+            "name": "PC Codex-Generic - Creality K2 Plus @Codex",
+            "sub_path": "filament/PC Codex-Generic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PC Codex-Generic - Elegoo Centauri @Codex",
+            "sub_path": "filament/PC Codex-Generic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PC Codex-Generic - Prusa Core One @Codex",
+            "sub_path": "filament/PC Codex-Generic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PC Codex-Generic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PC Codex-Generic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PC Codex-Generic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PC Codex-Generic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PC Codex-Generic - Snapmaker U1 @Codex",
+            "sub_path": "filament/PC Codex-Generic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PC Codex-Generic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PC Codex-Generic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PC Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/PC Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "PC Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/PC Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PC Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/PC Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PC Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/PC Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PC Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PC Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PC Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PC Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PC Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/PC Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PC Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PC Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PC+PBT Codex-Push Plastic - Bambu @Codex",
+            "sub_path": "filament/PC+PBT Codex-Push Plastic - Bambu @Codex.json"
+        },
+        {
+            "name": "PC+PBT Codex-Push Plastic - Creality K2 Plus @Codex",
+            "sub_path": "filament/PC+PBT Codex-Push Plastic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PC+PBT Codex-Push Plastic - Elegoo Centauri @Codex",
+            "sub_path": "filament/PC+PBT Codex-Push Plastic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PC+PBT Codex-Push Plastic - Prusa Core One @Codex",
+            "sub_path": "filament/PC+PBT Codex-Push Plastic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PC+PBT Codex-Push Plastic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PC+PBT Codex-Push Plastic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PC+PBT Codex-Push Plastic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PC+PBT Codex-Push Plastic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PC+PBT Codex-Push Plastic - Snapmaker U1 @Codex",
+            "sub_path": "filament/PC+PBT Codex-Push Plastic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PC+PBT Codex-Push Plastic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PC+PBT Codex-Push Plastic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PC-CF Codex-Generic - Bambu @Codex",
+            "sub_path": "filament/PC-CF Codex-Generic - Bambu @Codex.json"
+        },
+        {
+            "name": "PC-CF Codex-Generic - Creality K2 Plus @Codex",
+            "sub_path": "filament/PC-CF Codex-Generic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PC-CF Codex-Generic - Elegoo Centauri @Codex",
+            "sub_path": "filament/PC-CF Codex-Generic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PC-CF Codex-Generic - Prusa Core One @Codex",
+            "sub_path": "filament/PC-CF Codex-Generic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PC-CF Codex-Generic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PC-CF Codex-Generic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PC-CF Codex-Generic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PC-CF Codex-Generic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PC-CF Codex-Generic - Snapmaker U1 @Codex",
+            "sub_path": "filament/PC-CF Codex-Generic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PC-CF Codex-Generic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PC-CF Codex-Generic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PC-PBT Codex-Push Plastic - Bambu @Codex",
+            "sub_path": "filament/PC-PBT Codex-Push Plastic - Bambu @Codex.json"
+        },
+        {
+            "name": "PC-PBT Codex-Push Plastic - Creality K2 Plus @Codex",
+            "sub_path": "filament/PC-PBT Codex-Push Plastic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PC-PBT Codex-Push Plastic - Elegoo Centauri @Codex",
+            "sub_path": "filament/PC-PBT Codex-Push Plastic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PC-PBT Codex-Push Plastic - Prusa Core One @Codex",
+            "sub_path": "filament/PC-PBT Codex-Push Plastic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PC-PBT Codex-Push Plastic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PC-PBT Codex-Push Plastic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PC-PBT Codex-Push Plastic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PC-PBT Codex-Push Plastic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PC-PBT Codex-Push Plastic - Snapmaker U1 @Codex",
+            "sub_path": "filament/PC-PBT Codex-Push Plastic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PC-PBT Codex-Push Plastic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PC-PBT Codex-Push Plastic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PCTG Codex-Generic - Bambu @Codex",
+            "sub_path": "filament/PCTG Codex-Generic - Bambu @Codex.json"
+        },
+        {
+            "name": "PCTG Codex-Generic - Creality K2 Plus @Codex",
+            "sub_path": "filament/PCTG Codex-Generic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PCTG Codex-Generic - Elegoo Centauri @Codex",
+            "sub_path": "filament/PCTG Codex-Generic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PCTG Codex-Generic - Prusa Core One @Codex",
+            "sub_path": "filament/PCTG Codex-Generic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PCTG Codex-Generic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PCTG Codex-Generic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PCTG Codex-Generic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PCTG Codex-Generic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PCTG Codex-Generic - Snapmaker U1 @Codex",
+            "sub_path": "filament/PCTG Codex-Generic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PCTG Codex-Generic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PCTG Codex-Generic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PCTG-CF Codex-3D-Fuel Pro - Bambu @Codex",
+            "sub_path": "filament/PCTG-CF Codex-3D-Fuel Pro - Bambu @Codex.json"
+        },
+        {
+            "name": "PCTG-CF Codex-3D-Fuel Pro - Creality K2 Plus @Codex",
+            "sub_path": "filament/PCTG-CF Codex-3D-Fuel Pro - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PCTG-CF Codex-3D-Fuel Pro - Elegoo Centauri @Codex",
+            "sub_path": "filament/PCTG-CF Codex-3D-Fuel Pro - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PCTG-CF Codex-3D-Fuel Pro - Prusa Core One @Codex",
+            "sub_path": "filament/PCTG-CF Codex-3D-Fuel Pro - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PCTG-CF Codex-3D-Fuel Pro - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PCTG-CF Codex-3D-Fuel Pro - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PCTG-CF Codex-3D-Fuel Pro - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PCTG-CF Codex-3D-Fuel Pro - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PCTG-CF Codex-3D-Fuel Pro - Snapmaker U1 @Codex",
+            "sub_path": "filament/PCTG-CF Codex-3D-Fuel Pro - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PCTG-CF Codex-3D-Fuel Pro - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PCTG-CF Codex-3D-Fuel Pro - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PEBA Codex-SainSmart - Bambu @Codex",
+            "sub_path": "filament/PEBA Codex-SainSmart - Bambu @Codex.json"
+        },
+        {
+            "name": "PEBA Codex-SainSmart - Creality K2 Plus @Codex",
+            "sub_path": "filament/PEBA Codex-SainSmart - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PEBA Codex-SainSmart - Elegoo Centauri @Codex",
+            "sub_path": "filament/PEBA Codex-SainSmart - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PEBA Codex-SainSmart - Prusa Core One @Codex",
+            "sub_path": "filament/PEBA Codex-SainSmart - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PEBA Codex-SainSmart - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PEBA Codex-SainSmart - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PEBA Codex-SainSmart - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PEBA Codex-SainSmart - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PEBA Codex-SainSmart - Snapmaker U1 @Codex",
+            "sub_path": "filament/PEBA Codex-SainSmart - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PEBA Codex-SainSmart - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PEBA Codex-SainSmart - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Elegoo - Bambu @Codex",
+            "sub_path": "filament/PET-CF Codex-Elegoo - Bambu @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Elegoo - Creality K2 Plus @Codex",
+            "sub_path": "filament/PET-CF Codex-Elegoo - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Elegoo - Elegoo Centauri @Codex",
+            "sub_path": "filament/PET-CF Codex-Elegoo - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Elegoo - Prusa Core One @Codex",
+            "sub_path": "filament/PET-CF Codex-Elegoo - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Elegoo - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PET-CF Codex-Elegoo - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Elegoo - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PET-CF Codex-Elegoo - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Elegoo - Snapmaker U1 @Codex",
+            "sub_path": "filament/PET-CF Codex-Elegoo - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Elegoo - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PET-CF Codex-Elegoo - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PET-CF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PET-CF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PET-CF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PET-CF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PET-CF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PET-CF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PET-CF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PET-CF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PET-GF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PET-GF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PET-GF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PET-GF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PET-GF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PET-GF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PET-GF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PET-GF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PET-GF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PET-GF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PET-GF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PET-GF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PET-GF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PET-GF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PET-GF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PET-GF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PETG Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PETG Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PETG Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PETG Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PETG Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PETG Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PETG Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PETG Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Generic - Bambu @Codex",
+            "sub_path": "filament/PETG Codex-Generic - Bambu @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Generic - Creality K2 Plus @Codex",
+            "sub_path": "filament/PETG Codex-Generic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Generic - Elegoo Centauri @Codex",
+            "sub_path": "filament/PETG Codex-Generic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Generic - Prusa Core One @Codex",
+            "sub_path": "filament/PETG Codex-Generic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Generic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PETG Codex-Generic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Generic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PETG Codex-Generic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Generic - Snapmaker U1 @Codex",
+            "sub_path": "filament/PETG Codex-Generic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Generic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PETG Codex-Generic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/PETG Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/PETG Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/PETG Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/PETG Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PETG Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PETG Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/PETG Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PETG Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Bambu - Bambu @Codex",
+            "sub_path": "filament/PETG-CF Codex-Bambu - Bambu @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Bambu - Creality K2 Plus @Codex",
+            "sub_path": "filament/PETG-CF Codex-Bambu - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Bambu - Elegoo Centauri @Codex",
+            "sub_path": "filament/PETG-CF Codex-Bambu - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Bambu - Prusa Core One @Codex",
+            "sub_path": "filament/PETG-CF Codex-Bambu - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Bambu - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PETG-CF Codex-Bambu - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Bambu - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PETG-CF Codex-Bambu - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Bambu - Snapmaker U1 @Codex",
+            "sub_path": "filament/PETG-CF Codex-Bambu - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Bambu - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PETG-CF Codex-Bambu - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PETG-CF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PETG-CF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PETG-CF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PETG-CF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PETG-CF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PETG-CF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PETG-CF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PETG-CF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Generic - Bambu @Codex",
+            "sub_path": "filament/PETG-CF Codex-Generic - Bambu @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Generic - Creality K2 Plus @Codex",
+            "sub_path": "filament/PETG-CF Codex-Generic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Generic - Elegoo Centauri @Codex",
+            "sub_path": "filament/PETG-CF Codex-Generic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Generic - Prusa Core One @Codex",
+            "sub_path": "filament/PETG-CF Codex-Generic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Generic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PETG-CF Codex-Generic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Generic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PETG-CF Codex-Generic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Generic - Snapmaker U1 @Codex",
+            "sub_path": "filament/PETG-CF Codex-Generic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Generic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PETG-CF Codex-Generic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PETG-ESD Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PETG-ESD Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PETG-ESD Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PETG-ESD Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PETG-ESD Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PETG-ESD Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PETG-ESD Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PETG-ESD Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PETG-ESD Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PETG-ESD Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PETG-ESD Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PETG-ESD Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PETG-ESD Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PETG-ESD Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PETG-ESD Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PETG-ESD Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PLA Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/PLA Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "PLA Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/PLA Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PLA Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/PLA Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PLA Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/PLA Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PLA Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PLA Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PLA Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PLA Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PLA Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/PLA Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PLA Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PLA Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PLA-CF Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/PLA-CF Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "PLA-CF Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/PLA-CF Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PLA-CF Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/PLA-CF Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PLA-CF Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/PLA-CF Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PLA-CF Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PLA-CF Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PLA-CF Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PLA-CF Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PLA-CF Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/PLA-CF Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PLA-CF Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PLA-CF Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PLA-GF Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/PLA-GF Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "PLA-GF Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/PLA-GF Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PLA-GF Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/PLA-GF Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PLA-GF Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/PLA-GF Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PLA-GF Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PLA-GF Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PLA-GF Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PLA-GF Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PLA-GF Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/PLA-GF Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PLA-GF Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PLA-GF Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PolySmooth Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/PolySmooth Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "PolySmooth Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/PolySmooth Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PolySmooth Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/PolySmooth Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PolySmooth Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/PolySmooth Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PolySmooth Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PolySmooth Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PolySmooth Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PolySmooth Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PolySmooth Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/PolySmooth Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PolySmooth Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PolySmooth Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PPA-CF Codex-Bambu - Bambu @Codex",
+            "sub_path": "filament/PPA-CF Codex-Bambu - Bambu @Codex.json"
+        },
+        {
+            "name": "PPA-CF Codex-Bambu - Creality K2 Plus @Codex",
+            "sub_path": "filament/PPA-CF Codex-Bambu - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PPA-CF Codex-Bambu - Elegoo Centauri @Codex",
+            "sub_path": "filament/PPA-CF Codex-Bambu - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PPA-CF Codex-Bambu - Prusa Core One @Codex",
+            "sub_path": "filament/PPA-CF Codex-Bambu - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PPA-CF Codex-Bambu - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PPA-CF Codex-Bambu - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PPA-CF Codex-Bambu - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PPA-CF Codex-Bambu - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PPA-CF Codex-Bambu - Snapmaker U1 @Codex",
+            "sub_path": "filament/PPA-CF Codex-Bambu - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PPA-CF Codex-Bambu - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PPA-CF Codex-Bambu - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PPS Codex-Generic - Bambu @Codex",
+            "sub_path": "filament/PPS Codex-Generic - Bambu @Codex.json"
+        },
+        {
+            "name": "PPS Codex-Generic - Creality K2 Plus @Codex",
+            "sub_path": "filament/PPS Codex-Generic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PPS Codex-Generic - Elegoo Centauri @Codex",
+            "sub_path": "filament/PPS Codex-Generic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PPS Codex-Generic - Prusa Core One @Codex",
+            "sub_path": "filament/PPS Codex-Generic - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PPS Codex-Generic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PPS Codex-Generic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PPS Codex-Generic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PPS Codex-Generic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PPS Codex-Generic - Snapmaker U1 @Codex",
+            "sub_path": "filament/PPS Codex-Generic - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PPS Codex-Generic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PPS Codex-Generic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Bambu - Bambu @Codex",
+            "sub_path": "filament/PPS-CF Codex-Bambu - Bambu @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Bambu - Creality K2 Plus @Codex",
+            "sub_path": "filament/PPS-CF Codex-Bambu - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Bambu - Elegoo Centauri @Codex",
+            "sub_path": "filament/PPS-CF Codex-Bambu - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Bambu - Prusa Core One @Codex",
+            "sub_path": "filament/PPS-CF Codex-Bambu - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Bambu - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PPS-CF Codex-Bambu - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Bambu - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PPS-CF Codex-Bambu - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Bambu - Snapmaker U1 @Codex",
+            "sub_path": "filament/PPS-CF Codex-Bambu - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Bambu - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PPS-CF Codex-Bambu - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PPS-CF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PPS-CF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PPS-CF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PPS-CF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PPS-CF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PPS-CF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PPS-CF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PPS-CF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PPS-CF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PPS-GF Codex-Fiberon - Bambu @Codex",
+            "sub_path": "filament/PPS-GF Codex-Fiberon - Bambu @Codex.json"
+        },
+        {
+            "name": "PPS-GF Codex-Fiberon - Creality K2 Plus @Codex",
+            "sub_path": "filament/PPS-GF Codex-Fiberon - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PPS-GF Codex-Fiberon - Elegoo Centauri @Codex",
+            "sub_path": "filament/PPS-GF Codex-Fiberon - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PPS-GF Codex-Fiberon - Prusa Core One @Codex",
+            "sub_path": "filament/PPS-GF Codex-Fiberon - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "PPS-GF Codex-Fiberon - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PPS-GF Codex-Fiberon - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "PPS-GF Codex-Fiberon - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PPS-GF Codex-Fiberon - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PPS-GF Codex-Fiberon - Snapmaker U1 @Codex",
+            "sub_path": "filament/PPS-GF Codex-Fiberon - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "PPS-GF Codex-Fiberon - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PPS-GF Codex-Fiberon - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PPS-GF Codex-QIDI - Elegoo Centauri @Codex",
+            "sub_path": "filament/PPS-GF Codex-QIDI - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PPS-GF Codex-QIDI - Prusa Core One @Codex",
+            "sub_path": "filament/PPS-GF Codex-QIDI - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "TPU Codex-Elegoo - Elegoo Centauri @Codex",
+            "sub_path": "filament/TPU Codex-Elegoo - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "TPU Codex-Elegoo - Prusa Core One @Codex",
+            "sub_path": "filament/TPU Codex-Elegoo - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "TPU Codex-Polymaker - Bambu @Codex",
+            "sub_path": "filament/TPU Codex-Polymaker - Bambu @Codex.json"
+        },
+        {
+            "name": "TPU Codex-Polymaker - Creality K2 Plus @Codex",
+            "sub_path": "filament/TPU Codex-Polymaker - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "TPU Codex-Polymaker - Elegoo Centauri @Codex",
+            "sub_path": "filament/TPU Codex-Polymaker - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "TPU Codex-Polymaker - Prusa Core One @Codex",
+            "sub_path": "filament/TPU Codex-Polymaker - Prusa Core One @Codex.json"
+        },
+        {
+            "name": "TPU Codex-Polymaker - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/TPU Codex-Polymaker - Qidi X-Plus 4 @Codex.json"
+        },
+        {
+            "name": "TPU Codex-Polymaker - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/TPU Codex-Polymaker - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "TPU Codex-Polymaker - Snapmaker U1 @Codex",
+            "sub_path": "filament/TPU Codex-Polymaker - Snapmaker U1 @Codex.json"
+        },
+        {
+            "name": "TPU Codex-Polymaker - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/TPU Codex-Polymaker - Sovol SV08 MAX @Codex.json"
+        }
+    ],
+    "machine_list": []
+}

@@ -3,7 +3,7 @@
   "name": "CFC ASA-GF + X-CCF @FibreSeek Seeker 3",
   "inherits": "TinManX1 ASA-GF base",
   "from": "system",
-  "setting_id": "TMX-FS3-ASA-GF-X-CCF",
+  "setting_id": "pBzII0CV0APe0rG4",
   "filament_id": "tinmanx1-fs3-asa-gf-x-ccf",
   "instantiation": "true",
   "filament_vendor": [

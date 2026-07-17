@@ -3,7 +3,7 @@
   "name": "CFC PPS-CF + CBF @FibreSeek Seeker 3",
   "inherits": "TinManX1 PPS-CF base",
   "from": "system",
-  "setting_id": "TMX-FS3-PPS-CF-CBF",
+  "setting_id": "9c7sqgRgEjyEYPkq",
   "filament_id": "tinmanx1-fs3-pps-cf-cbf",
   "instantiation": "true",
   "filament_vendor": [

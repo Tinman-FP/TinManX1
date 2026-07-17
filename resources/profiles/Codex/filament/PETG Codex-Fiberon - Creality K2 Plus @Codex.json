@@ -1,0 +1,253 @@
+{
+    "bed_type": [
+        "Cool Plate"
+    ],
+    "close_fan_the_first_x_layers": [
+        "3"
+    ],
+    "compatible_printers": [
+        "Creality K2 Plus 0.2 nozzle",
+        "Creality K2 Plus 0.4 nozzle",
+        "Creality K2 Plus 0.4 nozzle - Codex Tinman",
+        "Creality K2 Plus 0.4 nozzle - Copy",
+        "Creality K2 Plus 0.4 nozzle - Tinman",
+        "Creality K2 Plus 0.6 nozzle",
+        "Creality K2 Plus 0.6 nozzle - Codex Tinman",
+        "Creality K2 Plus 0.6 nozzle - Copy",
+        "Creality K2 Plus 0.6 nozzle - Tinman",
+        "Creality K2 Plus 0.6 nozzle - Tinmans Hanger",
+        "Creality K2 Plus 0.8 nozzle",
+        "Creality K2 Plus 0.8 nozzle - Codex Tinman",
+        "Creality K2 Plus 0.8 nozzle - Tinman",
+        "Creality K2 Plus"
+    ],
+    "compatible_printers_condition": "",
+    "compatible_prints": [],
+    "compatible_prints_condition": "",
+    "cool_plate_temp": [
+        "0"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "0"
+    ],
+    "description": "Official Polymaker Orca preset source: Fiberon PETG-ESD for BBL X1 (2026-04-14T14:06:15+08:00). Imported on 2026-04-22 and made compatible with all local Orca printers.",
+    "eng_plate_temp": [
+        "60"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "60"
+    ],
+    "fan_cooling_layer_time": [
+        "15"
+    ],
+    "fan_max_speed": [
+        "80"
+    ],
+    "fan_min_speed": [
+        "0"
+    ],
+    "filament_adaptive_volumetric_speed": [
+        "0",
+        "0"
+    ],
+    "filament_cost": [
+        "20"
+    ],
+    "filament_density": [
+        "1.24"
+    ],
+    "filament_deretraction_speed": [
+        "nil",
+        "nil"
+    ],
+    "filament_diameter": [
+        "1.75"
+    ],
+    "filament_end_gcode": [
+        "; filament end gcode \n"
+    ],
+    "filament_extruder_variant": [
+        "Direct Drive Standard",
+        "Direct Drive High Flow"
+    ],
+    "filament_flow_ratio": [
+        "0.95",
+        "0.95"
+    ],
+    "filament_flush_temp": [
+        "0",
+        "0"
+    ],
+    "filament_flush_volumetric_speed": [
+        "0",
+        "0"
+    ],
+    "filament_id": "CODXC22D81F2",
+    "filament_long_retractions_when_cut": [
+        "nil",
+        "nil"
+    ],
+    "filament_max_volumetric_speed": [
+        "20",
+        "20"
+    ],
+    "filament_minimal_purge_on_wipe_tower": [
+        "15"
+    ],
+    "filament_pre_cooling_temperature": [
+        "0",
+        "0"
+    ],
+    "filament_ramming_travel_time": [
+        "0",
+        "0"
+    ],
+    "filament_ramming_volumetric_speed": [
+        "-1",
+        "-1"
+    ],
+    "filament_retract_before_wipe": [
+        "nil",
+        "nil"
+    ],
+    "filament_retract_restart_extra": [
+        "nil",
+        "nil"
+    ],
+    "filament_retract_when_changing_layer": [
+        "nil",
+        "nil"
+    ],
+    "filament_retraction_distances_when_cut": [
+        "nil",
+        "nil"
+    ],
+    "filament_retraction_length": [
+        "nil",
+        "nil"
+    ],
+    "filament_retraction_minimum_travel": [
+        "nil",
+        "nil"
+    ],
+    "filament_retraction_speed": [
+        "nil",
+        "nil"
+    ],
+    "filament_setting_id": [
+        "Fiberon PETG-ESD - Polymaker Universal Codex"
+    ],
+    "filament_settings_id": [
+        "PETG Codex-Fiberon - Creality K2 Plus @Codex"
+    ],
+    "filament_soluble": [
+        "0"
+    ],
+    "filament_start_gcode": [
+        "; filament start gcode\n{if (bed_temperature[current_extruder] >80)||(bed_temperature_initial_layer[current_extruder] >80)}M106 P3 S255\n{elsif (bed_temperature[current_extruder] >60)||(bed_temperature_initial_layer[current_extruder] >60)}M106 P3 S180\n{endif}\n\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}"
+    ],
+    "filament_type": [
+        "PETG"
+    ],
+    "filament_vendor": [
+        "Codex"
+    ],
+    "filament_wipe": [
+        "nil",
+        "nil"
+    ],
+    "filament_wipe_distance": [
+        "nil",
+        "nil"
+    ],
+    "filament_z_hop": [
+        "nil",
+        "nil"
+    ],
+    "filament_z_hop_types": [
+        "nil",
+        "nil"
+    ],
+    "from": "system",
+    "full_fan_speed_layer": [
+        "0"
+    ],
+    "hot_plate_temp": [
+        "60"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "60"
+    ],
+    "idle_temperature": "0",
+    "is_custom_defined": "0",
+    "long_retractions_when_ec": [
+        "0",
+        "0"
+    ],
+    "name": "PETG Codex-Fiberon - Creality K2 Plus @Codex",
+    "nozzle_temperature": [
+        "290",
+        "290"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "290",
+        "290"
+    ],
+    "nozzle_temperature_range_high": [
+        "290"
+    ],
+    "nozzle_temperature_range_low": [
+        "250"
+    ],
+    "overhang_fan_speed": [
+        "70"
+    ],
+    "overhang_fan_threshold": [
+        "95%"
+    ],
+    "reduce_fan_stop_start_freq": [
+        "1"
+    ],
+    "retraction_distances_when_ec": [
+        "0",
+        "0"
+    ],
+    "slow_down_for_layer_cooling": [
+        "1"
+    ],
+    "slow_down_layer_time": [
+        "2"
+    ],
+    "slow_down_min_speed": [
+        "20"
+    ],
+    "temperature_vitrification": [
+        "77"
+    ],
+    "textured_plate_temp": [
+        "60"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "60"
+    ],
+    "version": "2.0.0.54",
+    "volumetric_speed_coefficients": [
+        "0 0 0 0 0 0",
+        "0 0 0 0 0 0"
+    ],
+    "instantiation": "true",
+    "setting_id": "HkEoUGPeWQqFhnXj",
+    "filament_price_source_url": [
+        "https://shop.polymaker.com/products/fiberon-petg-esd"
+    ],
+    "filament_price_source": [
+        "Generic 1 kg retail average"
+    ],
+    "filament_price_source_note": [
+        "1.75mm / 1kg / Black; 59.99/1kg"
+    ],
+    "default_filament_colour": [
+        "#000000"
+    ],
+    "type": "filament"
+}

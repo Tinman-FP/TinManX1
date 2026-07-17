@@ -1,0 +1,275 @@
+{
+    "type": "filament",
+    "name": "PPS Codex-Generic - RatRig V-Core 4 @Codex",
+    "from": "system",
+    "instantiation": "true",
+    "cool_plate_temp": [
+        "0"
+    ],
+    "eng_plate_temp": [
+        "110"
+    ],
+    "hot_plate_temp": [
+        "110"
+    ],
+    "textured_plate_temp": [
+        "110"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "0"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "110"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "110"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "110"
+    ],
+    "overhang_fan_threshold": [
+        "0%"
+    ],
+    "overhang_fan_speed": [
+        "30"
+    ],
+    "slow_down_for_layer_cooling": [
+        "1"
+    ],
+    "close_fan_the_first_x_layers": [
+        "3"
+    ],
+    "filament_end_gcode": [
+        "; filament end gcode \n\n"
+    ],
+    "filament_flow_ratio": [
+        "0.96"
+    ],
+    "reduce_fan_stop_start_freq": [
+        "0"
+    ],
+    "fan_cooling_layer_time": [
+        "5"
+    ],
+    "filament_cost": [
+        "120"
+    ],
+    "filament_density": [
+        "1.36"
+    ],
+    "filament_deretraction_speed": [
+        "nil"
+    ],
+    "filament_diameter": [
+        "1.75"
+    ],
+    "filament_max_volumetric_speed": [
+        "4"
+    ],
+    "filament_minimal_purge_on_wipe_tower": [
+        "15"
+    ],
+    "filament_retraction_minimum_travel": [
+        "nil"
+    ],
+    "filament_retract_before_wipe": [
+        "nil"
+    ],
+    "filament_retract_when_changing_layer": [
+        "nil"
+    ],
+    "filament_retraction_length": [
+        "nil"
+    ],
+    "filament_z_hop": [
+        "nil"
+    ],
+    "filament_retract_restart_extra": [
+        "nil"
+    ],
+    "filament_retraction_speed": [
+        "nil"
+    ],
+    "filament_settings_id": [
+        "PPS Codex-Generic - RatRig V-Core 4 @Codex"
+    ],
+    "filament_soluble": [
+        "0"
+    ],
+    "filament_type": [
+        "PPS"
+    ],
+    "filament_vendor": [
+        "Codex"
+    ],
+    "filament_wipe": [
+        "nil"
+    ],
+    "filament_wipe_distance": [
+        "nil"
+    ],
+    "bed_type": [
+        "Cool Plate"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "320"
+    ],
+    "full_fan_speed_layer": [
+        "0"
+    ],
+    "fan_max_speed": [
+        "50"
+    ],
+    "fan_min_speed": [
+        "0"
+    ],
+    "slow_down_min_speed": [
+        "10"
+    ],
+    "slow_down_layer_time": [
+        "2"
+    ],
+    "filament_start_gcode": [
+        "; Filament gcode\n"
+    ],
+    "nozzle_temperature": [
+        "320"
+    ],
+    "temperature_vitrification": [
+        "125"
+    ],
+    "chamber_temperatures": [
+        "60"
+    ],
+    "filament_adhesiveness_category": [
+        "801"
+    ],
+    "nozzle_temperature_range_high": [
+        "340"
+    ],
+    "nozzle_temperature_range_low": [
+        "300"
+    ],
+    "supertack_plate_temp": [
+        "0"
+    ],
+    "supertack_plate_temp_initial_layer": [
+        "0"
+    ],
+    "activate_chamber_temp_control": [
+        "1"
+    ],
+    "chamber_temperature": [
+        "60"
+    ],
+    "compatible_printers": [
+        "RatRig V-Core 4 300 0.4 nozzle",
+        "RatRig V-Core 4 400 0.4 nozzle",
+        "RatRig V-Core 4 500 0.4 nozzle",
+        "RatRig V-Core 4 HYBRID 300 0.4 nozzle",
+        "RatRig V-Core 4 HYBRID 400 0.4 nozzle",
+        "RatRig V-Core 4 HYBRID 500 0.4 nozzle",
+        "RatRig V-Core 4 HYBRID 500 0.4 nozzle - Copy",
+        "RatRig V-Core 4 IDEX 300 0.4 nozzle",
+        "RatRig V-Core 4 IDEX 300 COPY MODE 0.4 nozzle",
+        "RatRig V-Core 4 IDEX 300 MIRROR MODE 0.4 nozzle",
+        "RatRig V-Core 4 IDEX 400 0.4 nozzle",
+        "RatRig V-Core 4 IDEX 400 COPY MODE 0.4 nozzle",
+        "RatRig V-Core 4 IDEX 400 MIRROR MODE 0.4 nozzle",
+        "RatRig V-Core 4 IDEX 500 0.4 nozzle",
+        "RatRig V-Core 4 IDEX 500 0.4 nozzle - Codex Tinman",
+        "RatRig V-Core 4 IDEX 500 0.4 nozzle - Tinman",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - Codex Tinman",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - Tinman",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - Codex Tinman",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - Tinman",
+        "RatRig V-Core 4 300 0.5 nozzle",
+        "RatRig V-Core 4 400 0.5 nozzle",
+        "RatRig V-Core 4 500 0.5 nozzle",
+        "RatRig V-Core 4 HYBRID 300 0.5 nozzle",
+        "RatRig V-Core 4 HYBRID 400 0.5 nozzle",
+        "RatRig V-Core 4 HYBRID 500 0.5 nozzle",
+        "RatRig V-Core 4 IDEX 300 0.5 nozzle",
+        "RatRig V-Core 4 IDEX 300 COPY MODE 0.5 nozzle",
+        "RatRig V-Core 4 IDEX 300 MIRROR MODE 0.5 nozzle",
+        "RatRig V-Core 4 IDEX 400 0.5 nozzle",
+        "RatRig V-Core 4 IDEX 400 COPY MODE 0.5 nozzle",
+        "RatRig V-Core 4 IDEX 400 MIRROR MODE 0.5 nozzle",
+        "RatRig V-Core 4 IDEX 500 0.5 nozzle",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.5 nozzle",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.5 nozzle",
+        "RatRig V-Core 4 300 0.6 nozzle",
+        "RatRig V-Core 4 400 0.6 nozzle",
+        "RatRig V-Core 4 500 0.6 nozzle",
+        "RatRig V-Core 4 HYBRID 300 0.6 nozzle",
+        "RatRig V-Core 4 HYBRID 400 0.6 nozzle",
+        "RatRig V-Core 4 HYBRID 500 0.6 nozzle",
+        "RatRig V-Core 4 IDEX 300 0.6 nozzle",
+        "RatRig V-Core 4 IDEX 300 COPY MODE 0.6 nozzle",
+        "RatRig V-Core 4 IDEX 300 MIRROR MODE 0.6 nozzle",
+        "RatRig V-Core 4 IDEX 400 0.6 nozzle",
+        "RatRig V-Core 4 IDEX 400 COPY MODE 0.6 nozzle",
+        "RatRig V-Core 4 IDEX 400 MIRROR MODE 0.6 nozzle",
+        "RatRig V-Core 4 IDEX 500 0.6 nozzle",
+        "RatRig V-Core 4 IDEX 500 0.6 nozzle - Codex Tinman",
+        "RatRig V-Core 4 IDEX 500 0.6 nozzle - Copy",
+        "RatRig V-Core 4 IDEX 500 0.6 nozzle - Tinman",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - Codex Tinman",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - Tinman",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - Codex Tinman",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - Tinman",
+        "RatRig V-Core 4 300 0.8 nozzle",
+        "RatRig V-Core 4 400 0.8 nozzle",
+        "RatRig V-Core 4 500 0.8 nozzle",
+        "RatRig V-Core 4 HYBRID 300 0.8 nozzle",
+        "RatRig V-Core 4 HYBRID 400 0.8 nozzle",
+        "RatRig V-Core 4 HYBRID 500 0.8 nozzle",
+        "RatRig V-Core 4 IDEX 300 0.8 nozzle",
+        "RatRig V-Core 4 IDEX 300 COPY MODE 0.8 nozzle",
+        "RatRig V-Core 4 IDEX 300 MIRROR MODE 0.8 nozzle",
+        "RatRig V-Core 4 IDEX 400 0.8 nozzle",
+        "RatRig V-Core 4 IDEX 400 COPY MODE 0.8 nozzle",
+        "RatRig V-Core 4 IDEX 400 MIRROR MODE 0.8 nozzle",
+        "RatRig V-Core 4 IDEX 500 0.8 nozzle",
+        "RatRig V-Core 4 IDEX 500 0.8 nozzle - Codex Tinman",
+        "RatRig V-Core 4 IDEX 500 0.8 nozzle - Tinman",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - Codex Tinman",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - Tinman",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - Codex Tinman",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - Tinman",
+        "RatRig V-Core 4 300",
+        "RatRig V-Core 4 400",
+        "RatRig V-Core 4 500",
+        "RatRig V-Core 4 HYBRID 300",
+        "RatRig V-Core 4 HYBRID 400",
+        "RatRig V-Core 4 HYBRID 500",
+        "RatRig V-Core 4 IDEX 300",
+        "RatRig V-Core 4 IDEX 300 COPY MODE",
+        "RatRig V-Core 4 IDEX 300 MIRROR MODE",
+        "RatRig V-Core 4 IDEX 400",
+        "RatRig V-Core 4 IDEX 400 COPY MODE",
+        "RatRig V-Core 4 IDEX 400 MIRROR MODE",
+        "RatRig V-Core 4 IDEX 500",
+        "RatRig V-Core 4 IDEX 500 COPY MODE",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE"
+    ],
+    "compatible_printers_condition": "",
+    "compatible_prints": [],
+    "compatible_prints_condition": "",
+    "is_custom_defined": "0",
+    "version": "2.3.1.10",
+    "setting_id": "ZkPY6mnV7w9ZuElv",
+    "filament_id": "CODX8D8937B4",
+    "filament_price_source": [
+        "Generic 1 kg retail average"
+    ],
+    "default_filament_colour": [
+        "#000000"
+    ]
+}

@@ -1,0 +1,74 @@
+{
+    "type": "machine",
+    "name": "QidiMaxEz 1.0",
+    "inherits": "Qidi X-Plus 4 0.8 nozzle",
+    "from": "system",
+    "is_custom_defined": "0",
+    "printer_model": "QidiMaxEz",
+    "printer_variant": "1.0",
+    "printer_settings_id": "QidiMaxEz 1.0",
+    "nozzle_diameter": [
+        "1.0"
+    ],
+    "min_layer_height": [
+        "0.20"
+    ],
+    "max_layer_height": [
+        "0.70"
+    ],
+    "nozzle_type": "hardened_steel",
+    "default_print_profile": "0.40mm Max EZ Quality @QidiMaxEz 1.0",
+    "default_filament_profile": [
+        "Qidi Generic PLA @Qidi X-Plus 4 0.8 nozzle"
+    ],
+    "machine_max_acceleration_x": [
+        "3000"
+    ],
+    "machine_max_acceleration_y": [
+        "3000"
+    ],
+    "machine_max_acceleration_z": [
+        "500"
+    ],
+    "machine_max_acceleration_e": [
+        "3000"
+    ],
+    "machine_max_acceleration_extruding": [
+        "3000"
+    ],
+    "machine_max_acceleration_retracting": [
+        "3000"
+    ],
+    "machine_max_speed_x": [
+        "300"
+    ],
+    "machine_max_speed_y": [
+        "300"
+    ],
+    "machine_max_speed_z": [
+        "20"
+    ],
+    "machine_max_speed_e": [
+        "80"
+    ],
+    "machine_max_jerk_x": [
+        "5"
+    ],
+    "machine_max_jerk_y": [
+        "5"
+    ],
+    "machine_max_jerk_z": [
+        "0.4"
+    ],
+    "machine_max_jerk_e": [
+        "5"
+    ],
+    "version": "2.4.2.1",
+    "setting_id": "bH5e0hNjyjr5XzMf",
+    "instantiation": "true",
+    "machine_max_acceleration_travel": [
+        "3000"
+    ],
+    "print_host": "192.168.50.107",
+    "print_host_webui": "192.168.50.107"
+}

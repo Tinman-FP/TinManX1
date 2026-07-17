@@ -1,0 +1,209 @@
+{
+    "type": "filament",
+    "name": "ABS Codex-Inland - Prusa Core One @Codex",
+    "from": "system",
+    "instantiation": "true",
+    "cool_plate_temp": [
+        "105"
+    ],
+    "eng_plate_temp": [
+        "105"
+    ],
+    "hot_plate_temp": [
+        "100"
+    ],
+    "textured_plate_temp": [
+        "100"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "105"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "105"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "105"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "100"
+    ],
+    "overhang_fan_threshold": [
+        "25%"
+    ],
+    "overhang_fan_speed": [
+        "25"
+    ],
+    "slow_down_for_layer_cooling": [
+        "1"
+    ],
+    "close_fan_the_first_x_layers": [
+        "3"
+    ],
+    "filament_end_gcode": [
+        "; filament end gcode \n"
+    ],
+    "filament_flow_ratio": [
+        "0.98"
+    ],
+    "reduce_fan_stop_start_freq": [
+        "1"
+    ],
+    "fan_cooling_layer_time": [
+        "30"
+    ],
+    "filament_cost": [
+        "22"
+    ],
+    "filament_density": [
+        "1.04"
+    ],
+    "filament_deretraction_speed": [
+        "35"
+    ],
+    "filament_diameter": [
+        "1.75"
+    ],
+    "filament_max_volumetric_speed": [
+        "15"
+    ],
+    "filament_minimal_purge_on_wipe_tower": [
+        "15"
+    ],
+    "filament_retraction_minimum_travel": [
+        "nil"
+    ],
+    "filament_retract_before_wipe": [
+        "1%"
+    ],
+    "filament_retract_when_changing_layer": [
+        "nil"
+    ],
+    "filament_retraction_length": [
+        "0.9"
+    ],
+    "filament_z_hop": [
+        "0.2"
+    ],
+    "filament_retract_restart_extra": [
+        "nil"
+    ],
+    "filament_retraction_speed": [
+        "35"
+    ],
+    "filament_settings_id": [
+        "ABS Codex-Inland - Prusa Core One @Codex"
+    ],
+    "filament_soluble": [
+        "0"
+    ],
+    "filament_type": [
+        "ABS"
+    ],
+    "filament_vendor": [
+        "Codex"
+    ],
+    "filament_wipe": [
+        "1"
+    ],
+    "filament_wipe_distance": [
+        "1.2"
+    ],
+    "bed_type": [
+        "Cool Plate"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "255"
+    ],
+    "full_fan_speed_layer": [
+        "0"
+    ],
+    "fan_max_speed": [
+        "10"
+    ],
+    "fan_min_speed": [
+        "0"
+    ],
+    "slow_down_min_speed": [
+        "10"
+    ],
+    "slow_down_layer_time": [
+        "3"
+    ],
+    "filament_start_gcode": [
+        "; Filament gcode\n"
+    ],
+    "nozzle_temperature": [
+        "250"
+    ],
+    "temperature_vitrification": [
+        "110"
+    ],
+    "nozzle_temperature_range_low": [
+        "235"
+    ],
+    "nozzle_temperature_range_high": [
+        "260"
+    ],
+    "setting_id": "ElrDi1BLEkzKOTII",
+    "filament_id": "CODX0AC72C01",
+    "compatible_printers": [
+        "Prusa CORE One 0.25 nozzle",
+        "Prusa CORE One 0.3 nozzle",
+        "Prusa CORE One 0.4 nozzle",
+        "Prusa CORE One HF 0.4 nozzle",
+        "Prusa CORE One L 0.4 nozzle",
+        "Prusa CORE One L 0.4 nozzle - Codex Tinman",
+        "Prusa CORE One L HF 0.4 nozzle",
+        "Prusa CORE One L HF 0.4 nozzle - Codex Tinman",
+        "Prusa CORE One 0.5 nozzle",
+        "Prusa CORE One HF 0.5 nozzle",
+        "Prusa CORE One L 0.5 nozzle",
+        "Prusa CORE One L 0.5 nozzle - Codex Tinman",
+        "Prusa CORE One L HF 0.5 nozzle",
+        "Prusa CORE One L HF 0.5 nozzle - Codex Tinman",
+        "Prusa CORE One 0.6 nozzle",
+        "Prusa CORE One HF 0.6 nozzle",
+        "Prusa CORE One L 0.6 nozzle",
+        "Prusa CORE One L 0.6 nozzle - Codex Tinman",
+        "Prusa CORE One L 0.6 nozzle - Copy",
+        "Prusa CORE One L HF 0.6 nozzle",
+        "Prusa CORE One L HF 0.6 nozzle - Codex Tinman",
+        "Prusa CORE One 0.8 nozzle",
+        "Prusa CORE One HF 0.8 nozzle",
+        "Prusa CORE One L 0.8 nozzle",
+        "Prusa CORE One L 0.8 nozzle - Codex Tinman",
+        "Prusa CORE One L HF 0.8 nozzle",
+        "Prusa CORE One L HF 0.8 nozzle - Codex Tinman",
+        "Prusa CORE One",
+        "Prusa CORE One HF",
+        "Prusa CORE One L",
+        "Prusa CORE One L HF"
+    ],
+    "chamber_temperatures": [
+        "50"
+    ],
+    "compatible_printers_condition": "",
+    "compatible_prints": [],
+    "compatible_prints_condition": "",
+    "default_filament_colour": [
+        "#000000"
+    ],
+    "description": "Aligned to Inland ABS guidance inside an enclosed direct-drive RatRig: 250/255C nozzle, 100/105C bed, 50C chamber, short retraction, moderate PA.",
+    "enable_pressure_advance": [
+        "1"
+    ],
+    "filament_shrink": [
+        "98.7%"
+    ],
+    "is_custom_defined": "0",
+    "pressure_advance": [
+        "0.03"
+    ],
+    "version": "1.2.0.18",
+    "activate_chamber_temp_control": [
+        "1"
+    ],
+    "filament_price_source": [
+        "Generic 1 kg retail average"
+    ]
+}

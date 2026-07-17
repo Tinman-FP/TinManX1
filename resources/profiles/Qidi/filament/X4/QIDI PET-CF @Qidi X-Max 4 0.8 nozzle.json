@@ -1,0 +1,89 @@
+{
+    "type": "filament",
+    "name": "QIDI PET-CF @Qidi X-Max 4 0.8 nozzle",
+    "inherits": "QIDI PET-CF@X-Max 4-Series",
+    "from": "system",
+    "setting_id": "YXvYJNsbPq1I73qT",
+    "instantiation": "true",
+    "pressure_advance": [
+        "0.025"
+    ],
+    "compatible_printers": [
+        "Qidi X-Max 4 0.8 nozzle"
+    ],
+    "filament_flow_ratio": [
+        "1.08"
+    ],
+    "filament_max_volumetric_speed": [
+        "4"
+    ],
+    "nozzle_temperature": [
+        "300"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "300"
+    ],
+    "nozzle_temperature_range_low": [
+        "270"
+    ],
+    "nozzle_temperature_range_high": [
+        "300"
+    ],
+    "textured_plate_temp": [
+        "80"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "80"
+    ],
+    "hot_plate_temp": [
+        "80"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "80"
+    ],
+    "eng_plate_temp": [
+        "80"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "80"
+    ],
+    "cool_plate_temp": [
+        "0"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "0"
+    ],
+    "supertack_plate_temp": [
+        "80"
+    ],
+    "supertack_plate_temp_initial_layer": [
+        "80"
+    ],
+    "fan_min_speed": [
+        "0"
+    ],
+    "fan_max_speed": [
+        "0"
+    ],
+    "overhang_fan_speed": [
+        "0"
+    ],
+    "slow_down_layer_time": [
+        "20"
+    ],
+    "slow_down_min_speed": [
+        "8"
+    ],
+    "filament_retraction_length": [
+        "0.8"
+    ],
+    "enable_pressure_advance": [
+        "1"
+    ],
+    "filament_notes": [
+        "TinManX1 PET-CF rescue tune 2026-07-11: after repeated porous PET-CF test prints, use 300C nozzle, 80C bed, fan off, max volumetric 4 mm3/s, flow 1.08, slowdown enabled, and pressure advance enabled. Dry filament and inspect hardened nozzle if voids persist."
+    ],
+    "tinmanx_petcf_rescue_tune": [
+        "2026-07-11 all PET-CF rescue tune with pressure advance"
+    ]
+}
