@@ -1,29 +1,39 @@
-# Release Scope
+# TinManX1 Release Scope
 
-This repository is a public source patchset and documentation package. Tagged GitHub releases may also attach CI-built alpha application packages, but those binary artifacts are generated from the public release workflow and are not stored in the repository.
+TinManX1 is a rebranded and extended Orca Slicer based build with FibreSeek
+continuous-fiber support. Public release work should be deliberate: include the
+source, profiles, scripts, and attribution needed to build and validate the app,
+but do not publish local validation payloads or private machine state.
 
-## Included
+## Include
 
-- TinManX1 source patch on the Orca Slicer 2.4.1 source line
-- helper scripts, smoke checks, FibreSeek G-code audit/comparison tooling, and wiring checks
-- manifest helper notes for the local TinManX1 app workflow
-- feature notes for native continuous fiber, Strength Lens, Wave Overhangs, Arc Supports, and backend improvements
-- source-credit and research ledgers
+- Source changes required for TinManX1 branding, FibreSeek profile handling,
+  continuous-fiber preview, G-code summary, and native fiber planning.
+- `resources/profiles/TinManX1.json` and `resources/profiles/TinManX1/`.
+- `resources/orcaslicer_codex/fiber_planner/`.
+- TinManX1 image assets created for this app.
+- FibreSeek profile generator, wiring check, profile lint, planner smoke test,
+  G-code comparison, and G-code contract audit scripts.
+- Public-safe documentation under `docs/`.
+- Attribution and upstream version notes.
 
-## Excluded
+## Exclude
 
-- compiled app bundles in the repository tree
-- native networking plugin binaries
-- private printer profiles and credentials
-- proprietary Rocket or FibreSeek assets
-- full local Git history from experimental worktrees
+- `outputs/` and other generated local G-code comparisons.
+- Rocket Slicer databases, app bundles, images, UI strings, or exported G-code.
+- Installed app bundles and local application-support profile state.
+- Private printer hostnames, IP addresses, tokens, logs, and account data.
+- Build directories and packaging scratch directories.
 
-## Validation Status
+## Release Gate
 
-The feature-port notes record local smoke checks and installed-app verification for the private working copy. Public consumers should treat the patch and any attached alpha binaries as experimental material and rerun their own build, smoke, and real-printer validation.
+Run this before publishing a FibreSeek-capable TinManX1 checkpoint:
 
-Strength Lens is advisory. It does not calculate certified stress, displacement, safety factor, or engineering allowables.
+```bash
+python3 checks/verify_tinmanx1_fiberseek_release.py
+```
 
-Wave Overhangs and Arc Supports are experimental toolpath-transform lanes. They require operator review and material/printer validation before use on real hardware.
-
-Native FibreSeek planning is a standalone experimental path. It emits continuous-fiber G-code and summaries, but it does not ship proprietary continuous-fiber assets or certify hardware readiness.
+The gate checks Python syntax, C++ profile-whitelist keys, profile/config/UI
+wiring, generated FibreSeek profile invariants, native planner smoke fixtures,
+the neutral G-code comparison self-test, and obvious public-release hygiene
+issues.

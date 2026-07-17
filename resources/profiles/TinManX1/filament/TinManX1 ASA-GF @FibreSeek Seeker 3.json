@@ -3,7 +3,7 @@
   "name": "TinManX1 ASA-GF @FibreSeek Seeker 3",
   "inherits": "TinManX1 ASA-GF base",
   "from": "system",
-  "setting_id": "TMX-FS3-ASA-GF-P",
+  "setting_id": "B8v8HvlpREPnyoHm",
   "filament_id": "tinmanx1-fs3-asa-gf-plastic",
   "instantiation": "true",
   "filament_vendor": [

@@ -1,0 +1,147 @@
+{
+    "type": "filament",
+    "name": "PA612-CF Codex-Fiberon - Creality K2 Plus @Codex",
+    "from": "system",
+    "instantiation": "true",
+    "filament_vendor": [
+        "Codex"
+    ],
+    "filament_type": [
+        "PA612-CF"
+    ],
+    "filament_settings_id": [
+        "PA612-CF Codex-Fiberon - Creality K2 Plus @Codex"
+    ],
+    "filament_id": "CODXBE0FF430",
+    "setting_id": "Y7LK6VGbzKK7fhVk",
+    "default_filament_colour": [
+        "#000000"
+    ],
+    "filament_diameter": [
+        "1.75"
+    ],
+    "filament_density": [
+        "1.03"
+    ],
+    "filament_cost": [
+        "49.99"
+    ],
+    "filament_flow_ratio": [
+        "0.99"
+    ],
+    "filament_max_volumetric_speed": [
+        "16"
+    ],
+    "filament_is_support": [
+        "0"
+    ],
+    "filament_soluble": [
+        "0"
+    ],
+    "nozzle_temperature": [
+        "270"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "270"
+    ],
+    "nozzle_temperature_range_low": [
+        "250"
+    ],
+    "nozzle_temperature_range_high": [
+        "300"
+    ],
+    "cool_plate_temp": [
+        "0"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "0"
+    ],
+    "eng_plate_temp": [
+        "100"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "100"
+    ],
+    "hot_plate_temp": [
+        "50"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "50"
+    ],
+    "textured_plate_temp": [
+        "100"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "100"
+    ],
+    "chamber_temperature": [
+        "0"
+    ],
+    "activate_chamber_temp_control": [
+        "0"
+    ],
+    "fan_min_speed": [
+        "0"
+    ],
+    "fan_max_speed": [
+        "30"
+    ],
+    "overhang_fan_speed": [
+        "40"
+    ],
+    "overhang_fan_threshold": [
+        "0%"
+    ],
+    "required_nozzle_HRC": [
+        "40"
+    ],
+    "temperature_vitrification": [
+        "206.2"
+    ],
+    "filament_retraction_length": [
+        "1"
+    ],
+    "filament_retraction_speed": [
+        "30"
+    ],
+    "filament_deretraction_speed": [
+        "30"
+    ],
+    "compatible_printers": [
+        "Creality K2 Plus 0.2 nozzle",
+        "Creality K2 Plus 0.4 nozzle",
+        "Creality K2 Plus 0.4 nozzle - Codex Tinman",
+        "Creality K2 Plus 0.4 nozzle - Copy",
+        "Creality K2 Plus 0.4 nozzle - Tinman",
+        "Creality K2 Plus 0.6 nozzle",
+        "Creality K2 Plus 0.6 nozzle - Codex Tinman",
+        "Creality K2 Plus 0.6 nozzle - Copy",
+        "Creality K2 Plus 0.6 nozzle - Tinman",
+        "Creality K2 Plus 0.6 nozzle - Tinmans Hanger",
+        "Creality K2 Plus 0.8 nozzle",
+        "Creality K2 Plus 0.8 nozzle - Codex Tinman",
+        "Creality K2 Plus 0.8 nozzle - Tinman",
+        "Creality K2 Plus"
+    ],
+    "is_custom_defined": "0",
+    "version": "2.4.2.0",
+    "description": "TinManX1 Codex Polymaker official catalog; material=Fiberon PA612-CF15; official source=preset/Fiberon PA612-CF15/Snapmaker/U1/OrcaSlicer/Fiberon PA612-CF15 @Snapmaker U1.json; source updated=2026-06-02T13:09:24+08:00",
+    "filament_notes": [
+        ""
+    ],
+    "polymaker_source_material": [
+        "Fiberon PA612-CF15"
+    ],
+    "polymaker_source_preset_path": [
+        "preset/Fiberon PA612-CF15/Snapmaker/U1/OrcaSlicer/Fiberon PA612-CF15 @Snapmaker U1.json"
+    ],
+    "polymaker_source_index_updated_at": [
+        "2026-07-02T08:50:28.961Z"
+    ],
+    "filament_price_source_url": [
+        "https://shop.polymaker.com/products/fiberon-pa612-cf"
+    ],
+    "filament_price_source_variant": [
+        "1.75mm / 1kg / Black"
+    ]
+}

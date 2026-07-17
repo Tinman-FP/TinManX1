@@ -3,7 +3,7 @@
   "name": "0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.4+0.7 nozzle",
   "inherits": "TinManX1 FibreSeek process common",
   "from": "system",
-  "setting_id": "TMX-FS3-PROC-X0.4-LIGHT",
+  "setting_id": "3ca3qqbuaT5aW4NF",
   "instantiation": "true",
   "layer_height": "0.2",
   "first_layer_height": "0.2",
@@ -74,7 +74,7 @@
   "fiber_inner_perimeter_loops": "1",
   "fiber_plastic_outer_loops_with_fiber": "2",
   "fiber_plastic_inner_loops_with_fiber": "0",
-  "fiber_reinforcement_payload": "{\"layup_bands\":[{\"enabled\":false,\"from_layer\":1,\"name\":\"No first fiber layer\",\"priority\":100,\"to_layer\":1},{\"from_layer\":2,\"infill\":true,\"max_routes_per_layer\":80,\"mode\":\"heavy\",\"name\":\"Tetragrid after first layer\",\"pattern\":\"tetragrid\",\"perimeters\":false,\"priority\":10,\"spacing\":8.0}]}",
+  "fiber_reinforcement_payload": "{}",
   "compatible_printers": [
     "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
     "FibreSeek Seeker 3 - Codex"

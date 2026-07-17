@@ -1,6 +1,2 @@
-*.patch text eol=lf
-*.sh text eol=lf
-*.py text eol=lf
-*.md text eol=lf
-*.yml text eol=lf
-*.yaml text eol=lf
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto

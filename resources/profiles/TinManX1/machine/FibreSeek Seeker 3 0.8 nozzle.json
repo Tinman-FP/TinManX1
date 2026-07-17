@@ -3,7 +3,7 @@
   "name": "FibreSeek Seeker 3 0.8 nozzle",
   "inherits": "TinManX1 FibreSeek machine common",
   "from": "system",
-  "setting_id": "TMX-FS3-M-P0.8",
+  "setting_id": "sOalcJvrn9NlmPQI",
   "instantiation": "true",
   "printer_model": "FibreSeek Seeker 3",
   "printer_variant": "0.8",

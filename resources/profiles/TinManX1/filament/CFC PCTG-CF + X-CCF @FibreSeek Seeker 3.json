@@ -3,7 +3,7 @@
   "name": "CFC PCTG-CF + X-CCF @FibreSeek Seeker 3",
   "inherits": "TinManX1 PCTG-CF base",
   "from": "system",
-  "setting_id": "TMX-FS3-PCTG-CF-X-CCF",
+  "setting_id": "sLRgYJaHkmHOZR4J",
   "filament_id": "tinmanx1-fs3-pctg-cf-x-ccf",
   "instantiation": "true",
   "filament_vendor": [

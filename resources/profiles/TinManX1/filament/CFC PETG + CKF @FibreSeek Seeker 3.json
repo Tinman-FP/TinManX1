@@ -3,7 +3,7 @@
   "name": "CFC PETG + CKF @FibreSeek Seeker 3",
   "inherits": "TinManX1 PETG base",
   "from": "system",
-  "setting_id": "TMX-FS3-PETG-CKF",
+  "setting_id": "uS8uuiywhtmkoccK",
   "filament_id": "tinmanx1-fs3-petg-ckf",
   "instantiation": "true",
   "filament_vendor": [

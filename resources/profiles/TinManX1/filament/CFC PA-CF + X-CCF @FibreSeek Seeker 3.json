@@ -3,7 +3,7 @@
   "name": "CFC PA-CF + X-CCF @FibreSeek Seeker 3",
   "inherits": "TinManX1 PA-CF base",
   "from": "system",
-  "setting_id": "TMX-FS3-PA-CF-X-CCF",
+  "setting_id": "fiUxWxQVN9eSK7n0",
   "filament_id": "tinmanx1-fs3-pa-cf-x-ccf",
   "instantiation": "true",
   "filament_vendor": [
