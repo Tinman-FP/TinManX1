@@ -364,6 +364,49 @@ def clamp_print_start_bounds(text: str, bounds: tuple[float, float, float, float
     return updated, report
 
 
+def count_emitted_layers(text: str) -> int | None:
+    layers: list[int] = []
+    for match in re.finditer(r"(?m)^(?!\s*;)\s*_ON_LAYER_CHANGE\b[^\n;]*\bLAYER=(\d+)\b", text):
+        layers.append(int(match.group(1)))
+    if layers:
+        return max(layers)
+
+    layer_changes = re.findall(r"(?m)^;LAYER_CHANGE\b", text)
+    return len(layer_changes) if layer_changes else None
+
+
+def normalize_print_start_layer_count(text: str) -> tuple[str, dict[str, Any]]:
+    actual_layers = count_emitted_layers(text)
+    report: dict[str, Any] = {
+        "changed": False,
+        "actual": actual_layers,
+        "before": None,
+        "after": None,
+    }
+    if actual_layers is None or actual_layers <= 0:
+        report["reason"] = "no_emitted_layer_count"
+        return text, report
+
+    def normalize_line(match: re.Match[str]) -> str:
+        line = match.group(0)
+        value_match = re.search(r"\bTOTAL_LAYER_COUNT=(-?\d+(?:\.\d+)?)", line)
+        if not value_match:
+            report["reason"] = "missing_total_layer_count"
+            return line
+        old_value = int(float(value_match.group(1)))
+        report["before"] = old_value
+        report["after"] = actual_layers
+        if old_value == actual_layers:
+            return line
+        report["changed"] = True
+        return re.sub(r"\bTOTAL_LAYER_COUNT=-?\d+(?:\.\d+)?", f"TOTAL_LAYER_COUNT={actual_layers}", line, count=1)
+
+    updated = re.sub(r"(?m)^(?!\s*;)\s*PRINT_START\b.*$", normalize_line, text, count=1)
+    if report["before"] is None and "reason" not in report:
+        report["reason"] = "missing_print_start"
+    return updated, report
+
+
 def allowed_lane_edges(target: str) -> set[str]:
     if env_flag("TINMAN_AUTO_PA_ALLOW_ANY_EDGE"):
         return set()
@@ -499,6 +542,20 @@ def strip_previous_stamps(text: str) -> str:
     ) + ("\n" if text.endswith("\n") else "")
 
 
+def parse_previous_stamp(text: str) -> dict[str, str]:
+    for line in text.splitlines():
+        if not line.startswith(STAMP_PREFIX):
+            continue
+        fields: dict[str, str] = {}
+        for token in line[len(STAMP_PREFIX):].strip().split():
+            if "=" not in token:
+                continue
+            key, value = token.split("=", 1)
+            fields[key] = value
+        return fields
+    return {}
+
+
 def stamp_file(gcode: Path, fields: dict[str, Any]) -> None:
     text = strip_previous_stamps(gcode.read_text(errors="replace"))
     field_text = " ".join(f"{key}={value}" for key, value in fields.items() if value not in (None, ""))
@@ -591,6 +648,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     text = gcode.read_text(errors="replace")
+    previous_stamp = parse_previous_stamp(text)
     target, detected = detect_target(text)
     report["detected"] = detected
     report["target"] = target
@@ -616,6 +674,7 @@ def main(argv: list[str] | None = None) -> int:
         write_report(report_path, report)
         return 0
 
+    text_modified = False
     bed_bounds = parse_bed_bounds(text, target)
     if bed_bounds is not None:
         text, skirt_report = sanitize_out_of_bounds_skirts(text, bed_bounds)
@@ -623,7 +682,15 @@ def main(argv: list[str] | None = None) -> int:
         report["skirt_sanitizer"] = skirt_report
         report["print_start_bounds"] = print_start_report
         if skirt_report.get("removed_blocks") or print_start_report.get("changed"):
-            gcode.write_text(text, encoding="utf-8")
+            text_modified = True
+
+    text, layer_count_report = normalize_print_start_layer_count(text)
+    report["print_start_layer_count"] = layer_count_report
+    if layer_count_report.get("changed"):
+        text_modified = True
+
+    if text_modified:
+        gcode.write_text(text, encoding="utf-8")
 
     pa_score, pa_reason = find_score(target, "pa")
     maxflow_score, maxflow_reason = find_score(target, "maxflow")
@@ -631,6 +698,9 @@ def main(argv: list[str] | None = None) -> int:
     report["pa_score_reason"] = pa_reason
     report["maxflow_score"] = maxflow_score
     report["maxflow_score_reason"] = maxflow_reason
+    skirt_removed = report.get("skirt_sanitizer", {}).get("removed_blocks") or previous_stamp.get("skirt") == "removed_oob"
+    bounds_clamped = report.get("print_start_bounds", {}).get("changed") or previous_stamp.get("bounds") == "clamped"
+    layers_normalized = report.get("print_start_layer_count", {}).get("changed")
     if not pa_score and not maxflow_score:
         report["status"] = "deferred_no_real_scores"
         stamp_file(
@@ -640,8 +710,9 @@ def main(argv: list[str] | None = None) -> int:
                 "target": target,
                 "pa_score": "missing",
                 "maxflow_score": "missing",
-                "skirt": "removed_oob" if report.get("skirt_sanitizer", {}).get("removed_blocks") else None,
-                "bounds": "clamped" if report.get("print_start_bounds", {}).get("changed") else None,
+                "skirt": "removed_oob" if skirt_removed else None,
+                "bounds": "clamped" if bounds_clamped else None,
+                "layers": "normalized" if layers_normalized else None,
             },
         )
         write_report(report_path, report)
@@ -670,8 +741,9 @@ def main(argv: list[str] | None = None) -> int:
                 "target": target,
                 "pa_score": "applied" if pa_score else "missing",
                 "maxflow_score": "applied" if maxflow_score else "missing",
-                "skirt": "removed_oob" if report.get("skirt_sanitizer", {}).get("removed_blocks") else None,
-                "bounds": "clamped" if report.get("print_start_bounds", {}).get("changed") else None,
+                "skirt": "removed_oob" if skirt_removed else None,
+                "bounds": "clamped" if bounds_clamped else None,
+                "layers": "normalized" if layers_normalized else None,
             },
         )
         write_report(report_path, report)

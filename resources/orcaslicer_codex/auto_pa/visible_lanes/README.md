@@ -26,6 +26,9 @@ When Orca generates a global skirt around the lane and the model, TinManX1
 removes only skirt blocks that would leave the bed and clamps the advertised
 `PRINT_START` bounds to the configured bed. This keeps the lane inside the
 edge strip without needing to move it farther into the printable area.
+The same postprocess pass also normalizes `PRINT_START TOTAL_LAYER_COUNT` to
+the emitted layer-change stream so printer-side progress and PLR bookkeeping
+track the actual G-code.
 
 Set `TINMAN_AUTO_PA_AUTO_ADD_VISIBLE_LANE=0` before launching TinManX1 to
 temporarily disable automatic lane insertion for debugging.
