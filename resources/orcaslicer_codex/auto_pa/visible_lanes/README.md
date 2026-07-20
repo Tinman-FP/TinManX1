@@ -22,5 +22,10 @@ configured edge strip, and the lane does not overlap another object footprint.
 Without that visible object, calibration is deferred and no hidden pattern is
 injected.
 
+When Orca generates a global skirt around the lane and the model, TinManX1
+removes only skirt blocks that would leave the bed and clamps the advertised
+`PRINT_START` bounds to the configured bed. This keeps the lane inside the
+edge strip without needing to move it farther into the printable area.
+
 Set `TINMAN_AUTO_PA_AUTO_ADD_VISIBLE_LANE=0` before launching TinManX1 to
 temporarily disable automatic lane insertion for debugging.

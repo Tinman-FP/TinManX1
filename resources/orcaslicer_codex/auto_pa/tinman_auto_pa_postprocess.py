@@ -25,8 +25,9 @@ from __future__ import annotations
 Orca/TinManX1 post-process scripts receive a single G-code path and are expected
 to mutate it in place. This adapter detects the target machine, looks for real
 same-print calibration score files, and delegates the actual G-code preparation
-to auto_pa.py. If fresh real scores are not present, it preserves the model G-code
-and adds a visible audit stamp instead of silently applying synthetic data.
+to auto_pa.py. If fresh real scores are not present, it preserves the model G-code,
+except for safety cleanup around visible lane skirts, and adds a visible audit
+stamp instead of silently applying synthetic data.
 """
 
 import argparse
@@ -259,6 +260,108 @@ def edge_name_for_bbox(
     if x0 >= max_x - limit:
         return "right"
     return ""
+
+
+def line_xy_values(line: str) -> dict[str, float]:
+    if not re.match(r"^\s*G[01]\b", line, flags=re.IGNORECASE):
+        return {}
+    return {axis.upper(): float(value) for axis, value in re.findall(r"\b([XY])(-?\d+(?:\.\d+)?)", line, flags=re.IGNORECASE)}
+
+
+def xy_outside_bounds(x: float, y: float, bounds: tuple[float, float, float, float], tolerance: float = 0.01) -> bool:
+    min_x, min_y, max_x, max_y = bounds
+    return x < min_x - tolerance or x > max_x + tolerance or y < min_y - tolerance or y > max_y + tolerance
+
+
+def sanitize_out_of_bounds_skirts(text: str, bounds: tuple[float, float, float, float]) -> tuple[str, dict[str, Any]]:
+    lines = text.splitlines(keepends=True)
+    output: list[str] = []
+    report: dict[str, Any] = {
+        "removed_blocks": 0,
+        "removed_lines": 0,
+        "first_removed_line": None,
+    }
+
+    i = 0
+    while i < len(lines):
+        if lines[i].lstrip().lower().startswith(";type:skirt"):
+            start = i
+            i += 1
+            while i < len(lines):
+                marker = lines[i].lstrip().lower()
+                if (
+                    marker.startswith(";type:")
+                    or marker.startswith("; printing object ")
+                    or marker.startswith("exclude_object_start ")
+                    or marker.startswith(";layer_change")
+                    or marker.startswith("; stop printing object ")
+                ):
+                    break
+                i += 1
+
+            block = lines[start:i]
+            last_x: float | None = None
+            last_y: float | None = None
+            out_of_bounds = False
+            for line in block:
+                values = line_xy_values(line)
+                if "X" in values:
+                    last_x = values["X"]
+                if "Y" in values:
+                    last_y = values["Y"]
+                if last_x is not None and last_y is not None and values and xy_outside_bounds(last_x, last_y, bounds):
+                    out_of_bounds = True
+                    break
+
+            if out_of_bounds:
+                report["removed_blocks"] += 1
+                report["removed_lines"] += len(block)
+                if report["first_removed_line"] is None:
+                    report["first_removed_line"] = start + 1
+                continue
+
+            output.extend(block)
+            continue
+
+        output.append(lines[i])
+        i += 1
+
+    if report["removed_blocks"] == 0:
+        return text, report
+    return "".join(output), report
+
+
+def clamp_print_start_bounds(text: str, bounds: tuple[float, float, float, float]) -> tuple[str, dict[str, Any]]:
+    min_x, min_y, max_x, max_y = bounds
+    report: dict[str, Any] = {"changed": False, "before": {}, "after": {}}
+    fields = {
+        "X0": (min_x, max_x),
+        "Y0": (min_y, max_y),
+        "X1": (min_x, max_x),
+        "Y1": (min_y, max_y),
+    }
+
+    def clamp_line(match: re.Match[str]) -> str:
+        line = match.group(0)
+        new_line = line
+        for key, (lo, hi) in fields.items():
+            value_match = re.search(rf"\b{key}=(-?\d+(?:\.\d+)?)", new_line)
+            if not value_match:
+                continue
+            old_value = float(value_match.group(1))
+            new_value = min(max(old_value, lo), hi)
+            report["before"][key] = old_value
+            report["after"][key] = new_value
+            if new_value != old_value:
+                report["changed"] = True
+                new_line = re.sub(rf"\b{key}=-?\d+(?:\.\d+)?", f"{key}={new_value:g}", new_line, count=1)
+        return new_line
+
+    updated = re.sub(r"(?m)^(?!\s*;)\s*PRINT_START\b.*$", clamp_line, text, count=1)
+    if not report["changed"]:
+        report["before"] = {}
+        report["after"] = {}
+    return updated, report
 
 
 def allowed_lane_edges(target: str) -> set[str]:
@@ -513,6 +616,15 @@ def main(argv: list[str] | None = None) -> int:
         write_report(report_path, report)
         return 0
 
+    bed_bounds = parse_bed_bounds(text, target)
+    if bed_bounds is not None:
+        text, skirt_report = sanitize_out_of_bounds_skirts(text, bed_bounds)
+        text, print_start_report = clamp_print_start_bounds(text, bed_bounds) if skirt_report.get("removed_blocks") else (text, {"changed": False})
+        report["skirt_sanitizer"] = skirt_report
+        report["print_start_bounds"] = print_start_report
+        if skirt_report.get("removed_blocks") or print_start_report.get("changed"):
+            gcode.write_text(text, encoding="utf-8")
+
     pa_score, pa_reason = find_score(target, "pa")
     maxflow_score, maxflow_reason = find_score(target, "maxflow")
     report["pa_score"] = pa_score
@@ -528,6 +640,8 @@ def main(argv: list[str] | None = None) -> int:
                 "target": target,
                 "pa_score": "missing",
                 "maxflow_score": "missing",
+                "skirt": "removed_oob" if report.get("skirt_sanitizer", {}).get("removed_blocks") else None,
+                "bounds": "clamped" if report.get("print_start_bounds", {}).get("changed") else None,
             },
         )
         write_report(report_path, report)
@@ -556,6 +670,8 @@ def main(argv: list[str] | None = None) -> int:
                 "target": target,
                 "pa_score": "applied" if pa_score else "missing",
                 "maxflow_score": "applied" if maxflow_score else "missing",
+                "skirt": "removed_oob" if report.get("skirt_sanitizer", {}).get("removed_blocks") else None,
+                "bounds": "clamped" if report.get("print_start_bounds", {}).get("changed") else None,
             },
         )
         write_report(report_path, report)
