@@ -7614,6 +7614,76 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
 
  #define AUTOPLACEMENT_ON_LOAD
 
+namespace {
+enum class TinManAutoPALaneEdge
+{
+    None,
+    Front,
+    Rear,
+    Left,
+    Right,
+};
+
+std::string tinman_auto_pa_normalized_name(std::string name)
+{
+    boost::algorithm::to_lower(name);
+    for (char &ch : name) {
+        const auto c = static_cast<unsigned char>(ch);
+        if (!std::isalnum(c))
+            ch = '_';
+    }
+    return name;
+}
+
+TinManAutoPALaneEdge tinman_auto_pa_lane_edge_from_name(const std::string &name)
+{
+    const std::string normalized = tinman_auto_pa_normalized_name(name);
+    if (normalized.find("tinman_auto_pa_lane") == std::string::npos)
+        return TinManAutoPALaneEdge::None;
+    if (normalized.find("_front") != std::string::npos)
+        return TinManAutoPALaneEdge::Front;
+    if (normalized.find("_rear") != std::string::npos)
+        return TinManAutoPALaneEdge::Rear;
+    if (normalized.find("_left") != std::string::npos)
+        return TinManAutoPALaneEdge::Left;
+    if (normalized.find("_right") != std::string::npos)
+        return TinManAutoPALaneEdge::Right;
+    return TinManAutoPALaneEdge::None;
+}
+
+bool tinman_auto_pa_lane_displacement(const std::string &name, const BoundingBoxf &bed_bb, double z_offset, Vec3d &displacement)
+{
+    const TinManAutoPALaneEdge edge = tinman_auto_pa_lane_edge_from_name(name);
+    if (edge == TinManAutoPALaneEdge::None || !bed_bb.defined)
+        return false;
+
+    constexpr double lane_center_from_edge_mm = 10.0;
+    const Vec2d      bed_center               = bed_bb.center();
+    double           x                        = bed_center(0);
+    double           y                        = bed_center(1);
+
+    switch (edge) {
+    case TinManAutoPALaneEdge::Front:
+        y = bed_bb.min(1) + lane_center_from_edge_mm;
+        break;
+    case TinManAutoPALaneEdge::Rear:
+        y = bed_bb.max(1) - lane_center_from_edge_mm;
+        break;
+    case TinManAutoPALaneEdge::Left:
+        x = bed_bb.min(0) + lane_center_from_edge_mm;
+        break;
+    case TinManAutoPALaneEdge::Right:
+        x = bed_bb.max(0) - lane_center_from_edge_mm;
+        break;
+    case TinManAutoPALaneEdge::None:
+        return false;
+    }
+
+    displacement = {x, y, z_offset};
+    return true;
+}
+} // namespace
+
 std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs& model_objects, bool allow_negative_z, bool split_object, bool auto_drop)
 {
     const Vec3d bed_size = Slic3r::to_3d(this->bed.build_volume().bounding_volume2d().size(), 1.0) - 2.0 * Vec3d::Ones();
@@ -7733,7 +7803,16 @@ std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs& mode
         auto start_point = this->bed.build_volume().bounding_volume2d().center();
         bool plate_empty = partplate_list.get_curr_plate()->empty();
         Vec3d displacement;
-        if (plate_empty)
+        ModelObject *instance_object = instance->get_object();
+        const std::string instance_object_name = instance_object == nullptr ?
+            std::string() :
+            (instance_object->name.empty() ? fs::path(instance_object->input_file).filename().string() : instance_object->name);
+        if (tinman_auto_pa_lane_displacement(instance_object_name, this->bed.build_volume().bounding_volume2d(), offset(2), displacement)) {
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__
+                                    << boost::format(", TinMan auto PA lane import placement, object %1%, x %2%, y %3%")
+                                           % instance_object_name % displacement(0) % displacement(1);
+        }
+        else if (plate_empty)
             displacement = {start_point(0), start_point(1), offset(2)};
         else {
             auto empty_cell = wxGetApp().plater()->canvas3D()->get_nearest_empty_cell({start_point(0), start_point(1)});

@@ -10,6 +10,10 @@ Use one lane object on the same plate as the model before slicing:
 - `TINMAN_AUTO_PA_LANE_500_REAR.3mf`: RatRig V-Core 4 rear edge.
 - `TINMAN_AUTO_PA_LANE_500_FRONT.3mf`: optional 500 mm front-edge variant.
 
+TinManX1 builds with the lane importer patch recognize these object names during
+3MF/model import and place them 10 mm from the named bed edge instead of using
+the normal bed-center auto-placement pass.
+
 The postprocessor only treats these as calibration lanes when the sliced G-code
 contains an `EXCLUDE_OBJECT_DEFINE` entry for the lane, the lane is inside the
 configured edge strip, and the lane does not overlap another object footprint.

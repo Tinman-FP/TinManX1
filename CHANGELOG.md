@@ -9,6 +9,7 @@ Included:
 - consolidated the full Orca-derived TinManX1 source branch with the public release-package ledgers, helper scripts, validation contracts, and profile-maintenance utilities so GitHub has one canonical fork branch for current work
 - added the visible TinManX1 revision `v2026.07.20-unified.1` to startup splash rendering while preserving the based-on-Orca version line
 - added Moonraker metadata-based remaining-time handling, live status stream restoration, and the TinManX1 Qidi Box device panel from the printer-operations workstream
+- added visible TinMan auto-PA lane assets and lane-aware import placement so Qidi, Max EZ, and RatRig calibration lanes appear on the intended bed edge before slicing
 - sanitized the Moonraker lane-data test default host and local catalog-normalizer defaults so public helpers no longer point at a specific private LAN/worktree
 - carried forward the pending HT-PLA-CF Codex helper entries and Arc Support pass-through fallback from the older 2.4.2 profile-maintenance branch
 - rebased the current TinManX1 patch onto upstream Orca Slicer 2.4.2 commit `8500fcdccaa10b5099ac20d252af3a7c560046f1`
