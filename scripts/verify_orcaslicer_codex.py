@@ -29,6 +29,8 @@ BAMBU_PLUGINS = (
     "libbambu_networking_02.06.00.50.dylib",
 )
 FEATURE_RESOURCES = (
+    "auto_pa/auto_pa.py",
+    "auto_pa/tinman_auto_pa_postprocess.py",
     "arc_support/orcaslicer_codex_arc_support_inplace_adapter.py",
     "arc_support/orcaslicer_codex_arc_support_transform.py",
     "attribution/orcaslicer_codex_feature_attribution.md",
@@ -45,6 +47,8 @@ FEATURE_ATTRIBUTION_MARKERS = (
     "Oak Ridge National Laboratory",
     "Strength Lens load axis",
     "stronger in X/Y than through the Z layer stack",
+    "Auto Pressure Advance / Max Flow Preflight",
+    "real same-print calibration score files",
 )
 FEATURE_BINARY_MARKERS = (
     "Strength Lens load axis",

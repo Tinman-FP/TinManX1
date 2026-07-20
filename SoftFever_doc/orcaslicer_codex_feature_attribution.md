@@ -64,3 +64,22 @@ remaining-time display instead of treating `print_stats.total_duration` as a
 slicer estimate. The Qidi Box panel is a Device-tab integration layer around
 existing printer-side macros; it does not replace Qidi firmware, bypass printer
 safety gates, or move filament unless the printer macro accepts the command.
+
+## Auto Pressure Advance / Max Flow Preflight
+
+- Source: TinManX1 same-print calibration requirements from William Tinney's
+  Qidi Plus 4, Max EZ, RatRig V-Core 4 IDEX, and Prusa Core One workflows.
+- Reference credit: CNC Kitchen pressure advance and volumetric-flow testing
+  methodology, Klipper pressure advance documentation, Marlin Linear Advance
+  documentation, and Prusa pressure advance behavior as calibration references.
+- Project credit: William Tinney / Tinman-FP for printer fleet requirements,
+  calibration-region constraints, Beacon-assisted measurement direction, and
+  live G-code export validation.
+- Implementation credit: OpenAI Codex / GPT-5 for the TinManX1 postprocessor
+  wrapper, real-score gating, RatRig T0/T1 detection, max-flow governor
+  integration path, profile hook, and verification scaffolding.
+
+The TinManX1 auto-PA path only applies PA, adaptive PA, or max-flow changes when
+real same-print calibration score files are available for the detected target
+printer. In the absence of real scores it preserves the model G-code and emits
+an audit stamp instead of applying synthetic calibration data.
