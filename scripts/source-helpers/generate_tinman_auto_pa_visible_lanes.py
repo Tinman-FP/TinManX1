@@ -146,8 +146,18 @@ def model_settings_xml(name: str) -> str:
 """
 
 
-def write_lane(path: Path, *, bed: float, edge: str, depth: float, margin: float, height: float, line_width: float) -> dict[str, object]:
-    length = bed - 2.0 * margin
+def write_lane(
+    path: Path,
+    *,
+    bed: float,
+    edge: str,
+    depth: float,
+    margin: float,
+    height: float,
+    line_width: float,
+    length_override: float | None = None,
+) -> dict[str, object]:
+    length = length_override if length_override is not None else bed - 2.0 * margin
     center_x = bed / 2.0
     center_y = depth / 2.0 if edge == "front" else bed - depth / 2.0
     name = f"TINMAN_AUTO_PA_LANE_{int(bed)}_{edge.upper()}"
@@ -172,7 +182,12 @@ def write_lane(path: Path, *, bed: float, edge: str, depth: float, margin: float
         "name": name,
         "bed_mm": bed,
         "edge": edge,
-        "bbox": [margin, center_y - depth / 2.0 + 1.0, bed - margin, center_y + depth / 2.0 - 1.0],
+        "bbox": [
+            center_x - length / 2.0,
+            center_y - depth / 2.0 + 1.0,
+            center_x + length / 2.0,
+            center_y + depth / 2.0 - 1.0,
+        ],
         "height_mm": height,
         "line_count": 5,
     }
@@ -199,6 +214,7 @@ def main() -> int:
                     margin=args.margin,
                     height=args.height,
                     line_width=args.line_width,
+                    length_override=270.0 if bed == 300.0 and edge == "front" else None,
                 )
             )
     manifest = {"kind": "tinman_auto_pa_visible_lane_manifest", "version": 1, "assets": outputs}

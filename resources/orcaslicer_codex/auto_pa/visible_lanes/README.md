@@ -10,6 +10,9 @@ Use one lane object on the same plate as the model before slicing:
 - `TINMAN_AUTO_PA_LANE_500_REAR.3mf`: RatRig V-Core 4 rear edge.
 - `TINMAN_AUTO_PA_LANE_500_FRONT.3mf`: optional 500 mm front-edge variant.
 
+The 300 mm front lane is shortened to 270 mm so it remains in the Qidi Plus 4
+front strip while clearing the profile's front-right bed exclusion pocket.
+
 TinManX1 builds with the lane importer patch recognize these object names during
 3MF/model import and place them 10 mm from the named bed edge instead of using
 the normal bed-center auto-placement pass. Current TinManX1 builds also auto-add
