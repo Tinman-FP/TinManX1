@@ -382,28 +382,46 @@ def normalize_print_start_layer_count(text: str) -> tuple[str, dict[str, Any]]:
         "actual": actual_layers,
         "before": None,
         "after": None,
+        "updates": [],
     }
     if actual_layers is None or actual_layers <= 0:
         report["reason"] = "no_emitted_layer_count"
         return text, report
 
-    def normalize_line(match: re.Match[str]) -> str:
+    def record_update(kind: str, old_value: int) -> None:
+        report["updates"].append({"kind": kind, "before": old_value, "after": actual_layers})
+        if report["before"] is None:
+            report["before"] = old_value
+            report["after"] = actual_layers
+        if old_value != actual_layers:
+            report["changed"] = True
+
+    def normalize_print_start_line(match: re.Match[str]) -> str:
         line = match.group(0)
         value_match = re.search(r"\bTOTAL_LAYER_COUNT=(-?\d+(?:\.\d+)?)", line)
         if not value_match:
-            report["reason"] = "missing_total_layer_count"
             return line
         old_value = int(float(value_match.group(1)))
-        report["before"] = old_value
-        report["after"] = actual_layers
+        record_update("PRINT_START TOTAL_LAYER_COUNT", old_value)
         if old_value == actual_layers:
             return line
-        report["changed"] = True
         return re.sub(r"\bTOTAL_LAYER_COUNT=-?\d+(?:\.\d+)?", f"TOTAL_LAYER_COUNT={actual_layers}", line, count=1)
 
-    updated = re.sub(r"(?m)^(?!\s*;)\s*PRINT_START\b.*$", normalize_line, text, count=1)
+    def normalize_stats_line(match: re.Match[str]) -> str:
+        line = match.group(0)
+        value_match = re.search(r"\bTOTAL_LAYER=(-?\d+(?:\.\d+)?)", line)
+        if not value_match:
+            return line
+        old_value = int(float(value_match.group(1)))
+        record_update("SET_PRINT_STATS_INFO TOTAL_LAYER", old_value)
+        if old_value == actual_layers:
+            return line
+        return re.sub(r"\bTOTAL_LAYER=-?\d+(?:\.\d+)?", f"TOTAL_LAYER={actual_layers}", line, count=1)
+
+    updated = re.sub(r"(?m)^(?!\s*;)\s*PRINT_START\w*\b.*$", normalize_print_start_line, text, count=1)
+    updated = re.sub(r"(?m)^(?!\s*;)\s*SET_PRINT_STATS_INFO\b[^\n;]*\bTOTAL_LAYER=-?\d+(?:\.\d+)?[^\n]*$", normalize_stats_line, updated)
     if report["before"] is None and "reason" not in report:
-        report["reason"] = "missing_print_start"
+        report["reason"] = "missing_layer_total_metadata"
     return updated, report
 
 
@@ -700,7 +718,7 @@ def main(argv: list[str] | None = None) -> int:
     report["maxflow_score_reason"] = maxflow_reason
     skirt_removed = report.get("skirt_sanitizer", {}).get("removed_blocks") or previous_stamp.get("skirt") == "removed_oob"
     bounds_clamped = report.get("print_start_bounds", {}).get("changed") or previous_stamp.get("bounds") == "clamped"
-    layers_normalized = report.get("print_start_layer_count", {}).get("changed")
+    layers_normalized = report.get("print_start_layer_count", {}).get("changed") or previous_stamp.get("layers") == "normalized"
     if not pa_score and not maxflow_score:
         report["status"] = "deferred_no_real_scores"
         stamp_file(

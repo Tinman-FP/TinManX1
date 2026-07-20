@@ -31,7 +31,9 @@ removes only skirt blocks that would leave the bed and clamps the advertised
 edge strip without needing to move it farther into the printable area.
 The same postprocess pass also normalizes `PRINT_START TOTAL_LAYER_COUNT` to
 the emitted layer-change stream so printer-side progress and PLR bookkeeping
-track the actual G-code.
+track the actual G-code. Profiles that report total layers with
+`SET_PRINT_STATS_INFO TOTAL_LAYER`, such as Qidi Plus 4, are normalized by the
+same pass.
 
 Set `TINMAN_AUTO_PA_AUTO_ADD_VISIBLE_LANE=0` before launching TinManX1 to
 temporarily disable automatic lane insertion for debugging.
