@@ -12,6 +12,7 @@
 #include <string>
 #include <regex>
 #include <future>
+#include <initializer_list>
 #include <utility>
 #include <boost/algorithm/string.hpp>
 #include <boost/iterator/counting_iterator.hpp>
@@ -5138,6 +5139,7 @@ struct Plater::priv
     std::string get_config(const std::string &key) const;
     BoundingBoxf bed_shape_bb() const;
     BoundingBox scaled_bed_shape_bb() const;
+    bool ensure_tinman_auto_pa_visible_lane_for_current_plate();
 
     // BBS: backup & restore
     std::vector<size_t> load_files(const std::vector<fs::path>& input_files, LoadStrategy strategy, bool ask_multi = false);
@@ -7625,6 +7627,12 @@ enum class TinManAutoPALaneEdge
     Right,
 };
 
+struct TinManAutoPALaneChoice
+{
+    std::string machine_label;
+    std::string filename;
+};
+
 std::string tinman_auto_pa_normalized_name(std::string name)
 {
     boost::algorithm::to_lower(name);
@@ -7650,6 +7658,46 @@ TinManAutoPALaneEdge tinman_auto_pa_lane_edge_from_name(const std::string &name)
     if (normalized.find("_right") != std::string::npos)
         return TinManAutoPALaneEdge::Right;
     return TinManAutoPALaneEdge::None;
+}
+
+bool tinman_auto_pa_is_lane_name(const std::string &name)
+{
+    return tinman_auto_pa_lane_edge_from_name(name) != TinManAutoPALaneEdge::None;
+}
+
+bool tinman_auto_pa_contains_any(const std::string &haystack, std::initializer_list<const char*> needles)
+{
+    for (const char *needle : needles) {
+        if (needle != nullptr && haystack.find(needle) != std::string::npos)
+            return true;
+    }
+    return false;
+}
+
+bool tinman_auto_pa_env_disables_auto_add()
+{
+    const char *value = std::getenv("TINMAN_AUTO_PA_AUTO_ADD_VISIBLE_LANE");
+    if (value == nullptr)
+        return false;
+
+    std::string normalized = value;
+    boost::algorithm::trim(normalized);
+    boost::algorithm::to_lower(normalized);
+    return normalized == "0" || normalized == "false" || normalized == "no" || normalized == "off";
+}
+
+TinManAutoPALaneChoice tinman_auto_pa_lane_choice_from_printer_haystack(const std::string &haystack)
+{
+    if (tinman_auto_pa_contains_any(haystack, {"qidi_max_ez", "max_ez"}))
+        return {"Qidi Max EZ", "TINMAN_AUTO_PA_LANE_300_REAR.3mf"};
+
+    if (tinman_auto_pa_contains_any(haystack, {"qidi_x_plus_4", "qidi_plus_4", "qidi_plus4", "x_plus_4", "xplus4"}))
+        return {"Qidi Plus 4", "TINMAN_AUTO_PA_LANE_300_FRONT.3mf"};
+
+    if (tinman_auto_pa_contains_any(haystack, {"rat_rig", "ratrig", "v_core"}))
+        return {"RatRig", "TINMAN_AUTO_PA_LANE_500_REAR.3mf"};
+
+    return {};
 }
 
 bool tinman_auto_pa_lane_displacement(const std::string &name, const BoundingBoxf &bed_bb, double z_offset, Vec3d &displacement)
@@ -7683,7 +7731,112 @@ bool tinman_auto_pa_lane_displacement(const std::string &name, const BoundingBox
     displacement = {x, y, z_offset};
     return true;
 }
+
+fs::path tinman_auto_pa_visible_lane_resource_path(const std::string &filename)
+{
+    const std::vector<fs::path> roots = {
+        fs::path(Slic3r::resources_dir()) / "orcaslicer_codex" / "auto_pa" / "visible_lanes",
+        fs::current_path() / "resources" / "orcaslicer_codex" / "auto_pa" / "visible_lanes",
+    };
+
+    for (const fs::path &root : roots) {
+        const fs::path candidate = root / filename;
+        boost::system::error_code ec;
+        if (fs::exists(candidate, ec))
+            return candidate;
+    }
+
+    return fs::path(Slic3r::resources_dir()) / "orcaslicer_codex" / "auto_pa" / "visible_lanes" / filename;
+}
 } // namespace
+
+bool Plater::priv::ensure_tinman_auto_pa_visible_lane_for_current_plate()
+{
+    if (tinman_auto_pa_env_disables_auto_add())
+        return false;
+
+    PresetBundle *preset_bundle = wxGetApp().preset_bundle;
+    if (preset_bundle == nullptr)
+        return false;
+
+    Preset &selected_printer = preset_bundle->printers.get_selected_preset();
+    Preset &edited_printer   = preset_bundle->printers.get_edited_preset();
+    if (selected_printer.printer_technology() != ptFFF && edited_printer.printer_technology() != ptFFF)
+        return false;
+
+    std::string printer_haystack;
+    auto append_value = [&printer_haystack](const std::string &value) {
+        if (!value.empty()) {
+            printer_haystack += ' ';
+            printer_haystack += tinman_auto_pa_normalized_name(value);
+        }
+    };
+    auto append_config_string = [&append_value](const DynamicPrintConfig &config, const char *key) {
+        try {
+            if (config.has(key))
+                append_value(config.opt_string(key));
+        } catch (...) {
+        }
+    };
+
+    append_value(preset_bundle->printers.get_selected_preset_name());
+    append_value(selected_printer.name);
+    append_value(selected_printer.alias);
+    append_value(selected_printer.inherits());
+    append_value(edited_printer.name);
+    append_value(edited_printer.alias);
+    append_value(edited_printer.inherits());
+    append_value(edited_printer.get_printer_type(preset_bundle));
+    append_value(edited_printer.get_current_printer_type(preset_bundle));
+    append_config_string(selected_printer.config, "printer_model");
+    append_config_string(selected_printer.config, "printer_settings_id");
+    append_config_string(edited_printer.config, "printer_model");
+    append_config_string(edited_printer.config, "printer_settings_id");
+
+    const TinManAutoPALaneChoice choice = tinman_auto_pa_lane_choice_from_printer_haystack(printer_haystack);
+    if (choice.filename.empty())
+        return false;
+
+    PartPlate *plate = partplate_list.get_curr_plate();
+    if (plate == nullptr)
+        return false;
+
+    const std::string expected_stem = tinman_auto_pa_normalized_name(fs::path(choice.filename).stem().string());
+    bool has_non_lane_object = false;
+    for (ModelObject *object : plate->get_objects_on_this_plate()) {
+        if (object == nullptr)
+            continue;
+
+        const std::string object_name = object->name.empty() ? fs::path(object->input_file).filename().string() : object->name;
+        if (tinman_auto_pa_is_lane_name(object_name)) {
+            const std::string normalized_object_name = tinman_auto_pa_normalized_name(object_name);
+            if (normalized_object_name.find(expected_stem) != std::string::npos)
+                return false;
+
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": found non-matching TinMan auto PA lane object %1% on plate %2%; not adding %3%")
+                                              % object_name % partplate_list.get_curr_plate_index() % choice.filename;
+            return false;
+        }
+
+        has_non_lane_object = true;
+    }
+
+    if (!has_non_lane_object)
+        return false;
+
+    const fs::path lane_path = tinman_auto_pa_visible_lane_resource_path(choice.filename);
+    boost::system::error_code ec;
+    if (!fs::exists(lane_path, ec)) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": TinMan auto PA visible lane missing for %1% at %2%")
+                                          % choice.machine_label % lane_path.string();
+        return false;
+    }
+
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": adding %1% visible auto PA lane %2% to plate %3%")
+                                   % choice.machine_label % choice.filename % partplate_list.get_curr_plate_index();
+    std::vector<size_t> loaded = load_files({lane_path}, LoadStrategy::LoadModel | LoadStrategy::Silence, false);
+    return !loaded.empty();
+}
 
 std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs& model_objects, bool allow_negative_z, bool split_object, bool auto_drop)
 {
@@ -8895,6 +9048,8 @@ void Plater::priv::export_gcode(fs::path output_path, bool output_path_on_remova
         return;
     }
 
+    ensure_tinman_auto_pa_visible_lane_for_current_plate();
+
     // bitmask of UpdateBackgroundProcessReturnState
     unsigned int state = update_background_process(true);
     if (state & priv::UPDATE_BACKGROUND_PROCESS_REFRESH_SCENE)
@@ -8926,6 +9081,8 @@ void Plater::priv::export_gcode(fs::path output_path, bool output_path_on_remova
         GUI::show_error(q, _L("Another export job is running."));
         return;
     }
+
+    ensure_tinman_auto_pa_visible_lane_for_current_plate();
 
     // bitmask of UpdateBackgroundProcessReturnState
     unsigned int state = update_background_process(true);
@@ -10911,6 +11068,8 @@ void Plater::priv::on_action_print_plate(SimpleEvent&)
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ":received print plate event\n" ;
     }
 
+    ensure_tinman_auto_pa_visible_lane_for_current_plate();
+
     PresetBundle& preset_bundle = *wxGetApp().preset_bundle;
     if (preset_bundle.use_bbl_network()) {
         // BBS
@@ -10986,6 +11145,8 @@ int Plater::priv::update_print_required_data(Slic3r::DynamicPrintConfig config, 
 
 void Plater::priv::on_action_send_to_printer(bool isall)
 {
+    ensure_tinman_auto_pa_visible_lane_for_current_plate();
+
 	if (!m_send_to_sdcard_dlg) m_send_to_sdcard_dlg = new SendToPrinterDialog(q);
     if (isall) {
         m_send_to_sdcard_dlg->prepare(PLATE_ALL_IDX);
@@ -11011,6 +11172,8 @@ void Plater::priv::on_action_print_all(SimpleEvent&)
     if (q != nullptr) {
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ":received print all event\n" ;
     }
+
+    ensure_tinman_auto_pa_visible_lane_for_current_plate();
 
     PresetBundle& preset_bundle = *wxGetApp().preset_bundle;
     if (preset_bundle.use_bbl_network()) {
@@ -15545,6 +15708,8 @@ void Plater::export_gcode(bool prefer_removable)
     if (p->process_completed_with_error == p->partplate_list.get_curr_plate_index())
         return;
 
+    p->ensure_tinman_auto_pa_visible_lane_for_current_plate();
+
     // If possible, remove accents from accented latin characters.
     // This function is useful for generating file names to be processed by legacy firmwares.
     fs::path default_output_file;
@@ -15647,6 +15812,8 @@ void Plater::export_gcode_3mf(bool export_all)
 
     if (p->process_completed_with_error == p->partplate_list.get_curr_plate_index())
         return;
+
+    p->ensure_tinman_auto_pa_visible_lane_for_current_plate();
 
     //calc default_output_file, get default output file from background process
     fs::path default_output_file;
@@ -16547,6 +16714,8 @@ void Plater::reslice()
     // and notify user that he should leave it first.
     if (get_view3D_canvas3D()->get_gizmos_manager().is_in_editing_mode(true))
         return;
+
+    p->ensure_tinman_auto_pa_visible_lane_for_current_plate();
     
     // Stop the running (and queued) UI jobs and only proceed if they actually
     // get stopped.
@@ -16725,6 +16894,8 @@ int Plater::start_next_slice()
     // Stop arrange and (or) optimize rotation tasks.
     //this->stop_jobs();
 
+    this->p->ensure_tinman_auto_pa_visible_lane_for_current_plate();
+
     //FIXME Don't reslice if export of G-code or sending to OctoPrint is running.
     // bitmask of UpdateBackgroundProcessReturnState
     unsigned int state = this->p->update_background_process(true, false, false);
@@ -16808,6 +16979,8 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
     upload_job.upload_data.use_3mf = use_3mf;
     // Orca: the concrete plate to export/send (PLATE_CURRENT_IDX resolves to the current plate).
     const int resolved_plate_idx = plate_idx == PLATE_CURRENT_IDX ? get_partplate_list().get_curr_plate_index() : plate_idx;
+
+    p->ensure_tinman_auto_pa_visible_lane_for_current_plate();
 
     // Obtain default output path
     fs::path default_output_file;
