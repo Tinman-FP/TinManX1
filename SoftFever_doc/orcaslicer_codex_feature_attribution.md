@@ -77,9 +77,12 @@ safety gates, or move filament unless the printer macro accepts the command.
   live G-code export validation.
 - Implementation credit: OpenAI Codex / GPT-5 for the TinManX1 postprocessor
   wrapper, real-score gating, RatRig T0/T1 detection, max-flow governor
-  integration path, profile hook, and verification scaffolding.
+  integration path, visible calibration-lane gate, profile hook, and
+  verification scaffolding.
 
 The TinManX1 auto-PA path only applies PA, adaptive PA, or max-flow changes when
 real same-print calibration score files are available for the detected target
-printer. In the absence of real scores it preserves the model G-code and emits
-an audit stamp instead of applying synthetic calibration data.
+printer and a named TinMan calibration lane is visible in the sliced object
+list. In the absence of real scores or a visible edge-strip lane, it preserves
+the model G-code and emits an audit stamp instead of applying hidden or
+synthetic calibration data.

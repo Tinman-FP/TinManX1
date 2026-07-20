@@ -45,6 +45,13 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 AUTO_PA = SCRIPT_DIR / "auto_pa.py"
 DEFAULT_DATADIR = Path.home() / "Library" / "Application Support" / "OrcaSlicer-Codex"
 STAMP_PREFIX = "; TINMAN_AUTO_PA_POSTPROCESS"
+LANE_MARKERS = (
+    "tinman_auto_pa_lane",
+    "tinman_pa_lane",
+    "tinman_auto_pressure_advance_lane",
+)
+DEFAULT_LANE_EDGE_MM = 20.0
+EDGE_TOLERANCE_MM = 0.75
 
 
 TARGETS: dict[str, dict[str, Any]] = {
@@ -87,6 +94,13 @@ def utc_now() -> str:
 
 def env_flag(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_float(name: str, default: float) -> float:
+    try:
+        return float(os.environ.get(name, ""))
+    except ValueError:
+        return default
 
 
 def datadir() -> Path:
@@ -151,6 +165,176 @@ def read_json(path: Path) -> dict[str, Any]:
     except Exception:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def normalize_name(value: str) -> str:
+    lowered = value.lower()
+    cleaned = re.sub(r"[^a-z0-9]+", "_", lowered)
+    return re.sub(r"_+", "_", cleaned).strip("_")
+
+
+def parse_bed_bounds(text: str, target: str) -> tuple[float, float, float, float] | None:
+    value = parse_config_value(text, "bed_shape")
+    points: list[tuple[float, float]] = []
+    for x, y in re.findall(r"(-?\d+(?:\.\d+)?)x(-?\d+(?:\.\d+)?)", value):
+        points.append((float(x), float(y)))
+    if points:
+        xs = [point[0] for point in points]
+        ys = [point[1] for point in points]
+        return min(xs), min(ys), max(xs), max(ys)
+    if target.startswith("ratrig"):
+        return 0.0, 0.0, 500.0, 500.0
+    if target in {"qidi_plus4", "maxez"}:
+        return 0.0, 0.0, 300.0, 300.0
+    return None
+
+
+def parse_polygon(line: str) -> list[tuple[float, float]]:
+    marker = "POLYGON="
+    if marker not in line:
+        return []
+    raw = line.split(marker, 1)[1]
+    numbers = [float(value) for value in re.findall(r"-?\d+(?:\.\d+)?", raw)]
+    return list(zip(numbers[0::2], numbers[1::2]))
+
+
+def bbox(points: list[tuple[float, float]]) -> tuple[float, float, float, float] | None:
+    if not points:
+        return None
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def parse_exclude_objects(text: str) -> list[dict[str, Any]]:
+    objects: list[dict[str, Any]] = []
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        stripped = line.lstrip()
+        if not stripped.startswith("EXCLUDE_OBJECT_DEFINE "):
+            continue
+        name_match = re.search(r"\bNAME=([^\s]+)", stripped)
+        if not name_match:
+            continue
+        points = parse_polygon(stripped)
+        objects.append(
+            {
+                "line": line_no,
+                "name": name_match.group(1),
+                "normalized_name": normalize_name(name_match.group(1)),
+                "bbox": bbox(points),
+                "polygon_points": len(points),
+            }
+        )
+    return objects
+
+
+def rects_intersect(
+    a: tuple[float, float, float, float],
+    b: tuple[float, float, float, float],
+    *,
+    tolerance: float = 0.05,
+) -> bool:
+    return not (
+        a[2] <= b[0] + tolerance
+        or b[2] <= a[0] + tolerance
+        or a[3] <= b[1] + tolerance
+        or b[3] <= a[1] + tolerance
+    )
+
+
+def edge_name_for_bbox(
+    bounds: tuple[float, float, float, float],
+    rect: tuple[float, float, float, float],
+    edge_mm: float,
+) -> str:
+    min_x, min_y, max_x, max_y = bounds
+    x0, y0, x1, y1 = rect
+    limit = edge_mm + EDGE_TOLERANCE_MM
+    if y1 <= min_y + limit:
+        return "front"
+    if y0 >= max_y - limit:
+        return "rear"
+    if x1 <= min_x + limit:
+        return "left"
+    if x0 >= max_x - limit:
+        return "right"
+    return ""
+
+
+def allowed_lane_edges(target: str) -> set[str]:
+    if env_flag("TINMAN_AUTO_PA_ALLOW_ANY_EDGE"):
+        return set()
+    if target == "qidi_plus4":
+        return {"front"}
+    if target == "maxez" or target.startswith("ratrig"):
+        return {"rear"}
+    return set()
+
+
+def validate_visible_lane(text: str, target: str) -> dict[str, Any]:
+    required = not env_flag("TINMAN_AUTO_PA_ALLOW_HIDDEN_LANE")
+    edge_mm = env_float("TINMAN_AUTO_PA_LANE_EDGE_MM", DEFAULT_LANE_EDGE_MM)
+    allowed_edges = allowed_lane_edges(target)
+    result: dict[str, Any] = {
+        "required": required,
+        "ok": True,
+        "edge_mm": edge_mm,
+        "allowed_edges": sorted(allowed_edges),
+        "lane_count": 0,
+    }
+    if not required:
+        result["reason"] = "hidden_lane_allowed_by_env"
+        return result
+
+    objects = parse_exclude_objects(text)
+    lanes = [obj for obj in objects if any(marker in obj["normalized_name"] for marker in LANE_MARKERS)]
+    result["lane_count"] = len(lanes)
+    if not lanes:
+        result.update({"ok": False, "reason": "missing_visible_lane"})
+        return result
+
+    bed = parse_bed_bounds(text, target)
+    if bed is None:
+        result.update({"ok": False, "reason": "missing_bed_shape"})
+        return result
+    result["bed_bounds"] = [round(value, 4) for value in bed]
+
+    for lane in lanes:
+        rect = lane.get("bbox")
+        if rect is None:
+            continue
+        edge = edge_name_for_bbox(bed, rect, edge_mm)
+        overlaps = [
+            obj["name"]
+            for obj in objects
+            if obj is not lane and obj.get("bbox") is not None and rects_intersect(rect, obj["bbox"])
+        ]
+        edge_allowed = not allowed_edges or edge in allowed_edges
+        if edge and edge_allowed and not overlaps:
+            return {
+                **result,
+                "ok": True,
+                "selected": {
+                    "name": lane["name"],
+                    "line": lane["line"],
+                    "bbox": [round(value, 4) for value in rect],
+                    "edge": edge,
+                    "polygon_points": lane["polygon_points"],
+                },
+            }
+        lane["edge"] = edge
+        lane["edge_allowed"] = edge_allowed
+        lane["overlaps"] = overlaps[:8]
+
+    wrong_edge = any(lane.get("edge") and not lane.get("edge_allowed") for lane in lanes)
+    result.update(
+        {
+            "ok": False,
+            "reason": "lane_wrong_edge_for_target" if wrong_edge else "lane_not_in_edge_strip_or_overlaps_model",
+            "lanes": lanes[:8],
+        }
+    )
+    return result
 
 
 def score_context(data: dict[str, Any]) -> dict[str, Any]:
@@ -309,6 +493,23 @@ def main(argv: list[str] | None = None) -> int:
     report["target"] = target
     if not target:
         report["status"] = "skipped_unknown_target"
+        write_report(report_path, report)
+        return 0
+
+    visible_lane = validate_visible_lane(text, target)
+    report["visible_lane"] = visible_lane
+    if not visible_lane.get("ok"):
+        reason = str(visible_lane.get("reason") or "invalid_visible_lane")
+        report["status"] = "deferred_missing_visible_lane" if reason == "missing_visible_lane" else "deferred_visible_lane_invalid"
+        stamp_file(
+            gcode,
+            {
+                "status": report["status"],
+                "target": target,
+                "lane": reason,
+                "edge_mm": visible_lane.get("edge_mm"),
+            },
+        )
         write_report(report_path, report)
         return 0
 

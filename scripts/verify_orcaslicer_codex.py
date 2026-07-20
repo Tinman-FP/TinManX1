@@ -31,6 +31,12 @@ BAMBU_PLUGINS = (
 FEATURE_RESOURCES = (
     "auto_pa/auto_pa.py",
     "auto_pa/tinman_auto_pa_postprocess.py",
+    "auto_pa/visible_lanes/README.md",
+    "auto_pa/visible_lanes/manifest.json",
+    "auto_pa/visible_lanes/TINMAN_AUTO_PA_LANE_300_FRONT.3mf",
+    "auto_pa/visible_lanes/TINMAN_AUTO_PA_LANE_300_REAR.3mf",
+    "auto_pa/visible_lanes/TINMAN_AUTO_PA_LANE_500_FRONT.3mf",
+    "auto_pa/visible_lanes/TINMAN_AUTO_PA_LANE_500_REAR.3mf",
     "arc_support/orcaslicer_codex_arc_support_inplace_adapter.py",
     "arc_support/orcaslicer_codex_arc_support_transform.py",
     "attribution/orcaslicer_codex_feature_attribution.md",

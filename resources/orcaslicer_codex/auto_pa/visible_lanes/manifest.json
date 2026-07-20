@@ -1,0 +1,62 @@
+{
+  "kind": "tinman_auto_pa_visible_lane_manifest",
+  "version": 1,
+  "assets": [
+    {
+      "path": "resources/orcaslicer_codex/auto_pa/visible_lanes/TINMAN_AUTO_PA_LANE_300_FRONT.3mf",
+      "name": "TINMAN_AUTO_PA_LANE_300_FRONT",
+      "bed_mm": 300.0,
+      "edge": "front",
+      "bbox": [
+        5.0,
+        1.0,
+        295.0,
+        19.0
+      ],
+      "height_mm": 0.28,
+      "line_count": 5
+    },
+    {
+      "path": "resources/orcaslicer_codex/auto_pa/visible_lanes/TINMAN_AUTO_PA_LANE_300_REAR.3mf",
+      "name": "TINMAN_AUTO_PA_LANE_300_REAR",
+      "bed_mm": 300.0,
+      "edge": "rear",
+      "bbox": [
+        5.0,
+        281.0,
+        295.0,
+        299.0
+      ],
+      "height_mm": 0.28,
+      "line_count": 5
+    },
+    {
+      "path": "resources/orcaslicer_codex/auto_pa/visible_lanes/TINMAN_AUTO_PA_LANE_500_FRONT.3mf",
+      "name": "TINMAN_AUTO_PA_LANE_500_FRONT",
+      "bed_mm": 500.0,
+      "edge": "front",
+      "bbox": [
+        5.0,
+        1.0,
+        495.0,
+        19.0
+      ],
+      "height_mm": 0.28,
+      "line_count": 5
+    },
+    {
+      "path": "resources/orcaslicer_codex/auto_pa/visible_lanes/TINMAN_AUTO_PA_LANE_500_REAR.3mf",
+      "name": "TINMAN_AUTO_PA_LANE_500_REAR",
+      "bed_mm": 500.0,
+      "edge": "rear",
+      "bbox": [
+        5.0,
+        481.0,
+        495.0,
+        499.0
+      ],
+      "height_mm": 0.28,
+      "line_count": 5
+    }
+  ]
+}
