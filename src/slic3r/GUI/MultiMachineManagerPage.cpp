@@ -40,6 +40,7 @@ struct ProbeResult
     std::string stage_text;
     int task_progress{ -1 };
     int left_time{ -1 };
+    double print_duration{ 0.0 };
 };
 
 static std::string trim_copy(std::string value)
@@ -332,6 +333,58 @@ static std::string json_string(const nlohmann::json& obj, const char* key)
     return it->get<std::string>();
 }
 
+static std::string moonraker_file_basename(std::string filename)
+{
+    boost::replace_all(filename, "\\", "/");
+    const size_t slash = filename.find_last_of('/');
+    return slash == std::string::npos ? filename : filename.substr(slash + 1);
+}
+
+static bool fetch_moonraker_metadata_estimate(const std::string& base_url,
+                                              const std::string& api_key,
+                                              const std::string& filename,
+                                              double& estimated_seconds,
+                                              std::string& error)
+{
+    if (filename.empty()) {
+        error = "No active filename";
+        return false;
+    }
+
+    auto fetch_estimate = [&](const std::string& requested_filename, double& estimate, std::string& request_error) {
+        nlohmann::json metadata_json;
+        if (!fetch_json(join_url(base_url, "/server/files/metadata?filename=" + Http::url_encode(requested_filename)),
+                        api_key, metadata_json, request_error)) {
+            return false;
+        }
+
+        const nlohmann::json& result = metadata_json.contains("result") && metadata_json["result"].is_object()
+            ? metadata_json["result"]
+            : metadata_json;
+        const double value = json_double(result, "estimated_time", 0.0);
+        if (value <= 0.0) {
+            request_error = "Metadata missing estimated_time";
+            return false;
+        }
+
+        estimate = value;
+        return true;
+    };
+
+    std::string request_error;
+    if (fetch_estimate(filename, estimated_seconds, request_error)) {
+        return true;
+    }
+
+    const std::string basename = moonraker_file_basename(filename);
+    if (basename != filename && fetch_estimate(basename, estimated_seconds, request_error)) {
+        return true;
+    }
+
+    error = request_error;
+    return false;
+}
+
 static bool parse_moonraker_status(const nlohmann::json& root, ProbeResult& result)
 {
     if (!root.contains("result") || !root["result"].contains("status"))
@@ -364,9 +417,9 @@ static bool parse_moonraker_status(const nlohmann::json& root, ProbeResult& resu
         result.task_progress = std::clamp(static_cast<int>(std::round(progress)), 0, 100);
     }
 
-    const double print_duration = json_double(print_stats, "print_duration", 0.0);
-    if (result.task_progress > 0 && result.task_progress < 100 && print_duration > 0.0) {
-        result.left_time = static_cast<int>(std::round(print_duration * (100.0 - result.task_progress) / result.task_progress));
+    result.print_duration = json_double(print_stats, "print_duration", 0.0);
+    if (result.task_progress > 0 && result.task_progress < 100 && result.print_duration > 0.0) {
+        result.left_time = static_cast<int>(std::round(result.print_duration * (100.0 - result.task_progress) / result.task_progress));
     }
 
     if (result.task_name.empty() && result.state_device > 2 && result.state_device < 7)
@@ -392,6 +445,11 @@ static ProbeResult probe_target_status(const ProbeTarget& target)
         if (fetch_json(join_url(base_url, "/printer/objects/query?print_stats&virtual_sdcard&display_status&extruder&heater_bed&toolhead&webhooks"),
                        target.access_code, status_json, error) &&
             parse_moonraker_status(status_json, result)) {
+            double estimated_seconds = 0.0;
+            if (!result.task_name.empty() && result.state_device >= 3 && result.state_device <= 4 &&
+                fetch_moonraker_metadata_estimate(base_url, target.access_code, result.task_name, estimated_seconds, error)) {
+                result.left_time = std::max(0, static_cast<int>(std::round(estimated_seconds - result.print_duration)));
+            }
             BOOST_LOG_TRIVIAL(info) << "MultiDeviceStatus: " << target.dev_name << " live status from " << base_url;
             return result;
         }

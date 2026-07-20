@@ -19,6 +19,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cctype>
+#include <cmath>
 #include <thread>
 
 namespace {
@@ -28,6 +29,10 @@ namespace http      = beast::http;
 namespace websocket = beast::websocket;
 namespace net       = boost::asio;
 using tcp           = net::ip::tcp;
+
+constexpr const char* MOONRAKER_METADATA_CACHE_KEY = "moonraker_metadata";
+constexpr const char* MOONRAKER_METADATA_LOOKUP_KEY = "moonraker_metadata_lookup";
+constexpr uint64_t MOONRAKER_METADATA_RETRY_INTERVAL_MS = 10000;
 
 struct WsEndpoint
 {
@@ -86,6 +91,119 @@ std::string map_moonraker_state(std::string state)
         return "FAILED";
     }
     return "IDLE";
+}
+
+uint64_t steady_millis()
+{
+    return static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+}
+
+std::string moonraker_file_basename(std::string filename)
+{
+    boost::replace_all(filename, "\\", "/");
+    const size_t slash = filename.find_last_of('/');
+    return slash == std::string::npos ? filename : filename.substr(slash + 1);
+}
+
+bool moonraker_filename_matches(const std::string& status_filename, const std::string& metadata_filename)
+{
+    return !status_filename.empty() && !metadata_filename.empty() &&
+           (status_filename == metadata_filename || moonraker_file_basename(status_filename) == moonraker_file_basename(metadata_filename));
+}
+
+double json_number_or(const nlohmann::json& obj, const char* key, double fallback = 0.0)
+{
+    auto it = obj.find(key);
+    return it != obj.end() && it->is_number() ? it->get<double>() : fallback;
+}
+
+int json_int_or(const nlohmann::json& obj, const char* key, int fallback = -1)
+{
+    auto it = obj.find(key);
+    if (it == obj.end()) {
+        return fallback;
+    }
+    if (it->is_number_integer() || it->is_number_unsigned()) {
+        return it->get<int>();
+    }
+    if (it->is_number_float()) {
+        return static_cast<int>(std::round(it->get<double>()));
+    }
+    return fallback;
+}
+
+std::string json_string_or(const nlohmann::json& obj, const char* key)
+{
+    auto it = obj.find(key);
+    return it != obj.end() && it->is_string() ? it->get<std::string>() : std::string();
+}
+
+const nlohmann::json* moonraker_metadata_result(const nlohmann::json& metadata)
+{
+    if (metadata.contains("result") && metadata["result"].is_object()) {
+        return &metadata["result"];
+    }
+    return metadata.is_object() ? &metadata : nullptr;
+}
+
+double moonraker_metadata_estimated_time(const nlohmann::json& metadata)
+{
+    const nlohmann::json* result = moonraker_metadata_result(metadata);
+    return result ? json_number_or(*result, "estimated_time", 0.0) : 0.0;
+}
+
+std::string moonraker_metadata_filename(const nlohmann::json& metadata)
+{
+    const nlohmann::json* result = moonraker_metadata_result(metadata);
+    return result ? json_string_or(*result, "filename") : std::string();
+}
+
+std::string active_print_filename_from_cache(const nlohmann::json& status_cache)
+{
+    if (status_cache.contains("print_stats") && status_cache["print_stats"].is_object()) {
+        const std::string filename = json_string_or(status_cache["print_stats"], "filename");
+        if (!filename.empty()) {
+            return filename;
+        }
+    }
+
+    if (status_cache.contains("virtual_sdcard") && status_cache["virtual_sdcard"].is_object()) {
+        std::string file_path = json_string_or(status_cache["virtual_sdcard"], "file_path");
+        if (!file_path.empty()) {
+            boost::replace_all(file_path, "\\", "/");
+            const std::string marker = "/gcodes/";
+            const size_t marker_pos = file_path.find(marker);
+            if (marker_pos != std::string::npos) {
+                return file_path.substr(marker_pos + marker.size());
+            }
+            return moonraker_file_basename(file_path);
+        }
+    }
+
+    return {};
+}
+
+double print_duration_from_cache(const nlohmann::json& status_cache)
+{
+    if (status_cache.contains("print_stats") && status_cache["print_stats"].is_object()) {
+        return json_number_or(status_cache["print_stats"], "print_duration", 0.0);
+    }
+    return 0.0;
+}
+
+double progress_from_cache(const nlohmann::json& status_cache)
+{
+    if (status_cache.contains("virtual_sdcard") && status_cache["virtual_sdcard"].is_object()) {
+        const double progress = json_number_or(status_cache["virtual_sdcard"], "progress", -1.0);
+        if (progress >= 0.0) {
+            return progress;
+        }
+    }
+    if (status_cache.contains("display_status") && status_cache["display_status"].is_object()) {
+        return json_number_or(status_cache["display_status"], "progress", -1.0);
+    }
+    return -1.0;
 }
 
 } // namespace
@@ -1377,7 +1495,7 @@ bool MoonrakerPrinterAgent::query_printer_status(const std::string& base_url,
                                                  nlohmann::json&    status,
                                                  std::string&       error) const
 {
-    std::string url = join_url(base_url, "/printer/objects/query?print_stats&virtual_sdcard&extruder&heater_bed&fan");
+    std::string url = join_url(base_url, "/printer/objects/query?print_stats&virtual_sdcard&display_status&extruder&heater_bed&toolhead&fan");
 
     std::string response_body;
     bool        success = false;
@@ -1423,6 +1541,83 @@ bool MoonrakerPrinterAgent::query_printer_status(const std::string& base_url,
 
     status = json["result"]["status"];
     return true;
+}
+
+bool MoonrakerPrinterAgent::fetch_print_metadata(const std::string& base_url,
+                                                 const std::string& api_key,
+                                                 const std::string& filename,
+                                                 nlohmann::json&    metadata,
+                                                 std::string&       error) const
+{
+    if (base_url.empty() || filename.empty()) {
+        error = "Missing base URL or filename";
+        return false;
+    }
+
+    auto fetch_metadata_for_filename = [&](const std::string& requested_filename, nlohmann::json& out, std::string& request_error) {
+        std::string response_body;
+        bool        success = false;
+        std::string http_error;
+
+        auto http = Http::get(join_url(base_url, "/server/files/metadata?filename=" + Http::url_encode(requested_filename)));
+        if (!api_key.empty()) {
+            http.header("X-Api-Key", api_key);
+        }
+        http.timeout_connect(5)
+            .timeout_max(10)
+            .on_complete([&](std::string body, unsigned status_code) {
+                if (status_code == 200) {
+                    response_body = std::move(body);
+                    success       = true;
+                } else {
+                    http_error = "HTTP error: " + std::to_string(status_code);
+                }
+            })
+            .on_error([&](std::string body, std::string err, unsigned status_code) {
+                (void) body;
+                http_error = err.empty() ? "Connection failed" : err;
+                if (status_code > 0) {
+                    http_error += " (HTTP " + std::to_string(status_code) + ")";
+                }
+            })
+            .perform_sync();
+
+        if (!success) {
+            request_error = http_error.empty() ? "Connection failed" : http_error;
+            return false;
+        }
+
+        nlohmann::json json = nlohmann::json::parse(response_body, nullptr, false, true);
+        if (json.is_discarded()) {
+            request_error = "Invalid JSON response";
+            return false;
+        }
+
+        const nlohmann::json* result = moonraker_metadata_result(json);
+        if (!result || !result->is_object()) {
+            request_error = "Unexpected JSON structure";
+            return false;
+        }
+
+        out = *result;
+        if (!out.contains("filename") || !out["filename"].is_string() || out["filename"].get<std::string>().empty()) {
+            out["filename"] = requested_filename;
+        }
+        return true;
+    };
+
+    std::string request_error;
+    if (fetch_metadata_for_filename(filename, metadata, request_error)) {
+        return true;
+    }
+
+    const std::string basename = moonraker_file_basename(filename);
+    if (basename != filename && fetch_metadata_for_filename(basename, metadata, request_error)) {
+        return true;
+    }
+
+    error = request_error;
+    return false;
 }
 
 bool MoonrakerPrinterAgent::send_gcode(const std::string& dev_id, const std::string& gcode) const
@@ -1789,6 +1984,7 @@ void MoonrakerPrinterAgent::run_status_stream(std::string dev_id, std::string ba
                         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
                     const auto last_ms = ws_last_emit_ms.load();
                     if (last_ms == 0 || now_ms - last_ms >= 10000) {
+                        sync_print_metadata(base_url, api_key);
                         nlohmann::json message;
                         {
                             std::lock_guard<std::recursive_mutex> lock(payload_mutex);
@@ -1923,6 +2119,19 @@ void MoonrakerPrinterAgent::handle_ws_message(const std::string& dev_id, const s
     }
 
     if (updated) {
+        std::string base_url;
+        std::string api_key;
+        {
+            std::lock_guard<std::recursive_mutex> lock(connect_mutex);
+            if (device_info.dev_id == dev_id) {
+                base_url = device_info.base_url;
+                api_key = device_info.api_key;
+            }
+        }
+        if (!base_url.empty()) {
+            sync_print_metadata(base_url, api_key);
+        }
+
         const auto now_ms = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
         const auto last_dispatch_ms = ws_last_dispatch_ms.load();
@@ -1969,6 +2178,65 @@ void MoonrakerPrinterAgent::update_status_cache(const nlohmann::json& updates)
             status_cache[item.key()] = item.value();
         }
     }
+}
+
+void MoonrakerPrinterAgent::sync_print_metadata(const std::string& base_url, const std::string& api_key)
+{
+    std::string filename;
+    {
+        std::lock_guard<std::recursive_mutex> lock(payload_mutex);
+        filename = active_print_filename_from_cache(status_cache);
+        if (filename.empty()) {
+            return;
+        }
+
+        if (status_cache.contains(MOONRAKER_METADATA_CACHE_KEY) && status_cache[MOONRAKER_METADATA_CACHE_KEY].is_object()) {
+            const auto& metadata = status_cache[MOONRAKER_METADATA_CACHE_KEY];
+            const double estimated_time = moonraker_metadata_estimated_time(metadata);
+            const std::string cached_filename = moonraker_metadata_filename(metadata);
+            if (estimated_time > 0.0 && moonraker_filename_matches(filename, cached_filename)) {
+                return;
+            }
+        }
+
+        if (status_cache.contains(MOONRAKER_METADATA_LOOKUP_KEY) && status_cache[MOONRAKER_METADATA_LOOKUP_KEY].is_object()) {
+            const auto& lookup = status_cache[MOONRAKER_METADATA_LOOKUP_KEY];
+            const std::string lookup_filename = json_string_or(lookup, "filename");
+            const double lookup_ms = json_number_or(lookup, "t_ms", 0.0);
+            if (moonraker_filename_matches(filename, lookup_filename) &&
+                lookup_ms > 0.0 && static_cast<double>(steady_millis()) - lookup_ms < static_cast<double>(MOONRAKER_METADATA_RETRY_INTERVAL_MS)) {
+                return;
+            }
+        }
+    }
+
+    nlohmann::json lookup_update;
+    lookup_update[MOONRAKER_METADATA_LOOKUP_KEY]["filename"] = filename;
+    lookup_update[MOONRAKER_METADATA_LOOKUP_KEY]["t_ms"] = steady_millis();
+    update_status_cache(lookup_update);
+
+    nlohmann::json metadata;
+    std::string    error;
+    if (!fetch_print_metadata(base_url, api_key, filename, metadata, error)) {
+        BOOST_LOG_TRIVIAL(debug) << "MoonrakerPrinterAgent: metadata unavailable for " << filename << ": " << error;
+        return;
+    }
+
+    const double estimated_time = moonraker_metadata_estimated_time(metadata);
+    if (estimated_time <= 0.0) {
+        BOOST_LOG_TRIVIAL(debug) << "MoonrakerPrinterAgent: metadata missing estimated_time for " << filename;
+        return;
+    }
+
+    if (!metadata.contains("filename") || !metadata["filename"].is_string() || metadata["filename"].get<std::string>().empty()) {
+        metadata["filename"] = filename;
+    }
+
+    nlohmann::json updates;
+    updates[MOONRAKER_METADATA_CACHE_KEY] = std::move(metadata);
+    update_status_cache(updates);
+    BOOST_LOG_TRIVIAL(info) << "MoonrakerPrinterAgent: cached slicer estimate for " << filename
+                            << " (" << static_cast<int>(std::round(estimated_time / 60.0)) << " min)";
 }
 
 nlohmann::json MoonrakerPrinterAgent::build_print_payload_locked() const
@@ -2085,36 +2353,63 @@ nlohmann::json MoonrakerPrinterAgent::build_print_payload_locked() const
     }
     // If "fan" object doesn't exist, don't include fan_gear in payload
 
-    if (status_cache.contains("print_stats") && status_cache["print_stats"].contains("filename") &&
-        status_cache["print_stats"]["filename"].is_string()) {
-        payload["print"]["subtask_name"] = status_cache["print_stats"]["filename"].get<std::string>();
-    }
-
-    if (status_cache.contains("print_stats") && status_cache["print_stats"].contains("filename")) {
-        payload["print"]["gcode_file"] = status_cache["print_stats"]["filename"];
+    const std::string print_filename = active_print_filename_from_cache(status_cache);
+    if (!print_filename.empty()) {
+        payload["print"]["subtask_name"] = print_filename;
+        payload["print"]["gcode_file"] = print_filename;
     }
 
     int mc_percent = -1;
-    if (status_cache.contains("virtual_sdcard") && status_cache["virtual_sdcard"].contains("progress") &&
-        status_cache["virtual_sdcard"]["progress"].is_number()) {
-        const double progress = status_cache["virtual_sdcard"]["progress"].get<double>();
-        if (progress >= 0.0) {
-            mc_percent = std::clamp(static_cast<int>(progress * 100.0 + 0.5), 0, 100);
-        }
+    double progress_fraction = progress_from_cache(status_cache);
+    if (progress_fraction > 1.0) {
+        progress_fraction /= 100.0;
+    }
+    if (progress_fraction >= 0.0) {
+        mc_percent = std::clamp(static_cast<int>(progress_fraction * 100.0 + 0.5), 0, 100);
     }
     if (mc_percent >= 0) {
         payload["print"]["mc_percent"] = mc_percent;
     }
 
-    if (status_cache.contains("print_stats") && status_cache["print_stats"].contains("total_duration") &&
-        status_cache["print_stats"].contains("print_duration") && status_cache["print_stats"]["total_duration"].is_number() &&
-        status_cache["print_stats"]["print_duration"].is_number()) {
-        const double total   = status_cache["print_stats"]["total_duration"].get<double>();
-        const double elapsed = status_cache["print_stats"]["print_duration"].get<double>();
-        if (total > 0.0 && elapsed >= 0.0) {
-            const auto remaining_minutes          = std::max(0, static_cast<int>((total - elapsed) / 60.0));
-            payload["print"]["mc_remaining_time"] = remaining_minutes;
+    int current_layer = -1;
+    int total_layers = -1;
+    if (status_cache.contains("print_stats") && status_cache["print_stats"].is_object()) {
+        const auto& print_stats = status_cache["print_stats"];
+        if (print_stats.contains("info") && print_stats["info"].is_object()) {
+            const auto& info = print_stats["info"];
+            current_layer = json_int_or(info, "current_layer", json_int_or(info, "layer", -1));
+            total_layers = json_int_or(info, "total_layer", json_int_or(info, "total_layers", json_int_or(info, "layer_count", -1)));
         }
+    }
+    if (status_cache.contains(MOONRAKER_METADATA_CACHE_KEY) && status_cache[MOONRAKER_METADATA_CACHE_KEY].is_object()) {
+        const auto& metadata = status_cache[MOONRAKER_METADATA_CACHE_KEY];
+        if (total_layers <= 0 && moonraker_filename_matches(print_filename, moonraker_metadata_filename(metadata))) {
+            total_layers = json_int_or(metadata, "layer_count", -1);
+        }
+    }
+    if (current_layer >= 0) {
+        payload["print"]["layer_num"] = current_layer;
+    }
+    if (total_layers > 0) {
+        payload["print"]["total_layer_num"] = total_layers;
+    }
+
+    const double elapsed = print_duration_from_cache(status_cache);
+    double estimated_time = 0.0;
+    if (status_cache.contains(MOONRAKER_METADATA_CACHE_KEY) && status_cache[MOONRAKER_METADATA_CACHE_KEY].is_object()) {
+        const auto& metadata = status_cache[MOONRAKER_METADATA_CACHE_KEY];
+        if (moonraker_filename_matches(print_filename, moonraker_metadata_filename(metadata))) {
+            estimated_time = moonraker_metadata_estimated_time(metadata);
+        }
+    }
+
+    if (estimated_time > 0.0) {
+        const int remaining_minutes = std::max(0, static_cast<int>(std::round((estimated_time - elapsed) / 60.0)));
+        payload["print"]["mc_remaining_time"] = remaining_minutes;
+    } else if (progress_fraction > 0.0 && progress_fraction < 1.0 && elapsed > 0.0) {
+        const double total_estimate = elapsed / progress_fraction;
+        const int remaining_minutes = std::max(0, static_cast<int>(std::round((total_estimate - elapsed) / 60.0)));
+        payload["print"]["mc_remaining_time"] = remaining_minutes;
     }
 
     const auto now_ms = static_cast<uint64_t>(
@@ -2317,6 +2612,7 @@ void MoonrakerPrinterAgent::perform_connection_async(const std::string& dev_id, 
         nlohmann::json initial_status;
         if (query_printer_status(base_url, api_key, initial_status, error_msg)) {
             update_status_cache(initial_status);
+            sync_print_metadata(base_url, api_key);
             nlohmann::json payload;
             {
                 std::lock_guard<std::recursive_mutex> lock(payload_mutex);
@@ -2328,11 +2624,8 @@ void MoonrakerPrinterAgent::perform_connection_async(const std::string& dev_id, 
             BOOST_LOG_TRIVIAL(warning) << "MoonrakerPrinterAgent: Initial status query failed: " << error_msg;
         }
 
-// Orca todo: disable websocket for now, as we don't use MonitorPanel for Moonraker printers yet
-#if 0
         // Start WebSocket status stream
         start_status_stream(dev_id, base_url, api_key);
-#endif
 
         // Success!
         result = BAMBU_NETWORK_SUCCESS;

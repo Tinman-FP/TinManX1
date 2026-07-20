@@ -46,3 +46,21 @@ The TinManX1 port emits advisory-only viewport metadata. The Prepare view now su
 - Ported Codex entrypoint: `scripts/orcaslicer_codex_fiber_metadata_sidecar.py`
 
 The TinManX1 port preserves continuous-fiber lane metadata and review gates for Preview/Summary use. It does not emit machine commands, start uploads, or mark hardware validation as complete.
+
+## Moonraker Device Integration / Qidi Box Panel
+
+- Source: TinManX1 live printer-operations requirements from William Tinney's
+  Qidi Plus 4, Max EZ, and Moonraker printer workflows.
+- Upstream foundation: OrcaSlicer device-page framework, Moonraker API, Fluidd
+  card DOM conventions, and Qidi Plus 4 / Qidi Box Klipper objects and macros.
+- Project credit: William Tinney / Tinman-FP for printer requirements, live
+  machine validation, Qidi Box UI acceptance testing, and release direction.
+- Implementation credit: OpenAI Codex / GPT-5 for Moonraker metadata-time
+  handling, live status-stream restoration, TinManX1 Qidi Box panel injection,
+  and regression-test scaffolding.
+
+The TinManX1 integration uses Moonraker file metadata `estimated_time` for
+remaining-time display instead of treating `print_stats.total_duration` as a
+slicer estimate. The Qidi Box panel is a Device-tab integration layer around
+existing printer-side macros; it does not replace Qidi firmware, bypass printer
+safety gates, or move filament unless the printer macro accepts the command.
