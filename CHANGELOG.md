@@ -1,0 +1,202 @@
+# Changelog
+
+## Unreleased
+
+TinManX1 FibreSeek nice-to-have controls and release hardening.
+
+Included:
+
+- consolidated the full Orca-derived TinManX1 source branch with the public release-package ledgers, helper scripts, validation contracts, and profile-maintenance utilities so GitHub has one canonical fork branch for current work
+- added the visible TinManX1 revision `v2026.07.20-unified.1` to startup splash rendering while preserving the based-on-Orca version line
+- added Moonraker metadata-based remaining-time handling, live status stream restoration, and the TinManX1 Qidi Box device panel from the printer-operations workstream
+- sanitized the Moonraker lane-data test default host and local catalog-normalizer defaults so public helpers no longer point at a specific private LAN/worktree
+- carried forward the pending HT-PLA-CF Codex helper entries and Arc Support pass-through fallback from the older 2.4.2 profile-maintenance branch
+- rebased the current TinManX1 patch onto upstream Orca Slicer 2.4.2 commit `8500fcdccaa10b5099ac20d252af3a7c560046f1`
+- updated the installed macOS TinManX1 app to report `2.4.2` while preserving the dedicated `OrcaSlicer-Codex` data directory and FibreSeek profile visibility
+- refreshed splash/about branding text to say `Based on Orca Slicer Version 2.4.2`
+- folded Bambu networking plug-in `02.06.00.50` recognition into the current 2.4.2 source patch without redistributing proprietary native plug-in binaries
+- added a current Polymaker/Fiberon Universal Codex catalog snapshot from Polymaker's official preset index, covering 66 current materials and preserving each selected official source preset path
+- enriched the Polymaker/Fiberon catalog with current Polymaker shop price sources and 1 kg-equivalent slicer costs
+- added a local Codex catalog installer and verifier for those Polymaker/Fiberon presets, including enabled-filament list repair and active user preset `.info` sidecars
+- added local Codex filament chamber/cost audit tooling for managed installed profiles, including generic 1 kg material averages when no vendor is present
+- added installed manufacturer profile-tree chamber audit tooling for Prusa CORE One, Qidi X-Plus 4, Sovol SV08 MAX, Creality, and Bambu H2D profiles
+- added installed profile-tree filament price audit tooling that resolves inheritance across all installed machine profile trees and verifies every material filament profile has a positive current 1 kg cost
+- added a local-only TinManX1 Bambu network plug-in restore helper and source patch recognizing Bambu networking plug-in `02.06.00.50` for Bambu printer connectivity without redistributing native plug-in binaries
+- added a local-only Bambu LAN binding repair helper that fixes stale TinManX1 `local_machines` IPs by matching printer TLS certificate CNs to saved Bambu serial numbers
+- added a TinManX1 profile-pack installer/validator for syncing generated FibreSeek profiles into the installed app bundle and Application Support system store
+- refreshed FibreSeek material costs for ASA, ABS-CF, ABS-GF, ASA-GF, PPA-CF, PPS-CF, PET-GF, PCTG, PCTG-CF, Push Plastic PC-PBT, and PA-CF while preserving active chamber-control settings
+- added Push Plastic PC-PBT plastic and continuous-fiber matrix profiles across every FibreSeek Seeker 3 plastic and composite nozzle variant
+- added a local Codex catalog installer for Push Plastic PC-PBT profiles across Universal, Creality K2 Plus, Elegoo Centauri, Prusa Core One, Qidi X-Plus 4, RatRig V-Core 4, Snapmaker U1, and Sovol SV08 MAX machine buckets
+- extended the Push Plastic PC-PBT Codex installer to repair TinManX1's enabled filament list and active user preset `.info` sidecars so the profiles appear under Codex in installed apps
+- added generated-rib fiber infill density and comma-separated custom angle controls
+- added fiber-only seam placement controls: Source, Nearest, Aligned, Rear, and Random, plus aligned seam angle
+- added a validated advanced layup payload helper for building `fiber_reinforcement_payload` JSON from named templates or simple band specs
+- added profile-generator support and CI coverage for writing validated layup templates into continuous-fiber process profiles
+- added a public FibreSeek layup editor contract and validator for future UI work
+- added a neutral Rocket/TinManX1 G-code comparison helper for command families, thermal setpoints, tool ownership, cut/load behavior, route metadata, timing, and material summaries
+- added a structural FibreSeek wiring checker so profile, config, UI, preset, generator, and planner handoff changes cannot silently drift
+- expanded compact Strength/search UI exposure for the important fiber controls
+- updated public release-scope and local install/verify helper defaults for the Orca Slicer 2.4.1 source line and TinManX1 bundle identity
+- regenerated the public source patch from the verified TinManX1 worktree and updated source-helper scripts
+- strengthened attribution language for upstream slicer contributors, transform-source authors, William Tinney / Tinman-FP, OpenAI Codex, and Rocket/FibreSeek private reference boundaries
+
+## v2026.06.28-fibreseek-alpha.8
+
+TinManX1 PCTG chamber target correction.
+
+Included:
+
+- sets all FibreSeek PCTG and PCTG-CF filament profiles to a 45 C active chamber target
+- carries forward the FibreSeek Seeker 3 active chamber-control capability flag
+- updates the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.8`
+
+## v2026.06.28-fibreseek-alpha.7
+
+TinManX1 FibreSeek chamber-control profile cleanup.
+
+Included:
+
+- marks the FibreSeek Seeker 3 profile pack as active chamber-control capable
+- keeps active chamber temperature control selected for every filament profile with a nonzero chamber target
+- preserves PETG as chamber-off because its FibreSeek baseline chamber target is zero
+- updates the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.7`
+
+## v2026.06.28-fibreseek-alpha.6
+
+TinManX1 macOS launcher packaging fix.
+
+Included:
+
+- packages the macOS app with a `TinManX1` launcher wrapper and `TinManX1.real` binary so installed apps use the `OrcaSlicer-Codex` data directory where FibreSeek profiles are installed
+- preserves the clean Python environment guard for FibreSeek helper planners in the packaged launcher
+- updates the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.6`
+
+## v2026.06.28-fibreseek-alpha.5
+
+TinManX1 2.4.1 startup branding follow-up.
+
+Included:
+
+- removed the upstream Orca/Bambu cloud migration popup that could show a misleading `Since version 2.4.0` message during TinManX1 startup
+- updated the visible TinManX1 splash/about rev line to `v2026.06.28-fibreseek-alpha.5`
+- kept the alpha.4 FibreSeek Python environment sanitation and 2.4.1 config-wiring fixes
+
+## v2026.06.28-fibreseek-alpha.4
+
+TinManX1 2.4.1 packaging fix for FibreSeek slicing and visible release revisioning.
+
+Included:
+
+- added a visible TinManX1 rev line to the splash and about artwork
+- sanitized `PYTHONHOME` and `PYTHONPATH` before launching macOS helper planners so Autodesk Fusion's Python environment cannot break FibreSeek slicing
+- restored upstream Orca Slicer 2.4.1 `chamber_minimal_temperature` config wiring that was dropped during rebase conflict cleanup
+- updated the macOS app installer launcher template with the same clean Python environment guard
+
+## v2026.06.28-fibreseek-alpha.3
+
+TinManX1 Orca Slicer 2.4.1 carry-forward and installed-profile slicing fix.
+
+Included:
+
+- rebased the current TinManX1 patch onto upstream Orca Slicer 2.4.1
+- updated TinManX1 splash/about branding strings to say `Based on Orca Slicer Version 2.4.1`
+- made GitHub macOS and Windows release workflows build from the 2.4.1 patch line
+- added the generated TinManX1 FibreSeek profile pack to the public package
+- verified the installed macOS app profile bundle slices a PETG + X-CCF FibreSeek smoke model and emits native fiber metadata
+
+## v2026.06.28-fibreseek-alpha.1
+
+TinManX1 FibreSeek alpha profile-safety correction.
+
+Included:
+
+- fixed generated FibreSeek process profiles so `bridge_line_width` is explicit and never exceeds the selected plastic nozzle diameter
+- fixed relative-E layer-change validation by making `layer_change_gcode` exactly `G92 E0`, matching Orca's strict validator
+- disabled grouped medium/heavy route cuts by forcing `fiber_routes_per_cut` to `1` until grouped-route emission has a mechanically safe cut/load model
+- added profile lint guards for bridge width, relative-E reset, and one-route-per-cut safety
+- published the macOS arm64 prerelease package and Windows build-path asset from the corrected checkpoint
+
+Supersedes `v2026.06.28-fibreseek-alpha`, which was caught by release validation before adoption.
+
+## v2026.06.27.3
+
+TinManX1 native FibreSeek planner regression rollback.
+
+Included:
+
+- kept isolated expanded-orbit candidates for tiny holes that cannot be followed directly but have room for an 8 mm bend-radius path
+- disabled local hole-cluster racetrack emission after live visual validation showed the path could over-reinforce the gear-tooth region and still miss the intended inner holes
+- fixed hole-loop grouping so concentric model shells are not merged with small internal holes
+- updated smoke coverage for 56 mm pocket routes, 68.92 mm legal small-hole loops, 56.41 mm tiny-hole expanded orbits, and disabled production cluster halos
+- installed-app recovery dry run against the bad gear slice produced 139 routes total, zero `hole_cluster_reinforcement_loop` routes, and 16.91 m / 1.72 g estimated continuous fiber
+
+## v2026.06.27.2
+
+TinManX1 native FibreSeek planner route-floor correction.
+
+Included:
+
+- corrected the misunderstood minimum route floor from 90 mm to 55 mm
+- removed the derived `cut_distance + 2 * start_length` filter that kept candidate routes effectively capped at the old 90 mm assumption
+- updated smoke coverage to prove 56 mm pocket routes and a 68.92 mm legal small-hole route pass the planner
+
+## v2026.06.27.1
+
+TinManX1 native FibreSeek planner safety correction.
+
+Included:
+
+- removed automatic close-hole cluster halos after validation showed they could connect outboard gear-tooth features
+- added printable-material checks for generated hole reinforcement loops
+- rejects enclosing web/outer rings that contain other distinct hole centers
+- kept the then-assumed 90 mm mechanical minimum and smooth multi-lap route support for legal-size hole loops
+- installed-app dry run against the current gear-guide slice confirmed zero cluster routes and zero routes under the then-assumed 90 mm floor
+
+## v2026.06.27
+
+TinManX1 native FibreSeek planner follow-up.
+
+Included:
+
+- hard 90 mm mechanical minimum carried through route filtering and planner summaries; superseded by the later 55 mm route-floor correction
+- close-hole cluster halo reinforcement experiment for hole groups that cannot accept individual continuous-fiber loops
+- profile bend-radius handling that honors the FibreSeek profile value instead of silently flooring it higher
+- native planner smoke coverage for the close-hole cluster case
+- installed-app validation against the current sliced gear guide part
+
+Superseded by `v2026.06.27.1` for close-hole planning. The cluster-halo experiment is not used by the corrected planner.
+
+## v2026.06.26
+
+TinManX1 houseclean and native-fiber release package.
+
+Included:
+
+- one current source patch for TinManX1 on the Orca Slicer 2.4.0 source line
+- startup splash fix that loads the same TinManX1 PNG used by the login/register home screen
+- standalone native FibreSeek planner path with the stale external planner bridge removed
+- TinManX1-facing helper text, summaries, and UI/log labels for the patched feature surface
+- continuous-fiber route stitching for short pockets, layer start/top guard behavior, preview reload support, and fiber usage summaries
+- smoke coverage for native fiber planning, Arc Support guard behavior, Strength/Fibre sidecars, and Wave Overhang scaffolding
+- public release checker updates for the current patch and documentation set
+
+Excluded:
+
+- compiled app bundles, installers, and native plugin binaries
+- private app-support data
+- printer credentials, access codes, cloud tokens, and API keys
+- proprietary Rocket or FibreSeek assets and private validation data
+
+## v2026.06.19
+
+Initial public pre-rebrand patch release.
+
+Included:
+
+- Wave Overhangs source-port patch for the Orca Slicer 2.4.0 source line
+- Wave + Arc Support source-port patch
+- Wave + Arc + Strength Lens + Fibre metadata source-port patch
+- standalone helper scripts and smoke guards
+- sanitized local app manifests and verification scripts
+- source-credit ledgers and research snapshots
+- public release checker for attribution, license, patch presence, and privacy guardrails

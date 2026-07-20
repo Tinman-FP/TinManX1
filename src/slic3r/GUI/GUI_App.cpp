@@ -344,8 +344,13 @@ public:
         rc.height = dc.GetTextExtent(m_text_version).GetHeight();
         dc.DrawLabel(m_text_version, rc, wxALIGN_CENTER);
 
+        dc.SetFont(m_font_revision);
+        rc.y      = c_sz.GetHeight() * 0.735;
+        rc.height = dc.GetTextExtent(m_text_revision).GetHeight();
+        dc.DrawLabel(m_text_revision, rc, wxALIGN_CENTER);
+
         dc.SetFont(m_font_action);
-        rc.y      = c_sz.GetHeight() * 0.84;
+        rc.y      = c_sz.GetHeight() * 0.86;
         rc.height = dc.GetTextExtent(m_text_action).GetHeight();
         dc.DrawLabel(m_text_action, rc, wxALIGN_CENTER);
     }
@@ -398,10 +403,12 @@ private:
 
     wxString m_text_title   = _L("TinManX1");
     wxString m_text_version = _L("Based on Orca Slicer Version ") + wxString::FromUTF8(GUI_App::format_display_version().c_str());
+    wxString m_text_revision = _L("TinManX1 Revision ") + wxString::FromUTF8(TINMANX1_REVISION);
     wxString m_text_action  = _L("Loading configuration") + dots;
 
     wxFont m_font_title   = Label::Head_24;
     wxFont m_font_version = Label::Body_16;
+    wxFont m_font_revision = Label::Body_14;
     wxFont m_font_action  = Label::Body_16;
 };
 

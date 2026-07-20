@@ -13,7 +13,7 @@ import time
 import sys
 
 # Configuration
-DEFAULT_HOST = "192.168.88.9"
+DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 7125
 NAMESPACE = "lane_data"
 LANE_KEYS = [f"lane{i}" for i in range(1, 9)]  # lane1-lane8

@@ -1,0 +1,263 @@
+{
+  "schema": 1,
+  "name": "TinManX1 FibreSeek layup editor contract",
+  "setting_key": "fiber_reinforcement_payload",
+  "payload_key": "layup_bands",
+  "description": "Public UI contract for editing advanced FibreSeek layup payloads without hand-writing JSON.",
+  "templates": [
+    {
+      "id": "balanced",
+      "label": "Balanced",
+      "summary": "Medium rhombic perimeters and infill from the selected layer range."
+    },
+    {
+      "id": "perimeter-shell",
+      "label": "Perimeter Shell",
+      "summary": "Medium rhombic perimeter reinforcement without generated-rib infill."
+    },
+    {
+      "id": "tetragrid-core",
+      "label": "Tetragrid Core",
+      "summary": "Heavy tetragrid generated-rib infill without perimeter routes."
+    },
+    {
+      "id": "first-layer-off-tetragrid",
+      "label": "First Layer Off Tetragrid",
+      "summary": "Disables the first visible fiber layer, then applies heavy tetragrid infill."
+    }
+  ],
+  "band_fields": [
+    {
+      "key": "name",
+      "label": "Band Name",
+      "type": "string",
+      "default": ""
+    },
+    {
+      "key": "enabled",
+      "label": "Enabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "from_layer",
+      "label": "Start Layer",
+      "type": "int",
+      "min": 1
+    },
+    {
+      "key": "to_layer",
+      "label": "End Layer",
+      "type": "int",
+      "min": 1,
+      "optional": true
+    },
+    {
+      "key": "from_z",
+      "label": "Start Z",
+      "type": "float",
+      "min": 0,
+      "optional": true
+    },
+    {
+      "key": "to_z",
+      "label": "End Z",
+      "type": "float",
+      "min": 0,
+      "optional": true
+    },
+    {
+      "key": "mode",
+      "label": "Strength",
+      "type": "choice",
+      "choices": [
+        "light",
+        "medium",
+        "heavy"
+      ],
+      "optional": true
+    },
+    {
+      "key": "pattern",
+      "label": "Pattern",
+      "type": "choice",
+      "choices": [
+        "solid",
+        "rhombic",
+        "isogrid",
+        "anisogrid",
+        "tetragrid",
+        "crosshatch",
+        "grid"
+      ],
+      "optional": true
+    },
+    {
+      "key": "perimeters",
+      "label": "Perimeters",
+      "type": "bool",
+      "optional": true
+    },
+    {
+      "key": "infill",
+      "label": "Infill",
+      "type": "bool",
+      "optional": true
+    },
+    {
+      "key": "spacing",
+      "label": "Infill Spacing",
+      "type": "float",
+      "min": 0,
+      "optional": true
+    },
+    {
+      "key": "density",
+      "label": "Infill Density",
+      "type": "float",
+      "min": 0,
+      "max": 100,
+      "optional": true
+    },
+    {
+      "key": "angles",
+      "label": "Angles",
+      "type": "float_list",
+      "optional": true
+    },
+    {
+      "key": "layer_step",
+      "label": "Every N Layers",
+      "type": "int",
+      "min": 1,
+      "optional": true
+    },
+    {
+      "key": "macro_layer_height",
+      "label": "Macro Layer Height",
+      "type": "float",
+      "min": 0,
+      "optional": true
+    },
+    {
+      "key": "max_routes_per_layer",
+      "label": "Max Routes Per Layer",
+      "type": "int",
+      "min": 1,
+      "optional": true
+    },
+    {
+      "key": "perimeter_routes_per_layer",
+      "label": "Perimeter Routes Per Layer",
+      "type": "int",
+      "min": 1,
+      "optional": true
+    },
+    {
+      "key": "hole_routes_per_layer",
+      "label": "Hole Routes Per Layer",
+      "type": "int",
+      "min": 1,
+      "optional": true
+    },
+    {
+      "key": "infill_routes_per_layer",
+      "label": "Infill Routes Per Layer",
+      "type": "int",
+      "min": 1,
+      "optional": true
+    },
+    {
+      "key": "priority",
+      "label": "Priority",
+      "type": "int",
+      "optional": true
+    },
+    {
+      "key": "seam_position",
+      "label": "Fiber Seam",
+      "type": "choice",
+      "choices": [
+        "source",
+        "nearest",
+        "aligned",
+        "rear",
+        "random"
+      ],
+      "optional": true
+    },
+    {
+      "key": "seam_angle",
+      "label": "Seam Angle",
+      "type": "float",
+      "optional": true
+    }
+  ],
+  "prime_line_fields": [
+    {
+      "key": "enabled",
+      "label": "Prime Line Enabled",
+      "type": "bool"
+    },
+    {
+      "key": "center_x",
+      "label": "Center X",
+      "type": "float",
+      "min": 0
+    },
+    {
+      "key": "y",
+      "label": "Y Position",
+      "type": "float",
+      "min": 0
+    },
+    {
+      "key": "length",
+      "label": "Length",
+      "type": "float",
+      "min": 0
+    },
+    {
+      "key": "height",
+      "label": "Line Height",
+      "type": "float",
+      "min": 0
+    },
+    {
+      "key": "travel_z",
+      "label": "Travel Z",
+      "type": "float",
+      "min": 0
+    },
+    {
+      "key": "dwell_ms",
+      "label": "Dwell",
+      "type": "int",
+      "min": 0
+    }
+  ],
+  "validation_rules": [
+    {
+      "id": "layer_range",
+      "message": "End layer must be blank or greater than or equal to start layer."
+    },
+    {
+      "id": "z_range",
+      "message": "End Z must be blank or greater than or equal to start Z."
+    },
+    {
+      "id": "enabled_routes",
+      "message": "An enabled band cannot disable both perimeters and infill."
+    },
+    {
+      "id": "planner_parse",
+      "message": "The resulting JSON must parse through the native FibreSeek planner without payload warnings."
+    }
+  ],
+  "ui_notes": [
+    "Start from a template, then edit one or more bands in a table-like surface.",
+    "Store the compact JSON in fiber_reinforcement_payload.",
+    "Keep the raw JSON field available as an expert escape hatch.",
+    "Do not emit machine commands from the editor; it only writes process settings."
+  ]
+}

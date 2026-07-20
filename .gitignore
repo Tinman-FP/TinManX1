@@ -49,6 +49,9 @@ internal_docs/
 # Python bytecode
 __pycache__/
 *.pyc
+.venv/
+venv/
+*-venv/
 
 # TinManX1 local validation artifacts.
 /outputs/

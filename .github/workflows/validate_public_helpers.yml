@@ -1,0 +1,51 @@
+name: Validate Public Helpers
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Verify release hygiene and fiber planner fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout TinManX1 public package
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Python test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install shapely
+
+      - name: Verify public release package
+        run: python3 checks/verify_release.py
+
+      - name: Run native FibreSeek smoke fixtures
+        run: python3 scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py
+
+      - name: Compare native FibreSeek golden fixtures
+        run: python3 scripts/source-helpers/golden_orcaslicer_codex_native_fiber_planner.py
+
+      - name: Validate FibreSeek layup payload helper
+        run: python3 scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py --self-test
+
+      - name: Validate FibreSeek layup editor contract
+        run: python3 scripts/source-helpers/validate_tinmanx1_fiber_layup_editor_contract.py
+
+      - name: Generate and lint FibreSeek profile pack
+        run: |
+          python3 scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py --fiber-layup-template first-layer-off-tetragrid
+          python3 scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py
