@@ -71,11 +71,18 @@ def cuboid(vertices: list[tuple[float, float, float]], triangles: list[tuple[int
     )
 
 
-def lane_mesh(*, length: float, depth: float, height: float, line_width: float) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]]:
+def lane_mesh(
+    *,
+    length: float,
+    depth: float,
+    height: float,
+    line_width: float,
+    y_offset: float = 0.0,
+) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]]:
     vertices: list[tuple[float, float, float]] = []
     triangles: list[tuple[int, int, int]] = []
     half_length = length / 2.0
-    y_positions = [-7.0, -3.5, 0.0, 3.5, 7.0]
+    y_positions = [y + y_offset for y in (-7.0, -3.5, 0.0, 3.5, 7.0)]
     for y in y_positions:
         cuboid(
             vertices,
@@ -156,12 +163,19 @@ def write_lane(
     height: float,
     line_width: float,
     length_override: float | None = None,
+    y_offset: float = 0.0,
 ) -> dict[str, object]:
     length = length_override if length_override is not None else bed - 2.0 * margin
     center_x = bed / 2.0
     center_y = depth / 2.0 if edge == "front" else bed - depth / 2.0
     name = f"TINMAN_AUTO_PA_LANE_{int(bed)}_{edge.upper()}"
-    vertices, triangles = lane_mesh(length=length, depth=depth - 2.0, height=height, line_width=line_width)
+    vertices, triangles = lane_mesh(
+        length=length,
+        depth=depth - 2.0,
+        height=height,
+        line_width=line_width,
+        y_offset=y_offset,
+    )
 
     path.parent.mkdir(parents=True, exist_ok=True)
     info = zipfile.ZipInfo
@@ -183,10 +197,10 @@ def write_lane(
         "bed_mm": bed,
         "edge": edge,
         "bbox": [
-            center_x - length / 2.0,
-            center_y - depth / 2.0 + 1.0,
-            center_x + length / 2.0,
-            center_y + depth / 2.0 - 1.0,
+            center_x + min(x for x, _, _ in vertices),
+            center_y + min(y for _, y, _ in vertices),
+            center_x + max(x for x, _, _ in vertices),
+            center_y + max(y for _, y, _ in vertices),
         ],
         "height_mm": height,
         "line_count": 5,
@@ -215,6 +229,7 @@ def main() -> int:
                     height=args.height,
                     line_width=args.line_width,
                     length_override=270.0 if bed == 300.0 and edge == "front" else None,
+                    y_offset=-1.5 if bed == 300.0 and edge == "rear" else 0.0,
                 )
             )
     manifest = {"kind": "tinman_auto_pa_visible_lane_manifest", "version": 1, "assets": outputs}

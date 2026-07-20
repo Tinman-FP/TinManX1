@@ -12,6 +12,9 @@ Use one lane object on the same plate as the model before slicing:
 
 The 300 mm front lane is shortened to 270 mm so it remains in the Qidi Plus 4
 front strip while clearing the profile's front-right bed exclusion pocket.
+The 300 mm rear lane is shifted slightly inward so Max EZ profiles that inherit
+the Qidi rear-left bed exclusion pocket can slice the lane without collision
+warnings.
 
 TinManX1 builds with the lane importer patch recognize these object names during
 3MF/model import and place them 10 mm from the named bed edge instead of using
