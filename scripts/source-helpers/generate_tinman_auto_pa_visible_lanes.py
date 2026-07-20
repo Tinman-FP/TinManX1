@@ -77,12 +77,13 @@ def lane_mesh(
     depth: float,
     height: float,
     line_width: float,
+    line_spacing: float = 3.5,
     y_offset: float = 0.0,
 ) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]]:
     vertices: list[tuple[float, float, float]] = []
     triangles: list[tuple[int, int, int]] = []
     half_length = length / 2.0
-    y_positions = [y + y_offset for y in (-7.0, -3.5, 0.0, 3.5, 7.0)]
+    y_positions = [i * line_spacing + y_offset for i in (-2.0, -1.0, 0.0, 1.0, 2.0)]
     for y in y_positions:
         cuboid(
             vertices,
@@ -163,6 +164,7 @@ def write_lane(
     height: float,
     line_width: float,
     length_override: float | None = None,
+    line_spacing: float = 3.5,
     y_offset: float = 0.0,
 ) -> dict[str, object]:
     length = length_override if length_override is not None else bed - 2.0 * margin
@@ -174,6 +176,7 @@ def write_lane(
         depth=depth - 2.0,
         height=height,
         line_width=line_width,
+        line_spacing=line_spacing,
         y_offset=y_offset,
     )
 
@@ -229,7 +232,7 @@ def main() -> int:
                     height=args.height,
                     line_width=args.line_width,
                     length_override=270.0 if bed == 300.0 and edge == "front" else None,
-                    y_offset=-1.5 if bed == 300.0 and edge == "rear" else 0.0,
+                    line_spacing=3.0 if bed == 300.0 and edge == "rear" else 3.5,
                 )
             )
     manifest = {"kind": "tinman_auto_pa_visible_lane_manifest", "version": 1, "assets": outputs}

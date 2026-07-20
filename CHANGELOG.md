@@ -13,7 +13,7 @@ Included:
 - trims any out-of-bounds skirt generated around a visible auto-PA lane and clamps advertised `PRINT_START` extents back to the bed before export
 - normalizes RatRig-style `PRINT_START TOTAL_LAYER_COUNT` metadata to the emitted layer-change stream during auto-PA postprocessing so progress and PLR state stay aligned with the generated G-code
 - shortens the Qidi Plus 4 front auto-PA lane so it clears the printer profile's front-right bed exclusion area while staying inside the front 20 mm calibration strip
-- shifts the Max EZ rear auto-PA lane slightly inward so it clears the inherited Qidi rear-left bed exclusion area while staying inside the rear 20 mm calibration strip
+- tightens the Max EZ rear auto-PA lane spacing so it clears the inherited Qidi rear-left bed exclusion area while staying inside the rear 20 mm calibration strip
 - extends auto-PA layer-count normalization to Qidi-style `SET_PRINT_STATS_INFO TOTAL_LAYER` metadata
 - sanitized the Moonraker lane-data test default host and local catalog-normalizer defaults so public helpers no longer point at a specific private LAN/worktree
 - carried forward the pending HT-PLA-CF Codex helper entries and Arc Support pass-through fallback from the older 2.4.2 profile-maintenance branch
