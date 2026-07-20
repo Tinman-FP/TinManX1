@@ -12,6 +12,7 @@
 #include <string>
 #include <regex>
 #include <future>
+#include <utility>
 #include <boost/algorithm/string.hpp>
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/optional.hpp>
@@ -7697,6 +7698,7 @@ std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs& mode
 
 #ifdef AUTOPLACEMENT_ON_LOAD
     ModelInstancePtrs new_instances;
+    std::vector<std::pair<ModelInstance*, std::string>> tinman_auto_pa_lane_instances;
 #endif /* AUTOPLACEMENT_ON_LOAD */
     for (ModelObject *model_object : model_objects) {
         auto *object = model.add_object(*model_object);
@@ -7720,6 +7722,13 @@ std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs& mode
             instance->set_offset(Slic3r::to_3d(this->bed.build_volume().bed_center(), -object->origin_translation(2)));
 #endif /* AUTOPLACEMENT_ON_LOAD */
         }
+
+#ifdef AUTOPLACEMENT_ON_LOAD
+        if (tinman_auto_pa_lane_edge_from_name(object_name) != TinManAutoPALaneEdge::None) {
+            for (ModelInstance *instance : object->instances)
+                tinman_auto_pa_lane_instances.emplace_back(instance, object_name);
+        }
+#endif /* AUTOPLACEMENT_ON_LOAD */
         
         //BBS: when the object is too large, let the user choose whether to scale it down
         for (size_t i = 0; i < object->instances.size(); ++i) {
@@ -7803,22 +7812,28 @@ std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs& mode
         auto start_point = this->bed.build_volume().bounding_volume2d().center();
         bool plate_empty = partplate_list.get_curr_plate()->empty();
         Vec3d displacement;
-        ModelObject *instance_object = instance->get_object();
-        const std::string instance_object_name = instance_object == nullptr ?
-            std::string() :
-            (instance_object->name.empty() ? fs::path(instance_object->input_file).filename().string() : instance_object->name);
-        if (tinman_auto_pa_lane_displacement(instance_object_name, this->bed.build_volume().bounding_volume2d(), offset(2), displacement)) {
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__
-                                    << boost::format(", TinMan auto PA lane import placement, object %1%, x %2%, y %3%")
-                                           % instance_object_name % displacement(0) % displacement(1);
-        }
-        else if (plate_empty)
+        if (plate_empty)
             displacement = {start_point(0), start_point(1), offset(2)};
         else {
             auto empty_cell = wxGetApp().plater()->canvas3D()->get_nearest_empty_cell({start_point(0), start_point(1)});
             displacement    = {empty_cell.x(), empty_cell.y(), offset(2)};
         }
         instance->set_offset(displacement);
+    }
+
+    for (const auto &lane_instance : tinman_auto_pa_lane_instances) {
+        ModelInstance *instance = lane_instance.first;
+        if (instance == nullptr)
+            continue;
+
+        Vec3d displacement;
+        const Vec3d offset = instance->get_offset();
+        if (tinman_auto_pa_lane_displacement(lane_instance.second, this->bed.build_volume().bounding_volume2d(), offset(2), displacement)) {
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__
+                                    << boost::format(", TinMan auto PA lane import placement, object %1%, x %2%, y %3%")
+                                           % lane_instance.second % displacement(0) % displacement(1);
+            instance->set_offset(displacement);
+        }
     }
 #endif
 
