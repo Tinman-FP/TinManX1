@@ -675,11 +675,20 @@ def main(argv: list[str] | None = None) -> int:
         write_report(report_path, report)
         return 0
 
+    text_modified = False
+    text, layer_count_report = normalize_print_start_layer_count(text)
+    report["print_start_layer_count"] = layer_count_report
+    if layer_count_report.get("changed"):
+        text_modified = True
+    layers_normalized = layer_count_report.get("changed") or previous_stamp.get("layers") == "normalized"
+
     visible_lane = validate_visible_lane(text, target)
     report["visible_lane"] = visible_lane
     if not visible_lane.get("ok"):
         reason = str(visible_lane.get("reason") or "invalid_visible_lane")
         report["status"] = "deferred_missing_visible_lane" if reason == "missing_visible_lane" else "deferred_visible_lane_invalid"
+        if text_modified:
+            gcode.write_text(text, encoding="utf-8")
         stamp_file(
             gcode,
             {
@@ -687,12 +696,12 @@ def main(argv: list[str] | None = None) -> int:
                 "target": target,
                 "lane": reason,
                 "edge_mm": visible_lane.get("edge_mm"),
+                "layers": "normalized" if layers_normalized else None,
             },
         )
         write_report(report_path, report)
         return 0
 
-    text_modified = False
     bed_bounds = parse_bed_bounds(text, target)
     if bed_bounds is not None:
         text, skirt_report = sanitize_out_of_bounds_skirts(text, bed_bounds)
@@ -701,11 +710,6 @@ def main(argv: list[str] | None = None) -> int:
         report["print_start_bounds"] = print_start_report
         if skirt_report.get("removed_blocks") or print_start_report.get("changed"):
             text_modified = True
-
-    text, layer_count_report = normalize_print_start_layer_count(text)
-    report["print_start_layer_count"] = layer_count_report
-    if layer_count_report.get("changed"):
-        text_modified = True
 
     if text_modified:
         gcode.write_text(text, encoding="utf-8")
@@ -718,7 +722,6 @@ def main(argv: list[str] | None = None) -> int:
     report["maxflow_score_reason"] = maxflow_reason
     skirt_removed = report.get("skirt_sanitizer", {}).get("removed_blocks") or previous_stamp.get("skirt") == "removed_oob"
     bounds_clamped = report.get("print_start_bounds", {}).get("changed") or previous_stamp.get("bounds") == "clamped"
-    layers_normalized = report.get("print_start_layer_count", {}).get("changed") or previous_stamp.get("layers") == "normalized"
     if not pa_score and not maxflow_score:
         report["status"] = "deferred_no_real_scores"
         stamp_file(

@@ -15,6 +15,7 @@ Included:
 - shortens the Qidi Plus 4 front auto-PA lane so it clears the printer profile's front-right bed exclusion area while staying inside the front 20 mm calibration strip
 - tightens the Max EZ rear auto-PA lane spacing so it clears the inherited Qidi rear-left bed exclusion area while staying inside the rear 20 mm calibration strip
 - extends auto-PA layer-count normalization to Qidi-style `SET_PRINT_STATS_INFO TOTAL_LAYER` metadata
+- normalizes layer-count metadata before deferring files with missing or invalid visible auto-PA lanes so PLR/progress bookkeeping stays sane even on rejected calibration exports
 - sanitized the Moonraker lane-data test default host and local catalog-normalizer defaults so public helpers no longer point at a specific private LAN/worktree
 - carried forward the pending HT-PLA-CF Codex helper entries and Arc Support pass-through fallback from the older 2.4.2 profile-maintenance branch
 - rebased the current TinManX1 patch onto upstream Orca Slicer 2.4.2 commit `8500fcdccaa10b5099ac20d252af3a7c560046f1`
