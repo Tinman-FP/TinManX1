@@ -26,6 +26,7 @@ PROFILE_ROOT = ROOT / "resources" / "profiles" / "TinManX1"
 INDEX_PATH = ROOT / "resources" / "profiles" / "TinManX1.json"
 
 MATERIALS = {
+    "PLA",
     "ABS",
     "ASA",
     "PPA-CF",
@@ -40,6 +41,14 @@ MATERIALS = {
     "PA-CF",
     "PETG",
     "PET GF",
+}
+REQUIRED_MATERIAL_TUNING = {
+    "PETG + X-CCF",
+    "PET GF + X-CCF",
+    "PET GF + CGF",
+    "PA-CF + X-CCF",
+    "PPS-CF + X-CCF",
+    "PLA + X-CCF",
 }
 FIBERS = {
     "X-CCF": {"diameter": 0.25, "linear_density": 102},
@@ -309,7 +318,16 @@ def check_processes() -> int:
             require_string(data, "fiber_infill_angles", path, nonempty=False)
             require_choice(data, "fiber_seam_position", path, {"source", "nearest", "aligned", "rear", "random"})
             require_float(data, "fiber_seam_angle", path, 0)
-            require_json_object(data, "fiber_reinforcement_payload", path)
+            payload = require_json_object(data, "fiber_reinforcement_payload", path)
+            tuning = payload.get("material_tuning")
+            if not isinstance(tuning, dict):
+                fail(f"{path.relative_to(ROOT)} fiber_reinforcement_payload missing material_tuning map")
+            missing_tuning = REQUIRED_MATERIAL_TUNING.difference(tuning)
+            if missing_tuning:
+                fail(
+                    f"{path.relative_to(ROOT)} material_tuning missing "
+                    + ", ".join(sorted(missing_tuning))
+                )
             require_int(data, "fiber_outer_perimeter_loops", path, 1)
             require_int(data, "fiber_inner_perimeter_loops", path, 1)
             require_int(data, "fiber_plastic_outer_loops_with_fiber", path, 2)

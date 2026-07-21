@@ -695,6 +695,47 @@ def main() -> int:
         )
         routes, skipped = planner.plan_routes(parsed, cfg)
 
+        material_payload = {
+            "material_tuning": {
+                "PA-CF + X-CCF": {
+                    "default": {
+                        "min_radius": 12,
+                        "max_arc_segment_length": 3,
+                        "start_length": 15,
+                        "slow_length": 10,
+                        "normal_max_speed": 30,
+                        "finish_max_speed": 15,
+                        "min_route_length": 55,
+                        "perimeter_min_route_length": 55,
+                    },
+                    "heavy": {
+                        "max_arc_segment_length": 1,
+                        "slow_length": 8,
+                        "normal_max_speed": 15,
+                    },
+                }
+            }
+        }
+        material_fixture = Path(tmpdir) / "material_tuning_fixture.gcode"
+        material_fixture.write_text(
+            SYNTHETIC_GCODE
+            + f"; fiber_source_material_id = tinmanx1-fs3-pa-cf-x-ccf\n"
+            + "; fiber_plastic_type = PA-CF\n"
+            + "; fiber_name = X-CCF Carbon fiber 0.25 mm\n"
+            + f"; fiber_reinforcement_payload = {json.dumps(material_payload, separators=(',', ':'))}\n",
+            encoding="utf-8",
+        )
+        material_cfg = planner.planner_config(planner.parse_gcode(material_fixture), default_planner_args())
+        if material_cfg.material_tuning_name != "PA-CF + X-CCF":
+            raise SystemExit(f"PA-CF material tuning was not selected: {material_cfg.material_tuning_name!r}")
+        if material_cfg.max_arc_segment_length != 1 or material_cfg.slow_length != 8:
+            raise SystemExit(
+                "PA-CF material tuning did not apply arc/slow-length overrides: "
+                f"arc={material_cfg.max_arc_segment_length}, slow={material_cfg.slow_length}"
+            )
+        if round(material_cfg.fiber_feedrate / 60.0, 3) != 15:
+            raise SystemExit(f"PA-CF material tuning did not apply route speed: {material_cfg.fiber_feedrate / 60.0}")
+
         expected_pattern_angles = {
             "rhombic": {45, 135},
             "isogrid": {0, 60, 120},

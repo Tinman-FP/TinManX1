@@ -10,20 +10,57 @@ cleanly.
 
 from __future__ import annotations
 
+import argparse
+import importlib.util
 import json
 import shutil
 from pathlib import Path
+import sys
 
 
-ROOT = Path(__file__).resolve().parents[1]
+def find_repo_root(start: Path) -> Path:
+    for candidate in (start.parent, *start.parents):
+        if (candidate / "README.md").is_file() and (candidate / "scripts").is_dir():
+            return candidate
+    return start.parents[1]
+
+
+ROOT = find_repo_root(Path(__file__).resolve())
+HELPER_DIR = Path(__file__).resolve().parent
 PROFILE_ROOT = ROOT / "resources" / "profiles"
 PACK_ROOT = PROFILE_ROOT / "TinManX1"
-PACK_VERSION = "02.04.00.13"
+PACK_VERSION = "02.04.00.15"
 MACHINE_MODEL = "FibreSeek Seeker 3"
 LEGACY_COMPOSITE_MACHINE_NAMES = ["FibreSeek Seeker 3 - Codex"]
 
 
 MATERIALS = {
+    "PLA": {
+        "color": "#F2F2F2",
+        "fiber_color": "#F67C01",
+        "manufacturer": "FIBRESEEK",
+        "fiber_plastic_name": "CFC PLA",
+        "fiber_plastic_density": 1.25,
+        "density": 1.25,
+        "cost": 20,
+        "temp": 220,
+        "temp_first": 225,
+        "bed": 55,
+        "bed_first": 60,
+        "chamber": 0,
+        "fan": 80,
+        "fan_max": 100,
+        "flow": 1.00,
+        "mvs": 16,
+        "fiber_temp": 235,
+        "fiber_temp_first": 240,
+        "fiber_fan": 100,
+        "fiber_flow": 0.82,
+        "fiber_mvs": 12,
+        "fiber_temp_standby": 180,
+        "fiber_plastic_extrusion_speed": 10,
+        "fiber_extrusion_speed": 25,
+    },
     "ABS": {
         "color": "#8A8A8A",
         "fiber_color": "#2F2F2F",
@@ -48,7 +85,7 @@ MATERIALS = {
         "color": "#E5A04C",
         "fiber_color": "#3B3B3B",
         "density": 1.07,
-        "cost": 28,
+        "cost": 27,
         "temp": 260,
         "temp_first": 265,
         "bed": 105,
@@ -68,7 +105,7 @@ MATERIALS = {
         "color": "#2E2E2E",
         "fiber_color": "#1F1F1F",
         "density": 1.25,
-        "cost": 80,
+        "cost": 145,
         "temp": 295,
         "temp_first": 300,
         "bed": 110,
@@ -88,7 +125,7 @@ MATERIALS = {
         "color": "#262626",
         "fiber_color": "#151515",
         "density": 1.26,
-        "cost": 120,
+        "cost": 140,
         "temp": 330,
         "temp_first": 335,
         "bed": 110,
@@ -108,7 +145,8 @@ MATERIALS = {
         "color": "#363636",
         "fiber_color": "#181818",
         "density": 1.12,
-        "cost": 48,
+        "cost": 42,
+        "price_source": "Generic 1 kg retail average",
         "temp": 255,
         "temp_first": 260,
         "bed": 100,
@@ -128,7 +166,8 @@ MATERIALS = {
         "color": "#777777",
         "fiber_color": "#3A3A3A",
         "density": 1.08,
-        "cost": 42,
+        "cost": 45,
+        "price_source": "Generic 1 kg retail average",
         "temp": 260,
         "temp_first": 265,
         "bed": 105,
@@ -148,7 +187,8 @@ MATERIALS = {
         "color": "#9B9B8B",
         "fiber_color": "#444438",
         "density": 1.15,
-        "cost": 52,
+        "cost": 50,
+        "price_source": "Generic 1 kg retail average",
         "temp": 260,
         "temp_first": 265,
         "bed": 105,
@@ -228,7 +268,8 @@ MATERIALS = {
         "color": "#FFF06292",
         "fiber_color": "#F67C01",
         "density": 1.43,
-        "cost": 24,
+        "cost": 30,
+        "price_source": "Generic 1 kg retail average",
         "temp": 300,
         "temp_first": 300,
         "bed": 75,
@@ -261,7 +302,8 @@ MATERIALS = {
         "color": "#64B5F6",
         "fiber_color": "#203040",
         "density": 1.27,
-        "cost": 35,
+        "cost": 30,
+        "price_source": "Generic 1 kg retail average",
         "temp": 260,
         "temp_first": 265,
         "bed": 80,
@@ -281,7 +323,8 @@ MATERIALS = {
         "color": "#2B3A42",
         "fiber_color": "#101820",
         "density": 1.18,
-        "cost": 55,
+        "cost": 54.95,
+        "price_source": "Generic 1 kg retail average",
         "temp": 260,
         "temp_first": 265,
         "bed": 80,
@@ -297,11 +340,35 @@ MATERIALS = {
         "fiber_flow": 0.82,
         "fiber_mvs": 8,
     },
+    "Push Plastic PC-PBT": {
+        "color": "#1F1F1F",
+        "fiber_color": "#111111",
+        "manufacturer": "Push Plastic",
+        "fiber_plastic_name": "Push Plastic PC-PBT",
+        "density": 1.20,
+        "cost": 39.99,
+        "temp": 255,
+        "temp_first": 255,
+        "temp_range_low": 245,
+        "temp_range_high": 260,
+        "bed": 110,
+        "bed_first": 110,
+        "chamber": 55,
+        "fan": 10,
+        "fan_max": 25,
+        "flow": 1.00,
+        "mvs": 6,
+        "fiber_temp": 260,
+        "fiber_temp_first": 260,
+        "fiber_fan": 15,
+        "fiber_flow": 0.82,
+        "fiber_mvs": 6,
+    },
     "PA-CF": {
         "color": "#2D2D2D",
         "fiber_color": "#111111",
         "density": 1.17,
-        "cost": 70,
+        "cost": 80,
         "temp": 300,
         "temp_first": 305,
         "bed": 80,
@@ -359,6 +426,141 @@ FIBER_MODES = {
         "infill_source": "generated_ribs",
         "generate_perimeters": "1",
         "generate_infill": "1",
+    },
+}
+
+
+ROCKET_REFERENCE = "Rocket Slicer 1.3.2.637 / preset pack v14"
+
+ROCKET_132_MATERIAL_TUNING = {
+    # Rocket keeps the hard FibreSeek machine contract common, then varies a
+    # small set of material/profile route limits. TinManX1 consumes this through
+    # fiber_reinforcement_payload so the UI stays streamlined.
+    "PETG + X-CCF": {
+        "source": "Rocket Slicer 1.3.2.637 PETG CFC X-CCF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 30,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+        "heavy": {
+            "min_radius": 10,
+            "max_arc_segment_length": 4,
+            "start_length": 5,
+            "slow_length": 5,
+            "normal_max_speed": 40,
+        },
+    },
+    "PET GF + CGF": {
+        "source": "Rocket Slicer 1.3.2.637 PET-GF CFC CGF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 10,
+            "slow_length": 10,
+            "normal_max_speed": 15,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+    },
+    "PET GF + X-CCF": {
+        "source": "Rocket Slicer 1.3.2.637 PET-GF CFC X-CCF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 30,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+        "heavy": {
+            "min_radius": 10,
+            "max_arc_segment_length": 4,
+            "start_length": 5,
+            "slow_length": 5,
+            "normal_max_speed": 40,
+        },
+    },
+    "PA-CF + X-CCF": {
+        "source": "Rocket Slicer 1.3.2.637 PA-CF CFC X-CCF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 30,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+        "medium": {
+            "min_radius": 10,
+            "max_arc_segment_length": 4,
+            "normal_max_speed": 30,
+        },
+        "heavy": {
+            "min_radius": 12,
+            "max_arc_segment_length": 1,
+            "slow_length": 8,
+            "normal_max_speed": 15,
+        },
+    },
+    "PPS-CF + X-CCF": {
+        "source": "Rocket Slicer 1.3.2.637 PPS-CF CFC X-CCF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 25,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+        "medium": {
+            "max_arc_segment_length": 1,
+            "normal_max_speed": 25,
+        },
+        "heavy": {
+            "max_arc_segment_length": 3,
+            "slow_length": 5,
+            "normal_max_speed": 15,
+        },
+    },
+    "PLA + X-CCF": {
+        "source": "Rocket Slicer 1.3.2.637 PLA CFC X-CCF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 20,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+        "medium": {
+            "min_radius": 10,
+            "max_arc_segment_length": 4,
+            "start_length": 5,
+            "slow_length": 5,
+            "normal_max_speed": 40,
+        },
+        "heavy": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 20,
+        },
     },
 }
 
@@ -422,6 +624,30 @@ def arr(value):
 def write_json(path: Path, data: dict):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=True) + "\n")
+
+
+def load_layup_payload_helper():
+    helper_path = HELPER_DIR / "build_tinmanx1_fiber_layup_payload.py"
+    spec = importlib.util.spec_from_file_location("tinmanx1_layup_payload_helper", helper_path)
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"Unable to load layup payload helper: {helper_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def layup_payload_for_template(template: str) -> str:
+    payload: dict[str, object] = {
+        "rocket_reference": ROCKET_REFERENCE,
+        "material_tuning": ROCKET_132_MATERIAL_TUNING,
+    }
+    if template == "none":
+        return json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    helper = load_layup_payload_helper()
+    payload["layup_bands"] = [helper.normalize_band(dict(item)) for item in helper.TEMPLATES[template]]
+    helper.assert_planner_accepts(payload)
+    return helper.compact_json(payload)
 
 
 def material_slug(material: str) -> str:
@@ -505,14 +731,15 @@ def filament_base(material: str, values: dict) -> dict:
         "filament_diameter": arr("1.75"),
         "filament_density": arr(values["density"]),
         "filament_cost": arr(values["cost"]),
+        **({"filament_price_source": arr(values["price_source"])} if "price_source" in values else {}),
         "filament_flow_ratio": arr(f"{values['flow']:.2f}"),
         "filament_max_volumetric_speed": arr(values["mvs"]),
         "filament_is_support": arr("0"),
         "filament_soluble": arr("0"),
         "nozzle_temperature": arr(values["temp"]),
         "nozzle_temperature_initial_layer": arr(values["temp_first"]),
-        "nozzle_temperature_range_low": arr(max(180, values["temp"] - 20)),
-        "nozzle_temperature_range_high": arr(values["temp_first"] + 20),
+        "nozzle_temperature_range_low": arr(values.get("temp_range_low", max(180, values["temp"] - 20))),
+        "nozzle_temperature_range_high": arr(values.get("temp_range_high", values["temp_first"] + 20)),
         "hot_plate_temp": arr(values["bed"]),
         "hot_plate_temp_initial_layer": arr(values["bed_first"]),
         "eng_plate_temp": arr(values["bed"]),
@@ -911,7 +1138,7 @@ def plastic_process(nozzle: str, spec: dict) -> dict:
     }
 
 
-def fiber_process(plastic_nozzle: str, spec: dict, mode_label: str, mode: dict) -> dict:
+def fiber_process(plastic_nozzle: str, spec: dict, mode_label: str, mode: dict, layup_payload: str = "{}") -> dict:
     width = spec["line_width"]
     return {
         "type": "process",
@@ -989,12 +1216,13 @@ def fiber_process(plastic_nozzle: str, spec: dict, mode_label: str, mode: dict) 
         "fiber_inner_perimeter_loops": "1",
         "fiber_plastic_outer_loops_with_fiber": "2",
         "fiber_plastic_inner_loops_with_fiber": "0",
-        "fiber_reinforcement_payload": "{}",
+        "fiber_reinforcement_payload": layup_payload,
         "compatible_printers": compatible_process_printers(plastic_nozzle, fiber=True),
     }
 
 
-def build_pack():
+def build_pack(layup_template: str = "none"):
+    layup_payload = layup_payload_for_template(layup_template)
     if PACK_ROOT.exists():
         shutil.rmtree(PACK_ROOT)
 
@@ -1036,7 +1264,7 @@ def build_pack():
         write_json(PACK_ROOT / ppath, p)
 
         for label, mode in FIBER_MODES.items():
-            fp = fiber_process(nozzle, spec, label, mode)
+            fp = fiber_process(nozzle, spec, label, mode, layup_payload)
             fpath = f"process/{fp['name']}.json"
             top["process_list"].append({"name": fp["name"], "sub_path": fpath})
             write_json(PACK_ROOT / fpath, fp)
@@ -1062,4 +1290,12 @@ def build_pack():
 
 
 if __name__ == "__main__":
-    build_pack()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--fiber-layup-template",
+        choices=["none", "balanced", "perimeter-shell", "tetragrid-core", "first-layer-off-tetragrid"],
+        default="none",
+        help="Optional advanced layup payload template to write into continuous-fiber process profiles.",
+    )
+    args = parser.parse_args()
+    build_pack(args.fiber_layup_template)

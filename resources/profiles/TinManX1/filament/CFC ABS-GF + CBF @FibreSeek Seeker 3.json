@@ -3,7 +3,7 @@
   "name": "CFC ABS-GF + CBF @FibreSeek Seeker 3",
   "inherits": "TinManX1 ABS-GF base",
   "from": "system",
-  "setting_id": "jTC73V1tpxoqQV7H",
+  "setting_id": "TMX-FS3-ABS-GF-CBF",
   "filament_id": "tinmanx1-fs3-abs-gf-cbf",
   "instantiation": "true",
   "filament_vendor": [
@@ -80,7 +80,7 @@
     "1.08"
   ],
   "fiber_plastic_cost": [
-    "42"
+    "45"
   ],
   "fiber_plastic_spool_weight": [
     "1000"

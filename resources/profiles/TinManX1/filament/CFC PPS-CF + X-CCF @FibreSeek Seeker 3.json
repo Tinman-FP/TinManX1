@@ -3,7 +3,7 @@
   "name": "CFC PPS-CF + X-CCF @FibreSeek Seeker 3",
   "inherits": "TinManX1 PPS-CF base",
   "from": "system",
-  "setting_id": "CxA3jN5RsS8yAWcI",
+  "setting_id": "TMX-FS3-PPS-CF-X-CCF",
   "filament_id": "tinmanx1-fs3-pps-cf-x-ccf",
   "instantiation": "true",
   "filament_vendor": [
@@ -80,7 +80,7 @@
     "1.26"
   ],
   "fiber_plastic_cost": [
-    "120"
+    "140"
   ],
   "fiber_plastic_spool_weight": [
     "1000"

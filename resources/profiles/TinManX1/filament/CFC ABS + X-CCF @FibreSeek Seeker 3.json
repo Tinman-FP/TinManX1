@@ -3,7 +3,7 @@
   "name": "CFC ABS + X-CCF @FibreSeek Seeker 3",
   "inherits": "TinManX1 ABS base",
   "from": "system",
-  "setting_id": "Cy4b6CqqZy6UqzJ0",
+  "setting_id": "TMX-FS3-ABS-X-CCF",
   "filament_id": "tinmanx1-fs3-abs-x-ccf",
   "instantiation": "true",
   "filament_vendor": [

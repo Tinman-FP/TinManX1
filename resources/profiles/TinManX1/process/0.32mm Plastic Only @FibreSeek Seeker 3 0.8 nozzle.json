@@ -3,7 +3,7 @@
   "name": "0.32mm Plastic Only @FibreSeek Seeker 3 0.8 nozzle",
   "inherits": "TinManX1 FibreSeek process common",
   "from": "system",
-  "setting_id": "TigoNU5gsG3joZtG",
+  "setting_id": "TMX-FS3-PROC-P0.8",
   "instantiation": "true",
   "layer_height": "0.32",
   "first_layer_height": "0.2",

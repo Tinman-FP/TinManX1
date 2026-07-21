@@ -3,7 +3,7 @@
   "name": "CFC PCTG + CKF @FibreSeek Seeker 3",
   "inherits": "TinManX1 PCTG base",
   "from": "system",
-  "setting_id": "Psn1uP2x3gwqiOyN",
+  "setting_id": "TMX-FS3-PCTG-CKF",
   "filament_id": "tinmanx1-fs3-pctg-ckf",
   "instantiation": "true",
   "filament_vendor": [
@@ -80,7 +80,7 @@
     "1.27"
   ],
   "fiber_plastic_cost": [
-    "35"
+    "30"
   ],
   "fiber_plastic_spool_weight": [
     "1000"

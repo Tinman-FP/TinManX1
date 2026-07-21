@@ -3,7 +3,7 @@
   "name": "CFC PA-CF + CKF @FibreSeek Seeker 3",
   "inherits": "TinManX1 PA-CF base",
   "from": "system",
-  "setting_id": "oK7n14KpVUhvDS1s",
+  "setting_id": "TMX-FS3-PA-CF-CKF",
   "filament_id": "tinmanx1-fs3-pa-cf-ckf",
   "instantiation": "true",
   "filament_vendor": [
@@ -80,7 +80,7 @@
     "1.17"
   ],
   "fiber_plastic_cost": [
-    "70"
+    "80"
   ],
   "fiber_plastic_spool_weight": [
     "1000"

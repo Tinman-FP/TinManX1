@@ -178,6 +178,7 @@ class PlannerConfig:
     fiber_path_phase: int = 0
     layup_bands: list[dict] = field(default_factory=list)
     layup_band_name: str = ""
+    material_tuning_name: str = ""
     layup_payload_warnings: list[str] = field(default_factory=list)
     fiber_tool_command: str = "T0 ; switch extruder type to:FIBER"
     plastic_tool_command: str = "T1 ; switch extruder type to:PLASTIC"
@@ -781,6 +782,123 @@ def payload_value(mapping: dict, *keys: str) -> object:
     return None
 
 
+def normalized_tuning_key(value: object) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value).lower())
+
+
+def comment_tokens(value: str | None) -> list[str]:
+    if not value:
+        return []
+    cleaned = value.replace("[", ";").replace("]", ";").replace('"', "").replace("'", "")
+    pieces = re.split(r"[;,]", cleaned)
+    return [piece.strip() for piece in pieces if piece.strip()]
+
+
+def material_tuning_candidates(comments: dict[str, str]) -> list[str]:
+    candidates: list[str] = []
+    for key in (
+        "fiber_source_material_id",
+        "filament_id",
+        "filament_settings_id",
+        "fiber_plastic_type",
+        "fiber_plastic_name",
+        "filament_type",
+        "fiber_name",
+    ):
+        candidates.extend(comment_tokens(comments.get(key)))
+
+    plastic_tokens = comment_tokens(comments.get("fiber_plastic_type")) + comment_tokens(comments.get("fiber_plastic_name"))
+    fiber_tokens = (
+        comment_tokens(comments.get("fiber_name"))
+        + comment_tokens(comments.get("fiber_type"))
+        + comment_tokens(comments.get("fiber_source_material_id"))
+        + comment_tokens(comments.get("filament_id"))
+    )
+    for plastic in plastic_tokens:
+        for fiber in fiber_tokens:
+            candidates.append(f"{plastic} + {fiber}")
+
+    seen: set[str] = set()
+    unique: list[str] = []
+    for candidate in candidates:
+        normalized = normalized_tuning_key(candidate)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        unique.append(candidate)
+    return unique
+
+
+def selected_material_tuning(payload: dict, comments: dict[str, str], mode: str) -> tuple[str, dict]:
+    raw = payload_value(payload, "material_tuning", "rocket_material_tuning")
+    if not isinstance(raw, dict):
+        return "", {}
+
+    normalized_candidates = [normalized_tuning_key(candidate) for candidate in material_tuning_candidates(comments)]
+    best_name = ""
+    best_config: dict = {}
+    best_score = -1
+    for name, value in raw.items():
+        if not isinstance(value, dict):
+            continue
+        normalized_name = normalized_tuning_key(name)
+        if not normalized_name:
+            continue
+        score = -1
+        for candidate in normalized_candidates:
+            if normalized_name == candidate:
+                score = max(score, len(normalized_name) + 1000)
+            elif normalized_name in candidate:
+                score = max(score, len(normalized_name))
+        if score <= best_score:
+            continue
+        merged: dict = {}
+        default_value = value.get("default")
+        if isinstance(default_value, dict):
+            merged.update(default_value)
+        mode_value = value.get(mode)
+        if isinstance(mode_value, dict):
+            merged.update(mode_value)
+        if not merged:
+            merged.update({key: item for key, item in value.items() if not isinstance(item, dict)})
+        best_name = str(name)
+        best_config = merged
+        best_score = score
+    return best_name, best_config
+
+
+def apply_material_tuning_overrides(cfg: PlannerConfig, tuning: dict) -> None:
+    if not tuning:
+        return
+    cfg.min_radius = payload_positive_float(payload_value(tuning, "min_radius", "fiber_min_radius"), cfg.min_radius)
+    cfg.max_arc_segment_length = payload_positive_float(
+        payload_value(tuning, "max_arc_segment_length", "fiber_max_arc_segment_length"),
+        cfg.max_arc_segment_length,
+    )
+    cfg.start_length = payload_positive_float(payload_value(tuning, "start_length", "fiber_start_length"), cfg.start_length)
+    cfg.slow_length = payload_positive_float(payload_value(tuning, "slow_length", "fiber_slow_length"), cfg.slow_length)
+    cfg.min_route_length = payload_positive_float(payload_value(tuning, "min_route_length"), cfg.min_route_length)
+    cfg.perimeter_min_route_length = payload_positive_float(
+        payload_value(tuning, "perimeter_min_route_length", "minimum_perimeter_length"),
+        cfg.perimeter_min_route_length,
+    )
+    normal_speed = payload_value(tuning, "normal_max_speed", "print_speed", "fiber_print_speed")
+    if normal_speed is not None:
+        cfg.fiber_feedrate = payload_positive_float(normal_speed, cfg.fiber_feedrate / 60.0) * 60.0
+    finish_speed = payload_value(tuning, "finish_max_speed")
+    if finish_speed is not None:
+        cfg.fiber_finish_feedrate = payload_positive_float(finish_speed, cfg.fiber_finish_feedrate / 60.0) * 60.0
+    start_speed = payload_value(tuning, "start_max_speed", "start_speed")
+    if start_speed is not None:
+        cfg.fiber_slow_feedrate = payload_positive_float(start_speed, cfg.fiber_slow_feedrate / 60.0) * 60.0
+    after_cut = payload_value(tuning, "after_cut_plastic_extrusion_multiplier")
+    if after_cut is not None:
+        cfg.after_cut_plastic_extrusion_multiplier = payload_positive_float(
+            after_cut,
+            cfg.after_cut_plastic_extrusion_multiplier,
+        )
+
+
 def safe_warning_name(value: object) -> str:
     text = str(value).strip().lower()
     text = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
@@ -1117,6 +1235,9 @@ def planner_config(parsed: ParsedGCode, args: argparse.Namespace) -> PlannerConf
         comments.get("fiber_priming_line_height"),
         cfg.fiber_prime_line_height,
     )
+    material_tuning_name, material_tuning = selected_material_tuning(payload, comments, cfg.reinforcement_mode)
+    cfg.material_tuning_name = material_tuning_name
+    apply_material_tuning_overrides(cfg, material_tuning)
     apply_layup_payload_overrides(cfg, payload, angle_override)
     apply_fiber_prime_payload_overrides(cfg, payload)
     if args.fiber_infill_pattern:
@@ -3231,6 +3352,7 @@ def emit_fiber_block(
                 f"; generated_at = {datetime.now(timezone.utc).isoformat()}",
                 f"; ORCA_CODEX_NATIVE_FIBER_INPUT source={cfg.input_source} mode={cfg.reinforcement_mode} perimeters={int(cfg.generate_perimeters)} infill={int(cfg.generate_infill)} pattern={cfg.pattern}",
                 f"; fiber_reinforcement_mode = {cfg.reinforcement_mode}",
+                f"; fiber_material_tuning = {cfg.material_tuning_name or 'none'}",
                 f"; continuous_fiber_route_count = {summary['count']}",
                 f"; continuous_fiber_layers = {summary['layers_with_routes']}",
                 f"; continuous_fiber_used_mm = {fmt_float(summary['total_length_mm'], 3)}",
@@ -3287,6 +3409,7 @@ def metadata_value_replacements(cfg: PlannerConfig) -> dict[str, str]:
     min_speed = cfg.fiber_cut_tail_feedrate / 60.0
     return {
         "fiber_reinforcement_mode": cfg.reinforcement_mode,
+        "fiber_material_tuning": cfg.material_tuning_name or "none",
         "fiber_after_cut_plastic_extrusion_multiplier": fmt_float(cfg.after_cut_plastic_extrusion_multiplier),
         "fiber_max_arc_segment_length": fmt_float(cfg.max_arc_segment_length),
         "fiber_slow_length": fmt_float(cfg.slow_length),
@@ -3333,6 +3456,7 @@ def emit_append_after_layer(parsed: ParsedGCode, routes: Sequence[FiberRoute], c
         "; Experimental merged output. Validate tool ownership before live printing.",
         f"; ORCA_CODEX_NATIVE_FIBER_INPUT source={cfg.input_source} mode={cfg.reinforcement_mode} perimeters={int(cfg.generate_perimeters)} infill={int(cfg.generate_infill)} pattern={cfg.pattern}",
         f"; fiber_reinforcement_mode = {cfg.reinforcement_mode}",
+        f"; fiber_material_tuning = {cfg.material_tuning_name or 'none'}",
         f"; continuous_fiber_route_count = {summary['count']}",
         f"; continuous_fiber_layers = {summary['layers_with_routes']}",
         f"; continuous_fiber_used_mm = {fmt_float(summary['total_length_mm'], 3)}",
@@ -3566,6 +3690,7 @@ def main() -> int:
             "generate_infill": cfg.generate_infill,
             "infill_source_policy": cfg.infill_source_policy,
             "reinforcement_mode": cfg.reinforcement_mode,
+            "material_tuning": cfg.material_tuning_name,
             "pattern": cfg.pattern,
             "input_source": cfg.input_source,
             "angles": cfg.angles,

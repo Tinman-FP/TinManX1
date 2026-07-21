@@ -1,16 +1,16 @@
 {
   "type": "filament",
-  "name": "TinManX1 PA-CF @FibreSeek Seeker 3",
-  "inherits": "TinManX1 PA-CF base",
+  "name": "TinManX1 PLA @FibreSeek Seeker 3",
+  "inherits": "TinManX1 PLA base",
   "from": "system",
-  "setting_id": "TMX-FS3-PA-CF-P",
-  "filament_id": "tinmanx1-fs3-pa-cf-plastic",
+  "setting_id": "TMX-FS3-PLA-P",
+  "filament_id": "tinmanx1-fs3-pla-plastic",
   "instantiation": "true",
   "filament_vendor": [
     "TinManX1"
   ],
   "filament_type": [
-    "PA-CF"
+    "PLA"
   ],
   "compatible_printers": [
     "FibreSeek Seeker 3 0.4 nozzle",

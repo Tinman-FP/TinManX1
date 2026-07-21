@@ -3,7 +3,7 @@
   "name": "TinManX1 ABS @FibreSeek Seeker 3",
   "inherits": "TinManX1 ABS base",
   "from": "system",
-  "setting_id": "iCheP5oPxoWEuTt1",
+  "setting_id": "TMX-FS3-ABS-P",
   "filament_id": "tinmanx1-fs3-abs-plastic",
   "instantiation": "true",
   "filament_vendor": [

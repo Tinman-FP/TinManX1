@@ -3,7 +3,7 @@
   "name": "CFC Push Plastic PC-PBT + X-CCF @FibreSeek Seeker 3",
   "inherits": "TinManX1 Push Plastic PC-PBT base",
   "from": "system",
-  "setting_id": "EiFX3FN0dt6XFnSL",
+  "setting_id": "TMX-FS3-Push-Plastic-PC-PBT-X-CCF",
   "filament_id": "tinmanx1-fs3-push-plastic-pc-pbt-x-ccf",
   "instantiation": "true",
   "filament_vendor": [

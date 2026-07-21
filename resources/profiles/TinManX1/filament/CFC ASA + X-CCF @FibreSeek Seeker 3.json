@@ -3,7 +3,7 @@
   "name": "CFC ASA + X-CCF @FibreSeek Seeker 3",
   "inherits": "TinManX1 ASA base",
   "from": "system",
-  "setting_id": "x1FWaiH8RAxfJ0gY",
+  "setting_id": "TMX-FS3-ASA-X-CCF",
   "filament_id": "tinmanx1-fs3-asa-x-ccf",
   "instantiation": "true",
   "filament_vendor": [
@@ -80,7 +80,7 @@
     "1.07"
   ],
   "fiber_plastic_cost": [
-    "28"
+    "27"
   ],
   "fiber_plastic_spool_weight": [
     "1000"

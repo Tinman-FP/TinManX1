@@ -3,7 +3,7 @@
   "name": "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
   "inherits": "TinManX1 FibreSeek machine common",
   "from": "system",
-  "setting_id": "EeP8IG9QUY2VGznW",
+  "setting_id": "TMX-FS3-M-X0.6-0.7",
   "instantiation": "true",
   "printer_model": "FibreSeek Seeker 3",
   "printer_variant": "0.6+0.7",

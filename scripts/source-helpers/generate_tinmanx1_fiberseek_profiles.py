@@ -29,12 +29,38 @@ ROOT = find_repo_root(Path(__file__).resolve())
 HELPER_DIR = Path(__file__).resolve().parent
 PROFILE_ROOT = ROOT / "resources" / "profiles"
 PACK_ROOT = PROFILE_ROOT / "TinManX1"
-PACK_VERSION = "02.04.00.14"
+PACK_VERSION = "02.04.00.15"
 MACHINE_MODEL = "FibreSeek Seeker 3"
 LEGACY_COMPOSITE_MACHINE_NAMES = ["FibreSeek Seeker 3 - Codex"]
 
 
 MATERIALS = {
+    "PLA": {
+        "color": "#F2F2F2",
+        "fiber_color": "#F67C01",
+        "manufacturer": "FIBRESEEK",
+        "fiber_plastic_name": "CFC PLA",
+        "fiber_plastic_density": 1.25,
+        "density": 1.25,
+        "cost": 20,
+        "temp": 220,
+        "temp_first": 225,
+        "bed": 55,
+        "bed_first": 60,
+        "chamber": 0,
+        "fan": 80,
+        "fan_max": 100,
+        "flow": 1.00,
+        "mvs": 16,
+        "fiber_temp": 235,
+        "fiber_temp_first": 240,
+        "fiber_fan": 100,
+        "fiber_flow": 0.82,
+        "fiber_mvs": 12,
+        "fiber_temp_standby": 180,
+        "fiber_plastic_extrusion_speed": 10,
+        "fiber_extrusion_speed": 25,
+    },
     "ABS": {
         "color": "#8A8A8A",
         "fiber_color": "#2F2F2F",
@@ -404,6 +430,141 @@ FIBER_MODES = {
 }
 
 
+ROCKET_REFERENCE = "Rocket Slicer 1.3.2.637 / preset pack v14"
+
+ROCKET_132_MATERIAL_TUNING = {
+    # Rocket keeps the hard FibreSeek machine contract common, then varies a
+    # small set of material/profile route limits. TinManX1 consumes this through
+    # fiber_reinforcement_payload so the UI stays streamlined.
+    "PETG + X-CCF": {
+        "source": "Rocket Slicer 1.3.2.637 PETG CFC X-CCF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 30,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+        "heavy": {
+            "min_radius": 10,
+            "max_arc_segment_length": 4,
+            "start_length": 5,
+            "slow_length": 5,
+            "normal_max_speed": 40,
+        },
+    },
+    "PET GF + CGF": {
+        "source": "Rocket Slicer 1.3.2.637 PET-GF CFC CGF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 10,
+            "slow_length": 10,
+            "normal_max_speed": 15,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+    },
+    "PET GF + X-CCF": {
+        "source": "Rocket Slicer 1.3.2.637 PET-GF CFC X-CCF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 30,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+        "heavy": {
+            "min_radius": 10,
+            "max_arc_segment_length": 4,
+            "start_length": 5,
+            "slow_length": 5,
+            "normal_max_speed": 40,
+        },
+    },
+    "PA-CF + X-CCF": {
+        "source": "Rocket Slicer 1.3.2.637 PA-CF CFC X-CCF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 30,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+        "medium": {
+            "min_radius": 10,
+            "max_arc_segment_length": 4,
+            "normal_max_speed": 30,
+        },
+        "heavy": {
+            "min_radius": 12,
+            "max_arc_segment_length": 1,
+            "slow_length": 8,
+            "normal_max_speed": 15,
+        },
+    },
+    "PPS-CF + X-CCF": {
+        "source": "Rocket Slicer 1.3.2.637 PPS-CF CFC X-CCF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 25,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+        "medium": {
+            "max_arc_segment_length": 1,
+            "normal_max_speed": 25,
+        },
+        "heavy": {
+            "max_arc_segment_length": 3,
+            "slow_length": 5,
+            "normal_max_speed": 15,
+        },
+    },
+    "PLA + X-CCF": {
+        "source": "Rocket Slicer 1.3.2.637 PLA CFC X-CCF profile set",
+        "default": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 20,
+            "finish_max_speed": 15,
+            "min_route_length": 55,
+            "perimeter_min_route_length": 55,
+        },
+        "medium": {
+            "min_radius": 10,
+            "max_arc_segment_length": 4,
+            "start_length": 5,
+            "slow_length": 5,
+            "normal_max_speed": 40,
+        },
+        "heavy": {
+            "min_radius": 12,
+            "max_arc_segment_length": 3,
+            "start_length": 15,
+            "slow_length": 10,
+            "normal_max_speed": 20,
+        },
+    },
+}
+
+
 CONTINUOUS_FIBERS = [
     {
         "label": "X-CCF Carbon fiber 0.25 mm",
@@ -477,10 +638,14 @@ def load_layup_payload_helper():
 
 
 def layup_payload_for_template(template: str) -> str:
+    payload: dict[str, object] = {
+        "rocket_reference": ROCKET_REFERENCE,
+        "material_tuning": ROCKET_132_MATERIAL_TUNING,
+    }
     if template == "none":
-        return "{}"
+        return json.dumps(payload, separators=(",", ":"), sort_keys=True)
     helper = load_layup_payload_helper()
-    payload = {"layup_bands": [helper.normalize_band(dict(item)) for item in helper.TEMPLATES[template]]}
+    payload["layup_bands"] = [helper.normalize_band(dict(item)) for item in helper.TEMPLATES[template]]
     helper.assert_planner_accepts(payload)
     return helper.compact_json(payload)
 

@@ -1,6 +1,6 @@
 {
   "name": "TinManX1",
-  "version": "02.04.00.14",
+  "version": "02.04.00.15",
   "force_update": "0",
   "description": "TinManX1 FibreSeek Seeker 3 plastic and continuous-fiber profiles",
   "machine_model_list": [
@@ -64,6 +64,30 @@
     }
   ],
   "filament_list": [
+    {
+      "name": "TinManX1 PLA base",
+      "sub_path": "filament/TinManX1 PLA base.json"
+    },
+    {
+      "name": "TinManX1 PLA @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 PLA @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PLA + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PLA + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PLA + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PLA + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PLA + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PLA + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC PLA + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC PLA + CBF @FibreSeek Seeker 3.json"
+    },
     {
       "name": "TinManX1 ABS base",
       "sub_path": "filament/TinManX1 ABS base.json"
