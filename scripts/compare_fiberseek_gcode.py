@@ -43,11 +43,13 @@ SUMMARY_RE = re.compile(r"^\s*;\s*([^:=]+?)\s*[:=]\s*(.+?)\s*$")
 TEMP_COMMAND_RE = re.compile(r"^\s*(M10[49]|M1[49]0|M19[01])\b(?P<body>[^;]*)", re.IGNORECASE)
 PARAM_RE = re.compile(r"\b([A-Z])([-+]?(?:\d+(?:\.\d*)?|\.\d+))\b", re.IGNORECASE)
 TIME_VALUE_RE = re.compile(
+    r"(?:(?P<days>\d+(?:\.\d+)?)\s*d(?:ays?)?)?\s*"
     r"(?:(?P<hours>\d+(?:\.\d+)?)\s*h(?:ours?)?)?\s*"
     r"(?:(?P<minutes>\d+(?:\.\d+)?)\s*m(?:in(?:utes?)?)?)?\s*"
     r"(?:(?P<seconds>\d+(?:\.\d+)?)\s*s(?:ec(?:onds?)?)?)?",
     re.IGNORECASE,
 )
+PRINTINFO_RE = re.compile(r"^\s*;\s*PRINTINFO:\s*(\{.*\})\s*$")
 
 CRITICAL_COMMANDS = (
     "T0",
@@ -101,6 +103,28 @@ def parse_summary(lines: list[str]) -> dict[str, list[str]]:
         if key:
             values.setdefault(key, []).append(match.group(2).strip())
     return values
+
+
+def parse_config_comments(lines: list[str]) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in lines:
+        match = re.match(r"^\s*;\s*([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$", line)
+        if match:
+            values[match.group(1)] = match.group(2)
+    return values
+
+
+def parse_printinfo(lines: list[str]) -> dict[str, Any]:
+    for line in lines:
+        match = PRINTINFO_RE.match(line)
+        if not match:
+            continue
+        try:
+            payload = json.loads(match.group(1))
+        except json.JSONDecodeError:
+            return {}
+        return payload if isinstance(payload, dict) else {}
+    return {}
 
 
 def parse_cut_distances(lines: list[str]) -> list[float]:
@@ -179,15 +203,16 @@ def layer_indexes(lines: list[str]) -> set[int]:
 
 def parse_seconds(text: str) -> float | None:
     lowered = text.lower()
-    if not any(token in lowered for token in ("h", "hour", "min", "sec", "s")):
+    if not any(token in lowered for token in ("d", "day", "h", "hour", "min", "sec", "s")):
         return None
     match = TIME_VALUE_RE.search(lowered)
     if not match or not any(match.groupdict().values()):
         return None
+    days = float(match.group("days") or 0)
     hours = float(match.group("hours") or 0)
     minutes = float(match.group("minutes") or 0)
     seconds = float(match.group("seconds") or 0)
-    return hours * 3600 + minutes * 60 + seconds
+    return days * 86400 + hours * 3600 + minutes * 60 + seconds
 
 
 def extract_summary_number(summary: dict[str, list[str]], key_tokens: tuple[str, ...]) -> float | None:
@@ -201,8 +226,18 @@ def extract_summary_number(summary: dict[str, list[str]], key_tokens: tuple[str,
 
 
 def extract_time_seconds(summary: dict[str, list[str]]) -> float | None:
-    for key, values in summary.items():
+    preferred_keys = (
+        "estimated_printing_time_normal_mode",
+        "printing_time",
+        "print_time",
+        "time",
+    )
+    ordered_items = [(key, summary[key]) for key in preferred_keys if key in summary]
+    ordered_items.extend((key, values) for key, values in summary.items() if key not in preferred_keys)
+    for key, values in ordered_items:
         if "time" not in key:
+            continue
+        if "first_layer" in key:
             continue
         for value in values:
             parsed = parse_seconds(value)
@@ -212,6 +247,87 @@ def extract_time_seconds(summary: dict[str, list[str]]) -> float | None:
             if numbers and any(unit in value.lower() for unit in ("sec", "second")):
                 return numbers[0]
     return None
+
+
+def printinfo_summary_values(printinfo: dict[str, Any]) -> dict[str, float | None]:
+    if not printinfo:
+        return {}
+    extruders = printinfo.get("extruders") if isinstance(printinfo.get("extruders"), dict) else {}
+    fiber_g = 0.0
+    filament_g = 0.0
+    for extruder in extruders.values():
+        if not isinstance(extruder, dict):
+            continue
+        polymer = extruder.get("p")
+        fiber = extruder.get("f")
+        if isinstance(polymer, dict):
+            filament_g += float(polymer.get("weight") or 0.0)
+        if isinstance(fiber, dict):
+            fiber_g += float(fiber.get("weight") or 0.0)
+    model_info = printinfo.get("model_info") if isinstance(printinfo.get("model_info"), dict) else {}
+    return {
+        "print_time_seconds": float(printinfo["time"]) if isinstance(printinfo.get("time"), (int, float)) else None,
+        "fiber_used_g": fiber_g if fiber_g > 0 else None,
+        "filament_used_g": filament_g if filament_g > 0 else None,
+        "total_layers": float(model_info["total_layers"]) if isinstance(model_info.get("total_layers"), (int, float)) else None,
+        "layer_height": float(model_info["macro_layer_height"]) if isinstance(model_info.get("macro_layer_height"), (int, float)) else None,
+        "max_z_height": float(model_info["total_height"]) if isinstance(model_info.get("total_height"), (int, float)) else None,
+    }
+
+
+def first_config_float(config: dict[str, str], key: str) -> float | None:
+    if key not in config:
+        return None
+    values = parse_float_values(config[key])
+    return values[0] if values else None
+
+
+def has_fiberseek_context(config: dict[str, str]) -> bool:
+    haystack = " ".join(
+        config.get(key, "")
+        for key in (
+            "printer_settings_id",
+            "printer_model",
+            "printer_variant",
+            "filament_settings_id",
+            "filament_ids",
+            "filament_type",
+        )
+    ).lower()
+    return (
+        "fibreseek" in haystack
+        or "fiberseek" in haystack
+        or "seeker 3" in haystack
+        or "seek3" in haystack
+        or "cfc" in haystack
+    )
+
+
+def process_supports_fiberseek(config: dict[str, str]) -> bool:
+    process_id = (config.get("print_settings_id") or "").lower()
+    payload = (config.get("fiber_reinforcement_payload") or "").strip()
+    return bool(payload) or any(
+        token in process_id
+        for token in (
+            "fibreseek",
+            "fiberseek",
+            "continuous fiber",
+            "continuous fibre",
+            "composite fiber",
+            "composite fibre",
+            "rocket compare",
+            "rocket exact",
+        )
+    )
+
+
+def fiber_requested(config: dict[str, str]) -> bool:
+    requested_values = [
+        config.get("fiber_enabled", ""),
+        config.get("fiber_generate_perimeters", ""),
+        config.get("fiber_generate_infill", ""),
+    ]
+    return any(value.strip().lower() in {"1", "true", "yes", "on"} for value in requested_values if value is not None)
 
 
 def command_sequence_signature(lines: list[str]) -> list[str]:
@@ -245,14 +361,26 @@ def summarize_gcode(path: Path) -> dict[str, Any]:
     route_layers = sorted({route["layer"] for route in routes})
     route_warnings = Counter(warning for route in routes for warning in route["warnings"])
     summary = parse_summary(lines)
+    config = parse_config_comments(lines)
+    printinfo = parse_printinfo(lines)
+    printinfo_values = printinfo_summary_values(printinfo)
     cut_distances = parse_cut_distances(lines)
     m1001_loads = parse_m1001_loads(lines)
     layer_ids = layer_indexes(lines)
     temperatures = parse_temperatures(lines)
+    total_layers = (
+        printinfo_values.get("total_layers")
+        or extract_summary_number(summary, ("total", "layer", "number"))
+        or extract_summary_number(summary, ("layer_count",))
+    )
+    layer_height = printinfo_values.get("layer_height") or first_config_float(config, "layer_height")
+    max_z_height = printinfo_values.get("max_z_height") or extract_summary_number(summary, ("max_z_height",))
 
     return {
         "path": str(path),
         "line_count": len(lines),
+        "config": config,
+        "printinfo_present": bool(printinfo),
         "command_counts": {command: commands.get(command, 0) for command in CRITICAL_COMMANDS},
         "all_command_counts": dict(sorted(commands.items())),
         "critical_sequence": command_sequence_signature(lines),
@@ -273,12 +401,15 @@ def summarize_gcode(path: Path) -> dict[str, Any]:
         "m1001_load_min": round(min(m1001_loads), 3) if m1001_loads else None,
         "m1001_load_max": round(max(m1001_loads), 3) if m1001_loads else None,
         "layers_seen": len(layer_ids),
+        "total_layers": total_layers,
+        "layer_height": layer_height,
+        "max_z_height": max_z_height,
         "temperatures": temperatures,
         "summary_values": {
-            "print_time_seconds": extract_time_seconds(summary),
+            "print_time_seconds": printinfo_values.get("print_time_seconds") or extract_time_seconds(summary),
             "fiber_used_mm": extract_summary_number(summary, ("fiber", "used", "mm")),
-            "fiber_used_g": extract_summary_number(summary, ("fiber", "used", "g")),
-            "filament_used_g": extract_summary_number(summary, ("filament", "used", "g")),
+            "fiber_used_g": printinfo_values.get("fiber_used_g") or extract_summary_number(summary, ("fiber", "used", "g")),
+            "filament_used_g": printinfo_values.get("filament_used_g") or extract_summary_number(summary, ("filament", "used", "g")),
             "estimated_printing_time": extract_time_seconds({"time": summary.get("estimated_printing_time_normal_mode", [])}),
         },
     }
@@ -318,6 +449,26 @@ def compare_gcodes(rocket_path: Path, tinman_path: Path, run_tinman_audit: bool)
 
     compare_lists("CUT DISTANCE values", rocket["cut_distance_values"], tinman["cut_distance_values"], findings)
     compare_temperature_sets(rocket, tinman, findings)
+
+    tinman_config = tinman["config"]
+    if has_fiberseek_context(tinman_config) and fiber_requested(tinman_config) and not process_supports_fiberseek(tinman_config):
+        findings.append(
+            "TinManX1 FibreSeek/CFC job uses a non-FibreSeek process profile: "
+            f"{tinman_config.get('print_settings_id') or '<missing>'}"
+        )
+    if has_fiberseek_context(tinman_config) and fiber_requested(tinman_config) and not (tinman_config.get("fiber_reinforcement_payload") or "").strip():
+        advisories.append("TinManX1 fiber_reinforcement_payload is empty; material-specific planner tuning was not applied")
+
+    rocket_layers = rocket.get("total_layers")
+    tinman_layers = tinman.get("total_layers")
+    if rocket_layers and tinman_layers:
+        baseline = max(abs(float(rocket_layers)), 1.0)
+        if abs(float(tinman_layers) - float(rocket_layers)) / baseline > 0.15:
+            findings.append(f"Total layer count differs materially: Rocket={rocket_layers:g} TinManX1={tinman_layers:g}")
+    rocket_layer_height = rocket.get("layer_height")
+    tinman_layer_height = tinman.get("layer_height")
+    if rocket_layer_height and tinman_layer_height and abs(float(rocket_layer_height) - float(tinman_layer_height)) > 0.02:
+        findings.append(f"Layer height differs: Rocket={rocket_layer_height:g} TinManX1={tinman_layer_height:g}")
 
     if tinman["bare_tool_commands"]:
         findings.append(f"TinManX1 contains bare tool commands: {dict(tinman['bare_tool_commands'])}")
@@ -377,6 +528,10 @@ def print_markdown(payload: dict[str, Any]) -> None:
     print("| --- | ---: | ---: |")
     rows = [
         ("Lines", rocket["line_count"], tinman["line_count"]),
+        ("Configured total layers", rocket.get("total_layers", "n/a"), tinman.get("total_layers", "n/a")),
+        ("Layer height", rocket.get("layer_height", "n/a"), tinman.get("layer_height", "n/a")),
+        ("Max Z", rocket.get("max_z_height", "n/a"), tinman.get("max_z_height", "n/a")),
+        ("TinManX1 process", "", tinman["config"].get("print_settings_id", "n/a")),
         ("Fiber routes", rocket["route_count"], tinman["route_count"]),
         ("Fiber layers", rocket["fiber_layers"], tinman["fiber_layers"]),
         ("Route length mm", rocket["route_length_mm"], tinman["route_length_mm"]),

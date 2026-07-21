@@ -479,6 +479,31 @@ def synthetic_fiberseek_contract_gcode() -> str:
     )
 
 
+def synthetic_bad_fiberseek_process_gcode() -> str:
+    return "\n".join(
+        [
+            "; print_settings_id = 0.08mm Extra Fine @MyMarlin - Copy",
+            "; printer_settings_id = FibreSeek Seeker 3 - Codex",
+            "; printer_model = SEEKER 3",
+            "; filament_type = PETG;CFC",
+            "; fiber_generate_perimeters = 1",
+            "; fiber_generate_infill = 1",
+            "; fiber_reinforcement_mode = heavy",
+            "G90",
+            "M82",
+            ";LAYER_CHANGE",
+            ";Z:0.2",
+            ";HEIGHT:0.2",
+            "G0 X0 Y0 F9000",
+            ";TYPE:Outer wall",
+            "G1 X100 Y0 E1 F1800",
+            "G1 X100 Y100 E2",
+            "G1 X0 Y100 E3",
+            "G1 X0 Y0 E4",
+        ]
+    ) + "\n"
+
+
 def synthetic_layup_payload_gcode() -> str:
     payload = {
         "z_bands": [
@@ -1144,6 +1169,16 @@ def main() -> int:
         )
         contract_routes, contract_skipped = planner.plan_routes(contract_parsed, contract_cfg)
         contract_merged = planner.emit_append_after_layer(contract_parsed, contract_routes, contract_cfg)
+
+        bad_process_fixture = Path(tmpdir) / "bad_fiberseek_process_fixture.gcode"
+        bad_process_fixture.write_text(synthetic_bad_fiberseek_process_gcode(), encoding="utf-8")
+        try:
+            planner.planner_config(planner.parse_gcode(bad_process_fixture), default_planner_args())
+        except SystemExit as exc:
+            if "not FibreSeek-compatible" not in str(exc):
+                raise
+        else:
+            raise SystemExit("FibreSeek planner accepted a generic MyMarlin process for a CFC FibreSeek job.")
 
         fan_schedule_fixture = Path(tmpdir) / "fiberseek_fan_schedule_fixture.gcode"
         fan_schedule_fixture.write_text(synthetic_fan_schedule_gcode(), encoding="utf-8")

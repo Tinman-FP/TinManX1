@@ -1075,6 +1075,61 @@ def config_for_layup_band(layer: LayerGeometry, cfg: PlannerConfig, explicit_ang
     return route_cfg, enabled
 
 
+def has_fiberseek_context(comments: dict[str, str]) -> bool:
+    haystack = " ".join(
+        comments.get(key, "")
+        for key in (
+            "printer_settings_id",
+            "printer_model",
+            "printer_variant",
+            "filament_settings_id",
+            "filament_ids",
+            "filament_type",
+        )
+    ).lower()
+    return (
+        "fibreseek" in haystack
+        or "fiberseek" in haystack
+        or "seeker 3" in haystack
+        or "seek3" in haystack
+        or "cfc" in haystack
+    )
+
+
+def process_supports_fiberseek(comments: dict[str, str]) -> bool:
+    process_id = (comments.get("print_settings_id") or "").lower()
+    payload = (comments.get("fiber_reinforcement_payload") or "").strip()
+    return bool(payload) or any(
+        token in process_id
+        for token in (
+            "fibreseek",
+            "fiberseek",
+            "continuous fiber",
+            "continuous fibre",
+            "composite fiber",
+            "composite fibre",
+            "rocket compare",
+            "rocket exact",
+        )
+    )
+
+
+def validate_fiberseek_process_contract(comments: dict[str, str], cfg: PlannerConfig) -> None:
+    if not has_fiberseek_context(comments):
+        return
+    if not (cfg.generate_perimeters or cfg.generate_infill or parse_bool(comments.get("fiber_enabled"), False)):
+        return
+    if process_supports_fiberseek(comments):
+        return
+    process_id = comments.get("print_settings_id") or "<missing>"
+    raise SystemExit(
+        "FibreSeek continuous-fiber planning is enabled, but the selected process profile "
+        f"is not FibreSeek-compatible: {process_id}. Select a TinManX1 process named "
+        "'0.20mm Plastic + Continuous Fiber Light/Medium/Heavy @FibreSeek Seeker 3 ...' "
+        "and reslice."
+    )
+
+
 def planner_config(parsed: ParsedGCode, args: argparse.Namespace) -> PlannerConfig:
     comments = parsed.config_comments
     cfg = PlannerConfig()
@@ -1293,6 +1348,8 @@ def planner_config(parsed: ParsedGCode, args: argparse.Namespace) -> PlannerConf
         cfg.generate_perimeters = False
     if args.no_infill:
         cfg.generate_infill = False
+
+    validate_fiberseek_process_contract(comments, cfg)
 
     return cfg
 
