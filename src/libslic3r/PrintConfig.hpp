@@ -273,6 +273,11 @@ enum class FiberReinforcementMode {
     Heavy,
 };
 
+enum class FiberManufacturingMode {
+    PlasticPlusFiberOverlay,
+    CompositeOnly,
+};
+
 enum class FiberInfillPattern {
     Solid,
     Rhombic,
@@ -642,6 +647,7 @@ CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(TinmanSupportStrategy)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(TinmanStrengthMaterialModel)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(TinmanStrengthLoadAxis)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FiberReinforcementMode)
+CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FiberManufacturingMode)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FiberInfillPattern)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FiberInfillSourcePolicy)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FiberSeamPosition)
@@ -4161,6 +4167,7 @@ protected:
 class FiberReinforcementModeConfig : public StaticPrintConfig {
     STATIC_PRINT_CONFIG_CACHE(FiberReinforcementModeConfig)
 public:
+    ConfigOptionEnum<FiberManufacturingMode> fiber_manufacturing_mode;
     ConfigOptionEnum<FiberReinforcementMode> fiber_reinforcement_mode;
     ConfigOptionBool fiber_generate_perimeters;
     ConfigOptionBool fiber_generate_infill;
@@ -4174,6 +4181,7 @@ public:
     size_t hash() const throw()
     {
         size_t seed = 0;
+        tinman_config_hash_combine(seed, fiber_manufacturing_mode);
         tinman_config_hash_combine(seed, fiber_reinforcement_mode);
         tinman_config_hash_combine(seed, fiber_generate_perimeters);
         tinman_config_hash_combine(seed, fiber_generate_infill);
@@ -4189,6 +4197,7 @@ public:
     bool operator==(const FiberReinforcementModeConfig &rhs) const throw()
     {
         return tinman_config_equal(
+            fiber_manufacturing_mode, rhs.fiber_manufacturing_mode,
             fiber_reinforcement_mode, rhs.fiber_reinforcement_mode,
             fiber_generate_perimeters, rhs.fiber_generate_perimeters,
             fiber_generate_infill, rhs.fiber_generate_infill,
@@ -4205,6 +4214,7 @@ public:
     bool operator<(const FiberReinforcementModeConfig &rhs) const throw()
     {
         return tinman_config_less(
+            fiber_manufacturing_mode, rhs.fiber_manufacturing_mode,
             fiber_reinforcement_mode, rhs.fiber_reinforcement_mode,
             fiber_generate_perimeters, rhs.fiber_generate_perimeters,
             fiber_generate_infill, rhs.fiber_generate_infill,
@@ -4219,6 +4229,7 @@ public:
 protected:
     void initialize(StaticCacheBase &cache, const char *base_ptr)
     {
+        cache.opt_add("fiber_manufacturing_mode", base_ptr, this->fiber_manufacturing_mode);
         cache.opt_add("fiber_reinforcement_mode", base_ptr, this->fiber_reinforcement_mode);
         cache.opt_add("fiber_generate_perimeters", base_ptr, this->fiber_generate_perimeters);
         cache.opt_add("fiber_generate_infill", base_ptr, this->fiber_generate_infill);
@@ -4640,6 +4651,7 @@ public:
     ConfigOptionInt fiber_plastic_outer_loops_with_fiber;
     ConfigOptionInt fiber_plastic_inner_loops_with_fiber;
     ConfigOptionString fiber_reinforcement_payload;
+    ConfigOptionString fiber_infill_solid_payload;
 
     size_t hash() const throw()
     {
@@ -4653,6 +4665,7 @@ public:
         tinman_config_hash_combine(seed, fiber_plastic_outer_loops_with_fiber);
         tinman_config_hash_combine(seed, fiber_plastic_inner_loops_with_fiber);
         tinman_config_hash_combine(seed, fiber_reinforcement_payload);
+        tinman_config_hash_combine(seed, fiber_infill_solid_payload);
         return seed;
     }
 
@@ -4667,7 +4680,8 @@ public:
             fiber_inner_perimeter_loops, rhs.fiber_inner_perimeter_loops,
             fiber_plastic_outer_loops_with_fiber, rhs.fiber_plastic_outer_loops_with_fiber,
             fiber_plastic_inner_loops_with_fiber, rhs.fiber_plastic_inner_loops_with_fiber,
-            fiber_reinforcement_payload, rhs.fiber_reinforcement_payload);
+            fiber_reinforcement_payload, rhs.fiber_reinforcement_payload,
+            fiber_infill_solid_payload, rhs.fiber_infill_solid_payload);
     }
 
     bool operator!=(const FiberReinforcementRouteOutputConfig &rhs) const throw() { return !(*this == rhs); }
@@ -4683,7 +4697,8 @@ public:
             fiber_inner_perimeter_loops, rhs.fiber_inner_perimeter_loops,
             fiber_plastic_outer_loops_with_fiber, rhs.fiber_plastic_outer_loops_with_fiber,
             fiber_plastic_inner_loops_with_fiber, rhs.fiber_plastic_inner_loops_with_fiber,
-            fiber_reinforcement_payload, rhs.fiber_reinforcement_payload);
+            fiber_reinforcement_payload, rhs.fiber_reinforcement_payload,
+            fiber_infill_solid_payload, rhs.fiber_infill_solid_payload);
     }
 
 protected:
@@ -4698,6 +4713,7 @@ protected:
         cache.opt_add("fiber_plastic_outer_loops_with_fiber", base_ptr, this->fiber_plastic_outer_loops_with_fiber);
         cache.opt_add("fiber_plastic_inner_loops_with_fiber", base_ptr, this->fiber_plastic_inner_loops_with_fiber);
         cache.opt_add("fiber_reinforcement_payload", base_ptr, this->fiber_reinforcement_payload);
+        cache.opt_add("fiber_infill_solid_payload", base_ptr, this->fiber_infill_solid_payload);
     }
 };
 

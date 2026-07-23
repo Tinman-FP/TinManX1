@@ -942,6 +942,10 @@ class Print;
     private:
         void register_commands();
         void apply_config(const DynamicPrintConfig& config);
+        bool ensure_orcaslicer_codex_continuous_fiber_preview_filament(
+            float fiber_diameter = 0.25f,
+            float fiber_linear_density = 102.0f,
+            const std::string& fiber_name = std::string());
         void apply_config_simplify3d(const std::string& filename);
         void apply_config_superslicer(const std::string& filename);
         void process_gcode_line(const GCodeReader::GCodeLine& line, bool producers_enabled);

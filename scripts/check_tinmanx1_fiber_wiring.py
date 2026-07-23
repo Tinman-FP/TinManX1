@@ -14,10 +14,18 @@ import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+def find_repo_root(start: Path) -> Path:
+    for path in [start, *start.parents]:
+        if (path / "resources" / "profiles" / "TinManX1").is_dir() and (path / "src" / "libslic3r").is_dir():
+            return path
+    raise RuntimeError(f"could not find TinManX1 repo root from {start}")
+
+
+ROOT = find_repo_root(Path(__file__).resolve())
 PROFILE_ROOT = ROOT / "resources" / "profiles" / "TinManX1"
 
 COMPACT_STRENGTH_OPTIONS = [
+    "fiber_manufacturing_mode",
     "fiber_reinforcement_mode",
     "fiber_generate_perimeters",
     "fiber_generate_infill",
@@ -205,7 +213,14 @@ def require_profile_generation_and_lint(process_keys: set[str]) -> None:
     missing_generator = [key for key in sorted(process_keys) if f'"{key}"' not in generator]
     if missing_generator:
         fail("profile generator missing process fiber keys: " + ", ".join(missing_generator))
-    for key in ("fiber_seam_position", "fiber_infill_density", "fiber_infill_angles", "fiber_reinforcement_payload"):
+    for key in (
+        "fiber_manufacturing_mode",
+        "fiber_seam_position",
+        "fiber_infill_density",
+        "fiber_infill_angles",
+        "fiber_reinforcement_payload",
+        "fiber_infill_solid_payload",
+    ):
         if key not in linter:
             fail(f"profile linter missing guard for {key}")
 
@@ -219,10 +234,63 @@ def require_preset_whitelist(process_keys: set[str]) -> None:
 
 def require_planner_handoff() -> None:
     print_cpp = read("src/libslic3r/Print.cpp")
+    print_object_cpp = read("src/libslic3r/PrintObject.cpp")
+    gcode_cpp = read("src/libslic3r/GCode.cpp")
+    gcode_hpp = read("src/libslic3r/GCode.hpp")
     planner = read("scripts/orcaslicer_codex_native_fiber_planner.py")
     bundled = read("resources/orcaslicer_codex/fiber_planner/orcaslicer_codex_native_fiber_planner.py")
     if planner != bundled:
         fail("bundled native fiber planner copy differs from scripts/orcaslicer_codex_native_fiber_planner.py")
+
+    require_all(
+        print_cpp,
+        [
+            '"fiber_manufacturing_mode"',
+            "FiberManufacturingMode::CompositeOnly",
+            "orcaslicer_codex_composite_only_requested(config)",
+        ],
+        "Print.cpp composite-only planner routing",
+    )
+    for stale in (
+        "Composite Only is not connected to the native composite-road writer yet",
+        "orcaslicer_codex_guard_composite_only_export",
+        "TINMANX1_NATIVE_COMPOSITE_ONLY_EXPERIMENTAL",
+    ):
+        if stale in print_cpp:
+            fail(f"Print.cpp still contains stale composite-only gate token: {stale}")
+
+    require_all(
+        gcode_hpp,
+        ["extrude_fiberseek_composite_routes_for_layer"],
+        "GCode.hpp native composite writer declaration",
+    )
+    require_all(
+        gcode_cpp,
+        [
+            "extrude_fiberseek_composite_routes_for_layer",
+            "ORCA_CODEX_NATIVE_FIBER_PLANNER_START",
+            "ORCA_CODEX_FIBER_ROUTE",
+            "M1001 L",
+            "M1002",
+            "fiber_cut_gcode",
+        ],
+        "GCode.cpp native composite writer hook",
+    )
+    if "TINMANX1_NATIVE_COMPOSITE_ONLY_EXPERIMENTAL" in gcode_cpp:
+        fail("GCode.cpp still gates composite-only export on TINMANX1_NATIVE_COMPOSITE_ONLY_EXPERIMENTAL")
+
+    require_all(
+        print_object_cpp,
+        [
+            '"fiber_infill_solid_payload"',
+            "tinman_parse_rocket_solid_payload",
+            "angle_list_raw",
+            "extrusion_width_mm",
+            "min_segment_length_mm",
+            "FiberseekComposite::CompositeRouteGraphOptions",
+        ],
+        "PrintObject.cpp Rocket-compare solid payload consumption",
+    )
 
     for option, token_sets in CRITICAL_PLANNER_HANDOFFS.items():
         if option not in print_cpp:

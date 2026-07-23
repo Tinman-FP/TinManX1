@@ -12,6 +12,87 @@
   "filament_type": [
     "ABS-CF"
   ],
+  "default_filament_colour": [
+    "#363636"
+  ],
+  "filament_diameter": [
+    "1.75"
+  ],
+  "filament_density": [
+    "1.12"
+  ],
+  "filament_cost": [
+    "42"
+  ],
+  "filament_price_source": [
+    "Generic 1 kg retail average"
+  ],
+  "filament_flow_ratio": [
+    "0.98"
+  ],
+  "filament_max_volumetric_speed": [
+    "10"
+  ],
+  "nozzle_temperature": [
+    "255"
+  ],
+  "nozzle_temperature_initial_layer": [
+    "260"
+  ],
+  "nozzle_temperature_range_low": [
+    "235"
+  ],
+  "nozzle_temperature_range_high": [
+    "280"
+  ],
+  "hot_plate_temp": [
+    "100"
+  ],
+  "hot_plate_temp_initial_layer": [
+    "105"
+  ],
+  "cool_plate_temp": [
+    "100"
+  ],
+  "cool_plate_temp_initial_layer": [
+    "105"
+  ],
+  "eng_plate_temp": [
+    "100"
+  ],
+  "eng_plate_temp_initial_layer": [
+    "105"
+  ],
+  "textured_plate_temp": [
+    "100"
+  ],
+  "textured_plate_temp_initial_layer": [
+    "105"
+  ],
+  "chamber_temperature": [
+    "50"
+  ],
+  "activate_chamber_temp_control": [
+    "1"
+  ],
+  "fan_min_speed": [
+    "5"
+  ],
+  "fan_max_speed": [
+    "15"
+  ],
+  "slow_down_for_layer_cooling": [
+    "1"
+  ],
+  "enable_pressure_advance": [
+    "1"
+  ],
+  "pressure_advance": [
+    "0.020"
+  ],
+  "composite_enabled": [
+    "0"
+  ],
   "compatible_printers": [
     "FibreSeek Seeker 3 0.4 nozzle",
     "FibreSeek Seeker 3 0.6 nozzle",

@@ -14,7 +14,7 @@
   "internal_solid_infill_line_width": "0.82",
   "top_surface_line_width": "0.82",
   "support_line_width": "0.82",
-  "bridge_line_width": "0.8",
+  "bridge_line_width": "0.79",
   "compatible_printers": [
     "FibreSeek Seeker 3 0.8 nozzle",
     "FibreSeek Seeker 3 0.8+0.7 composite nozzle"

@@ -117,6 +117,7 @@ std::map<std::string, std::vector<SimpleSettingData>> SettingsFactory::PART_CATE
       {{"strength_lens_enabled", "", 1},
        {"strength_lens_material_model", "", 1},
        {"strength_lens_load_axis", "", 1},
+       {"fiber_manufacturing_mode", "", 1},
        {"fiber_reinforcement_mode", "", 1},
        {"fiber_generate_perimeters", "", 1},
        {"fiber_generate_infill", "", 1},

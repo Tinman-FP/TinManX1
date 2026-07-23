@@ -128,6 +128,15 @@ static int orcaslicer_codex_config_int_value(const DynamicPrintConfig& config, c
     return default_value;
 }
 
+static bool orcaslicer_codex_composite_only_requested(const DynamicPrintConfig& config)
+{
+    const int value = orcaslicer_codex_config_int_value(
+        config,
+        "fiber_manufacturing_mode",
+        int(FiberManufacturingMode::PlasticPlusFiberOverlay));
+    return value == int(FiberManufacturingMode::CompositeOnly);
+}
+
 static double orcaslicer_codex_config_float_value(const DynamicPrintConfig& config, const char *key, double default_value)
 {
     if (const ConfigOption *option = config.option(key))
@@ -197,6 +206,8 @@ static bool orcaslicer_codex_native_fiber_planner_requested(const DynamicPrintCo
     if (codex_truthy_env("ORCASLICER_CODEX_DISABLE_NATIVE_FIBER_PLANNER"))
         return false;
     if (!orcaslicer_codex_continuous_fiber_requested(config))
+        return false;
+    if (orcaslicer_codex_composite_only_requested(config))
         return false;
 
     if (const char *env_value = std::getenv("ORCASLICER_CODEX_NATIVE_FIBER_PLANNER"))

@@ -1206,10 +1206,19 @@ std::vector<int> ToolOrdering::get_recommended_filament_maps(const std::vector<s
             ret = fg.calc_filament_group();
         }
     } else if (extruder_nums > 1) {
-        // For non-bbl multi-extruder printers we don't support filament group yet, and we use filament id as extruder id
-        assert(extruder_nums == filament_nums);
-        for (int i = 0; i < filament_nums; i++) {
-            ret[i] = i;
+        // For non-BBL multi-extruder printers we don't run filament grouping here.
+        // Prefer the explicit filament_map, and fall back to a clamped identity map
+        // so composite machines with fewer material presets than physical tools do
+        // not trip an assertion during CLI/export-only slicing.
+        const std::vector<int> &configured_filament_map = print_config.filament_map.values;
+        if (configured_filament_map.size() == filament_nums) {
+            for (unsigned int i = 0; i < filament_nums; ++i) {
+                const int mapped_extruder = std::clamp(configured_filament_map[i], 1, int(extruder_nums));
+                ret[i] = mapped_extruder - 1;
+            }
+        } else {
+            for (unsigned int i = 0; i < filament_nums; ++i)
+                ret[i] = int(std::min<size_t>(i, extruder_nums - 1));
         }
     }
 

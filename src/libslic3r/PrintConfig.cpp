@@ -411,6 +411,12 @@ static t_config_enum_values s_keys_map_FiberReinforcementMode{
 };
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(FiberReinforcementMode)
 
+static t_config_enum_values s_keys_map_FiberManufacturingMode{
+    { "plastic_plus_fiber_overlay", int(FiberManufacturingMode::PlasticPlusFiberOverlay) },
+    { "composite_only",             int(FiberManufacturingMode::CompositeOnly) }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(FiberManufacturingMode)
+
 static t_config_enum_values s_keys_map_FiberInfillPattern{
     { "solid",    int(FiberInfillPattern::Solid) },
     { "rhombic",  int(FiberInfillPattern::Rhombic) },
@@ -3348,6 +3354,18 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Octagram Spiral"));
     def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipCrossHatch));
 
+    def = this->add("fiber_manufacturing_mode", coEnum);
+    def->label = L("Fiber manufacturing mode");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Chooses whether continuous fiber is added as a supplemental overlay or planned as fiber-owned composite roads with plastic refill.");
+    def->enum_keys_map = &ConfigOptionEnum<FiberManufacturingMode>::get_enum_values();
+    def->enum_values.push_back("plastic_plus_fiber_overlay");
+    def->enum_values.push_back("composite_only");
+    def->enum_labels.push_back(L("Plastic + fiber overlay"));
+    def->enum_labels.push_back(L("Fiber-owned composite roads"));
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionEnum<FiberManufacturingMode>(FiberManufacturingMode::PlasticPlusFiberOverlay));
+
     def = this->add("fiber_reinforcement_mode", coEnum);
     def->label = L("Fiber reinforcement mode");
     def->category = L("Fiber Settings");
@@ -3847,6 +3865,13 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Fiber advanced layup payload");
     def->category = L("Fiber Settings");
     def->tooltip = L("Serialized JSON for advanced FibreSeek planning, including layup_bands with layer/Z ranges, mode, pattern, perimeter/infill intent, spacing, route caps, priority, and optional prime_line data.");
+    def->mode = comExpert;
+    def->set_default_value(new ConfigOptionString());
+
+    def = this->add("fiber_infill_solid_payload", coString);
+    def->label = L("Fiber solid infill payload");
+    def->category = L("Fiber Settings");
+    def->tooltip = L("Serialized solid fiber infill settings, including angle list, road width, extension, and minimum segment length for native composite-road planning.");
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionString());
 
@@ -12879,8 +12904,10 @@ static std::map<t_custom_gcode_key, t_config_option_keys> s_CustomGcodeSpecificP
     {"machine_start_gcode",         {}},
     {"machine_end_gcode",           {"layer_num", "layer_z", "max_layer_z", "filament_extruder_id"}},
     {"before_layer_change_gcode",   {"layer_num", "layer_z", "max_layer_z"}},
-    {"layer_change_gcode",          {"layer_num", "layer_z", "max_layer_z"}},
-    {"timelapse_gcode",             {"layer_num", "layer_z", "max_layer_z"}},
+    {"layer_change_gcode",          {"layer_num", "layer_z", "max_layer_z", "most_used_physical_extruder_id"}},
+    {"timelapse_gcode",             {"layer_num", "layer_z", "max_layer_z", "most_used_physical_extruder_id",
+                                      "curr_physical_extruder_id", "timelapse_pos_x", "timelapse_pos_y",
+                                      "has_timelapse_safe_pos"}},
     {"change_filament_gcode",       {"layer_num", "layer_z", "max_layer_z", "next_extruder", "previous_extruder", "fan_speed",
                                "first_flush_volume", "flush_length_1", "flush_length_2", "flush_length_3", "flush_length_4",
                                "new_filament_e_feedrate", "new_filament_temp", "new_retract_length",
@@ -12893,6 +12920,8 @@ static std::map<t_custom_gcode_key, t_config_option_keys> s_CustomGcodeSpecificP
     {"process_change_extrusion_role_gcode", {"layer_num", "layer_z", "extrusion_role", "last_extrusion_role"}},
     {"printing_by_object_gcode",    {}},
     {"machine_pause_gcode",         {}},
+    {"wrapping_detection_gcode",     {"layer_num", "layer_z", "max_layer_z", "most_used_physical_extruder_id",
+                                      "curr_physical_extruder_id"}},
     {"template_custom_gcode",       {}},
     // Filament G-code
     {"filament_start_gcode",        {"layer_num", "layer_z", "max_layer_z", "filament_extruder_id",
@@ -12925,6 +12954,12 @@ CustomGcodeSpecificConfigDef::CustomGcodeSpecificConfigDef()
     def = this->add("filament_extruder_id", coInt);
     def->label = L("Filament extruder ID");
     def->tooltip = L("The current extruder ID. The same as current_extruder.");
+
+    new_def("most_used_physical_extruder_id", coInt, "Most used physical extruder", "Physical extruder ID used most often on the current layer.");
+    new_def("curr_physical_extruder_id", coInt, "Current physical extruder", "Physical extruder ID currently active during custom G-code processing.");
+    new_def("timelapse_pos_x", coInt, "Timelapse X", "Chosen X position for the timelapse move.");
+    new_def("timelapse_pos_y", coInt, "Timelapse Y", "Chosen Y position for the timelapse move.");
+    new_def("has_timelapse_safe_pos", coBool, "Has timelapse safe position", "Whether a safe timelapse position was selected for this layer.");
 
     new_def("long_retraction_when_cut", coBool, "Long retraction when cut", "Whether long retraction is active for the current filament cut.");
     new_def("retraction_distance_when_cut", coFloat, "Retraction distance when cut", "Retraction distance used when cutting the current filament.");

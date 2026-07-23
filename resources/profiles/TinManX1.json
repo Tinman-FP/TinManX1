@@ -23,12 +23,24 @@
       "sub_path": "process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.4+0.7 nozzle.json"
     },
     {
+      "name": "0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.4+0.7 nozzle",
+      "sub_path": "process/0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.4+0.7 nozzle.json"
+    },
+    {
       "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4+0.7 nozzle",
       "sub_path": "process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4+0.7 nozzle.json"
     },
     {
+      "name": "0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.4+0.7 nozzle",
+      "sub_path": "process/0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.4+0.7 nozzle.json"
+    },
+    {
       "name": "0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle",
       "sub_path": "process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json"
+    },
+    {
+      "name": "0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle",
+      "sub_path": "process/0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json"
     },
     {
       "name": "0.20mm Plastic Only @FibreSeek Seeker 3 0.6 nozzle",
@@ -39,12 +51,24 @@
       "sub_path": "process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
     },
     {
+      "name": "0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.6+0.7 nozzle",
+      "sub_path": "process/0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
+    },
+    {
       "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6+0.7 nozzle",
       "sub_path": "process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
     },
     {
+      "name": "0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.6+0.7 nozzle",
+      "sub_path": "process/0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
+    },
+    {
       "name": "0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle",
       "sub_path": "process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
+    },
+    {
+      "name": "0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle",
+      "sub_path": "process/0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json"
     },
     {
       "name": "0.32mm Plastic Only @FibreSeek Seeker 3 0.8 nozzle",
@@ -55,12 +79,24 @@
       "sub_path": "process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.8+0.7 nozzle.json"
     },
     {
+      "name": "0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.8+0.7 nozzle",
+      "sub_path": "process/0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.8+0.7 nozzle.json"
+    },
+    {
       "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8+0.7 nozzle",
       "sub_path": "process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8+0.7 nozzle.json"
     },
     {
+      "name": "0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.8+0.7 nozzle",
+      "sub_path": "process/0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.8+0.7 nozzle.json"
+    },
+    {
       "name": "0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle",
       "sub_path": "process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle.json"
+    },
+    {
+      "name": "0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle",
+      "sub_path": "process/0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle.json"
     }
   ],
   "filament_list": [

@@ -39,6 +39,7 @@ enum ExtrusionRole : uint8_t {
     erCustom,
     // Extrusion role for a collection with multiple extrusion roles.
     erMixed,
+    erContinuousFiber,
     erCount
 };
 

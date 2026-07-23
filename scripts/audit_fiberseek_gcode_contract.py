@@ -24,10 +24,15 @@ CUT_RE = re.compile(r"^\s*;\s*CUT\s+DISTANCE\s+([-+]?(?:\d+(?:\.\d*)?|\.\d+))\s*
 M1001_RE = re.compile(r"^\s*M1001\s+L([-+]?\d+(?:\.\d*)?)\b", re.IGNORECASE)
 SUMMARY_RE = re.compile(r"^\s*;\s*([A-Za-z0-9_]+)\s*=\s*(.+?)\s*$")
 ROUTE_RE = re.compile(
-    r"^\s*;\s*ORCA_CODEX_FIBER_ROUTE\s+"
-    r"layer=(?P<layer>\d+)\s+z=(?P<z>[-+]?(?:\d+(?:\.\d*)?|\.\d+))\s+"
-    r"kind=(?P<kind>\S+)\s+length=(?P<length>[-+]?(?:\d+(?:\.\d*)?|\.\d+))\s+"
+    r"^\s*;\s*ORCA_CODEX_FIBER_ROUTE(?:_START)?\s+"
+    r".*?\blayer=(?P<layer>\d+)\s+z=(?P<z>[-+]?(?:\d+(?:\.\d*)?|\.\d+))\s+"
+    r"kind=(?P<kind>\S+)\s+(?:fiber_)?length=(?P<length>[-+]?(?:\d+(?:\.\d*)?|\.\d+))\b.*?\s+"
     r"warnings=(?P<warnings>.*)\s*$"
+)
+SEGMENT_RE = re.compile(
+    r"^\s*;\s*TINMANX1_FIBER_SEGMENT\s+.*?\blength=(?P<length>[-+]?(?:\d+(?:\.\d*)?|\.\d+))\s+"
+    r"plastic=(?P<plastic>[01])\s+fiber=(?P<fiber>[01])\b",
+    re.IGNORECASE,
 )
 
 
@@ -137,6 +142,31 @@ def parse_routes(lines: list[str]) -> list[dict[str, Any]]:
     return routes
 
 
+def parse_matrix_segment_path_mm(lines: list[str]) -> float | None:
+    total = 0.0
+    matched = False
+    for line in lines:
+        match = SEGMENT_RE.match(line)
+        if match is None:
+            continue
+        matched = True
+        if match.group("plastic") == "1":
+            total += float(match.group("length"))
+    return total if matched else None
+
+
+def route_layer_boundary_indexes(routes: list[dict[str, Any]]) -> list[int]:
+    boundaries: list[int] = []
+    seen_layers: set[int] = set()
+    for route in routes:
+        layer = int(route["layer"])
+        if layer in seen_layers:
+            continue
+        seen_layers.add(layer)
+        boundaries.append(int(route["index"]))
+    return boundaries
+
+
 def load_summary(gcode_path: Path, explicit_summary: Path | None) -> dict[str, Any] | None:
     summary_path = explicit_summary or gcode_path.with_suffix(gcode_path.suffix + ".native_fiber.summary.json")
     if not summary_path.exists():
@@ -220,7 +250,10 @@ def audit_gcode(gcode_path: Path, summary_path: Path | None, require_alternation
             add_failure(failures, "machine contract, planner block, shutdown, and executable end are out of order")
 
     required_substrings = [
+        "SET_PRESSURE_ADVANCE EXTRUDER=extruder ADVANCE=0",
+        "SET_VELOCITY_LIMIT MINIMUM_CRUISE_RATIO=0.8",
         "SET_VELOCITY_LIMIT SQUARE_CORNER_VELOCITY=1",
+        "SET_TOOL_CORNER_VELOCITY T=0 SCV=1",
         "; ORCA_CODEX_FIBERSEEK_INITIAL_PLASTIC_TOOL",
         "T1 ; switch extruder type to:PLASTIC",
         "MOVE_TO_BRUSH_STATION",
@@ -280,32 +313,41 @@ def audit_gcode(gcode_path: Path, summary_path: Path | None, require_alternation
                         f"{label} S{emitted:g} does not match chamber_temperature={expected_chamber:g}",
                     )
 
-    require_predicates_in_order(
-        lines,
+    sequence_checks = [
+        ("machine contract start", lambda line: "; ORCA_CODEX_FIBERSEEK_MACHINE_CONTRACT_START" in line),
+        ("total layer stats", lambda line: "SET_PRINT_STATS_INFO TOTAL_LAYER=" in line),
+        ("pressure advance baseline", lambda line: "SET_PRESSURE_ADVANCE EXTRUDER=extruder ADVANCE=0" in line),
+        ("minimum cruise ratio", lambda line: "SET_VELOCITY_LIMIT MINIMUM_CRUISE_RATIO=0.8" in line),
+        ("square corner velocity", lambda line: "SET_VELOCITY_LIMIT SQUARE_CORNER_VELOCITY=1" in line),
+        ("tool corner velocity", lambda line: "SET_TOOL_CORNER_VELOCITY T=0 SCV=1" in line),
+        ("fiber nozzle preheat", command_predicate(r"^M104\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\s+T0\b")),
+        ("bed preheat", command_predicate(r"^M140\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\b")),
+        ("chamber preheat", command_predicate(r"^M141\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\b")),
+        ("machine contract end", lambda line: "; ORCA_CODEX_FIBERSEEK_MACHINE_CONTRACT_END" in line),
+        ("bed wait", command_predicate(r"^M190\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\b")),
+        ("chamber wait", command_predicate(r"^M191\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\b")),
+        ("plastic nozzle preheat", command_predicate(r"^M104\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\s+T1\b")),
+        ("initial plastic tool marker", lambda line: "; ORCA_CODEX_FIBERSEEK_INITIAL_PLASTIC_TOOL" in line),
+        ("initial plastic tool switch", lambda line: "T1 ; switch extruder type to:PLASTIC" in line),
+        ("plastic nozzle wait", command_predicate(r"^M109\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\s+T1\b")),
+        ("native planner start", lambda line: "; ORCA_CODEX_NATIVE_FIBER_PLANNER_START" in line),
+        ("fiber tool switch", lambda line: "T0 R ; switch extruder type to:FIBER" in line),
+        ("fiber nozzle wait", command_predicate(r"^M109\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\s+T0\b")),
+    ]
+    if prime_count > 0:
+        sequence_checks.extend(
+            [
+                ("fiber prime start", lambda line: "; ORCA_CODEX_FIBER_PRIME_START" in line),
+                ("fiber prime M1001", lambda line: "M1001" in line),
+                ("fiber prime cut start", lambda line: exact_command(line).upper() == "M2800"),
+                ("fiber prime cut distance", lambda line: CUT_RE.match(line) is not None),
+                ("fiber prime M1002", lambda line: exact_command(line).upper() == "M1002"),
+                ("fiber prime end", lambda line: "; ORCA_CODEX_FIBER_PRIME_END" in line),
+            ]
+        )
+    sequence_checks.extend(
         [
-            ("machine contract start", lambda line: "; ORCA_CODEX_FIBERSEEK_MACHINE_CONTRACT_START" in line),
-            ("total layer stats", lambda line: "SET_PRINT_STATS_INFO TOTAL_LAYER=" in line),
-            ("square corner velocity", lambda line: "SET_VELOCITY_LIMIT SQUARE_CORNER_VELOCITY=1" in line),
-            ("fiber nozzle preheat", command_predicate(r"^M104\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\s+T0\b")),
-            ("bed preheat", command_predicate(r"^M140\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\b")),
-            ("chamber preheat", command_predicate(r"^M141\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\b")),
-            ("machine contract end", lambda line: "; ORCA_CODEX_FIBERSEEK_MACHINE_CONTRACT_END" in line),
-            ("bed wait", command_predicate(r"^M190\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\b")),
-            ("chamber wait", command_predicate(r"^M191\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\b")),
-            ("plastic nozzle preheat", command_predicate(r"^M104\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\s+T1\b")),
-            ("initial plastic tool marker", lambda line: "; ORCA_CODEX_FIBERSEEK_INITIAL_PLASTIC_TOOL" in line),
-            ("initial plastic tool switch", lambda line: "T1 ; switch extruder type to:PLASTIC" in line),
-            ("plastic nozzle wait", command_predicate(r"^M109\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\s+T1\b")),
-            ("native planner start", lambda line: "; ORCA_CODEX_NATIVE_FIBER_PLANNER_START" in line),
-            ("fiber tool switch", lambda line: "T0 R ; switch extruder type to:FIBER" in line),
-            ("fiber nozzle wait", command_predicate(r"^M109\s+S[-+]?(?:\d+(?:\.\d*)?|\.\d+)\s+T0\b")),
-            ("fiber prime start", lambda line: "; ORCA_CODEX_FIBER_PRIME_START" in line),
-            ("fiber prime M1001", lambda line: "M1001" in line),
-            ("fiber prime cut start", lambda line: exact_command(line).upper() == "M2800"),
-            ("fiber prime cut distance", lambda line: CUT_RE.match(line) is not None),
-            ("fiber prime M1002", lambda line: exact_command(line).upper() == "M1002"),
-            ("fiber prime end", lambda line: "; ORCA_CODEX_FIBER_PRIME_END" in line),
-            ("fiber layer", lambda line: "; ORCA_CODEX_FIBER_LAYER" in line),
+            ("fiber route marker", lambda line: "; ORCA_CODEX_FIBER_LAYER" in line or "; ORCA_CODEX_FIBER_ROUTE_START" in line),
             ("fiber route M1001", lambda line: "M1001" in line),
             ("fiber route cut start", lambda line: exact_command(line).upper() == "M2800"),
             ("fiber route cut distance", lambda line: CUT_RE.match(line) is not None),
@@ -317,9 +359,9 @@ def audit_gcode(gcode_path: Path, summary_path: Path | None, require_alternation
             ("shutdown fiber nozzle", lambda line: "M104 S0 T0" in line),
             ("shutdown chamber", lambda line: "M141 S0" in line),
             ("executable end", lambda line: "; EXECUTABLE_BLOCK_END" in line),
-        ],
-        failures,
+        ]
     )
+    require_predicates_in_order(lines, sequence_checks, failures)
 
     bare_tool_commands = [line.strip() for line in lines if line.strip() in {"T0", "T1"}]
     if bare_tool_commands:
@@ -327,8 +369,8 @@ def audit_gcode(gcode_path: Path, summary_path: Path | None, require_alternation
 
     if route_count == 0:
         add_failure(failures, "no ORCA_CODEX_FIBER_ROUTE blocks found")
-    if route_count > 0 and prime_count != 1:
-        add_failure(failures, f"expected exactly one fiber prime block, found {prime_count}")
+    if prime_count > 1:
+        add_failure(failures, f"expected zero or one fiber prime block, found {prime_count}")
     if prime_count != len(prime_end_indexes):
         add_failure(failures, f"fiber prime start/end markers do not match: {prime_count}/{len(prime_end_indexes)}")
 
@@ -407,6 +449,20 @@ def audit_gcode(gcode_path: Path, summary_path: Path | None, require_alternation
     if used_mm_values and any(abs(value - total_route_length) > 1.0 for value in used_mm_values):
         add_failure(failures, f"continuous_fiber_used_mm values {used_mm_values} do not match route sum {total_route_length:.3f}")
 
+    matrix_segment_path_mm = parse_matrix_segment_path_mm(lines)
+    matrix_path_values = [
+        float(value)
+        for value in top_summary.get("continuous_fiber_matrix_path_mm", [])
+        if re.match(r"^-?\d+(?:\.\d+)?$", value)
+    ]
+    if matrix_path_values and matrix_segment_path_mm is None:
+        add_failure(failures, "continuous_fiber_matrix_path_mm is present but no TINMANX1_FIBER_SEGMENT diagnostics were found")
+    if matrix_path_values and matrix_segment_path_mm is not None and any(abs(value - matrix_segment_path_mm) > 1.0 for value in matrix_path_values):
+        add_failure(
+            failures,
+            f"continuous_fiber_matrix_path_mm values {matrix_path_values} do not match plastic segment sum {matrix_segment_path_mm:.3f}",
+        )
+
     if summary is not None:
         summary_routes = summary.get("routes", {})
         summary_config = summary.get("config", {})
@@ -443,10 +499,14 @@ def audit_gcode(gcode_path: Path, summary_path: Path | None, require_alternation
     ]
     t1_switches = [index for index, line in enumerate(lines) if line.strip() == "T1 ; switch extruder type to:PLASTIC"]
     fiber_layers = [index for index, line in enumerate(lines) if line.strip().startswith("; ORCA_CODEX_FIBER_LAYER ")]
+    if not fiber_layers:
+        fiber_layers = route_layer_boundary_indexes(routes)
     if len(t0_switches) != len(fiber_layers):
         add_failure(failures, f"T0 fiber switch count {len(t0_switches)} does not match fiber layer count {len(fiber_layers)}")
-    if len(t1_switches) != len(t0_switches) + 1:
-        add_failure(failures, f"T1 plastic switch count {len(t1_switches)} should equal T0 switches plus initial plastic selection")
+    if len(t1_switches) < len(t0_switches) + 1:
+        add_failure(failures, f"T1 plastic switch count {len(t1_switches)} should be at least T0 switches plus initial plastic selection")
+    elif len(t1_switches) > len(t0_switches) + 2:
+        add_failure(failures, f"T1 plastic switch count {len(t1_switches)} is unexpectedly higher than managed T0 switch count {len(t0_switches)}")
 
     for layer_index, fiber_layer_line in enumerate(fiber_layers):
         previous_boundary = fiber_layers[layer_index - 1] if layer_index else (planner_start_index or 0)
@@ -482,7 +542,11 @@ def audit_gcode(gcode_path: Path, summary_path: Path | None, require_alternation
                 )
 
     if executable_end_index is not None:
-        late_fiber_layers = [index + 1 for index, line in enumerate(lines[executable_end_index + 1 :], executable_end_index + 1) if line.strip().startswith("; ORCA_CODEX_FIBER_LAYER ")]
+        late_fiber_layers = [
+            index + 1
+            for index, line in enumerate(lines[executable_end_index + 1 :], executable_end_index + 1)
+            if line.strip().startswith("; ORCA_CODEX_FIBER_LAYER ") or line.strip().startswith("; ORCA_CODEX_FIBER_ROUTE_START ")
+        ]
         if late_fiber_layers:
             add_failure(failures, f"fiber layers emitted after EXECUTABLE_BLOCK_END: {late_fiber_layers[:5]}")
         if shutdown_start_index is not None and shutdown_start_index > executable_end_index:
@@ -523,7 +587,25 @@ def audit_gcode(gcode_path: Path, summary_path: Path | None, require_alternation
         "cut_distance_values": unique_cut_distances,
         "command_counts": {
             key: command_counts.get(key, 0)
-            for key in ("T0", "T1", "M1001", "M1002", "M2800", "M400", "M104", "M109", "M106", "M140", "M141", "M190", "M191")
+            for key in (
+                "T0",
+                "T1",
+                "M1001",
+                "M1002",
+                "M2800",
+                "M400",
+                "M104",
+                "M109",
+                "M106",
+                "M140",
+                "M141",
+                "M190",
+                "M191",
+                "SET_PRINT_STATS_INFO",
+                "SET_PRESSURE_ADVANCE",
+                "SET_VELOCITY_LIMIT",
+                "SET_TOOL_CORNER_VELOCITY",
+            )
         },
         "route_warning_counts": dict(sorted(route_warning_counts.items())),
         "summary_present": summary is not None,

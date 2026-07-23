@@ -161,7 +161,7 @@
         "TinManX1 Bambu X1C PET-CF17 field tune 2026-07-11: for Fiberon PET-CF17 on hardened Bambu nozzles, dry filament if surface degrades, fan off, 300C nozzle, 80C bed, max volumetric 5 mm3/s. Pressure advance enabled for Bambu X1C PET-CF17 tune: PA 0.026 starting value; calibrate per spool/nozzle if corners bulge or thin. TinManX1 PET-CF rescue tune 2026-07-11: after repeated porous PET-CF test prints, use 300C nozzle, 80C bed, fan off, max volumetric 4 mm3/s, flow 1.08, slowdown enabled, and pressure advance enabled. Dry filament and inspect hardened nozzle if voids persist."
     ],
     "tinmanx_petcf17_tune": [
-        "2026-07-11 Plus 4 0.6 PET-CF17 anti-starvation tune; backup=/Users/williamtinney/Documents/Codex/2026-06-25/r/work/profile-backups/petcf17-tune-20260711/Users/williamtinney/Documents/Codex/2026-06-25/r/work/tinmanx1-v2.4.2-rebase/resources/profiles/BBL/filament/Polymaker/Fiberon PET-CF @BBL X1C.json"
+        "2026-07-11 Plus 4 0.6 PET-CF17 anti-starvation tune; backup=local profile-backups/petcf17-tune-20260711"
     ],
     "nozzle_temperature_range_low": [
         "270",

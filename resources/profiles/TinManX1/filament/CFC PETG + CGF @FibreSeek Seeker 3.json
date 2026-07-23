@@ -16,6 +16,15 @@
   "default_filament_colour": [
     "#E8F4FF"
   ],
+  "filament_diameter": [
+    "1.75"
+  ],
+  "filament_density": [
+    "1.27"
+  ],
+  "filament_cost": [
+    "20"
+  ],
   "filament_flow_ratio": [
     "0.68"
   ],
@@ -34,11 +43,47 @@
   "nozzle_temperature_range_high": [
     "290"
   ],
+  "hot_plate_temp": [
+    "75"
+  ],
+  "hot_plate_temp_initial_layer": [
+    "75"
+  ],
+  "cool_plate_temp": [
+    "75"
+  ],
+  "cool_plate_temp_initial_layer": [
+    "75"
+  ],
+  "eng_plate_temp": [
+    "75"
+  ],
+  "eng_plate_temp_initial_layer": [
+    "75"
+  ],
+  "textured_plate_temp": [
+    "75"
+  ],
+  "textured_plate_temp_initial_layer": [
+    "75"
+  ],
+  "chamber_temperature": [
+    "0"
+  ],
+  "activate_chamber_temp_control": [
+    "0"
+  ],
   "fan_min_speed": [
     "100"
   ],
   "fan_max_speed": [
     "100"
+  ],
+  "enable_pressure_advance": [
+    "1"
+  ],
+  "pressure_advance": [
+    "0.020"
   ],
   "composite_enabled": [
     "1"

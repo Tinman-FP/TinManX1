@@ -57,6 +57,99 @@ FIBERS = {
     "CBF": {"diameter": 0.25, "linear_density": 95},
 }
 PROCESS_MODES = {"Light": "light", "Medium": "medium", "Heavy": "heavy"}
+PROCESS_LAYER_STEPS = {"Light": 3, "Medium": 2, "Heavy": 1}
+PROCESS_FIBER_EXPECTED = {
+    "Light": {
+        "fiber_min_radius": 12,
+        "fiber_max_arc_segment_length": 3,
+        "fiber_start_length": 15,
+        "fiber_slow_length": 5,
+        "fiber_start_max_speed": 5,
+        "fiber_start_min_speed": 3,
+        "fiber_start_min_limit_speed": 3,
+        "fiber_normal_max_speed": 30,
+        "fiber_normal_min_speed": 5,
+        "fiber_normal_min_limit_speed": 3,
+        "fiber_finish_max_speed": 15,
+        "fiber_finish_min_speed": 5,
+        "fiber_finish_min_limit_speed": 3,
+        "fiber_after_cut_plastic_extrusion_multiplier": 0.58,
+        "fiber_line_width": 0.68,
+        "fiber_outer_perimeter_loops": 1,
+        "fiber_inner_perimeter_loops": 1,
+        "fiber_plastic_outer_loops_with_fiber": 2,
+        "fiber_plastic_inner_loops_with_fiber": 0,
+    },
+    "Medium": {
+        "fiber_min_radius": 12,
+        "fiber_max_arc_segment_length": 3,
+        "fiber_start_length": 15,
+        "fiber_slow_length": 10,
+        "fiber_start_max_speed": 5,
+        "fiber_start_min_speed": 3,
+        "fiber_start_min_limit_speed": 3,
+        "fiber_normal_max_speed": 30,
+        "fiber_normal_min_speed": 5,
+        "fiber_normal_min_limit_speed": 3,
+        "fiber_finish_max_speed": 15,
+        "fiber_finish_min_speed": 5,
+        "fiber_finish_min_limit_speed": 8,
+        "fiber_after_cut_plastic_extrusion_multiplier": 0.72,
+        "fiber_line_width": 0.80,
+        "fiber_outer_perimeter_loops": 2,
+        "fiber_inner_perimeter_loops": 2,
+        "fiber_plastic_outer_loops_with_fiber": 0,
+        "fiber_plastic_inner_loops_with_fiber": 0,
+    },
+    "Heavy": {
+        "fiber_min_radius": 10,
+        "fiber_max_arc_segment_length": 4,
+        "fiber_start_length": 5,
+        "fiber_slow_length": 5,
+        "fiber_start_max_speed": 2,
+        "fiber_start_min_speed": 2,
+        "fiber_start_min_limit_speed": 2,
+        "fiber_normal_max_speed": 40,
+        "fiber_normal_min_speed": 5,
+        "fiber_normal_min_limit_speed": 3,
+        "fiber_finish_max_speed": 15,
+        "fiber_finish_min_speed": 3,
+        "fiber_finish_min_limit_speed": 3,
+        "fiber_after_cut_plastic_extrusion_multiplier": 0.72,
+        "fiber_line_width": 0.70,
+        "fiber_outer_perimeter_loops": 2,
+        "fiber_inner_perimeter_loops": 2,
+        "fiber_plastic_outer_loops_with_fiber": 0,
+        "fiber_plastic_inner_loops_with_fiber": 0,
+    },
+}
+PROCESS_ROUTE_CAPS = {"Light": 2, "Medium": 6, "Heavy": 10}
+ROCKET_COMPARE_EXPECTED = {
+    "Light": {
+        "fiber_generate_perimeters": "0",
+        "fiber_generate_infill": "0",
+        "fiber_infill_pattern": "isogrid",
+        "fiber_infill_density": 0,
+        "fiber_infill_angles": "",
+        "fiber_max_routes_per_layer": 32,
+    },
+    "Medium": {
+        "fiber_generate_perimeters": "1",
+        "fiber_generate_infill": "1",
+        "fiber_infill_pattern": "isogrid",
+        "fiber_infill_density": 20,
+        "fiber_infill_angles": "0,60,120",
+        "fiber_max_routes_per_layer": 80,
+    },
+    "Heavy": {
+        "fiber_generate_perimeters": "1",
+        "fiber_generate_infill": "1",
+        "fiber_infill_pattern": "solid",
+        "fiber_infill_density": 0,
+        "fiber_infill_angles": "0,90,0",
+        "fiber_max_routes_per_layer": 180,
+    },
+}
 PLASTIC_NOZZLES = {"0.4", "0.6", "0.8"}
 COMPOSITE_NOZZLE = "0.7"
 
@@ -167,9 +260,10 @@ def check_index() -> dict[str, Any]:
         if composite_machine not in machine_names:
             fail(f"profile index missing composite machine {composite_machine}")
         for mode in PROCESS_MODES:
-            process = f"0.20mm Plastic + Continuous Fiber {mode} @FibreSeek Seeker 3 {nozzle}+{COMPOSITE_NOZZLE} nozzle"
-            if process not in process_names:
-                fail(f"profile index missing process {process}")
+            for prefix in ("0.20mm Plastic + Continuous Fiber", "0.20mm Rocket Compare Composite Only"):
+                process = f"{prefix} {mode} @FibreSeek Seeker 3 {nozzle}+{COMPOSITE_NOZZLE} nozzle"
+                if process not in process_names:
+                    fail(f"profile index missing process {process}")
 
     return index
 
@@ -277,62 +371,102 @@ def check_filaments() -> tuple[int, int]:
 
 
 def check_processes() -> int:
+    common_path = PROFILE_ROOT / "process" / "TinManX1 FibreSeek process common.json"
+    common = load_json(common_path)
+    require_choice(
+        common,
+        "fiber_manufacturing_mode",
+        common_path,
+        {"plastic_plus_fiber_overlay", "composite_only"},
+    )
+    if common["fiber_manufacturing_mode"] != "plastic_plus_fiber_overlay":
+        fail(
+            f"{common_path.relative_to(ROOT)} fiber_manufacturing_mode should default to "
+            "plastic_plus_fiber_overlay so process profiles opt into composite-road planning deliberately"
+        )
+
     count = 0
     for nozzle in PLASTIC_NOZZLES:
         for mode_label, mode_value in PROCESS_MODES.items():
-            path = PROFILE_ROOT / "process" / (
-                f"0.20mm Plastic + Continuous Fiber {mode_label} @FibreSeek Seeker 3 "
-                f"{nozzle}+{COMPOSITE_NOZZLE} nozzle.json"
-            )
-            data = load_json(path)
-            count += 1
-            if data.get("fiber_reinforcement_mode") != mode_value:
-                fail(f"{path.relative_to(ROOT)} has wrong fiber_reinforcement_mode")
-            bridge_width = require_float(data, "bridge_line_width", path)
-            if bridge_width > float(nozzle):
-                fail(f"{path.relative_to(ROOT)} bridge_line_width exceeds plastic nozzle diameter")
-            require_int(data, "fiber_start_layer", path, 4)
-            require_float(data, "fiber_min_radius", path, 12)
-            require_float(data, "fiber_min_route_length", path, 55)
-            require_float(data, "fiber_perimeter_min_route_length", path, 55)
-            require_float(data, "fiber_mechanical_min_route_length", path, 55)
-            require_float(data, "fiber_max_arc_segment_length", path, 3)
-            require_float(data, "fiber_start_length", path, 15)
-            require_float(data, "fiber_slow_length", path, 10)
-            require_float(data, "fiber_start_max_speed", path, 5)
-            require_float(data, "fiber_start_min_speed", path, 3)
-            require_float(data, "fiber_start_min_limit_speed", path, 3)
-            require_float(data, "fiber_normal_max_speed", path, 30)
-            require_float(data, "fiber_normal_min_speed", path, 5)
-            require_float(data, "fiber_normal_min_limit_speed", path, 3)
-            require_float(data, "fiber_finish_max_speed", path, 15)
-            require_float(data, "fiber_finish_min_speed", path, 5)
-            require_float(data, "fiber_finish_min_limit_speed", path, 3)
-            require_float(data, "fiber_tension_release_fraction", path, 0)
-            require_float(data, "fiber_feedrate_percent", path, 100)
-            require_float(data, "fiber_correction_move_speed", path, 2)
-            require_float(data, "fiber_correction_move_feedrate_percent", path, 0)
-            require_float(data, "fiber_after_cut_plastic_extrusion_multiplier", path, 0.72)
-            require_int(data, "fiber_routes_per_cut", path, 1)
-            require_float(data, "fiber_infill_density", path, 0)
-            require_string(data, "fiber_infill_angles", path, nonempty=False)
-            require_choice(data, "fiber_seam_position", path, {"source", "nearest", "aligned", "rear", "random"})
-            require_float(data, "fiber_seam_angle", path, 0)
-            payload = require_json_object(data, "fiber_reinforcement_payload", path)
-            tuning = payload.get("material_tuning")
-            if not isinstance(tuning, dict):
-                fail(f"{path.relative_to(ROOT)} fiber_reinforcement_payload missing material_tuning map")
-            missing_tuning = REQUIRED_MATERIAL_TUNING.difference(tuning)
-            if missing_tuning:
-                fail(
-                    f"{path.relative_to(ROOT)} material_tuning missing "
-                    + ", ".join(sorted(missing_tuning))
+            for prefix, compare_mode in (
+                ("0.20mm Plastic + Continuous Fiber", False),
+                ("0.20mm Rocket Compare Composite Only", True),
+            ):
+                path = PROFILE_ROOT / "process" / (
+                    f"{prefix} {mode_label} @FibreSeek Seeker 3 "
+                    f"{nozzle}+{COMPOSITE_NOZZLE} nozzle.json"
                 )
-            require_int(data, "fiber_outer_perimeter_loops", path, 1)
-            require_int(data, "fiber_inner_perimeter_loops", path, 1)
-            require_int(data, "fiber_plastic_outer_loops_with_fiber", path, 2)
-            require_int(data, "fiber_plastic_inner_loops_with_fiber", path, 0)
-
+                data = load_json(path)
+                count += 1
+                if data.get("fiber_reinforcement_mode") != mode_value:
+                    fail(f"{path.relative_to(ROOT)} has wrong fiber_reinforcement_mode")
+                require_string(data, "fiber_manufacturing_mode", path)
+                if data["fiber_manufacturing_mode"] != "composite_only":
+                    fail(f"{path.relative_to(ROOT)} must set fiber_manufacturing_mode=composite_only")
+                solid_payload = require_json_object(data, "fiber_infill_solid_payload", path)
+                if solid_payload.get("angle_list_raw") != "0/90/0":
+                    fail(f"{path.relative_to(ROOT)} solid payload must preserve 0/90/0 solid angles")
+                require_float(solid_payload, "extrusion_width_mm", path, 0.7)
+                require_float(solid_payload, "min_segment_length_mm", path, 10)
+                require_int(data, "fiber_layer_step", path, PROCESS_LAYER_STEPS[mode_label])
+                bridge_width = require_float(data, "bridge_line_width", path)
+                if bridge_width > float(nozzle):
+                    fail(f"{path.relative_to(ROOT)} bridge_line_width exceeds plastic nozzle diameter")
+                require_int(data, "fiber_start_layer", path, 4)
+                expected = PROCESS_FIBER_EXPECTED[mode_label]
+                for key, value in expected.items():
+                    require_float(data, key, path, value)
+                require_float(data, "fiber_min_route_length", path, 55)
+                require_float(data, "fiber_perimeter_min_route_length", path, 55)
+                require_float(data, "fiber_mechanical_min_route_length", path, 55)
+                require_float(data, "fiber_tension_release_fraction", path, 0)
+                require_float(data, "fiber_feedrate_percent", path, 100)
+                require_float(data, "fiber_correction_move_speed", path, 2)
+                require_float(data, "fiber_correction_move_feedrate_percent", path, 0)
+                require_float(data, "fiber_cut_distance", path, 58)
+                require_float(data, "fiber_restart_length", path, 55)
+                cut_gcode = require_string(data, "fiber_cut_gcode", path)
+                for needle in ("M2800", "M400", "CUT DISTANCE 54.8"):
+                    if needle not in cut_gcode:
+                        fail(f"{path.relative_to(ROOT)} fiber_cut_gcode missing {needle}")
+                require_int(data, "fiber_routes_per_cut", path, 1)
+                if compare_mode:
+                    compare_expected = ROCKET_COMPARE_EXPECTED[mode_label]
+                    require_boolish(data, "fiber_generate_perimeters", path, compare_expected["fiber_generate_perimeters"])
+                    require_boolish(data, "fiber_generate_infill", path, compare_expected["fiber_generate_infill"])
+                    pattern = require_choice(data, "fiber_infill_pattern", path, {"solid", "rhombic", "isogrid", "anisogrid", "tetragrid"})
+                    if pattern != compare_expected["fiber_infill_pattern"]:
+                        fail(
+                            f"{path.relative_to(ROOT)} fiber_infill_pattern expected "
+                            f"{compare_expected['fiber_infill_pattern']}, got {pattern}"
+                        )
+                    require_float(data, "fiber_infill_density", path, compare_expected["fiber_infill_density"])
+                    angles = require_string(data, "fiber_infill_angles", path, nonempty=False)
+                    if angles != compare_expected["fiber_infill_angles"]:
+                        fail(
+                            f"{path.relative_to(ROOT)} fiber_infill_angles expected "
+                            f"{compare_expected['fiber_infill_angles']!r}, got {angles!r}"
+                        )
+                    require_int(data, "fiber_max_routes_per_layer", path, compare_expected["fiber_max_routes_per_layer"])
+                else:
+                    require_boolish(data, "fiber_generate_perimeters", path, "1")
+                    require_boolish(data, "fiber_generate_infill", path, "1")
+                    require_choice(data, "fiber_infill_pattern", path, {"solid"})
+                    require_float(data, "fiber_infill_density", path, 0)
+                    require_string(data, "fiber_infill_angles", path, nonempty=False)
+                    require_int(data, "fiber_max_routes_per_layer", path, PROCESS_ROUTE_CAPS[mode_label])
+                require_choice(data, "fiber_seam_position", path, {"source", "nearest", "aligned", "rear", "random"})
+                require_float(data, "fiber_seam_angle", path, 0)
+                payload = require_json_object(data, "fiber_reinforcement_payload", path)
+                tuning = payload.get("material_tuning")
+                if not isinstance(tuning, dict):
+                    fail(f"{path.relative_to(ROOT)} fiber_reinforcement_payload missing material_tuning map")
+                missing_tuning = REQUIRED_MATERIAL_TUNING.difference(tuning)
+                if missing_tuning:
+                    fail(
+                        f"{path.relative_to(ROOT)} material_tuning missing "
+                        + ", ".join(sorted(missing_tuning))
+                    )
     for path in sorted((PROFILE_ROOT / "process").glob("*Plastic Only*.json")):
         data = load_json(path)
         nozzle = path.stem.rsplit(" ", 2)[1]

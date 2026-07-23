@@ -107,24 +107,17 @@ static std::string get_view_type_string(libvgcode::EViewType view_type)
 
 static bool tinmanx_has_continuous_fiber_preview(const GCodeProcessorResult& result, const Print& print)
 {
-    size_t configured_filaments = 0;
-    if (const ConfigOptionFloats* filament_diameters = print.config().option<ConfigOptionFloats>("filament_diameter");
-        filament_diameters != nullptr) {
-        configured_filaments = filament_diameters->values.size();
-    }
-    if (configured_filaments == 0)
-        configured_filaments = result.settings_ids.filament.size();
+    (void)print;
 
-    if (configured_filaments == 0 || result.filaments_count <= configured_filaments)
-        return false;
+    if (result.print_statistics.used_filaments_per_role.find(erContinuousFiber) != result.print_statistics.used_filaments_per_role.end())
+        return true;
 
     for (const GCodeProcessorResult::MoveVertex& move : result.moves) {
         if (move.internal_only ||
             move.type != EMoveType::Extrude ||
-            move.extrusion_role != erCustom)
+            move.extrusion_role != erContinuousFiber)
             continue;
-        if (static_cast<size_t>(move.extruder_id) >= configured_filaments)
-            return true;
+        return true;
     }
 
     return false;
@@ -345,6 +338,7 @@ static std::string to_string(libvgcode::EGCodeExtrusionRole role)
     case libvgcode::EGCodeExtrusionRole::Brim:                     { return _u8L("Brim"); }
     case libvgcode::EGCodeExtrusionRole::SupportTransition:        { return _u8L("Support transition"); }
     case libvgcode::EGCodeExtrusionRole::Mixed:                    { return _u8L("Mixed"); }
+    case libvgcode::EGCodeExtrusionRole::ContinuousFiber:          { return _u8L("Continuous fiber"); }
     default:                                                       { return _u8L("Unknown"); }
     }
 }
@@ -381,6 +375,8 @@ static libvgcode::Color strength_lens_role_color(libvgcode::EGCodeExtrusionRole 
     case libvgcode::EGCodeExtrusionRole::InternalInfill:
     case libvgcode::EGCodeExtrusionRole::Mixed:
         return { 242, 190, 78 };
+    case libvgcode::EGCodeExtrusionRole::ContinuousFiber:
+        return { 10, 10, 10 };
     case libvgcode::EGCodeExtrusionRole::OverhangPerimeter:
     case libvgcode::EGCodeExtrusionRole::BridgeInfill:
     case libvgcode::EGCodeExtrusionRole::InternalBridgeInfill:
@@ -412,6 +408,7 @@ static std::string strength_lens_role_label(libvgcode::EGCodeExtrusionRole role,
     case libvgcode::EGCodeExtrusionRole::SolidInfill: return _u8L("Solid infill - load spread");
     case libvgcode::EGCodeExtrusionRole::InternalInfill: return _u8L("Sparse infill - load sharing");
     case libvgcode::EGCodeExtrusionRole::Mixed: return _u8L("Mixed extrusion - review");
+    case libvgcode::EGCodeExtrusionRole::ContinuousFiber: return _u8L("Continuous fiber - reinforcement path");
     case libvgcode::EGCodeExtrusionRole::OverhangPerimeter: return _u8L("Overhang wall - review");
     case libvgcode::EGCodeExtrusionRole::BridgeInfill: return _u8L("Bridge/Arc infill - review");
     case libvgcode::EGCodeExtrusionRole::InternalBridgeInfill: return _u8L("Internal bridge - review");
@@ -1471,7 +1468,7 @@ void GCodeViewer::load_as_gcode(const GCodeProcessorResult& gcode_result, const 
             libvgcode::EGCodeExtrusionRole::WipeTower,
             // ORCA
             libvgcode::EGCodeExtrusionRole::BottomSurface, libvgcode::EGCodeExtrusionRole::InternalBridgeInfill, libvgcode::EGCodeExtrusionRole::Brim,
-            libvgcode::EGCodeExtrusionRole::SupportTransition, libvgcode::EGCodeExtrusionRole::Mixed
+            libvgcode::EGCodeExtrusionRole::SupportTransition, libvgcode::EGCodeExtrusionRole::Mixed, libvgcode::EGCodeExtrusionRole::ContinuousFiber
             });
     m_paths_bounding_box = BoundingBoxf3(libvgcode::convert(bbox[0]).cast<double>(), libvgcode::convert(bbox[1]).cast<double>());
 
@@ -1701,6 +1698,7 @@ void GCodeViewer::load_as_preview(libvgcode::GCodeInputData&& data)
     m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::SolidInfill,              { 255, 127, 127 });
     m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::WipeTower,                { 127, 255, 127 });
     m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::Custom,                   { 10, 10, 10 });
+    m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::ContinuousFiber,          { 10, 10, 10 });
     m_strength_lens_saved_role_colors.clear();
     m_viewer.load(std::move(data));
     apply_strength_lens_role_colors();

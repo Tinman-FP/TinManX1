@@ -2534,6 +2534,7 @@ void TabPrint::build()
 
     page = add_options_page(L("Fiber Settings"), "custom-gcode_strength");
         optgroup = page->new_optgroup(L("Planning"), L"custom-gcode_strength");
+        optgroup->append_single_option_line("fiber_manufacturing_mode");
         optgroup->append_single_option_line("fiber_generate_perimeters");
         optgroup->append_single_option_line("fiber_generate_infill");
         optgroup->append_single_option_line("fiber_reinforcement_mode");
@@ -2601,6 +2602,7 @@ void TabPrint::build()
 
         optgroup = page->new_optgroup(L("Advanced layup payload"), L"param_advanced");
         optgroup->append_single_option_line("fiber_reinforcement_payload");
+        optgroup->append_single_option_line("fiber_infill_solid_payload");
     }
 
     page = add_options_page(L("Strength"), "custom-gcode_strength"); // ORCA: icon only visible on placeholders

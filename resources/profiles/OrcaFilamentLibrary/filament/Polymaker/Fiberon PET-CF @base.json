@@ -96,7 +96,7 @@
         "TinManX1 Plus 4 0.6 nozzle tune: dry at 100C for 10h if print quality degrades; hardened nozzle required; cooling fan off; use max volumetric 6 mm3/s until flow is verified. TinManX1 PET-CF rescue tune 2026-07-11: after repeated porous PET-CF test prints, use 300C nozzle, 80C bed, fan off, max volumetric 4 mm3/s, flow 1.08, slowdown enabled, and pressure advance enabled. Dry filament and inspect hardened nozzle if voids persist."
     ],
     "tinmanx_petcf17_tune": [
-        "2026-07-11 Plus 4 0.6 PET-CF17 anti-starvation tune; backup=/Users/williamtinney/Documents/Codex/2026-06-25/r/work/profile-backups/petcf17-tune-20260711/Users/williamtinney/Documents/Codex/2026-06-25/r/work/tinmanx1-v2.4.2-rebase/resources/profiles/OrcaFilamentLibrary/filament/Polymaker/Fiberon PET-CF @base.json"
+        "2026-07-11 Plus 4 0.6 PET-CF17 anti-starvation tune; backup=local profile-backups/petcf17-tune-20260711"
     ],
     "enable_pressure_advance": [
         "1"

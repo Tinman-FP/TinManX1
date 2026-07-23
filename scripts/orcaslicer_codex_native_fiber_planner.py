@@ -145,6 +145,12 @@ class PlannerConfig:
     fiber_slow_feedrate: float = 300.0
     fiber_finish_feedrate: float = 900.0
     fiber_cut_tail_feedrate: float = 180.0
+    fiber_start_min_speed: float = 3.0
+    fiber_start_min_limit_speed: float = 3.0
+    fiber_normal_min_speed: float = 5.0
+    fiber_normal_min_limit_speed: float = 3.0
+    fiber_finish_min_speed: float = 5.0
+    fiber_finish_min_limit_speed: float = 3.0
     restart_feedrate: float = 1500.0
     priming_feedrate: float = 600.0
     tension_length: float = 0.0
@@ -711,7 +717,7 @@ def parse_json_like_payload(value: str | None) -> tuple[dict, list[str]]:
             warnings.append(f"fiber_reinforcement_payload_parse_error:{exc.__class__.__name__}")
             continue
         if isinstance(parsed, dict):
-            return parsed, warnings
+            return parsed, []
         warnings.append("fiber_reinforcement_payload_not_object")
     return {}, warnings[:1] or ["fiber_reinforcement_payload_parse_error"]
 
@@ -877,6 +883,7 @@ def apply_material_tuning_overrides(cfg: PlannerConfig, tuning: dict) -> None:
     )
     cfg.start_length = payload_positive_float(payload_value(tuning, "start_length", "fiber_start_length"), cfg.start_length)
     cfg.slow_length = payload_positive_float(payload_value(tuning, "slow_length", "fiber_slow_length"), cfg.slow_length)
+    cfg.fiber_width = payload_positive_float(payload_value(tuning, "line_width", "fiber_line_width"), cfg.fiber_width)
     cfg.min_route_length = payload_positive_float(payload_value(tuning, "min_route_length"), cfg.min_route_length)
     cfg.perimeter_min_route_length = payload_positive_float(
         payload_value(tuning, "perimeter_min_route_length", "minimum_perimeter_length"),
@@ -891,6 +898,33 @@ def apply_material_tuning_overrides(cfg: PlannerConfig, tuning: dict) -> None:
     start_speed = payload_value(tuning, "start_max_speed", "start_speed")
     if start_speed is not None:
         cfg.fiber_slow_feedrate = payload_positive_float(start_speed, cfg.fiber_slow_feedrate / 60.0) * 60.0
+    cfg.fiber_start_min_speed = payload_positive_float(
+        payload_value(tuning, "start_min_speed"),
+        cfg.fiber_start_min_speed,
+    )
+    cfg.fiber_start_min_limit_speed = payload_positive_float(
+        payload_value(tuning, "start_min_limit_speed"),
+        cfg.fiber_start_min_limit_speed,
+    )
+    cfg.fiber_normal_min_speed = payload_positive_float(
+        payload_value(tuning, "normal_min_speed"),
+        cfg.fiber_normal_min_speed,
+    )
+    cfg.fiber_normal_min_limit_speed = payload_positive_float(
+        payload_value(tuning, "normal_min_limit_speed"),
+        cfg.fiber_normal_min_limit_speed,
+    )
+    cfg.fiber_finish_min_speed = payload_positive_float(
+        payload_value(tuning, "finish_min_speed"),
+        cfg.fiber_finish_min_speed,
+    )
+    cfg.fiber_finish_min_limit_speed = payload_positive_float(
+        payload_value(tuning, "finish_min_limit_speed"),
+        cfg.fiber_finish_min_limit_speed,
+    )
+    min_speed = payload_value(tuning, "start_min_speed", "start_min_limit_speed")
+    if min_speed is not None:
+        cfg.fiber_cut_tail_feedrate = payload_positive_float(min_speed, cfg.fiber_cut_tail_feedrate / 60.0) * 60.0
     after_cut = payload_value(tuning, "after_cut_plastic_extrusion_multiplier")
     if after_cut is not None:
         cfg.after_cut_plastic_extrusion_multiplier = payload_positive_float(
@@ -1177,6 +1211,21 @@ def planner_config(parsed: ParsedGCode, args: argparse.Namespace) -> PlannerConf
         cfg.fiber_slow_feedrate,
     )
     cfg.fiber_finish_feedrate = speed_mm_s_to_feedrate(comments.get("fiber_finish_max_speed"), cfg.fiber_finish_feedrate)
+    cfg.fiber_start_min_speed = parse_first_positive_float(comments.get("fiber_start_min_speed"), cfg.fiber_start_min_speed)
+    cfg.fiber_start_min_limit_speed = parse_first_positive_float(
+        comments.get("fiber_start_min_limit_speed"),
+        cfg.fiber_start_min_limit_speed,
+    )
+    cfg.fiber_normal_min_speed = parse_first_positive_float(comments.get("fiber_normal_min_speed"), cfg.fiber_normal_min_speed)
+    cfg.fiber_normal_min_limit_speed = parse_first_positive_float(
+        comments.get("fiber_normal_min_limit_speed"),
+        cfg.fiber_normal_min_limit_speed,
+    )
+    cfg.fiber_finish_min_speed = parse_first_positive_float(comments.get("fiber_finish_min_speed"), cfg.fiber_finish_min_speed)
+    cfg.fiber_finish_min_limit_speed = parse_first_positive_float(
+        comments.get("fiber_finish_min_limit_speed"),
+        cfg.fiber_finish_min_limit_speed,
+    )
     cfg.fiber_cut_tail_feedrate = speed_mm_s_to_feedrate(
         comments.get("fiber_start_min_speed")
         or comments.get("fiber_start_min_limit_speed")
@@ -3239,7 +3288,10 @@ def emit_fiberseek_start_contract(parsed: ParsedGCode, cfg: PlannerConfig) -> li
     lines = [
         "; ORCA_CODEX_FIBERSEEK_MACHINE_CONTRACT_START",
         f"SET_PRINT_STATS_INFO TOTAL_LAYER={len(parsed.layers)}",
+        "SET_PRESSURE_ADVANCE EXTRUDER=extruder ADVANCE=0",
+        "SET_VELOCITY_LIMIT MINIMUM_CRUISE_RATIO=0.8",
         "SET_VELOCITY_LIMIT SQUARE_CORNER_VELOCITY=1",
+        "SET_TOOL_CORNER_VELOCITY T=0 SCV=1",
         f"M104 S{fmt_temp(cfg.fiber_nozzle_temperature)} T0",
         f"M140 S{fmt_temp(cfg.bed_temperature)}",
         f"M141 S{fmt_temp(cfg.chamber_temperature)}",
@@ -3468,8 +3520,11 @@ def metadata_value_replacements(cfg: PlannerConfig) -> dict[str, str]:
         "fiber_reinforcement_mode": cfg.reinforcement_mode,
         "fiber_material_tuning": cfg.material_tuning_name or "none",
         "fiber_after_cut_plastic_extrusion_multiplier": fmt_float(cfg.after_cut_plastic_extrusion_multiplier),
+        "fiber_min_radius": fmt_float(cfg.min_radius),
         "fiber_max_arc_segment_length": fmt_float(cfg.max_arc_segment_length),
+        "fiber_start_length": fmt_float(cfg.start_length),
         "fiber_slow_length": fmt_float(cfg.slow_length),
+        "fiber_line_width": fmt_float(cfg.fiber_width),
         "fiber_min_route_length": fmt_float(cfg.min_route_length),
         "fiber_mechanical_min_route_length": fmt_float(cfg.mechanical_min_route_length),
         "fiber_perimeter_min_route_length": fmt_float(cfg.perimeter_min_route_length),
@@ -3479,14 +3534,16 @@ def metadata_value_replacements(cfg: PlannerConfig) -> dict[str, str]:
             f"{fmt_temp(cfg.plastic_standby_temperature)},{fmt_temp(cfg.fiber_standby_temperature)}"
         ),
         "fiber_start_max_speed": fmt_float(start_max_speed),
-        "fiber_start_min_speed": fmt_float(min_speed),
-        "fiber_start_min_limit_speed": fmt_float(min_speed),
+        "fiber_start_min_speed": fmt_float(cfg.fiber_start_min_speed),
+        "fiber_start_min_limit_speed": fmt_float(cfg.fiber_start_min_limit_speed),
         "fiber_normal_max_speed": fmt_float(normal_max_speed),
-        "fiber_normal_min_speed": fmt_float(start_max_speed),
-        "fiber_normal_min_limit_speed": fmt_float(min_speed),
+        "fiber_normal_min_speed": fmt_float(cfg.fiber_normal_min_speed),
+        "fiber_normal_min_limit_speed": fmt_float(cfg.fiber_normal_min_limit_speed),
         "fiber_finish_max_speed": fmt_float(finish_max_speed),
-        "fiber_finish_min_speed": fmt_float(start_max_speed),
-        "fiber_finish_min_limit_speed": fmt_float(min_speed),
+        "fiber_finish_min_speed": fmt_float(cfg.fiber_finish_min_speed),
+        "fiber_finish_min_limit_speed": fmt_float(cfg.fiber_finish_min_limit_speed),
+        "fiber_print_speed": fmt_float(normal_max_speed),
+        "fiber_start_speed": fmt_float(start_max_speed),
     }
 
 

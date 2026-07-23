@@ -394,50 +394,146 @@ PLASTIC_NOZZLES = {
 }
 COMPOSITE_NOZZLE = "0.7"
 COMPOSITE_LINE_WIDTH = "0.80"
+FIBRESEEK_BED_VOLUME = {
+    "printable_area": ["0x0", "305x0", "305x305", "0x305"],
+    "printable_height": "245",
+}
+ROCKET_COMPARE_SOLID_PAYLOAD = json.dumps(
+    {
+        "angle_list_raw": "0/90/0",
+        "extrusion_width_mm": 0.7,
+        "extend_into_perimeters_mm": 0.0,
+        "min_segment_length_mm": 10.0,
+        "coalesce_transition_length_mm": 12.0,
+        "route_stitch_transition_length_mm": 16.0,
+        "source": "Rocket Slicer 1.3.1.480 Fortified PETG + X-CCF session",
+    },
+    separators=(",", ":"),
+)
 
 
 FIBER_MODES = {
     "Light": {
         "mode": "light",
         "spacing": "2.40",
-        "layer_step": "8",
+        "layer_step": "3",
         "max_routes": "2",
         "routes_per_cut": "1",
         "infill_source": "plastic_traces",
         "generate_perimeters": "1",
         "generate_infill": "1",
+        "fiber_min_radius": "12",
+        "fiber_max_arc_segment_length": "3",
+        "fiber_start_length": "15",
+        "fiber_slow_length": "5",
+        "fiber_start_max_speed": "5",
+        "fiber_start_min_speed": "3",
+        "fiber_start_min_limit_speed": "3",
+        "fiber_normal_max_speed": "30",
+        "fiber_normal_min_speed": "5",
+        "fiber_normal_min_limit_speed": "3",
+        "fiber_finish_max_speed": "15",
+        "fiber_finish_min_speed": "5",
+        "fiber_finish_min_limit_speed": "3",
+        "fiber_after_cut_plastic_extrusion_multiplier": "0.58",
+        "fiber_line_width": "0.68",
+        "fiber_outer_perimeter_loops": "1",
+        "fiber_inner_perimeter_loops": "1",
+        "fiber_plastic_outer_loops_with_fiber": "2",
+        "fiber_plastic_inner_loops_with_fiber": "0",
     },
     "Medium": {
         "mode": "medium",
         "spacing": "1.60",
-        "layer_step": "4",
-        "max_routes": "4",
+        "layer_step": "2",
+        "max_routes": "6",
         "routes_per_cut": "1",
         "infill_source": "plastic_traces",
         "generate_perimeters": "1",
         "generate_infill": "1",
+        "fiber_min_radius": "12",
+        "fiber_max_arc_segment_length": "3",
+        "fiber_start_length": "15",
+        "fiber_slow_length": "10",
+        "fiber_start_max_speed": "5",
+        "fiber_start_min_speed": "3",
+        "fiber_start_min_limit_speed": "3",
+        "fiber_normal_max_speed": "30",
+        "fiber_normal_min_speed": "5",
+        "fiber_normal_min_limit_speed": "3",
+        "fiber_finish_max_speed": "15",
+        "fiber_finish_min_speed": "5",
+        "fiber_finish_min_limit_speed": "8",
+        "fiber_after_cut_plastic_extrusion_multiplier": "0.72",
+        "fiber_line_width": "0.80",
+        "fiber_outer_perimeter_loops": "2",
+        "fiber_inner_perimeter_loops": "2",
+        "fiber_plastic_outer_loops_with_fiber": "0",
+        "fiber_plastic_inner_loops_with_fiber": "0",
     },
     "Heavy": {
         "mode": "heavy",
         "spacing": "0.80",
-        "layer_step": "2",
-        "max_routes": "8",
+        "layer_step": "1",
+        "max_routes": "10",
         "routes_per_cut": "1",
         "infill_source": "generated_ribs",
         "generate_perimeters": "1",
         "generate_infill": "1",
+        "fiber_min_radius": "10",
+        "fiber_max_arc_segment_length": "4",
+        "fiber_start_length": "5",
+        "fiber_slow_length": "5",
+        "fiber_start_max_speed": "2",
+        "fiber_start_min_speed": "2",
+        "fiber_start_min_limit_speed": "2",
+        "fiber_normal_max_speed": "40",
+        "fiber_normal_min_speed": "5",
+        "fiber_normal_min_limit_speed": "3",
+        "fiber_finish_max_speed": "15",
+        "fiber_finish_min_speed": "3",
+        "fiber_finish_min_limit_speed": "3",
+        "fiber_after_cut_plastic_extrusion_multiplier": "0.72",
+        "fiber_line_width": "0.70",
+        "fiber_outer_perimeter_loops": "2",
+        "fiber_inner_perimeter_loops": "2",
+        "fiber_plastic_outer_loops_with_fiber": "0",
+        "fiber_plastic_inner_loops_with_fiber": "0",
+    },
+}
+
+ROCKET_COMPARE_MODE_OVERRIDES = {
+    "Light": {
+        # Rocket Speedy emits plastic only for this part/profile family.
+        "fiber_generate_perimeters": "0",
+        "fiber_generate_infill": "0",
+        "fiber_infill_pattern": "isogrid",
+        "fiber_max_routes_per_layer": "32",
+    },
+    "Medium": {
+        "fiber_infill_pattern": "isogrid",
+        "fiber_infill_density": "20",
+        "fiber_infill_angles": "0,60,120",
+        "fiber_infill_spacing": "0",
+        "fiber_max_routes_per_layer": "80",
+    },
+    "Heavy": {
+        "fiber_infill_pattern": "solid",
+        "fiber_infill_density": "0",
+        "fiber_infill_angles": "0,90,0",
+        "fiber_max_routes_per_layer": "180",
     },
 }
 
 
-ROCKET_REFERENCE = "Rocket Slicer 1.3.2.637 / preset pack v14"
+ROCKET_REFERENCE = "Rocket Slicer 1.3.1.480 / default preset pack"
 
 ROCKET_132_MATERIAL_TUNING = {
     # Rocket keeps the hard FibreSeek machine contract common, then varies a
     # small set of material/profile route limits. TinManX1 consumes this through
     # fiber_reinforcement_payload so the UI stays streamlined.
     "PETG + X-CCF": {
-        "source": "Rocket Slicer 1.3.2.637 PETG CFC X-CCF profile set",
+        "source": "Rocket Slicer 1.3.1.480 PETG CFC X-CCF profile set",
         "default": {
             "min_radius": 12,
             "max_arc_segment_length": 3,
@@ -453,7 +549,17 @@ ROCKET_132_MATERIAL_TUNING = {
             "max_arc_segment_length": 4,
             "start_length": 5,
             "slow_length": 5,
+            "start_max_speed": 2,
+            "start_min_speed": 2,
+            "start_min_limit_speed": 2,
             "normal_max_speed": 40,
+            "normal_min_speed": 5,
+            "normal_min_limit_speed": 3,
+            "finish_max_speed": 15,
+            "finish_min_speed": 3,
+            "finish_min_limit_speed": 3,
+            "after_cut_plastic_extrusion_multiplier": 0.72,
+            "line_width": 0.7,
         },
     },
     "PET GF + CGF": {
@@ -742,6 +848,8 @@ def filament_base(material: str, values: dict) -> dict:
         "nozzle_temperature_range_high": arr(values.get("temp_range_high", values["temp_first"] + 20)),
         "hot_plate_temp": arr(values["bed"]),
         "hot_plate_temp_initial_layer": arr(values["bed_first"]),
+        "cool_plate_temp": arr(values["bed"]),
+        "cool_plate_temp_initial_layer": arr(values["bed_first"]),
         "eng_plate_temp": arr(values["bed"]),
         "eng_plate_temp_initial_layer": arr(values["bed_first"]),
         "textured_plate_temp": arr(values["bed"]),
@@ -785,6 +893,8 @@ def filament_base(material: str, values: dict) -> dict:
 
 
 def plastic_filament(material: str) -> dict:
+    values = MATERIALS[material]
+    chamber_temperature = int(values["chamber"])
     return {
         "type": "filament",
         "name": plastic_filament_name(material),
@@ -795,6 +905,33 @@ def plastic_filament(material: str) -> dict:
         "instantiation": "true",
         "filament_vendor": arr("TinManX1"),
         "filament_type": arr(material),
+        "default_filament_colour": arr(values["color"]),
+        "filament_diameter": arr("1.75"),
+        "filament_density": arr(values["density"]),
+        "filament_cost": arr(values["cost"]),
+        **({"filament_price_source": arr(values["price_source"])} if "price_source" in values else {}),
+        "filament_flow_ratio": arr(f"{values['flow']:.2f}"),
+        "filament_max_volumetric_speed": arr(values["mvs"]),
+        "nozzle_temperature": arr(values["temp"]),
+        "nozzle_temperature_initial_layer": arr(values["temp_first"]),
+        "nozzle_temperature_range_low": arr(values.get("temp_range_low", max(180, values["temp"] - 20))),
+        "nozzle_temperature_range_high": arr(values.get("temp_range_high", values["temp_first"] + 20)),
+        "hot_plate_temp": arr(values["bed"]),
+        "hot_plate_temp_initial_layer": arr(values["bed_first"]),
+        "cool_plate_temp": arr(values["bed"]),
+        "cool_plate_temp_initial_layer": arr(values["bed_first"]),
+        "eng_plate_temp": arr(values["bed"]),
+        "eng_plate_temp_initial_layer": arr(values["bed_first"]),
+        "textured_plate_temp": arr(values["bed"]),
+        "textured_plate_temp_initial_layer": arr(values["bed_first"]),
+        "chamber_temperature": arr(chamber_temperature),
+        "activate_chamber_temp_control": arr("1" if chamber_temperature else "0"),
+        "fan_min_speed": arr(values["fan"]),
+        "fan_max_speed": arr(values["fan_max"]),
+        "slow_down_for_layer_cooling": arr("1" if values["fan"] else "0"),
+        "enable_pressure_advance": arr("1"),
+        "pressure_advance": arr("0.020"),
+        "composite_enabled": arr("0"),
         "compatible_printers": compatible_filament_printers(),
     }
 
@@ -822,14 +959,30 @@ def composite_filament(material: str, values: dict, fiber: dict) -> dict:
         "filament_type": arr("CFC"),
         "description": f"{composite_filament_name(material, fiber)}. {confidence}. {baseline_note}",
         "default_filament_colour": arr(fiber["color"]),
+        "filament_diameter": arr("1.75"),
+        "filament_density": arr(values.get("fiber_plastic_density", values["density"])),
+        "filament_cost": arr(values.get("fiber_plastic_cost", values["cost"])),
+        **({"filament_price_source": arr(values["price_source"])} if "price_source" in values else {}),
         "filament_flow_ratio": arr(f"{fiber_value(values, fiber, 'fiber_flow'):.2f}"),
         "filament_max_volumetric_speed": arr(fiber_value(values, fiber, "fiber_mvs")),
         "nozzle_temperature": arr(fiber_value(values, fiber, "fiber_temp")),
         "nozzle_temperature_initial_layer": arr(fiber_value(values, fiber, "fiber_temp_first")),
         "nozzle_temperature_range_low": arr(max(180, fiber_value(values, fiber, "fiber_temp") - 20)),
         "nozzle_temperature_range_high": arr(fiber_value(values, fiber, "fiber_temp_first") + 20),
+        "hot_plate_temp": arr(values["bed"]),
+        "hot_plate_temp_initial_layer": arr(values["bed_first"]),
+        "cool_plate_temp": arr(values["bed"]),
+        "cool_plate_temp_initial_layer": arr(values["bed_first"]),
+        "eng_plate_temp": arr(values["bed"]),
+        "eng_plate_temp_initial_layer": arr(values["bed_first"]),
+        "textured_plate_temp": arr(values["bed"]),
+        "textured_plate_temp_initial_layer": arr(values["bed_first"]),
+        "chamber_temperature": arr(int(values["chamber"])),
+        "activate_chamber_temp_control": arr("1" if int(values["chamber"]) else "0"),
         "fan_min_speed": arr(fiber_value(values, fiber, "fiber_fan")),
         "fan_max_speed": arr(max(fiber_value(values, fiber, "fiber_fan"), values["fan_max"])),
+        "enable_pressure_advance": arr("1"),
+        "pressure_advance": arr("0.020"),
         "composite_enabled": arr("1"),
         "fiber_name": arr(fiber["label"]),
         "fiber_type": arr(fiber["type"]),
@@ -892,8 +1045,7 @@ def machine_common() -> dict:
         "printer_model": MACHINE_MODEL,
         "gcode_flavor": "marlin",
         "single_extruder_multi_material": "0",
-        "printable_area": ["0x0", "305x0", "305x305", "0x305"],
-        "printable_height": "245",
+        **FIBRESEEK_BED_VOLUME,
         "machine_max_speed_x": arr("500"),
         "machine_max_speed_y": arr("500"),
         "machine_max_speed_z": arr("5"),
@@ -997,6 +1149,7 @@ def machine_common() -> dict:
 
 def plastic_machine(nozzle: str, spec: dict) -> dict:
     return {
+        **machine_common(),
         "type": "machine",
         "name": plastic_machine_name(nozzle),
         "inherits": "TinManX1 FibreSeek machine common",
@@ -1004,6 +1157,7 @@ def plastic_machine(nozzle: str, spec: dict) -> dict:
         "setting_id": f"TMX-FS3-M-P{nozzle}",
         "instantiation": "true",
         "printer_model": MACHINE_MODEL,
+        **FIBRESEEK_BED_VOLUME,
         "printer_variant": nozzle,
         "nozzle_diameter": arr(nozzle),
         "max_layer_height": arr(spec["max_layer"]),
@@ -1017,6 +1171,7 @@ def plastic_machine(nozzle: str, spec: dict) -> dict:
 
 def composite_machine(plastic_nozzle: str, spec: dict) -> dict:
     return {
+        **machine_common(),
         "type": "machine",
         "name": composite_machine_name(plastic_nozzle),
         "inherits": "TinManX1 FibreSeek machine common",
@@ -1024,6 +1179,7 @@ def composite_machine(plastic_nozzle: str, spec: dict) -> dict:
         "setting_id": f"TMX-FS3-M-X{plastic_nozzle}-{COMPOSITE_NOZZLE}",
         "instantiation": "true",
         "printer_model": MACHINE_MODEL,
+        **FIBRESEEK_BED_VOLUME,
         "printer_variant": f"{plastic_nozzle}+{COMPOSITE_NOZZLE}",
         "extruder_colour": ["#D84B4B", "#111111"],
         "extruder_offset": ["0x0", "0x0"],
@@ -1108,10 +1264,19 @@ def process_common() -> dict:
         "xy_hole_compensation": "0",
         "xy_contour_compensation": "0",
         "enable_arc_fitting": "0",
+        "fiber_manufacturing_mode": "plastic_plus_fiber_overlay",
         "fiber_generate_perimeters": "0",
         "fiber_generate_infill": "0",
         "fiber_reinforcement_mode": "light",
     }
+
+
+def bridge_line_width_for_nozzle(nozzle: str) -> str:
+    return "0.79" if nozzle == "0.8" else nozzle
+
+
+def bridge_line_width_for_composite_nozzle(plastic_nozzle: str) -> str:
+    return "0.69" if float(plastic_nozzle) > float(COMPOSITE_NOZZLE) else plastic_nozzle
 
 
 def plastic_process(nozzle: str, spec: dict) -> dict:
@@ -1133,7 +1298,7 @@ def plastic_process(nozzle: str, spec: dict) -> dict:
         "internal_solid_infill_line_width": width,
         "top_surface_line_width": width,
         "support_line_width": width,
-        "bridge_line_width": nozzle,
+        "bridge_line_width": bridge_line_width_for_nozzle(nozzle),
         "compatible_printers": compatible_process_printers(nozzle, fiber=False),
     }
 
@@ -1156,39 +1321,43 @@ def fiber_process(plastic_nozzle: str, spec: dict, mode_label: str, mode: dict, 
         "internal_solid_infill_line_width": width,
         "top_surface_line_width": width,
         "support_line_width": width,
-        "bridge_line_width": plastic_nozzle,
+        "bridge_line_width": bridge_line_width_for_composite_nozzle(plastic_nozzle),
         "wall_loops": "3",
         "sparse_infill_density": "18%",
         "sparse_infill_pattern": "grid",
         "top_shell_layers": "4",
         "bottom_shell_layers": "3",
+        "fiber_manufacturing_mode": "composite_only",
         "fiber_generate_perimeters": mode["generate_perimeters"],
         "fiber_generate_infill": mode["generate_infill"],
         "fiber_reinforcement_mode": mode["mode"],
         "fiber_start_layer": "4",
         "fiber_print_order_code": "1",
-        "fiber_min_radius": "12",
-        "fiber_max_arc_segment_length": "3",
-        "fiber_start_length": "15",
-        "fiber_slow_length": "10",
+        "fiber_min_radius": mode["fiber_min_radius"],
+        "fiber_max_arc_segment_length": mode["fiber_max_arc_segment_length"],
+        "fiber_start_length": mode["fiber_start_length"],
+        "fiber_slow_length": mode["fiber_slow_length"],
         "fiber_tension_length": "0",
         "fiber_tension_feedrate": "0",
         "fiber_tension_release_fraction": "0",
         "fiber_feedrate_percent": "100",
-        "fiber_start_max_speed": "5",
-        "fiber_start_min_speed": "3",
-        "fiber_start_min_limit_speed": "3",
-        "fiber_normal_max_speed": "30",
-        "fiber_normal_min_speed": "5",
-        "fiber_normal_min_limit_speed": "3",
-        "fiber_finish_max_speed": "15",
-        "fiber_finish_min_speed": "5",
-        "fiber_finish_min_limit_speed": "3",
+        "fiber_start_max_speed": mode["fiber_start_max_speed"],
+        "fiber_start_min_speed": mode["fiber_start_min_speed"],
+        "fiber_start_min_limit_speed": mode["fiber_start_min_limit_speed"],
+        "fiber_normal_max_speed": mode["fiber_normal_max_speed"],
+        "fiber_normal_min_speed": mode["fiber_normal_min_speed"],
+        "fiber_normal_min_limit_speed": mode["fiber_normal_min_limit_speed"],
+        "fiber_finish_max_speed": mode["fiber_finish_max_speed"],
+        "fiber_finish_min_speed": mode["fiber_finish_min_speed"],
+        "fiber_finish_min_limit_speed": mode["fiber_finish_min_limit_speed"],
         "fiber_override_correction_speed": "0",
         "fiber_correction_move_speed": "2",
         "fiber_correction_move_feedrate_percent": "0",
-        "fiber_after_cut_plastic_extrusion_multiplier": "0.72",
+        "fiber_after_cut_plastic_extrusion_multiplier": mode["fiber_after_cut_plastic_extrusion_multiplier"],
         "fiber_z_hop_after_cut": "0",
+        "fiber_cut_distance": "58",
+        "fiber_restart_length": "55",
+        "fiber_cut_gcode": "M2800\nM400\n;CUT DISTANCE 54.8",
         "fiber_first_layer_flow_ratio": "0",
         "fiber_first_layer_line_width": "0",
         "fiber_first_layer_height": "0",
@@ -1199,7 +1368,7 @@ def fiber_process(plastic_nozzle: str, spec: dict, mode_label: str, mode: dict, 
         "fiber_infill_source_policy": mode["infill_source"],
         "fiber_seam_position": "source",
         "fiber_seam_angle": "0",
-        "fiber_line_width": COMPOSITE_LINE_WIDTH,
+        "fiber_line_width": mode.get("fiber_line_width", COMPOSITE_LINE_WIDTH),
         "fiber_infill_spacing": mode["spacing"],
         "fiber_macro_layer_height": "0.2",
         "fiber_layer_step": mode["layer_step"],
@@ -1208,17 +1377,39 @@ def fiber_process(plastic_nozzle: str, spec: dict, mode_label: str, mode: dict, 
         "fiber_mechanical_min_route_length": "55",
         "fiber_perimeter_inset": "0.85",
         "fiber_infill_inset": "1.2",
-        "fiber_print_speed": "30",
-        "fiber_start_speed": "5",
+        "fiber_print_speed": mode["fiber_normal_max_speed"],
+        "fiber_start_speed": mode["fiber_start_max_speed"],
         "fiber_max_routes_per_layer": mode["max_routes"],
         "fiber_routes_per_cut": mode["routes_per_cut"],
-        "fiber_outer_perimeter_loops": "1",
-        "fiber_inner_perimeter_loops": "1",
-        "fiber_plastic_outer_loops_with_fiber": "2",
-        "fiber_plastic_inner_loops_with_fiber": "0",
+        "fiber_outer_perimeter_loops": mode["fiber_outer_perimeter_loops"],
+        "fiber_inner_perimeter_loops": mode["fiber_inner_perimeter_loops"],
+        "fiber_plastic_outer_loops_with_fiber": mode["fiber_plastic_outer_loops_with_fiber"],
+        "fiber_plastic_inner_loops_with_fiber": mode["fiber_plastic_inner_loops_with_fiber"],
+        "fiber_infill_solid_payload": ROCKET_COMPARE_SOLID_PAYLOAD,
         "fiber_reinforcement_payload": layup_payload,
         "compatible_printers": compatible_process_printers(plastic_nozzle, fiber=True),
     }
+
+
+def rocket_compare_process(plastic_nozzle: str, spec: dict, mode_label: str, mode: dict, layup_payload: str = "{}") -> dict:
+    process = fiber_process(plastic_nozzle, spec, mode_label, mode, layup_payload)
+    process.update(ROCKET_COMPARE_MODE_OVERRIDES.get(mode_label, {}))
+    process.update(
+        {
+            "name": (
+                f"0.20mm Rocket Compare Composite Only {mode_label} @FibreSeek Seeker 3 "
+                f"{plastic_nozzle}+{COMPOSITE_NOZZLE} nozzle"
+            ),
+            "setting_id": f"TMX-FS3-PROC-RC-X{plastic_nozzle}-{mode_label.upper()}",
+            "fiber_manufacturing_mode": "composite_only",
+            "fiber_infill_solid_payload": ROCKET_COMPARE_SOLID_PAYLOAD,
+            "notes": (
+                "Rocket comparison profile. These values intentionally track the Rocket/FibreSeek mode mapping "
+                "for G-code comparison. The composite nozzle still deposits polymer matrix with continuous fiber."
+            ),
+        }
+    )
+    return process
 
 
 def build_pack(layup_template: str = "none"):
@@ -1268,6 +1459,11 @@ def build_pack(layup_template: str = "none"):
             fpath = f"process/{fp['name']}.json"
             top["process_list"].append({"name": fp["name"], "sub_path": fpath})
             write_json(PACK_ROOT / fpath, fp)
+
+            rcp = rocket_compare_process(nozzle, spec, label, mode, layup_payload)
+            rcpath = f"process/{rcp['name']}.json"
+            top["process_list"].append({"name": rcp["name"], "sub_path": rcpath})
+            write_json(PACK_ROOT / rcpath, rcp)
 
     for material, values in MATERIALS.items():
         base = filament_base(material, values)

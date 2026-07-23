@@ -269,7 +269,7 @@ and the emitted G-code had no `wave_overhangs` settings or native
 `WAVE_OVERHANG_*` markers. It still contained ordinary support output:
 
 - TinManX GUI G-code:
-  `/var/folders/0n/8rttb2wd2kb17y9g2tnlk7hc0000gn/T/orcaslicer_model/Sat_Jun_06/11_05_28#16289#34/Metadata/.16289.0.gcode`
+  temporary GUI export captured during the May 19 source snapshot
 - selected support settings: `enable_support=1`, `support_type=arc(auto)`,
   `support_style=default`, `support_threshold_angle=30`,
   `tinman_support_strategy=arc`
