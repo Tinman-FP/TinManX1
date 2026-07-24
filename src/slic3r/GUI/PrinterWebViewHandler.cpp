@@ -10,6 +10,7 @@
 #include <nlohmann/json.hpp>
 #include <atomic>
 #include <boost/filesystem/path.hpp>
+#include <string>
 #include <thread>
 #include <wx/filedlg.h>
 #include <wx/string.h>
@@ -320,7 +321,8 @@ public:
 private:
     static const char* qidi_box_injection_script()
     {
-        return R"JS(
+        static const std::string script =
+R"JS(
 (function () {
   'use strict';
   if (window.__tinmanQidiBoxPanelActive) {
@@ -489,6 +491,8 @@ private:
     }
     return false;
   }
+)JS"
+R"JS(
 
   function ensureShell() {
     if (!document.getElementById('tinman-qidi-box-style')) {
@@ -616,6 +620,8 @@ private:
       }
     });
   }
+)JS"
+R"JS(
 
   function setStatus(message, tone) {
     const panel = document.getElementById('tinman-qidi-box-panel');
@@ -732,6 +738,8 @@ private:
     window.__tinmanQidiBoxFallbackTemp = fallbackTemp;
     setStatus(busyPrint ? 'Print in progress: box motion controls disabled.' : 'Ready', busyPrint ? 'warn' : 'ready');
   }
+)JS"
+R"JS(
 
   function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -817,6 +825,7 @@ private:
   });
 })();
 )JS";
+        return script.c_str();
     }
 };
 
