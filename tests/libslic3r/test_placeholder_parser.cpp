@@ -248,21 +248,26 @@ SCENARIO("Placeholder parser coFloatsOrPercents vector access", "[PlaceholderPar
     // outer_wall_speed is the ratio_over target for small_perimeter_speed.
     // Different values per extruder to verify parent resolves at the same element index.
     config.set_deserialize_strict({
-        { "outer_wall_speed", "60,70,80,90" },
         { "nozzle_diameter", "0.4,0.4,0.4,0.4" },
         { "pressure_advance", "1.5,2.0,3.0,4.0" }  // coFloats non-nullable
     });
+    config.set_key_value("outer_wall_speed", new ConfigOptionFloats { 60.0, 70.0, 80.0, 90.0 });
+    // small_perimeter_speed is normally a scalar FloatOrPercent, but legacy
+    // multi-variant configs may carry it as a coFloatsOrPercents vector. Inject
+    // that shape directly so the placeholder parser can still resolve the
+    // existing ratio_over rule from print_config_def.
+    //
     // small_perimeter_speed:
     //   [0] = 50% of outer_wall_speed[0] (= 60) → 30
     //   [1] = 80% of outer_wall_speed[1] (= 70) → 56
     //   [2] = 0 absolute
     //   [3] = 50% of outer_wall_speed[3] (= 90) → 45
-    config.option<ConfigOptionFloatsOrPercentsNullable>("small_perimeter_speed")->values = {
+    config.set_key_value("small_perimeter_speed", new ConfigOptionFloatsOrPercents {
         FloatOrPercent{50.0, true},    // 50% of outer_wall_speed[0] (60) = 30
         FloatOrPercent{80.0, true},    // 80% of outer_wall_speed[1] (70) = 56
         FloatOrPercent{0.0, false},    // absolute: 0
         FloatOrPercent{50.0, true},    // 50% of outer_wall_speed[3] (90) = 45
-    };
+    });
 
     parser.apply_config(config);
     parser.set("foo", 0);
@@ -314,12 +319,11 @@ SCENARIO("Placeholder parser coFloatsOrPercents vector access", "[PlaceholderPar
         REQUIRE(std::stod(parser.process("{small_perimeter_speed[99]}")) == Catch::Approx(30.0));
     }
 
-    SECTION("coFloats no-index access - nullable (outer_wall_speed)") {
-        // outer_wall_speed is ConfigOptionFloatsNullable, exercises the 'if' branch
+    SECTION("coFloats no-index access - legacy vector parent (outer_wall_speed)") {
         REQUIRE(std::stod(parser.process("{outer_wall_speed}")) == Catch::Approx(60.0));
     }
 
-    SECTION("coFloats indexed access - nullable") {
+    SECTION("coFloats indexed access - legacy vector parent") {
         // outer_wall_speed[2] = 80
         REQUIRE(std::stod(parser.process("{outer_wall_speed[2]}")) == Catch::Approx(80.0));
     }
