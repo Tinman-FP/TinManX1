@@ -98,6 +98,18 @@ def binary_strings(path: Path) -> str:
     return proc.stdout if proc.returncode == 0 else ""
 
 
+def file_description(path: Path) -> str:
+    proc = run_text(["file", str(path)])
+    return proc.stdout if proc.returncode == 0 else ""
+
+
+def launcher_strings(path: Path) -> str:
+    description = file_description(path)
+    if "Mach-O" in description:
+        return binary_strings(path)
+    return path.read_text(errors="replace")
+
+
 def find_launcher_pair(app: Path):
     macos_dir = app / "Contents" / "MacOS"
     for name in LAUNCHER_NAMES:
@@ -139,7 +151,13 @@ def check_launcher(state: CheckState, app: Path, app_support: Path) -> None:
         state.fail(f"missing real executable next to launcher: {launcher}")
         return
 
-    text = launcher.read_text(errors="replace")
+    launcher_description = file_description(launcher)
+    if "Mach-O" in launcher_description:
+        state.ok("launcher is native Mach-O for Finder/Dock launch")
+    else:
+        state.fail(f"launcher is not a native Mach-O executable: {launcher_description.strip()}")
+
+    text = launcher_strings(launcher)
     if str(app_support) in text or "OrcaSlicer-Codex" in text:
         state.ok("launcher points at OrcaSlicer-Codex data directory")
     else:

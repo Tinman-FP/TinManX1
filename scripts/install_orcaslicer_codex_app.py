@@ -9,12 +9,14 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import os
 import plistlib
 import shutil
 import stat
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 
@@ -158,6 +160,209 @@ def update_info_plist(app: Path) -> str:
     return version
 
 
+def c_string(value: str) -> str:
+    return json.dumps(value)
+
+
+def executable_archs(path: Path) -> list[str]:
+    proc = subprocess.run(["lipo", "-archs", str(path)], text=True, capture_output=True, check=False)
+    if proc.returncode != 0:
+        return []
+    return [arch for arch in proc.stdout.strip().split() if arch]
+
+
+def write_native_launcher(launcher: Path, real: Path, default_datadir: str) -> None:
+    clang = shutil.which("clang") or shutil.which("cc")
+    if not clang:
+        raise SystemExit("clang/cc is required to build the native TinManX1 macOS launcher")
+
+    source = launcher.with_suffix(".launcher.c")
+    source.write_text(
+        textwrap.dedent(
+            f"""
+            #include <errno.h>
+            #include <fcntl.h>
+            #include <limits.h>
+            #include <mach-o/dyld.h>
+            #include <spawn.h>
+            #include <stdarg.h>
+            #include <stdbool.h>
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <string.h>
+            #include <sys/stat.h>
+            #include <sys/wait.h>
+            #include <unistd.h>
+
+            extern char **environ;
+
+            static const char *DEFAULT_DATADIR = {c_string(default_datadir)};
+            static const char *BAMBU_POLICY_ENV = "ORCASLICER_CODEX_BAMBU_PLUGIN_POLICY=allow";
+            static const char *BAMBU_REPAIR_MARKER = "repair_bambu_lan_bindings.py";
+
+            static void copy_string(char *dst, size_t dst_size, const char *src) {{
+                if (dst_size == 0) return;
+                if (!src) src = "";
+                snprintf(dst, dst_size, "%s", src);
+            }}
+
+            static bool starts_with(const char *value, const char *prefix) {{
+                return strncmp(value, prefix, strlen(prefix)) == 0;
+            }}
+
+            static void dirname_inplace(char *path) {{
+                char *slash = strrchr(path, '/');
+                if (!slash) {{
+                    copy_string(path, PATH_MAX, ".");
+                    return;
+                }}
+                if (slash == path) {{
+                    slash[1] = '\\0';
+                    return;
+                }}
+                *slash = '\\0';
+            }}
+
+            static void join_path(char *dst, size_t dst_size, const char *base, const char *rel) {{
+                if (!base || !*base) {{
+                    copy_string(dst, dst_size, rel);
+                    return;
+                }}
+                size_t len = strlen(base);
+                snprintf(dst, dst_size, "%s%s%s", base, (len > 0 && base[len - 1] == '/') ? "" : "/", rel);
+            }}
+
+            static void expand_default_datadir(char *dst, size_t dst_size) {{
+                const char *env_datadir = getenv("ORCASLICER_CODEX_DATADIR");
+                if (env_datadir && *env_datadir) {{
+                    copy_string(dst, dst_size, env_datadir);
+                    return;
+                }}
+                if (starts_with(DEFAULT_DATADIR, "~/")) {{
+                    const char *home = getenv("HOME");
+                    if (home && *home) {{
+                        join_path(dst, dst_size, home, DEFAULT_DATADIR + 2);
+                        return;
+                    }}
+                }}
+                copy_string(dst, dst_size, DEFAULT_DATADIR);
+            }}
+
+            static void mkdir_p(const char *path) {{
+                if (!path || !*path) return;
+                char tmp[PATH_MAX];
+                copy_string(tmp, sizeof(tmp), path);
+                for (char *p = tmp + 1; *p; ++p) {{
+                    if (*p == '/') {{
+                        *p = '\\0';
+                        mkdir(tmp, 0755);
+                        *p = '/';
+                    }}
+                }}
+                mkdir(tmp, 0755);
+            }}
+
+            static void redirect_to(int fd, const char *path) {{
+                int out = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                if (out >= 0) {{
+                    dup2(out, fd);
+                    close(out);
+                }}
+            }}
+
+            static void run_python_helper(const char *script, char *const argv[], const char *stdout_path, const char *stderr_path) {{
+                if (!script || access(script, F_OK) != 0) return;
+                pid_t pid = fork();
+                if (pid < 0) return;
+                if (pid == 0) {{
+                    unsetenv("PYTHONHOME");
+                    unsetenv("PYTHONPATH");
+                    if (stdout_path) redirect_to(STDOUT_FILENO, stdout_path);
+                    if (stderr_path) redirect_to(STDERR_FILENO, stderr_path);
+                    execv("/usr/bin/python3", argv);
+                    _exit(127);
+                }}
+                int status = 0;
+                waitpid(pid, &status, 0);
+            }}
+
+            int main(int argc, char **argv) {{
+                char exe_path[PATH_MAX];
+                uint32_t size = sizeof(exe_path);
+                if (_NSGetExecutablePath(exe_path, &size) != 0) return 126;
+
+                char resolved_exe[PATH_MAX];
+                if (!realpath(exe_path, resolved_exe)) copy_string(resolved_exe, sizeof(resolved_exe), exe_path);
+
+                char macos_dir[PATH_MAX];
+                copy_string(macos_dir, sizeof(macos_dir), resolved_exe);
+                dirname_inplace(macos_dir);
+
+                char real_path[PATH_MAX];
+                join_path(real_path, sizeof(real_path), macos_dir, "TinManX1.real");
+
+                char datadir[PATH_MAX];
+                expand_default_datadir(datadir, sizeof(datadir));
+                mkdir_p(datadir);
+
+                setenv("ORCASLICER_CODEX_DATADIR", datadir, 0);
+                if (!getenv("ORCASLICER_CODEX_BAMBU_PLUGIN_POLICY")) {{
+                    putenv((char *)BAMBU_POLICY_ENV);
+                }}
+                unsetenv("PYTHONHOME");
+                unsetenv("PYTHONPATH");
+
+                char preflight[PATH_MAX];
+                join_path(preflight, sizeof(preflight), datadir, "tools/orca_codex_launch_preflight.py");
+                if (access(preflight, X_OK) == 0) {{
+                    char summary[PATH_MAX], out[PATH_MAX], err[PATH_MAX];
+                    join_path(summary, sizeof(summary), datadir, "_orcaslicer_codex_launch_preflight_last.json");
+                    join_path(out, sizeof(out), datadir, "_orcaslicer_codex_launch_preflight_last.out");
+                    join_path(err, sizeof(err), datadir, "_orcaslicer_codex_launch_preflight_last.err");
+                    char *preflight_argv[] = {{"/usr/bin/python3", preflight, "--app-support", datadir, "--summary", summary, NULL}};
+                    run_python_helper(preflight, preflight_argv, out, err);
+                }}
+
+                if (!getenv("TINMANX1_SKIP_BAMBU_LAN_REPAIR")) {{
+                    char helper[PATH_MAX], out[PATH_MAX], err[PATH_MAX];
+                    join_path(helper, sizeof(helper), macos_dir, "../Resources/orcaslicer_codex/tools/repair_bambu_lan_bindings.py");
+                    join_path(out, sizeof(out), datadir, "_tinmanx1_bambu_lan_repair_last.out");
+                    join_path(err, sizeof(err), datadir, "_tinmanx1_bambu_lan_repair_last.err");
+                    char *repair_argv[] = {{"/usr/bin/python3", helper, "--datadir", datadir, NULL}};
+                    (void)BAMBU_REPAIR_MARKER;
+                    run_python_helper(helper, repair_argv, out, err);
+                }}
+
+                int extra = 2;
+                char **real_argv = calloc((size_t)argc + (size_t)extra + 1, sizeof(char *));
+                if (!real_argv) return 125;
+                real_argv[0] = real_path;
+                real_argv[1] = "--datadir";
+                real_argv[2] = datadir;
+                for (int i = 1; i < argc; ++i) {{
+                    real_argv[i + extra] = argv[i];
+                }}
+                real_argv[argc + extra] = NULL;
+
+                execv(real_path, real_argv);
+                perror("execv TinManX1.real");
+                return 127;
+            }}
+            """
+        ).strip()
+        + "\n"
+    )
+
+    cmd = [clang, "-Os", "-mmacosx-version-min=10.13"]
+    archs = executable_archs(real)
+    for arch in archs:
+        cmd.extend(["-arch", arch])
+    cmd.extend([str(source), "-o", str(launcher)])
+    run(cmd)
+    source.unlink()
+    launcher.chmod(launcher.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+
 def write_launcher(app: Path, app_support: Path, *, portable_launcher: bool = False) -> None:
     macos_dir = app / "Contents" / "MacOS"
     launcher = macos_dir / TARGET_EXECUTABLE_NAME
@@ -173,81 +378,12 @@ def write_launcher(app: Path, app_support: Path, *, portable_launcher: bool = Fa
     source_executable.rename(real)
 
     default_datadir = (
-        "${HOME}/Library/Application Support/OrcaSlicer-Codex"
+        "~/Library/Application Support/OrcaSlicer-Codex"
         if portable_launcher
         else str(app_support)
     )
 
-    script = f"""#!/bin/sh
-DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-DATADIR="${{ORCASLICER_CODEX_DATADIR:-{default_datadir}}}"
-PREFLIGHT="$DATADIR/tools/orca_codex_launch_preflight.py"
-REPAIR_HELPER="$DIR/../Resources/orcaslicer_codex/tools/repair_bambu_lan_bindings.py"
-PYTHON_BIN="${{ORCASLICER_CODEX_PYTHON:-/usr/bin/python3}}"
-LIVE_GUARD_SECONDS="${{ORCASLICER_CODEX_LIVE_GUARD_SECONDS:-300}}"
-LIVE_GUARD_TICK_SECONDS="${{ORCASLICER_CODEX_LIVE_GUARD_TICK_SECONDS:-5}}"
-: "${{ORCASLICER_CODEX_BAMBU_PLUGIN_POLICY:=allow}}"
-export ORCASLICER_CODEX_BAMBU_PLUGIN_POLICY
-
-# CAD tools such as Autodesk Fusion can leave Python runtime variables in the
-# launch environment. TinManX1 helper planners must use a clean interpreter.
-unset PYTHONHOME
-unset PYTHONPATH
-
-run_preflight() {{
-  PYTHONHOME= PYTHONPATH= "$PYTHON_BIN" "$PREFLIGHT" "$@"
-}}
-
-if [ -x "$PREFLIGHT" ]; then
-  mkdir -p "$DATADIR" 2>/dev/null || true
-  run_preflight \\
-    --app-support "$DATADIR" \\
-    --summary "$DATADIR/_orcaslicer_codex_launch_preflight_last.json" \\
-    > "$DATADIR/_orcaslicer_codex_launch_preflight_last.out" \\
-    2> "$DATADIR/_orcaslicer_codex_launch_preflight_last.err" || true
-fi
-
-if [ -z "$TINMANX1_SKIP_BAMBU_LAN_REPAIR" ] && [ -f "$REPAIR_HELPER" ]; then
-  mkdir -p "$DATADIR" 2>/dev/null || true
-  PYTHONHOME= PYTHONPATH= /usr/bin/python3 "$REPAIR_HELPER" --datadir "$DATADIR" \\
-    > "$DATADIR/_tinmanx1_bambu_lan_repair_last.out" \\
-    2> "$DATADIR/_tinmanx1_bambu_lan_repair_last.err" || true
-fi
-
-ORCA_STARTED_EPOCH="$(date +%s)"
-"$DIR/{TARGET_EXECUTABLE_NAME}.real" --datadir "$DATADIR" "$@" &
-ORCA_PID=$!
-LAST_GUARD_EPOCH="$ORCA_STARTED_EPOCH"
-
-while kill -0 "$ORCA_PID" 2>/dev/null; do
-  sleep "$LIVE_GUARD_TICK_SECONDS"
-  NOW_EPOCH="$(date +%s)"
-  if kill -0 "$ORCA_PID" 2>/dev/null && \\
-     [ -x "$PREFLIGHT" ] && \\
-     [ $((NOW_EPOCH - LAST_GUARD_EPOCH)) -ge "$LIVE_GUARD_SECONDS" ]; then
-    run_preflight \\
-      --app-support "$DATADIR" \\
-      --summary "$DATADIR/_orcaslicer_codex_launch_live_guard_last.json" \\
-      --skip-validator \\
-      > "$DATADIR/_orcaslicer_codex_launch_live_guard_last.out" \\
-      2> "$DATADIR/_orcaslicer_codex_launch_live_guard_last.err" || true
-    LAST_GUARD_EPOCH="$NOW_EPOCH"
-  fi
-done
-
-wait "$ORCA_PID"
-STATUS=$?
-if [ -x "$PREFLIGHT" ]; then
-  ORCASLICER_CODEX_SESSION_START_EPOCH="$ORCA_STARTED_EPOCH" run_preflight \\
-    --app-support "$DATADIR" \\
-    --summary "$DATADIR/_orcaslicer_codex_launch_postflight_last.json" \\
-    > "$DATADIR/_orcaslicer_codex_launch_postflight_last.out" \\
-    2> "$DATADIR/_orcaslicer_codex_launch_postflight_last.err" || true
-fi
-exit "$STATUS"
-"""
-    launcher.write_text(script)
-    launcher.chmod(launcher.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    write_native_launcher(launcher, real, default_datadir)
 
 
 def preserve_existing_identity_assets(existing_app: Path, staged_app: Path) -> None:
