@@ -9,14 +9,14 @@ Requires the Windows SDK (makeappx.exe) unless -StageOnly is used.
 #>
 param(
     [string]$InstallDir = "build/OrcaSlicer",
-    [string]$OutputPath = "build/OrcaSlicer_Windows_MSIX.msix",
+    [string]$OutputPath = "build/TinManX1_Windows_MSIX.msix",
     [ValidateSet("x64", "arm64")]
     [string]$Architecture = "x64",
     [string]$StagingDir = "",
     [switch]$StageOnly,
-    [string]$IdentityName = "OrcaSlicer.OrcaSlicer",
+    [string]$IdentityName = "TinManX1.TinManX1",
     [string]$Publisher = "CN=38F7EA55-C73B-4072-B3B2-C8E0EA15BB82",
-    [string]$PublisherDisplayName = "OrcaSlicer"
+    [string]$PublisherDisplayName = "TinManX1"
 )
 $ErrorActionPreference = 'Stop'
 
@@ -43,8 +43,8 @@ if ($msixVersionOverride) {
 }
 Write-Output "MSIX version: $msixVersion"
 
-if (-not (Test-Path (Join-Path $InstallDir 'orca-slicer.exe'))) {
-    throw "orca-slicer.exe not found in '$InstallDir' - build the install tree first"
+if (-not (Test-Path (Join-Path $InstallDir 'TinManX1.exe'))) {
+    throw "TinManX1.exe not found in '$InstallDir' - build the install tree first"
 }
 
 if ([string]::IsNullOrEmpty($StagingDir)) {

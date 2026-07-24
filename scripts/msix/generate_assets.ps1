@@ -1,22 +1,18 @@
-# Generates the MSIX package logo assets from the master vector logo
-# (resources\images\OrcaSlicer_gradient_circle.svg). Each PNG is rendered from
-# the SVG at its exact target size (true per-size vector rasterization, not
-# downscaled from one bitmap), preserving alpha transparency in the corners
-# outside the circle (the manifest uses BackgroundColor="transparent").
+# Generates the MSIX package logo assets from the TinManX1 master bitmap
+# (resources\images\TinManX1_1024.png). Each PNG is rendered at its exact target
+# size and preserves alpha transparency in the corners.
 #
 # Run once locally on Windows (re-run only if the logo changes), then commit
 # the PNGs in assets/. CI never runs this script.
 #
-# Prerequisite: Python 3 with the resvg-py package (pip install resvg-py).
-# It bundles the resvg SVG renderer, needed because the master SVG uses
-# gradients with alpha-fade stops that System.Drawing cannot rasterize.
+# Prerequisite: Python 3 with Pillow (pip install pillow).
 param(
     [string]$Python = 'python'
 )
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-$source   = Join-Path $repoRoot 'resources\images\OrcaSlicer_gradient_circle.svg'
+$source   = Join-Path $repoRoot 'resources\images\TinManX1_1024.png'
 $outDir   = Join-Path $PSScriptRoot 'assets'
 New-Item -ItemType Directory -Force $outDir | Out-Null
 
@@ -31,24 +27,25 @@ $py = @'
 import sys
 from pathlib import Path
 
-import resvg_py
+from PIL import Image
 
-svg, out_dir = sys.argv[1], Path(sys.argv[2])
+source, out_dir = Path(sys.argv[1]), Path(sys.argv[2])
+image = Image.open(source).convert('RGBA')
 for spec in sys.argv[3:]:
     name, px = spec.rsplit('=', 1)
     px = int(px)
-    data = resvg_py.svg_to_bytes(svg_path=svg, width=px, height=px)
-    (out_dir / name).write_bytes(bytes(data))
+    resized = image.resize((px, px), Image.Resampling.LANCZOS)
+    resized.save(out_dir / name)
     print(f'Wrote {name} ({px}x{px})')
 '@
 
-$renderScript = Join-Path $env:TEMP 'orca_msix_render.py'
+$renderScript = Join-Path $env:TEMP 'tinmanx1_msix_render.py'
 Set-Content -Path $renderScript -Value $py -Encoding utf8
 try {
     $specs = foreach ($name in $sizes.Keys) { "$name=$($sizes[$name])" }
     & $Python $renderScript $source $outDir @specs
     if ($LASTEXITCODE -ne 0) {
-        throw 'resvg render failed. Is resvg-py installed? (pip install resvg-py)'
+        throw 'MSIX asset render failed. Is Pillow installed? (pip install pillow)'
     }
 }
 finally {
