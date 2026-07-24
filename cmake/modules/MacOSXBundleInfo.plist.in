@@ -10,6 +10,8 @@
 	<string>${MACOSX_BUNDLE_INFO_STRING}</string>
 	<key>CFBundleIconFile</key>
 	<string>${MACOSX_BUNDLE_ICON_FILE}</string>
+	<key>CFBundleDisplayName</key>
+	<string>${MACOSX_BUNDLE_BUNDLE_NAME}</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.tinmanfp.TinManX1</string>
 	<key>CFBundleInfoDictionaryVersion</key>

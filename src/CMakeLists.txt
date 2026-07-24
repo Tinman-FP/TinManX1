@@ -123,6 +123,11 @@ if (WIN32)
 else ()
     add_executable(OrcaSlicer OrcaSlicer.cpp OrcaSlicer.hpp)
 endif ()
+if (APPLE AND CMAKE_MACOSX_BUNDLE)
+    set_target_properties(OrcaSlicer PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/Info.plist"
+    )
+endif ()
 
 if (MINGW)
     target_link_options(OrcaSlicer PUBLIC "-Wl,-allow-multiple-definition")
