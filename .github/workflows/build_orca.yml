@@ -203,7 +203,6 @@ jobs:
           security import $CERTIFICATE_PATH -P $P12_PASSWORD -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $P12_PASSWORD $KEYCHAIN_PATH
-          codesign --deep --force --verbose --options runtime --timestamp --entitlements ${{ github.workspace }}/scripts/disable_validation.entitlements --sign "$CERTIFICATE_ID" ${{ github.workspace }}/build/universal/OrcaSlicer/OrcaSlicer.app
           # Sign OrcaSlicer_profile_validator.app if it exists
           if [ -f "${{ github.workspace }}/build/universal/OrcaSlicer/OrcaSlicer_profile_validator.app/Contents/MacOS/OrcaSlicer_profile_validator" ]; then
             codesign --deep --force --verbose --options runtime --timestamp --entitlements ${{ github.workspace }}/scripts/disable_validation.entitlements --sign "$CERTIFICATE_ID" ${{ github.workspace }}/build/universal/OrcaSlicer/OrcaSlicer_profile_validator.app
@@ -215,7 +214,15 @@ jobs:
           # expose the TinManX1 application name.
           mkdir -p ${{ github.workspace }}/build/universal/OrcaSlicer_dmg
           rm -rf ${{ github.workspace }}/build/universal/OrcaSlicer_dmg/*
-          cp -R ${{ github.workspace }}/build/universal/OrcaSlicer/OrcaSlicer.app ${{ github.workspace }}/build/universal/OrcaSlicer_dmg/TinManX1.app
+          python3 ${{ github.workspace }}/scripts/install_orcaslicer_codex_app.py \
+            --source-root ${{ github.workspace }} \
+            --source-app ${{ github.workspace }}/build/universal/OrcaSlicer/OrcaSlicer.app \
+            --target-app ${{ github.workspace }}/build/universal/OrcaSlicer_dmg/TinManX1.app \
+            --stage-dir ${{ runner.temp }}/tinmanx1-dmg-stage \
+            --portable-launcher \
+            --skip-auto-pa-profile-hook \
+            --skip-codesign
+          codesign --deep --force --verbose --options runtime --timestamp --entitlements ${{ github.workspace }}/scripts/disable_validation.entitlements --sign "$CERTIFICATE_ID" ${{ github.workspace }}/build/universal/OrcaSlicer_dmg/TinManX1.app
           ln -sfn /Applications ${{ github.workspace }}/build/universal/OrcaSlicer_dmg/Applications
           retry hdiutil create -volname "TinManX1" -srcfolder ${{ github.workspace }}/build/universal/OrcaSlicer_dmg -ov -format UDZO TinManX1_Mac_universal_${{ env.ver }}.dmg
           codesign --deep --force --verbose --options runtime --timestamp --entitlements ${{ github.workspace }}/scripts/disable_validation.entitlements --sign "$CERTIFICATE_ID" TinManX1_Mac_universal_${{ env.ver }}.dmg
@@ -248,7 +255,14 @@ jobs:
           source ${{ github.workspace }}/scripts/retry.sh
           mkdir -p ${{ github.workspace }}/build/universal/OrcaSlicer_dmg
           rm -rf ${{ github.workspace }}/build/universal/OrcaSlicer_dmg/*
-          cp -R ${{ github.workspace }}/build/universal/OrcaSlicer/OrcaSlicer.app ${{ github.workspace }}/build/universal/OrcaSlicer_dmg/TinManX1.app
+          python3 ${{ github.workspace }}/scripts/install_orcaslicer_codex_app.py \
+            --source-root ${{ github.workspace }} \
+            --source-app ${{ github.workspace }}/build/universal/OrcaSlicer/OrcaSlicer.app \
+            --target-app ${{ github.workspace }}/build/universal/OrcaSlicer_dmg/TinManX1.app \
+            --stage-dir ${{ runner.temp }}/tinmanx1-dmg-stage \
+            --portable-launcher \
+            --skip-auto-pa-profile-hook \
+            --skip-codesign
           ln -sfn /Applications ${{ github.workspace }}/build/universal/OrcaSlicer_dmg/Applications
           retry hdiutil create -volname "TinManX1" -srcfolder ${{ github.workspace }}/build/universal/OrcaSlicer_dmg -ov -format UDZO TinManX1_Mac_universal_${{ env.ver }}.dmg
           
