@@ -5,9 +5,11 @@
   <key>CFBundleExecutable</key>
   <string>TinManX1</string>
   <key>CFBundleGetInfoString</key>
-  <string>@SLIC3R_APP_NAME@ Copyright(C) 2026 OrcaSlicer Pte Ltd All Rights Reserved</string>
+  <string>@SLIC3R_APP_NAME@ based on Orca Slicer</string>
   <key>CFBundleIconFile</key>
   <string>images/TinManX1.icns</string>
+  <key>CFBundleDisplayName</key>
+  <string>TinManX1</string>
   <key>CFBundleName</key>
   <string>TinManX1</string>
   <key>CFBundleShortVersionString</key>
