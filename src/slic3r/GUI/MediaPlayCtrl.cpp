@@ -39,6 +39,39 @@ static std::map<int, std::string> error_messages = {
 namespace Slic3r {
 namespace GUI {
 
+namespace {
+
+std::string append_default_port_if_missing(const std::string& host, const std::string& port)
+{
+    if (host.empty() || port.empty())
+        return host;
+    if (host.front() == '[' || host.find(':') != std::string::npos)
+        return host;
+    return host + ":" + port;
+}
+
+std::string build_bambu_local_liveview_url(
+    int proto,
+    const std::string& user,
+    const std::string& passwd,
+    const std::string& ip)
+{
+    if (proto == MachineObject::LVL_Local)
+        return "bambu:///local/" + ip + ".?port=6000&user=" + user + "&passwd=" + passwd;
+
+    if (proto == MachineObject::LVL_Rtsps) {
+        const std::string host = append_default_port_if_missing(ip, "322");
+        return "bambu:///rtsps___" + user + ":" + passwd + "@" + host + "/streaming/live/1?proto=rtsps";
+    }
+
+    if (proto == MachineObject::LVL_Rtsp)
+        return "bambu:///rtsp___" + user + ":" + passwd + "@" + ip + "/streaming/live/1?proto=rtsp";
+
+    return {};
+}
+
+} // namespace
+
 MediaPlayCtrl::MediaPlayCtrl(wxWindow *parent, wxMediaCtrl2 *media_ctrl, const wxPoint &pos, const wxSize &size)
     : wxPanel(parent, wxID_ANY, pos, size)
     , m_media_ctrl(media_ctrl)
@@ -288,13 +321,7 @@ void MediaPlayCtrl::Play()
     std::string  agent_version = agent ? agent->get_version() : "";
     if (m_lan_proto > MachineObject::LVL_Disable && (m_lan_mode || !m_remote_proto) && !m_disable_lan && !m_lan_ip.empty()) {
         m_disable_lan = m_remote_proto && !m_lan_mode; // try remote next time
-        std::string url;
-        if (m_lan_proto == MachineObject::LVL_Local)
-            url = "bambu:///local/" + m_lan_ip + ".?port=6000&user=" + m_lan_user + "&passwd=" + m_lan_passwd;
-        else if (m_lan_proto == MachineObject::LVL_Rtsps)
-            url = "bambu:///rtsps___" + m_lan_user + ":" + m_lan_passwd + "@" + m_lan_ip + "/streaming/live/1?proto=rtsps";
-        else if (m_lan_proto == MachineObject::LVL_Rtsp)
-            url = "bambu:///rtsp___" + m_lan_user + ":" + m_lan_passwd + "@" + m_lan_ip + "/streaming/live/1?proto=rtsp";
+        std::string url = build_bambu_local_liveview_url(m_lan_proto, m_lan_user, m_lan_passwd, m_lan_ip);
         url += "&device=" + m_machine;
         url += "&net_ver=" + agent_version;
         url += "&dev_ver=" + m_dev_ver;
@@ -532,13 +559,7 @@ void MediaPlayCtrl::ToggleStream()
         if (res == wxID_CANCEL) return;
     }
     if (m_lan_proto > MachineObject::LVL_Disable && (m_lan_mode || !m_remote_proto) && !m_disable_lan && !m_lan_ip.empty()) {
-        std::string url;
-        if (m_lan_proto == MachineObject::LVL_Local)
-            url = "bambu:///local/" + m_lan_ip + ".?port=6000&user=" + m_lan_user + "&passwd=" + m_lan_passwd;
-        else if (m_lan_proto == MachineObject::LVL_Rtsps)
-            url = "bambu:///rtsps___" + m_lan_user + ":" + m_lan_passwd + "@" + m_lan_ip + "/streaming/live/1?proto=rtsps";
-        else if (m_lan_proto == MachineObject::LVL_Rtsp)
-            url = "bambu:///rtsp___" + m_lan_user + ":" + m_lan_passwd + "@" + m_lan_ip + "/streaming/live/1?proto=rtsp";
+        std::string url = build_bambu_local_liveview_url(m_lan_proto, m_lan_user, m_lan_passwd, m_lan_ip);
         url += "&device=" + into_u8(m_machine);
         url += "&dev_ver=" + m_dev_ver;
         BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl::ToggleStream: " << hide_passwd(hide_id_middle_string(url, url.find(m_lan_ip), m_lan_ip.length()), {m_lan_passwd});
