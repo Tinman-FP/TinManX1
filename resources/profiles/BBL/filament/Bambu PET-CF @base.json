@@ -6,6 +6,9 @@
     "filament_id": "GFT01",
     "instantiation": "false",
     "description": "When printing this filament, there's a risk of nozzle clogging, oozing, warping and low layer adhesion strength. To get better results, please refer to this wiki: Printing Tips for High Temp / Engineering materials.",
+    "chamber_temperatures": [
+        "50"
+    ],
     "cool_plate_temp": [
         "0"
     ],
@@ -19,10 +22,10 @@
         "80"
     ],
     "fan_cooling_layer_time": [
-        "5"
+        "20"
     ],
     "fan_max_speed": [
-        "0"
+        "20"
     ],
     "fan_min_speed": [
         "0"
@@ -34,7 +37,7 @@
         "1.29"
     ],
     "filament_max_volumetric_speed": [
-        "4"
+        "3.2"
     ],
     "filament_type": [
         "PET-CF"
@@ -55,22 +58,22 @@
         "4.5"
     ],
     "nozzle_temperature_range_low": [
-        "270"
+        "260"
     ],
     "nozzle_temperature_range_high": [
         "300"
     ],
     "nozzle_temperature": [
-        "300"
+        "280"
     ],
     "nozzle_temperature_initial_layer": [
-        "300"
+        "285"
     ],
     "overhang_fan_speed": [
-        "0"
+        "35"
     ],
     "overhang_fan_threshold": [
-        "0%"
+        "25%"
     ],
     "required_nozzle_HRC": [
         "40"
@@ -82,7 +85,7 @@
         "80"
     ],
     "slow_down_layer_time": [
-        "20"
+        "25"
     ],
     "temperature_vitrification": [
         "185"
@@ -97,10 +100,10 @@
         "; filament start gcode\n{if (bed_temperature[current_extruder] >80)||(bed_temperature_initial_layer[current_extruder] >80)}M106 P3 S255\n{elsif (bed_temperature[current_extruder] >60)||(bed_temperature_initial_layer[current_extruder] >60)}M106 P3 S180\n{endif}\n\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}"
     ],
     "filament_flow_ratio": [
-        "1.08"
+        "1.00"
     ],
     "slow_down_min_speed": [
-        "8"
+        "6"
     ],
     "filament_retraction_length": [
         "0.8"
@@ -109,12 +112,12 @@
         "1"
     ],
     "pressure_advance": [
-        "0.026"
+        "0.022"
     ],
     "filament_notes": [
-        "TinManX1 PET-CF rescue tune 2026-07-11: after repeated porous PET-CF test prints, use 300C nozzle, 80C bed, fan off, max volumetric 4 mm3/s, flow 1.08, slowdown enabled, and pressure advance enabled. Dry filament and inspect hardened nozzle if voids persist."
+        "TinManX1 PET-CF surface tune 2026-07-27: adjusted after rough Bambu PET-CF H2D print. Use 285C first layer / 280C print, 80C bed, 50C chamber where supported, flow 1.00, max volumetric 3.2 mm3/s, limited overhang cooling, and pressure advance 0.022. Dry Bambu PET-CF at 80C for 8-12h before printing; if the surface still has popping or pitting, dry longer before changing flow."
     ],
     "tinmanx_petcf_rescue_tune": [
-        "2026-07-11 all PET-CF rescue tune with pressure advance"
+        "2026-07-27 shared Bambu PET-CF surface tune from PET-CF_Print.jpeg"
     ]
 }
