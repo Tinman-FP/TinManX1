@@ -118,6 +118,7 @@
 #include "ConfigWizard.hpp"
 #include "SyncAmsInfoDialog.hpp"
 #include "../Utils/ASCIIFolding.hpp"
+#include "../Utils/NetworkAgentFactory.hpp"
 #include "../Utils/UndoRedo.hpp"
 #include "../Utils/PresetUpdater.hpp"
 #include "../Utils/Process.hpp"
@@ -408,6 +409,165 @@ wxString sanitize_window_layout_for_wayland(const wxString& layout, bool* remove
     return modified ? wxString::FromUTF8(output) : layout;
 }
 #endif
+
+std::string sidebar_host_authority(std::string url)
+{
+    boost::algorithm::trim(url);
+    if (url.empty())
+        return {};
+
+    const auto scheme = url.find("://");
+    if (scheme != std::string::npos)
+        url = url.substr(scheme + 3);
+
+    if (const auto at = url.rfind('@'); at != std::string::npos)
+        url = url.substr(at + 1);
+
+    if (const auto slash = url.find('/'); slash != std::string::npos)
+        url = url.substr(0, slash);
+
+    while (!url.empty() && url.back() == '/')
+        url.pop_back();
+
+    return url;
+}
+
+std::string sidebar_host_name(std::string url)
+{
+    url = sidebar_host_authority(std::move(url));
+    if (url.empty())
+        return {};
+
+    if (url.front() == '[') {
+        const auto close = url.find(']');
+        return close == std::string::npos ? url : url.substr(0, close + 1);
+    }
+
+    const auto colon = url.find(':');
+    return colon == std::string::npos ? url : url.substr(0, colon);
+}
+
+bool sidebar_address_matches_machine(const std::string& address, const MachineObject* obj)
+{
+    if (address.empty() || obj == nullptr)
+        return false;
+
+    const std::string dev_ip = obj->get_dev_ip();
+    const std::string dev_id = obj->get_dev_id();
+    if (address == dev_ip || address == dev_id)
+        return true;
+
+    const std::string address_authority = sidebar_host_authority(address);
+    const std::string address_host      = sidebar_host_name(address);
+    const std::string dev_ip_authority  = sidebar_host_authority(dev_ip);
+    const std::string dev_id_authority  = sidebar_host_authority(dev_id);
+
+    return (!dev_ip.empty() && (address_authority == dev_ip_authority || address_host == sidebar_host_name(dev_ip))) ||
+           (!dev_id.empty() && (address_authority == dev_id_authority || address_host == sidebar_host_name(dev_id)));
+}
+
+bool sidebar_config_matches_machine(const DynamicPrintConfig& cfg, const MachineObject* obj)
+{
+    const std::string print_host       = cfg.has("print_host") ? cfg.opt_string("print_host") : std::string();
+    const std::string print_host_webui = cfg.has("print_host_webui") ? cfg.opt_string("print_host_webui") : std::string();
+    return sidebar_address_matches_machine(print_host, obj) || sidebar_address_matches_machine(print_host_webui, obj);
+}
+
+std::string sidebar_configured_agent_for_machine(MachineObject* obj)
+{
+    if (obj == nullptr)
+        return {};
+
+    if (PresetBundle* preset_bundle = wxGetApp().preset_bundle) {
+        for (const PhysicalPrinter& printer : preset_bundle->physical_printers) {
+            if (sidebar_config_matches_machine(printer.config, obj) && printer.config.has("printer_agent")) {
+                const std::string agent_id = printer.config.opt_string("printer_agent");
+                if (!agent_id.empty())
+                    return agent_id;
+            }
+        }
+
+        for (const Preset& printer : preset_bundle->printers) {
+            if (sidebar_config_matches_machine(printer.config, obj) && printer.config.has("printer_agent")) {
+                const std::string agent_id = printer.config.opt_string("printer_agent");
+                if (!agent_id.empty())
+                    return agent_id;
+            }
+        }
+    }
+
+    return {};
+}
+
+bool sidebar_is_bambu_monitor_device(const MachineObject* obj)
+{
+    if (obj == nullptr)
+        return false;
+
+    return obj->is_series_x() || obj->is_series_p() || obj->is_series_n() || obj->is_series_o() ||
+           obj->printer_type == "O1D" || boost::algorithm::istarts_with(obj->printer_type, "BL-");
+}
+
+std::string sidebar_agent_id_for_machine(MachineObject* obj)
+{
+    if (sidebar_is_bambu_monitor_device(obj))
+        return BBL_PRINTER_AGENT_ID;
+
+    if (std::string agent_id = sidebar_configured_agent_for_machine(obj); !agent_id.empty())
+        return agent_id;
+
+    const std::string type = obj ? obj->printer_type : std::string();
+    const std::string name = obj ? obj->get_dev_name() : std::string();
+    const std::string id   = obj ? obj->get_dev_id() : std::string();
+    const std::string ip   = obj ? obj->get_dev_ip() : std::string();
+    const std::string key  = type + " " + name + " " + id + " " + ip;
+
+    if (boost::algorithm::icontains(key, "qidi"))
+        return "qidi";
+    if (boost::algorithm::icontains(key, "snapmaker"))
+        return "snapmaker";
+    if (boost::algorithm::icontains(key, "creality") || boost::algorithm::icontains(key, "k2"))
+        return "crealityprint";
+    if (boost::algorithm::icontains(key, "v-core") || boost::algorithm::icontains(key, "ratrig") ||
+        boost::algorithm::icontains(key, "prusa") || boost::algorithm::icontains(key, "sovol"))
+        return "moonraker";
+
+    return {};
+}
+
+bool sidebar_ensure_printer_agent_for_machine(MachineObject* obj)
+{
+    const std::string agent_id = sidebar_agent_id_for_machine(obj);
+    if (agent_id.empty())
+        return false;
+
+    NetworkAgent* agent = wxGetApp().getAgent();
+    if (agent == nullptr)
+        return false;
+
+    if (auto current_agent = agent->get_printer_agent()) {
+        if (current_agent->get_agent_info().id == agent_id)
+            return true;
+    }
+
+    if (!NetworkAgentFactory::is_printer_agent_registered(agent_id)) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": unregistered agent ID '" << agent_id << "'";
+        return false;
+    }
+
+    const std::string cloud_agent_id = agent_id == BBL_PRINTER_AGENT_ID ? BBL_CLOUD_PROVIDER : ORCA_CLOUD_PROVIDER;
+    auto              cloud_agent    = agent->get_cloud_agent(cloud_agent_id);
+    auto              printer_agent  = NetworkAgentFactory::create_printer_agent_by_id(agent_id, cloud_agent, data_dir());
+    if (!printer_agent) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": failed to create agent '" << agent_id << "'";
+        return false;
+    }
+
+    agent->set_printer_agent(printer_agent);
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": switched printer agent to " << agent_id
+                            << " for " << (obj ? obj->get_dev_id() : std::string());
+    return true;
+}
 
 } // namespace
 
@@ -3921,10 +4081,18 @@ std::map<int, DynamicPrintConfig> Sidebar::build_filament_ams_list(MachineObject
     std::map<int, DynamicPrintConfig> filament_ams_list;
     if (!obj) return filament_ams_list;
 
-    // For pull-mode agents (e.g., HTTP REST API), refresh DevFilaSystem first
+    // For pull-mode agents (e.g., HTTP REST API), refresh DevFilaSystem first.
+    // The Device tab can view a different printer than the edited preset, so
+    // make the active agent match the selected machine before pulling slots.
+    sidebar_ensure_printer_agent_for_machine(obj);
     auto* agent = wxGetApp().getDeviceManager()->get_agent();
     if (agent && agent->get_filament_sync_mode() == FilamentSyncMode::pull) {
-        if (!agent->fetch_filament_info(obj->get_dev_id())) {
+        const std::string dev_id = obj->get_dev_id().empty() ? obj->get_dev_ip() : obj->get_dev_id();
+        const std::string dev_ip = obj->get_dev_ip().empty() ? obj->get_dev_id() : obj->get_dev_ip();
+        if (!dev_id.empty() && !dev_ip.empty()) {
+            agent->connect_printer(dev_id, dev_ip, "bblp", obj->get_access_code(), false);
+        }
+        if (!agent->fetch_filament_info(dev_id)) {
             return filament_ams_list;
         }
     }
@@ -18128,7 +18296,9 @@ void Plater::pop_warning_and_go_to_device_page(wxString printer_name, PrinterWar
 {
     printer_name.Replace("Bambu Lab", "", false);
     wxString content;
-    bool device_page = (wxGetApp().mainframe == nullptr) && (wxGetApp().mainframe->m_monitor->IsShown());
+    bool device_page = wxGetApp().mainframe != nullptr &&
+                       wxGetApp().mainframe->m_monitor != nullptr &&
+                       wxGetApp().mainframe->m_monitor->IsShown();
     if (type == PrinterWarningType::NOT_CONNECTED) {
         if (device_page) {
             content = wxString::Format(_L("Printer not connected. Please go to the device page to connect %s before syncing."),
@@ -18160,7 +18330,9 @@ bool Plater::is_same_printer_for_connected_and_selected(bool popup_warning)
     if (obj == nullptr) {
         return false;
     }
-    if (!check_printer_initialized(obj, true, popup_warning))
+    auto* agent = wxGetApp().getDeviceManager()->get_agent();
+    const bool pull_mode_sync = agent && agent->get_filament_sync_mode() == FilamentSyncMode::pull;
+    if (!pull_mode_sync && !check_printer_initialized(obj, true, popup_warning))
         return false;
     Preset *      machine_preset     = get_printer_preset(obj);
     if (!machine_preset)

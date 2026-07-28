@@ -112,6 +112,67 @@ bool moonraker_filename_matches(const std::string& status_filename, const std::s
            (status_filename == metadata_filename || moonraker_file_basename(status_filename) == moonraker_file_basename(metadata_filename));
 }
 
+std::string moonraker_host_authority(std::string url)
+{
+    boost::algorithm::trim(url);
+    if (url.empty())
+        return {};
+
+    const auto scheme = url.find("://");
+    if (scheme != std::string::npos)
+        url = url.substr(scheme + 3);
+
+    if (const auto at = url.rfind('@'); at != std::string::npos)
+        url = url.substr(at + 1);
+
+    if (const auto slash = url.find('/'); slash != std::string::npos)
+        url = url.substr(0, slash);
+
+    while (!url.empty() && url.back() == '/')
+        url.pop_back();
+
+    return url;
+}
+
+std::string moonraker_host_name(std::string url)
+{
+    url = moonraker_host_authority(std::move(url));
+    if (url.empty())
+        return {};
+
+    if (url.front() == '[') {
+        const auto close = url.find(']');
+        return close == std::string::npos ? url : url.substr(0, close + 1);
+    }
+
+    const auto colon = url.find(':');
+    return colon == std::string::npos ? url : url.substr(0, colon);
+}
+
+bool moonraker_address_matches(const std::string& address, const std::string& dev_id, const std::string& dev_ip)
+{
+    if (address.empty())
+        return false;
+
+    if (address == dev_ip || address == dev_id)
+        return true;
+
+    const std::string address_authority = moonraker_host_authority(address);
+    const std::string address_host      = moonraker_host_name(address);
+    const std::string dev_ip_authority  = moonraker_host_authority(dev_ip);
+    const std::string dev_id_authority  = moonraker_host_authority(dev_id);
+
+    return (!dev_ip.empty() && (address_authority == dev_ip_authority || address_host == moonraker_host_name(dev_ip))) ||
+           (!dev_id.empty() && (address_authority == dev_id_authority || address_host == moonraker_host_name(dev_id)));
+}
+
+bool moonraker_config_matches_connection(const Slic3r::DynamicPrintConfig& cfg, const std::string& dev_id, const std::string& dev_ip)
+{
+    const std::string print_host       = cfg.has("print_host") ? cfg.opt_string("print_host") : std::string();
+    const std::string print_host_webui = cfg.has("print_host_webui") ? cfg.opt_string("print_host_webui") : std::string();
+    return moonraker_address_matches(print_host, dev_id, dev_ip) || moonraker_address_matches(print_host_webui, dev_id, dev_ip);
+}
+
 double json_number_or(const nlohmann::json& obj, const char* key, double fallback = 0.0)
 {
     auto it = obj.find(key);
@@ -1031,6 +1092,42 @@ bool MoonrakerPrinterAgent::fetch_snapmaker_print_task_config(std::vector<AmsTra
         return base;
     };
 
+    auto material_type_from_label = [](const std::string& label) {
+        const std::string value = canonical_filament_type(label);
+        if (value.empty())
+            return std::string();
+
+        const std::pair<const char*, const char*> specialty_types[] = {
+            {"HT-PLA-CF", "HT-PLA-CF"},
+            {"HT-PLA-GF", "HT-PLA-GF"},
+            {"PLA-CF",    "PLA-CF"},
+            {"PLA-GF",    "PLA-GF"},
+            {"PETG-CF",   "PETG-CF"},
+            {"PETG-GF",   "PETG-GF"},
+            {"PET-CF",    "PET-CF"},
+            {"PET-GF",    "PET-GF"},
+            {"PA-CF",     "PA-CF"},
+            {"PA-GF",     "PA-GF"},
+            {"ASA-CF",    "ASA-CF"},
+            {"ABS-CF",    "ABS-CF"},
+            {"PC-CF",     "PC-CF"},
+            {"PCTG",      "PCTG"},
+        };
+
+        for (const auto& [needle, material] : specialty_types) {
+            if (value.find(needle) != std::string::npos)
+                return std::string(material);
+        }
+
+        const std::string simple_types[] = {"PLA", "PETG", "PET", "ABS", "ASA", "PC", "PA", "TPU", "PVA", "HIPS"};
+        for (const std::string& material : simple_types) {
+            if (value == material)
+                return material;
+        }
+
+        return std::string();
+    };
+
     trays.clear();
     max_lane_index = -1;
 
@@ -1040,7 +1137,8 @@ bool MoonrakerPrinterAgent::fetch_snapmaker_print_task_config(std::vector<AmsTra
         const std::string saved_material = save_variables.value(saved_key, std::string());
         const std::string base_type      = safe_array_string(filament_type, i);
         const std::string sub_type       = safe_array_string(filament_sub_type, i);
-        const std::string material       = !saved_material.empty() ? trim_and_upper(saved_material) : combine_type(base_type, sub_type);
+        const std::string saved_type     = material_type_from_label(saved_material);
+        const std::string material       = !saved_type.empty() ? saved_type : combine_type(base_type, sub_type);
         const bool        exists         = array_bool(filament_exist, i, !material.empty());
 
         if (!exists || material.empty()) {
@@ -1416,13 +1514,30 @@ bool MoonrakerPrinterAgent::init_device_info(std::string dev_id, std::string dev
         return false;
     }
 
-    auto&       preset      = preset_bundle->printers.get_edited_preset();
-    const auto& printer_cfg = preset.config;
+    auto&                     edited_preset  = preset_bundle->printers.get_edited_preset();
+    const DynamicPrintConfig* printer_cfg    = &edited_preset.config;
+
+    for (const PhysicalPrinter& printer : preset_bundle->physical_printers) {
+        if (moonraker_config_matches_connection(printer.config, dev_id, dev_ip)) {
+            printer_cfg = &printer.config;
+            break;
+        }
+    }
+
+    for (const Preset& printer : preset_bundle->printers) {
+        if (moonraker_config_matches_connection(printer.config, dev_id, dev_ip)) {
+            printer_cfg = &printer.config;
+            break;
+        }
+    }
+
     device_info.dev_ip      = dev_ip;
 
     device_info.api_key    = password;
-    device_info.model_name = printer_cfg.opt_string("printer_model");
-    device_info.model_id   = preset.get_printer_type(preset_bundle);
+    device_info.model_name = printer_cfg->opt_string("printer_model");
+    device_info.model_id   = printer_cfg->opt_string("printer_model");
+    if (device_info.model_id.empty())
+        device_info.model_id = edited_preset.get_printer_type(preset_bundle);
     device_info.base_url   = use_ssl ? "https://" + dev_ip : "http://" + dev_ip;
     device_info.dev_id     = dev_id;
     device_info.version    = "";

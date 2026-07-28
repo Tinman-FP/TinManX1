@@ -13,17 +13,45 @@ namespace Slic3r {
 
 namespace {
 
-// Qidi's firmware reports stable per-series filament IDs such as QD_0_1_37.
-// The selected Codex preset may be a user/non-base preset, so keep this check
-// aligned with the AMS sync matcher instead of requiring visible system bases.
-bool has_usable_preset_id(const PresetCollection& filaments, const std::string& filament_id)
+std::string canonical_material_key(std::string value)
+{
+    boost::trim(value);
+    boost::algorithm::to_upper(value);
+    for (char& c : value) {
+        if (c == '_' || c == '/' || std::isspace(static_cast<unsigned char>(c)))
+            c = '-';
+    }
+    while (value.find("--") != std::string::npos)
+        boost::replace_all(value, "--", "-");
+    boost::trim_if(value, boost::is_any_of("-"));
+    return value;
+}
+
+// Qidi's firmware reports stable-looking per-series filament IDs such as
+// QD_0_1_37, but those raw numeric IDs may collide with preset-library IDs for
+// a different material. Trust the raw ID only when the preset material matches
+// the printer-reported slot material, then fall back to type/color matching.
+bool has_usable_preset_id_for_type(const PresetCollection& filaments,
+                                   const std::string& filament_id,
+                                   const std::string& tray_type)
 {
     if (filament_id.empty())
         return false;
 
+    const std::string expected_type = canonical_material_key(tray_type);
     for (const auto& p : filaments.get_presets()) {
-        if (!p.is_default && !p.is_external && p.filament_id == filament_id)
+        if (p.is_default || p.is_external || p.filament_id != filament_id)
+            continue;
+
+        const std::string preset_type = p.config.opt_string("filament_type", 0u);
+        if (expected_type.empty() || canonical_material_key(preset_type) == expected_type)
             return true;
+
+        BOOST_LOG_TRIVIAL(warning) << "QidiPrinterAgent::fetch_slot_info: ignoring raw filament id "
+                                   << filament_id
+                                   << " because printer reports type " << tray_type
+                                   << " but preset " << p.name << " is " << preset_type;
+        return false;
     }
     return false;
 }
@@ -203,7 +231,7 @@ bool QidiPrinterAgent::fetch_slot_info(const std::string&        base_url,
             auto* bundle = GUI::wxGetApp().preset_bundle;
             if (!bundle) {
                 tray.tray_info_idx = setting_id;
-            } else if (!setting_id.empty() && has_usable_preset_id(bundle->filaments, setting_id)) {
+            } else if (!setting_id.empty() && has_usable_preset_id_for_type(bundle->filaments, setting_id, tray.tray_type)) {
                 tray.tray_info_idx = setting_id;
             } else {
                 tray.tray_info_idx = resolve_filament_id_for_tray(bundle->filaments,

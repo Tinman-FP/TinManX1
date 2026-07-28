@@ -5,6 +5,9 @@
 
 #include "nlohmann/json.hpp"
 #include <boost/log/trivial.hpp>
+#include <algorithm>
+#include <cctype>
+#include <utility>
 
 namespace Slic3r {
 
@@ -17,6 +20,73 @@ template<typename T>
 T safe_at(const std::vector<T>& vec, int index, const T& fallback)
 {
     return (index >= 0 && index < static_cast<int>(vec.size())) ? vec[index] : fallback;
+}
+
+std::string canonical_material_label(std::string value)
+{
+    auto is_space = [](unsigned char c) { return std::isspace(c) != 0; };
+
+    value.erase(value.begin(), std::find_if(value.begin(), value.end(), [&](unsigned char c) { return !is_space(c); }));
+    value.erase(std::find_if(value.rbegin(), value.rend(), [&](unsigned char c) { return !is_space(c); }).base(), value.end());
+
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+        if (c == ' ' || c == '_' || c == '/')
+            return '-';
+        return static_cast<char>(std::toupper(c));
+    });
+
+    std::string normalized;
+    normalized.reserve(value.size());
+    bool previous_dash = false;
+    for (char c : value) {
+        if (c == '-') {
+            if (!previous_dash)
+                normalized.push_back(c);
+            previous_dash = true;
+        } else {
+            normalized.push_back(c);
+            previous_dash = false;
+        }
+    }
+
+    return normalized;
+}
+
+std::string material_type_from_label(const std::string& label)
+{
+    const std::string value = canonical_material_label(label);
+    if (value.empty())
+        return {};
+
+    const std::pair<const char*, const char*> specialty_types[] = {
+        {"HT-PLA-CF", "HT-PLA-CF"},
+        {"HT-PLA-GF", "HT-PLA-GF"},
+        {"PLA-CF",    "PLA-CF"},
+        {"PLA-GF",    "PLA-GF"},
+        {"PETG-CF",   "PETG-CF"},
+        {"PETG-GF",   "PETG-GF"},
+        {"PET-CF",    "PET-CF"},
+        {"PET-GF",    "PET-GF"},
+        {"PA-CF",     "PA-CF"},
+        {"PA-GF",     "PA-GF"},
+        {"ASA-CF",    "ASA-CF"},
+        {"ABS-CF",    "ABS-CF"},
+        {"PC-CF",     "PC-CF"},
+        {"PCTG",      "PCTG"},
+    };
+
+    for (const auto& [needle, material] : specialty_types) {
+        if (value.find(needle) != std::string::npos)
+            return material;
+    }
+
+    const std::string simple_types[] = {"PLA", "PETG", "PET", "ABS", "ASA", "PC", "PA", "TPU", "PVA", "HIPS"};
+    for (const std::string& material : simple_types) {
+        if (value == material)
+            return material;
+    }
+
+    return {};
 }
 
 } // anonymous namespace
@@ -67,7 +137,7 @@ std::string SnapmakerPrinterAgent::combine_filament_type(const std::string& type
 
 bool SnapmakerPrinterAgent::fetch_filament_info(std::string dev_id)
 {
-    std::string url = join_url(device_info.base_url, "/printer/objects/query?print_task_config&filament_detect");
+    std::string url = join_url(device_info.base_url, "/printer/objects/query?print_task_config&save_variables&filament_detect");
 
     std::string response_body;
     bool        success = false;
@@ -114,6 +184,11 @@ bool SnapmakerPrinterAgent::fetch_filament_info(std::string dev_id)
     }
 
     auto& ptc = json["result"]["status"]["print_task_config"];
+    const auto& status = json["result"]["status"];
+    const auto& save_variables = status.contains("save_variables") && status["save_variables"].contains("variables") &&
+                                 status["save_variables"]["variables"].is_object()
+                                     ? status["save_variables"]["variables"]
+                                     : nlohmann::json::object();
 
     // Read parallel arrays from print_task_config
     auto filament_exist    = ptc.value("filament_exist", std::vector<bool>{});
@@ -147,8 +222,12 @@ bool SnapmakerPrinterAgent::fetch_filament_info(std::string dev_id)
         tray.has_filament = filament_exist[i];
 
         if (tray.has_filament) {
-            tray.tray_type     = combine_filament_type(safe_at(filament_type, i, empty_str),
-                                                       safe_at(filament_sub_type, i, empty_str));
+            const std::string saved_key  = "u1_t" + std::to_string(i) + "_filament";
+            const std::string saved_type = material_type_from_label(save_variables.value(saved_key, std::string()));
+            tray.tray_type               = !saved_type.empty()
+                                               ? saved_type
+                                               : combine_filament_type(safe_at(filament_type, i, empty_str),
+                                                                       safe_at(filament_sub_type, i, empty_str));
             tray.tray_color    = safe_at(filament_color, i, default_color);
 
             auto* bundle = GUI::wxGetApp().preset_bundle;
