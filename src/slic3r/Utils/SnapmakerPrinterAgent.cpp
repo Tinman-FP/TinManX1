@@ -254,6 +254,8 @@ bool SnapmakerPrinterAgent::fetch_filament_info(std::string dev_id)
         trays.emplace_back(std::move(tray));
     }
 
+    BOOST_LOG_TRIVIAL(info) << "SnapmakerPrinterAgent::fetch_filament_info: parsed " << trays.size()
+                            << " filament slots from " << device_info.base_url;
     build_ams_payload(1, slot_count - 1, trays);
     return true;
 }

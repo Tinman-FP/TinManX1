@@ -3549,6 +3549,20 @@ void GUI_App::switch_printer_agent()
             if (!value.empty())
                 effective_agent_id = value;
         }
+        if (effective_agent_id == ORCA_PRINTER_AGENT_ID) {
+            const std::string model = config.has("printer_model") ? config.opt_string("printer_model") : std::string();
+            const std::string name  = config.has("printer_settings_id") ? config.opt_string("printer_settings_id") : std::string();
+            const std::string key   = model + " " + name;
+            if (boost::algorithm::icontains(key, "qidi"))
+                effective_agent_id = "qidi";
+            else if (boost::algorithm::icontains(key, "snapmaker"))
+                effective_agent_id = "snapmaker";
+            else if (boost::algorithm::icontains(key, "creality") || boost::algorithm::icontains(key, "k2"))
+                effective_agent_id = "crealityprint";
+            else if (boost::algorithm::icontains(key, "v-core") || boost::algorithm::icontains(key, "ratrig") ||
+                     boost::algorithm::icontains(key, "prusa") || boost::algorithm::icontains(key, "sovol"))
+                effective_agent_id = "moonraker";
+        }
     }
 
     // Check if agent is registered

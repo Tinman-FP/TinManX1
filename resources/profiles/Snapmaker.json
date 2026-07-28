@@ -407,6 +407,10 @@
 			"sub_path": "process/0.08 Extra Fine @Snapmaker U1 (0.4 nozzle).json"
 		},
 		{
+			"name": "0.08 Extra Fine - Snapmaker U1 CURRENT MIXED - T0 0.6 Model - T1 ABS Support 0.4",
+			"sub_path": "process/0.08 Extra Fine @Snapmaker U1 (0.6+0.4 nozzle).json"
+		},
+		{
 			"name": "0.08 High Quality @Snapmaker U1 (0.4 nozzle)",
 			"sub_path": "process/0.08 High Quality @Snapmaker U1 (0.4 nozzle).json"
 		},
@@ -427,6 +431,10 @@
 			"sub_path": "process/0.16 Optimal @Snapmaker U1 (0.4 nozzle).json"
 		},
 		{
+			"name": "CURRENT Snapmaker U1 MIXED - Quality - T0 0.6 - T1-T3 0.4",
+			"sub_path": "process/0.16 Quality @Snapmaker U1 (0.6+0.4 nozzle).json"
+		},
+		{
 			"name": "0.20 Bambu Support W @Snapmaker U1 (0.4 nozzle)",
 			"sub_path": "process/0.20 Bambu Support W @Snapmaker U1 (0.4 nozzle).json"
 		},
@@ -441,6 +449,14 @@
 		{
 			"name": "0.20 Standard @Snapmaker U1 (0.4+0.6 nozzle)",
 			"sub_path": "process/0.20 Standard @Snapmaker U1 (0.4+0.6 nozzle).json"
+		},
+		{
+			"name": "0.20 Standard - Snapmaker U1 CURRENT MIXED - T0 0.6 - T1-T3 0.4",
+			"sub_path": "process/0.20 Standard @Snapmaker U1 (0.6+0.4 nozzle).json"
+		},
+		{
+			"name": "CURRENT Snapmaker U1 MIXED - Support/MM - T0 0.6 Model - T1 0.4 Support",
+			"sub_path": "process/0.20 Support Multi Material @Snapmaker U1 (0.6+0.4 nozzle).json"
 		},
 		{
 			"name": "0.20 Strength @Snapmaker U1 (0.4 nozzle)",
@@ -461,6 +477,14 @@
 		{
 			"name": "0.28 Extra Draft @Snapmaker U1 (0.4 nozzle)",
 			"sub_path": "process/0.28 Extra Draft @Snapmaker U1 (0.4 nozzle).json"
+		},
+		{
+			"name": "CURRENT Snapmaker U1 MIXED - Strength - T0 0.6 - T1-T3 0.4",
+			"sub_path": "process/0.30 Strength @Snapmaker U1 (0.6+0.4 nozzle).json"
+		},
+		{
+			"name": "CURRENT Snapmaker U1 MIXED - Speed - T0 0.6 - T1-T3 0.4",
+			"sub_path": "process/0.30 Speed @Snapmaker U1 (0.6+0.4 nozzle).json"
 		},
 		{
 			"name": "0.20 Standard @Snapmaker U1 (0.6 nozzle)",
@@ -1801,6 +1825,10 @@
 		{
 			"name": "Snapmaker U1 (0.4+0.6 nozzle)",
 			"sub_path": "machine/Snapmaker U1 (0.4+0.6 nozzle).json"
+		},
+		{
+			"name": "Snapmaker U1 CURRENT MIXED - T0 0.6 - T1-T3 0.4",
+			"sub_path": "machine/Snapmaker U1 (0.6+0.4 nozzle).json"
 		},
 		{
 			"name": "Snapmaker U1 (0.6 nozzle)",

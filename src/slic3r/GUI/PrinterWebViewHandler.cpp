@@ -2,13 +2,17 @@
 
 #include "I18N.hpp"
 #include "PrinterWebView.hpp"
+#include "DeviceManager.hpp"
+#include "DeviceCore/DevManager.h"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/Widgets/WebView.hpp"
+#include "slic3r/Utils/NetworkAgentFactory.hpp"
 #include "slic3r/Utils/PrintHost.hpp"
 #include "libslic3r/Preset.hpp"
 
 #include <nlohmann/json.hpp>
 #include <atomic>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem/path.hpp>
 #include <string>
 #include <thread>
@@ -53,6 +57,131 @@ DynamicPrintConfig* get_active_printer_config()
         return nullptr;
 
     return &wxGetApp().preset_bundle->printers.get_edited_preset().config;
+}
+
+std::string config_string(const DynamicPrintConfig& cfg, const std::string& key)
+{
+    return cfg.has(key) ? cfg.opt_string(key) : std::string();
+}
+
+static std::string authority_from_url(std::string url)
+{
+    if (url.empty())
+        return url;
+
+    const size_t scheme = url.find("://");
+    if (scheme != std::string::npos)
+        url = url.substr(scheme + 3);
+
+    const size_t slash = url.find('/');
+    if (slash != std::string::npos)
+        url = url.substr(0, slash);
+
+    return url;
+}
+
+static std::string host_from_url(const std::string& url)
+{
+    std::string authority = authority_from_url(url);
+    if (!authority.empty() && authority.front() == '[') {
+        const size_t end = authority.find(']');
+        if (end != std::string::npos)
+            return authority.substr(1, end - 1);
+    }
+
+    const size_t port = authority.find(':');
+    return port == std::string::npos ? authority : authority.substr(0, port);
+}
+
+bool address_matches_machine(const std::string& address, const MachineObject* obj)
+{
+    if (address.empty() || obj == nullptr)
+        return false;
+
+    const std::string dev_ip = obj->get_dev_ip();
+    const std::string dev_id = obj->get_dev_id();
+    if (address == dev_ip || address == dev_id)
+        return true;
+
+    const std::string address_authority = authority_from_url(address);
+    const std::string address_host      = host_from_url(address);
+    const std::string dev_ip_authority  = authority_from_url(dev_ip);
+    const std::string dev_id_authority  = authority_from_url(dev_id);
+
+    return (!dev_ip.empty() && (address_authority == dev_ip_authority || address_host == host_from_url(dev_ip))) ||
+           (!dev_id.empty() && (address_authority == dev_id_authority || address_host == host_from_url(dev_id)));
+}
+
+bool config_matches_machine(const DynamicPrintConfig& cfg, const MachineObject* obj)
+{
+    return address_matches_machine(config_string(cfg, "print_host"), obj) ||
+           address_matches_machine(config_string(cfg, "print_host_webui"), obj);
+}
+
+std::string configured_agent_for_machine(const MachineObject* obj)
+{
+    if (obj == nullptr || wxGetApp().preset_bundle == nullptr)
+        return {};
+
+    for (const PhysicalPrinter& printer : wxGetApp().preset_bundle->physical_printers) {
+        if (config_matches_machine(printer.config, obj) && printer.config.has("printer_agent")) {
+            const std::string agent_id = printer.config.opt_string("printer_agent");
+            if (!agent_id.empty())
+                return agent_id;
+        }
+    }
+
+    for (const Preset& printer : wxGetApp().preset_bundle->printers) {
+        if (config_matches_machine(printer.config, obj) && printer.config.has("printer_agent")) {
+            const std::string agent_id = printer.config.opt_string("printer_agent");
+            if (!agent_id.empty())
+                return agent_id;
+        }
+    }
+
+    return {};
+}
+
+std::string infer_agent_from_text(const std::string& key)
+{
+    if (boost::algorithm::icontains(key, "qidi"))
+        return "qidi";
+    if (boost::algorithm::icontains(key, "snapmaker"))
+        return "snapmaker";
+    if (boost::algorithm::icontains(key, "creality") || boost::algorithm::icontains(key, "k2"))
+        return "crealityprint";
+    if (boost::algorithm::icontains(key, "v-core") || boost::algorithm::icontains(key, "ratrig") ||
+        boost::algorithm::icontains(key, "prusa") || boost::algorithm::icontains(key, "sovol"))
+        return "moonraker";
+
+    return {};
+}
+
+std::string selected_machine_agent_id()
+{
+    DeviceManager* device_manager = wxGetApp().getDeviceManager();
+    MachineObject* obj            = device_manager ? device_manager->get_selected_machine() : nullptr;
+    if (obj == nullptr)
+        return {};
+
+    std::string agent_id = configured_agent_for_machine(obj);
+    if (!agent_id.empty())
+        return agent_id;
+
+    return infer_agent_from_text(obj->printer_type + " " + obj->get_dev_name() + " " +
+                                 obj->get_dev_id() + " " + obj->get_dev_ip());
+}
+
+std::string config_agent_id(const DynamicPrintConfig& cfg)
+{
+    const std::string explicit_agent = config_string(cfg, "printer_agent");
+    if (!explicit_agent.empty())
+        return explicit_agent;
+
+    return infer_agent_from_text(config_string(cfg, "printer_model") + " " +
+                                 config_string(cfg, "printer_settings_id") + " " +
+                                 config_string(cfg, "print_host") + " " +
+                                 config_string(cfg, "print_host_webui"));
 }
 
 std::string json_string(const json& node, const char* key)
@@ -833,14 +962,25 @@ R"JS(
 
 std::unique_ptr<PrinterWebViewHandler> create_printer_webview_handler(PrinterWebView& owner)
 {
+    const std::string selected_agent_id = selected_machine_agent_id();
+    if (!selected_agent_id.empty()) {
+        if (selected_agent_id == "qidi")
+            return std::make_unique<QidiBoxPrinterWebViewHandler>(owner);
+
+        return std::make_unique<PrinterWebViewHandler>(owner);
+    }
+
     auto     cfg = get_active_printer_config();
     if (cfg != nullptr) {
         const auto* host_type_opt = cfg->option<ConfigOptionEnum<PrintHostType>>("host_type");
         if (host_type_opt != nullptr && host_type_opt->value == PrintHostType::htElegooLink)
             return std::make_unique<ElegooPrinterWebViewHandler>(owner);
+
+        if (config_agent_id(*cfg) == "qidi")
+            return std::make_unique<QidiBoxPrinterWebViewHandler>(owner);
     }
 
-    return std::make_unique<QidiBoxPrinterWebViewHandler>(owner);
+    return std::make_unique<PrinterWebViewHandler>(owner);
 }
 
 } // GUI

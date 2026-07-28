@@ -1,13 +1,13 @@
 {
     "type": "machine",
     "setting_id": "SMU10604TINMAN01",
-    "name": "Snapmaker U1 (0.6+0.4 nozzle)",
+    "name": "Snapmaker U1 CURRENT MIXED - T0 0.6 - T1-T3 0.4",
     "from": "system",
     "instantiation": "true",
     "inherits": "fdm_U1",
     "printer_model": "Snapmaker U1",
     "printer_variant": "0.6+0.4",
-    "default_print_profile": "0.20 Standard @Snapmaker U1 (0.6+0.4 nozzle)",
+    "default_print_profile": "0.20 Standard - Snapmaker U1 CURRENT MIXED - T0 0.6 - T1-T3 0.4",
     "max_layer_height": [
         "0.48",
         "0.32",

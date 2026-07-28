@@ -5277,6 +5277,12 @@ void MachineObject::update_printer_preset_name()
     PresetBundle *     preset_bundle = Slic3r::GUI::wxGetApp().preset_bundle;
     if (!preset_bundle) return;
     auto               printer_model = DevPrinterConfigUtil::get_printer_display_name(this->printer_type);
+    if (printer_model.empty())
+        printer_model = this->printer_type;
+    if (printer_model.empty())
+        printer_model = this->dev_product_name;
+    if (printer_model.empty())
+        printer_model = this->dev_name;
     std::set<std::string> diameter_set;
     for (auto &nozzle : m_extder_system->m_extders) {
         float diameter = nozzle.GetNozzleDiameter();
@@ -5292,7 +5298,9 @@ void MachineObject::update_printer_preset_name()
             m_nozzle_filament_data[nozzle_diameter_str] = data;
         }
         else
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " " << __LINE__ << " update printer preset name failed: "<< "printer_type: " << printer_type << "nozzle_diameter_str" << nozzle_diameter_str;
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " " << __LINE__ << " update printer preset name failed: "
+                                    << "printer_type: " << printer_type << " printer_model: " << printer_model
+                                    << " nozzle_diameter_str: " << nozzle_diameter_str;
     }
 
     for (auto iter = m_nozzle_filament_data.begin(); iter != m_nozzle_filament_data.end();)

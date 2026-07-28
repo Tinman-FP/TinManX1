@@ -473,6 +473,70 @@ bool sidebar_config_matches_machine(const DynamicPrintConfig& cfg, const Machine
     return sidebar_address_matches_machine(print_host, obj) || sidebar_address_matches_machine(print_host_webui, obj);
 }
 
+bool sidebar_config_model_matches_machine(const DynamicPrintConfig& cfg, const MachineObject* obj)
+{
+    if (obj == nullptr || !cfg.has("printer_model"))
+        return false;
+
+    const std::string cfg_model = cfg.opt_string("printer_model");
+    const std::string obj_model = obj->get_show_printer_type();
+    return !cfg_model.empty() && !obj_model.empty() && boost::algorithm::iequals(cfg_model, obj_model);
+}
+
+bool sidebar_config_nozzle_matches_or_unknown(const DynamicPrintConfig& cfg, const MachineObject* obj)
+{
+    if (obj == nullptr)
+        return false;
+
+    const ConfigOptionFloats* nozzle_vals = cfg.option<ConfigOptionFloats>("nozzle_diameter");
+    return nozzle_vals == nullptr || nozzle_vals->values.empty() ||
+           obj->GetExtderSystem()->NozzleDiameterMatchesOrUnknown(0, nozzle_vals->get_at(0));
+}
+
+bool sidebar_printer_config_matches_machine(const DynamicPrintConfig& cfg, const MachineObject* obj)
+{
+    return sidebar_config_matches_machine(cfg, obj) ||
+           (sidebar_config_model_matches_machine(cfg, obj) && sidebar_config_nozzle_matches_or_unknown(cfg, obj));
+}
+
+MachineObject* sidebar_machine_for_prepare_preset()
+{
+    DeviceManager* dev_manager = wxGetApp().getDeviceManager();
+    PresetBundle*  preset_bundle = wxGetApp().preset_bundle;
+    if (dev_manager == nullptr || preset_bundle == nullptr)
+        return nullptr;
+
+    const DynamicPrintConfig& cfg = preset_bundle->printers.get_edited_preset().config;
+    MachineObject* selected = dev_manager->get_selected_machine();
+    if (sidebar_printer_config_matches_machine(cfg, selected))
+        return selected;
+
+    auto machine_list = dev_manager->get_my_machine_list();
+    for (const auto& machine_pair : machine_list) {
+        if (sidebar_config_matches_machine(cfg, machine_pair.second))
+            return machine_pair.second;
+    }
+
+    for (const auto& machine_pair : machine_list) {
+        if (sidebar_printer_config_matches_machine(cfg, machine_pair.second))
+            return machine_pair.second;
+    }
+
+    return selected;
+}
+
+void sidebar_select_machine_if_needed(MachineObject* obj)
+{
+    DeviceManager* dev_manager = wxGetApp().getDeviceManager();
+    if (dev_manager == nullptr || obj == nullptr)
+        return;
+
+    MachineObject* selected = dev_manager->get_selected_machine();
+    const std::string dev_id = obj->get_dev_id();
+    if (!dev_id.empty() && (selected == nullptr || selected->get_dev_id() != dev_id))
+        dev_manager->set_selected_machine(dev_id);
+}
+
 std::string sidebar_configured_agent_for_machine(MachineObject* obj)
 {
     if (obj == nullptr)
@@ -4253,9 +4317,10 @@ void Sidebar::sync_ams_list(bool is_from_big_sync_btn)
 {
     wxBusyCursor cursor;
     // Force load ams list
-    auto obj = wxGetApp().getDeviceManager()->get_selected_machine();
+    auto obj = sidebar_machine_for_prepare_preset();
     if (!obj)
         return;
+    sidebar_select_machine_if_needed(obj);
     GUI::wxGetApp().sidebar().load_ams_list(obj);
 
     auto & list = wxGetApp().preset_bundle->filament_ams_list;
@@ -16075,6 +16140,10 @@ Preset *get_printer_preset(const MachineObject *obj)
     Preset       *printer_preset = nullptr;
 
     PresetBundle *preset_bundle  = wxGetApp().preset_bundle;
+    Preset       &edited_printer = preset_bundle->printers.get_edited_preset();
+    if (sidebar_printer_config_matches_machine(edited_printer.config, obj))
+        return &edited_printer;
+
     for (auto printer_it = preset_bundle->printers.begin(); printer_it != preset_bundle->printers.end(); printer_it++) {
         // only use system printer preset
         if (!printer_it->is_system)
@@ -16084,9 +16153,12 @@ Preset *get_printer_preset(const MachineObject *obj)
         ConfigOptionFloats *printer_nozzle_vals = nullptr;
         if (printer_nozzle_opt) printer_nozzle_vals = dynamic_cast<ConfigOptionFloats *>(printer_nozzle_opt);
         std::string model_id = printer_it->get_current_printer_type(preset_bundle);
+        if (model_id.empty() && printer_it->config.has("printer_model"))
+            model_id = printer_it->config.opt_string("printer_model");
 
         std::string printer_type = obj->get_show_printer_type();
-        bool nozzle_diameter_matches_or_unknown = printer_nozzle_vals && obj->GetExtderSystem()->NozzleDiameterMatchesOrUnknown(0, printer_nozzle_vals->get_at(0));
+        bool nozzle_diameter_matches_or_unknown = !printer_nozzle_vals || printer_nozzle_vals->values.empty() ||
+                                                  obj->GetExtderSystem()->NozzleDiameterMatchesOrUnknown(0, printer_nozzle_vals->get_at(0));
         if (model_id.compare(printer_type) == 0 && nozzle_diameter_matches_or_unknown) {
             printer_preset = &(*printer_it);
         }
@@ -18326,10 +18398,11 @@ bool Plater::is_same_printer_for_connected_and_selected(bool popup_warning)
     if (!wxGetApp().getDeviceManager()) {
         return false;
     }
-    MachineObject *obj = wxGetApp().getDeviceManager()->get_selected_machine();
+    MachineObject *obj = sidebar_machine_for_prepare_preset();
     if (obj == nullptr) {
         return false;
     }
+    sidebar_select_machine_if_needed(obj);
     auto* agent = wxGetApp().getDeviceManager()->get_agent();
     const bool pull_mode_sync = agent && agent->get_filament_sync_mode() == FilamentSyncMode::pull;
     if (!pull_mode_sync && !check_printer_initialized(obj, true, popup_warning))
