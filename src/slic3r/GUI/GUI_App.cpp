@@ -2257,7 +2257,21 @@ bool GUI_App::is_blocking_printing(MachineObject *obj_)
     }
 
     PresetBundle *preset_bundle = wxGetApp().preset_bundle;
-    std::string    source_model  = preset_bundle->printers.get_edited_preset().get_printer_type(preset_bundle);
+    if (!preset_bundle)
+        return false;
+
+    Preset& edited_printer = preset_bundle->printers.get_edited_preset();
+    if (edited_printer.config.has("printer_model")) {
+        const std::string configured_model = edited_printer.config.opt_string("printer_model");
+        const std::string visible_model    = obj_->get_show_printer_type();
+        if (!configured_model.empty() &&
+            ((!visible_model.empty() && boost::algorithm::iequals(configured_model, visible_model)) ||
+             (!target_model.empty() && boost::algorithm::iequals(configured_model, target_model)))) {
+            return false;
+        }
+    }
+
+    std::string source_model = edited_printer.get_printer_type(preset_bundle);
 
     if (source_model != target_model) {
         std::vector<std::string>      compatible_machine = obj_->get_compatible_machine();

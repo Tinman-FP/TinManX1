@@ -18411,7 +18411,10 @@ bool Plater::is_same_printer_for_connected_and_selected(bool popup_warning)
     if (!machine_preset)
         return false;
 
-    if (wxGetApp().is_blocking_printing()) {
+    const bool prepare_preset_matches_machine =
+        wxGetApp().preset_bundle &&
+        sidebar_printer_config_matches_machine(wxGetApp().preset_bundle->printers.get_edited_preset().config, obj);
+    if (!prepare_preset_matches_machine && wxGetApp().is_blocking_printing(obj)) {
         if (popup_warning) {
             auto printer_name = get_selected_printer_name_in_combox(); // wxString(obj->get_preset_printer_model_name(machine_print_name))
             pop_warning_and_go_to_device_page(printer_name, PrinterWarningType::INCONSISTENT, _L("Synchronize AMS Filament Information"));

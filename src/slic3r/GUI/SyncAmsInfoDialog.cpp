@@ -22,6 +22,8 @@
 #include "CapsuleButton.hpp"
 #include "PrePrintChecker.hpp"
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "DeviceCore/DevConfig.h"
 #include "DeviceCore/DevConfigUtil.h"
 #include "DeviceCore/DevFilaSystem.h"
@@ -1897,7 +1899,17 @@ bool SyncAmsInfoDialog::is_blocking_printing(MachineObject *obj_)
 
     if (m_print_type == PrintFromType::FROM_NORMAL) {
         PresetBundle *preset_bundle = wxGetApp().preset_bundle;
-        source_model                = preset_bundle->printers.get_edited_preset().get_printer_type(preset_bundle);
+        Preset& edited_printer = preset_bundle->printers.get_edited_preset();
+        if (edited_printer.config.has("printer_model")) {
+            const std::string configured_model = edited_printer.config.opt_string("printer_model");
+            const std::string visible_model    = obj_->get_show_printer_type();
+            if (!configured_model.empty() &&
+                ((!visible_model.empty() && boost::algorithm::iequals(configured_model, visible_model)) ||
+                 (!target_model.empty() && boost::algorithm::iequals(configured_model, target_model)))) {
+                return false;
+            }
+        }
+        source_model                = edited_printer.get_printer_type(preset_bundle);
 
     } else if (m_print_type == PrintFromType::FROM_SDCARD_VIEW) {
         if (m_required_data_plate_data_list.size() > 0) { source_model = m_required_data_plate_data_list[m_print_plate_idx]->printer_model_id; }
