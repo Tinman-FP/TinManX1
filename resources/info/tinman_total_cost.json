@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "electricity_rates": {
+    "source": "U.S. Energy Information Administration, Electric Power Monthly Table 5.6.A, May 2026 residential average price, cents per kWh, release date 2026-07-23",
+    "default_cents_per_kwh": 18.44,
+    "states": {
+      "AK": 28.23,
+      "AL": 16.77,
+      "AR": 14.36,
+      "AZ": 15.23,
+      "CA": 33.25,
+      "CO": 16.16,
+      "CT": 27.37,
+      "DC": 25.40,
+      "DE": 19.38,
+      "FL": 15.17,
+      "GA": 15.84,
+      "HI": 52.00,
+      "IA": 14.14,
+      "ID": 12.35,
+      "IL": 23.85,
+      "IN": 18.15,
+      "KS": 15.13,
+      "KY": 14.98,
+      "LA": 14.15,
+      "MA": 28.82,
+      "MD": 21.77,
+      "ME": 28.63,
+      "MI": 22.01,
+      "MN": 16.95,
+      "MO": 13.68,
+      "MS": 16.16,
+      "MT": 14.67,
+      "NC": 15.09,
+      "ND": 13.61,
+      "NE": 13.59,
+      "NH": 27.33,
+      "NJ": 23.27,
+      "NM": 14.12,
+      "NV": 13.60,
+      "NY": 29.93,
+      "OH": 19.52,
+      "OK": 13.38,
+      "OR": 16.27,
+      "PA": 21.55,
+      "RI": 29.46,
+      "SC": 16.18,
+      "SD": 15.73,
+      "TN": 14.47,
+      "TX": 16.44,
+      "UT": 12.96,
+      "VA": 17.61,
+      "VT": 24.89,
+      "WA": 14.95,
+      "WI": 19.74,
+      "WV": 16.80,
+      "WY": 14.80
+    }
+  },
+  "machine_power_profiles": [
+    {
+      "name": "Bambu Lab H2D",
+      "matches": ["h2d"],
+      "average_running_watts": 430,
+      "notes": "Starter estimate for enclosed high-speed Bambu printing; replace with measured wall-meter average per material."
+    },
+    {
+      "name": "Bambu Lab X1/P1 enclosed",
+      "matches": ["x1c", "x1 carbon", "p1s", "p1p"],
+      "average_running_watts": 260,
+      "notes": "Starter estimate for Bambu CoreXY machines after warm-up."
+    },
+    {
+      "name": "Bambu Lab A1 series",
+      "matches": ["a1 mini", "a1"],
+      "average_running_watts": 160,
+      "notes": "Starter estimate for Bambu bedslinger machines after warm-up."
+    },
+    {
+      "name": "QIDI Plus 4",
+      "matches": ["qidi plus 4", "plus4", "plus 4"],
+      "average_running_watts": 520,
+      "notes": "Starter estimate includes chamber-heater-heavy engineering filament jobs."
+    },
+    {
+      "name": "QIDI enclosed CoreXY",
+      "matches": ["qidi", "x-max", "x-plus", "max 3"],
+      "average_running_watts": 420,
+      "notes": "Starter estimate for enclosed QIDI printers."
+    },
+    {
+      "name": "Creality K2 Plus",
+      "matches": ["k2 plus", "k2"],
+      "average_running_watts": 360,
+      "notes": "Starter estimate for enclosed Creality CoreXY printing."
+    },
+    {
+      "name": "Creality K1 series",
+      "matches": ["k1 max", "k1c", "k1"],
+      "average_running_watts": 320,
+      "notes": "Starter estimate for enclosed Creality K1-family printing."
+    },
+    {
+      "name": "Prusa CORE One",
+      "matches": ["core one", "core one l"],
+      "average_running_watts": 260,
+      "notes": "Starter estimate for Prusa enclosed CoreXY printing."
+    },
+    {
+      "name": "Prusa MK series",
+      "matches": ["mk4", "mk3", "mk3s"],
+      "average_running_watts": 180,
+      "notes": "Starter estimate for open-frame Prusa bed-slingers."
+    },
+    {
+      "name": "RatRig V-Core",
+      "matches": ["ratrig", "rat rig", "v-core", "vcore"],
+      "average_running_watts": 450,
+      "notes": "Starter estimate for custom enclosed RatRig builds."
+    },
+    {
+      "name": "Snapmaker U1",
+      "matches": ["snapmaker u1", "fdm_u1", " u1"],
+      "average_running_watts": 240,
+      "notes": "Starter estimate for Snapmaker U1-style FFF printing."
+    },
+    {
+      "name": "Elegoo FFF",
+      "matches": ["elegoo", "centauri"],
+      "average_running_watts": 260,
+      "notes": "Starter estimate for Elegoo FFF printers."
+    },
+    {
+      "name": "Generic enclosed FFF printer",
+      "matches": ["enclosed"],
+      "average_running_watts": 350,
+      "notes": "Fallback for enclosed printers without a specific profile."
+    },
+    {
+      "name": "Generic open FFF printer",
+      "matches": [],
+      "average_running_watts": 220,
+      "notes": "Final fallback when no machine name match is found."
+    }
+  ]
+}

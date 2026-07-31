@@ -27,12 +27,14 @@
 #include "libslic3r/Layer.hpp"
 #include "Widgets/ProgressDialog.hpp"
 #include "MsgDialog.hpp"
+#include "nlohmann/json.hpp"
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 
 #include <imgui/imgui_internal.h>
 
 #include <glad/gl.h>
+#include <boost/filesystem.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/nowide/cstdio.hpp>
@@ -46,7 +48,11 @@
 #include <cctype>
 #include <cmath>
 #include <chrono>
+#include <cstdio>
+#include <cstring>
 #include <map>
+#include <sstream>
+#include <vector>
 
 
 namespace Slic3r {
@@ -122,6 +128,262 @@ static bool tinmanx_has_continuous_fiber_preview(const GCodeProcessorResult& res
 
     return false;
 }
+
+namespace {
+
+struct TinmanMachinePowerProfile
+{
+    std::string name;
+    std::vector<std::string> matches;
+    double average_running_watts { 350.0 };
+};
+
+struct TinmanTotalCostDatabase
+{
+    std::map<std::string, double> state_rates_cents_per_kwh;
+    std::vector<TinmanMachinePowerProfile> machine_power_profiles;
+    std::string electricity_rate_source;
+    double default_cents_per_kwh { 18.44 };
+    double default_average_running_watts { 350.0 };
+};
+
+struct TinmanZipStateRange
+{
+    int first;
+    int last;
+    const char* state;
+};
+
+static constexpr std::array<int, 4> tinman_spool_kg_options = {{ 1, 3, 5, 10 }};
+
+static std::string tinman_lowercase(std::string value)
+{
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return value;
+}
+
+static double tinman_parse_double_or(const std::string& value, double fallback)
+{
+    try {
+        size_t parsed = 0;
+        const double ret = std::stod(value, &parsed);
+        return parsed > 0 && std::isfinite(ret) ? ret : fallback;
+    } catch (...) {
+        return fallback;
+    }
+}
+
+static int tinman_parse_int_or(const std::string& value, int fallback)
+{
+    try {
+        size_t parsed = 0;
+        const int ret = std::stoi(value, &parsed);
+        return parsed > 0 ? ret : fallback;
+    } catch (...) {
+        return fallback;
+    }
+}
+
+static std::string tinman_format_config_double(double value)
+{
+    if (!std::isfinite(value))
+        value = 0.0;
+
+    char buffer[64];
+    std::snprintf(buffer, sizeof(buffer), "%.4f", value);
+    std::string ret(buffer);
+    while (ret.size() > 1 && ret.back() == '0')
+        ret.pop_back();
+    if (!ret.empty() && ret.back() == '.')
+        ret.pop_back();
+    return ret.empty() ? "0" : ret;
+}
+
+static void tinman_copy_string_to_buffer(const std::string& value, char* buffer, size_t buffer_size)
+{
+    if (buffer_size == 0)
+        return;
+    std::snprintf(buffer, buffer_size, "%s", value.c_str());
+}
+
+static std::string tinman_digits_only(const std::string& value)
+{
+    std::string ret;
+    ret.reserve(value.size());
+    for (char c : value) {
+        if (std::isdigit(static_cast<unsigned char>(c))) {
+            ret.push_back(c);
+            if (ret.size() == 5)
+                break;
+        }
+    }
+    return ret;
+}
+
+static std::string tinman_state_from_zip(const std::string& zip)
+{
+    const std::string digits = tinman_digits_only(zip);
+    if (digits.size() != 5)
+        return {};
+
+    const int zip_value = tinman_parse_int_or(digits, -1);
+    static constexpr TinmanZipStateRange ranges[] = {
+        {  501,   999, "NY" },
+        { 1000,  2799, "MA" },
+        { 2800,  2999, "RI" },
+        { 3000,  3899, "NH" },
+        { 3900,  4999, "ME" },
+        { 5000,  5999, "VT" },
+        { 6000,  6999, "CT" },
+        { 7000,  8999, "NJ" },
+        {10000, 14999, "NY" },
+        {15000, 19699, "PA" },
+        {19700, 19999, "DE" },
+        {20000, 20599, "DC" },
+        {20600, 21999, "MD" },
+        {22000, 24699, "VA" },
+        {24700, 26899, "WV" },
+        {27000, 28999, "NC" },
+        {29000, 29999, "SC" },
+        {30000, 31999, "GA" },
+        {32000, 34999, "FL" },
+        {35000, 36999, "AL" },
+        {37000, 38599, "TN" },
+        {38600, 39799, "MS" },
+        {39800, 39999, "GA" },
+        {40000, 42799, "KY" },
+        {43000, 45999, "OH" },
+        {46000, 47999, "IN" },
+        {48000, 49999, "MI" },
+        {50000, 52999, "IA" },
+        {53000, 54999, "WI" },
+        {55000, 56799, "MN" },
+        {57000, 57799, "SD" },
+        {58000, 58899, "ND" },
+        {59000, 59999, "MT" },
+        {60000, 62999, "IL" },
+        {63000, 65899, "MO" },
+        {66000, 67999, "KS" },
+        {68000, 69399, "NE" },
+        {70000, 71499, "LA" },
+        {71600, 72999, "AR" },
+        {73000, 74999, "OK" },
+        {73300, 73399, "TX" },
+        {75000, 79999, "TX" },
+        {80000, 81699, "CO" },
+        {82000, 83199, "WY" },
+        {83200, 83899, "ID" },
+        {84000, 84999, "UT" },
+        {85000, 86999, "AZ" },
+        {87000, 88499, "NM" },
+        {88500, 88599, "TX" },
+        {88900, 89899, "NV" },
+        {90000, 96199, "CA" },
+        {96700, 96899, "HI" },
+        {97000, 97999, "OR" },
+        {98000, 99499, "WA" },
+        {99500, 99999, "AK" }
+    };
+
+    for (const TinmanZipStateRange& range : ranges) {
+        if (zip_value >= range.first && zip_value <= range.last)
+            return range.state;
+    }
+
+    return {};
+}
+
+static TinmanTotalCostDatabase& tinman_total_cost_database()
+{
+    static TinmanTotalCostDatabase db = [] {
+        TinmanTotalCostDatabase ret;
+        const std::string path = (boost::filesystem::path(Slic3r::resources_dir()) / "info" / "tinman_total_cost.json").make_preferred().string();
+        boost::nowide::ifstream in(path);
+        if (in.good()) {
+            nlohmann::json json = nlohmann::json::parse(in, nullptr, false);
+            if (!json.is_discarded()) {
+                const nlohmann::json rates = json.value("electricity_rates", nlohmann::json::object());
+                ret.electricity_rate_source = rates.value("source", std::string());
+                ret.default_cents_per_kwh = rates.value("default_cents_per_kwh", ret.default_cents_per_kwh);
+                const nlohmann::json states = rates.value("states", nlohmann::json::object());
+                if (states.is_object()) {
+                    for (auto it = states.begin(); it != states.end(); ++it) {
+                        if (it.value().is_number())
+                            ret.state_rates_cents_per_kwh[it.key()] = it.value().get<double>();
+                    }
+                }
+
+                const nlohmann::json power_profiles = json.value("machine_power_profiles", nlohmann::json::array());
+                if (power_profiles.is_array()) {
+                    for (const nlohmann::json& item : power_profiles) {
+                        TinmanMachinePowerProfile profile;
+                        profile.name = item.value("name", std::string());
+                        profile.average_running_watts = item.value("average_running_watts", ret.default_average_running_watts);
+                        const nlohmann::json matches = item.value("matches", nlohmann::json::array());
+                        if (matches.is_array()) {
+                            for (const nlohmann::json& match : matches) {
+                                if (match.is_string())
+                                    profile.matches.push_back(tinman_lowercase(match.get<std::string>()));
+                            }
+                        }
+                        if (!profile.name.empty())
+                            ret.machine_power_profiles.push_back(std::move(profile));
+                    }
+                }
+            }
+        }
+
+        if (ret.machine_power_profiles.empty())
+            ret.machine_power_profiles.push_back({"Default FFF printer", {}, ret.default_average_running_watts});
+
+        return ret;
+    }();
+
+    return db;
+}
+
+static double tinman_rate_cents_for_zip(const std::string& zip)
+{
+    const TinmanTotalCostDatabase& db = tinman_total_cost_database();
+    const std::string state = tinman_state_from_zip(zip);
+    const auto it = db.state_rates_cents_per_kwh.find(state);
+    return it == db.state_rates_cents_per_kwh.end() ? db.default_cents_per_kwh : it->second;
+}
+
+static TinmanMachinePowerProfile tinman_select_power_profile(const std::string& printer_name)
+{
+    const TinmanTotalCostDatabase& db = tinman_total_cost_database();
+    const std::string haystack = tinman_lowercase(printer_name);
+    const TinmanMachinePowerProfile* fallback = nullptr;
+    const TinmanMachinePowerProfile* best = nullptr;
+    size_t best_score = 0;
+
+    for (const TinmanMachinePowerProfile& profile : db.machine_power_profiles) {
+        if (profile.matches.empty()) {
+            if (fallback == nullptr)
+                fallback = &profile;
+            continue;
+        }
+        for (const std::string& token : profile.matches) {
+            if (token.empty()) {
+                fallback = &profile;
+                continue;
+            }
+            if (haystack.find(token) != std::string::npos && token.size() > best_score) {
+                best = &profile;
+                best_score = token.size();
+            }
+        }
+    }
+
+    if (best != nullptr)
+        return *best;
+    if (fallback != nullptr)
+        return *fallback;
+    return {"Default FFF printer", {}, db.default_average_running_watts};
+}
+
+} // namespace
 
 // Find an index of a value in a sorted vector, which is in <z-eps, z+eps>.
 // Returns -1 if there is no such member.
@@ -1089,6 +1351,200 @@ GCodeViewer::~GCodeViewer()
         delete m_layers_slider;
         m_layers_slider = nullptr;
     }
+}
+
+void GCodeViewer::load_total_cost_settings()
+{
+    if (m_total_cost_settings_loaded)
+        return;
+    m_total_cost_settings_loaded = true;
+
+    if (wxGetApp().app_config == nullptr) {
+        m_total_cost_electric_rate_cents = tinman_total_cost_database().default_cents_per_kwh;
+        return;
+    }
+
+    const std::string zip = wxGetApp().app_config->get("tinman_total_cost_zip");
+    tinman_copy_string_to_buffer(zip, m_total_cost_zip.data(), m_total_cost_zip.size());
+
+    m_total_cost_setup_hours = tinman_parse_double_or(wxGetApp().app_config->get("tinman_total_cost_setup_hours"), 0.0);
+    m_total_cost_setup_labor_rate = tinman_parse_double_or(wxGetApp().app_config->get("tinman_total_cost_setup_labor_rate"), 0.0);
+    m_total_cost_post_hours = tinman_parse_double_or(wxGetApp().app_config->get("tinman_total_cost_post_hours"), 0.0);
+    m_total_cost_post_labor_rate = tinman_parse_double_or(wxGetApp().app_config->get("tinman_total_cost_post_labor_rate"), 0.0);
+    m_total_cost_electric_rate_cents = tinman_parse_double_or(wxGetApp().app_config->get("tinman_total_cost_electric_rate_cents"), 0.0);
+
+    const int saved_spool_kg = tinman_parse_int_or(wxGetApp().app_config->get("tinman_total_cost_spool_kg"), 1);
+    m_total_cost_spool_index = 0;
+    for (int i = 0; i < static_cast<int>(tinman_spool_kg_options.size()); ++i) {
+        if (tinman_spool_kg_options[i] == saved_spool_kg) {
+            m_total_cost_spool_index = i;
+            break;
+        }
+    }
+
+    if (m_total_cost_electric_rate_cents <= 0.0)
+        m_total_cost_electric_rate_cents = tinman_rate_cents_for_zip(m_total_cost_zip.data());
+}
+
+void GCodeViewer::save_total_cost_settings()
+{
+    if (wxGetApp().app_config == nullptr)
+        return;
+
+    m_total_cost_setup_hours = std::max(0.0, m_total_cost_setup_hours);
+    m_total_cost_setup_labor_rate = std::max(0.0, m_total_cost_setup_labor_rate);
+    m_total_cost_post_hours = std::max(0.0, m_total_cost_post_hours);
+    m_total_cost_post_labor_rate = std::max(0.0, m_total_cost_post_labor_rate);
+    m_total_cost_electric_rate_cents = std::max(0.0, m_total_cost_electric_rate_cents);
+    m_total_cost_spool_index = std::clamp(m_total_cost_spool_index, 0, static_cast<int>(tinman_spool_kg_options.size()) - 1);
+
+    wxGetApp().app_config->set("tinman_total_cost_zip", m_total_cost_zip.data());
+    wxGetApp().app_config->set("tinman_total_cost_spool_kg", std::to_string(tinman_spool_kg_options[m_total_cost_spool_index]));
+    wxGetApp().app_config->set("tinman_total_cost_electric_rate_cents", tinman_format_config_double(m_total_cost_electric_rate_cents));
+    wxGetApp().app_config->set("tinman_total_cost_setup_hours", tinman_format_config_double(m_total_cost_setup_hours));
+    wxGetApp().app_config->set("tinman_total_cost_setup_labor_rate", tinman_format_config_double(m_total_cost_setup_labor_rate));
+    wxGetApp().app_config->set("tinman_total_cost_post_hours", tinman_format_config_double(m_total_cost_post_hours));
+    wxGetApp().app_config->set("tinman_total_cost_post_labor_rate", tinman_format_config_double(m_total_cost_post_labor_rate));
+    wxGetApp().app_config->save();
+}
+
+void GCodeViewer::render_total_cost_section(float window_padding, float label_width, const PrintStatistics& ps, const PrintEstimatedStatistics::Mode& time_mode)
+{
+    load_total_cost_settings();
+
+    ImGuiWrapper& imgui = *wxGetApp().imgui();
+    const float spacing_x = ImGui::GetStyle().ItemSpacing.x;
+    const float section_label_width = std::max(label_width,
+        window_padding + 2.0f * spacing_x + std::max(ImGui::CalcTextSize(_u8L("Prints per spool").c_str()).x,
+            std::max(ImGui::CalcTextSize(_u8L("Power profile").c_str()).x, ImGui::CalcTextSize(_u8L("Post labor").c_str()).x)));
+
+    auto begin_row = [&](const std::string& label) {
+        ImGui::Dummy({ window_padding, window_padding });
+        ImGui::SameLine();
+        imgui.text(label + ":");
+        ImGui::SameLine(section_label_width);
+    };
+
+    std::string printer_name = m_settings_ids.printer;
+    if (wxGetApp().preset_bundle != nullptr) {
+        const std::string selected_printer = wxGetApp().preset_bundle->printers.get_selected_preset_name();
+        if (!selected_printer.empty()) {
+            if (!printer_name.empty())
+                printer_name += " ";
+            printer_name += selected_printer;
+        }
+    }
+    const TinmanMachinePowerProfile power_profile = tinman_select_power_profile(printer_name);
+    const std::string zip_state = tinman_state_from_zip(m_total_cost_zip.data());
+    const double print_seconds = time_mode.time > 0.0f ? time_mode.time : m_viewer.get_estimated_time();
+    const double print_hours = std::max(0.0, print_seconds / 3600.0);
+    const double energy_kwh = print_hours * power_profile.average_running_watts / 1000.0;
+    const double energy_cost = energy_kwh * (m_total_cost_electric_rate_cents / 100.0);
+    const double setup_cost = m_total_cost_setup_hours * m_total_cost_setup_labor_rate;
+    const double post_cost = m_total_cost_post_hours * m_total_cost_post_labor_rate;
+    const double total_cost = ps.total_cost + energy_cost + setup_cost + post_cost;
+    const double spool_grams = static_cast<double>(tinman_spool_kg_options[m_total_cost_spool_index]) * 1000.0;
+    const unsigned long long prints_per_spool = ps.total_weight > 0.0 ? static_cast<unsigned long long>(std::floor(spool_grams / ps.total_weight)) : 0;
+
+    bool settings_changed = false;
+
+    ImGui::Spacing();
+    ImGui::Dummy(ImVec2(0.0f, ImGui::GetFontSize() * 0.1f));
+    ImGui::Dummy({ window_padding, window_padding });
+    ImGui::SameLine();
+    imgui.title(_u8L("TinMan Total Cost"));
+
+    begin_row(_u8L("ZIP"));
+    ImGui::SetNextItemWidth(82.0f * m_scale);
+    if (ImGui::InputText("##tinman_total_cost_zip", m_total_cost_zip.data(), m_total_cost_zip.size(), ImGuiInputTextFlags_CharsDecimal)) {
+        m_total_cost_electric_rate_cents = tinman_rate_cents_for_zip(m_total_cost_zip.data());
+        settings_changed = true;
+    }
+
+    begin_row(zip_state.empty() ? _u8L("Rate") : _u8L("Rate") + " (" + zip_state + ")");
+    ImGui::SetNextItemWidth(82.0f * m_scale);
+    if (ImGui::InputDouble("##tinman_total_cost_rate", &m_total_cost_electric_rate_cents, 0.0, 0.0, "%.2f", ImGuiInputTextFlags_CharsDecimal))
+        settings_changed = true;
+    ImGui::SameLine();
+    imgui.text("c/kWh");
+
+    begin_row(_u8L("Spool size"));
+    const std::string selected_spool = std::to_string(tinman_spool_kg_options[m_total_cost_spool_index]) + " kg";
+    ImGui::SetNextItemWidth(82.0f * m_scale);
+    if (ImGui::BeginCombo("##tinman_total_cost_spool", selected_spool.c_str())) {
+        for (int i = 0; i < static_cast<int>(tinman_spool_kg_options.size()); ++i) {
+            const std::string spool_label = std::to_string(tinman_spool_kg_options[i]) + " kg";
+            const bool selected = i == m_total_cost_spool_index;
+            if (ImGui::Selectable(spool_label.c_str(), selected)) {
+                m_total_cost_spool_index = i;
+                settings_changed = true;
+            }
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+
+    begin_row(_u8L("Setup labor"));
+    ImGui::SetNextItemWidth(54.0f * m_scale);
+    if (ImGui::InputDouble("##tinman_total_cost_setup_hours", &m_total_cost_setup_hours, 0.0, 0.0, "%.2f", ImGuiInputTextFlags_CharsDecimal))
+        settings_changed = true;
+    ImGui::SameLine();
+    imgui.text("h");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(66.0f * m_scale);
+    if (ImGui::InputDouble("##tinman_total_cost_setup_rate", &m_total_cost_setup_labor_rate, 0.0, 0.0, "%.2f", ImGuiInputTextFlags_CharsDecimal))
+        settings_changed = true;
+    ImGui::SameLine();
+    imgui.text("$/h");
+
+    begin_row(_u8L("Post labor"));
+    ImGui::SetNextItemWidth(54.0f * m_scale);
+    if (ImGui::InputDouble("##tinman_total_cost_post_hours", &m_total_cost_post_hours, 0.0, 0.0, "%.2f", ImGuiInputTextFlags_CharsDecimal))
+        settings_changed = true;
+    ImGui::SameLine();
+    imgui.text("h");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(66.0f * m_scale);
+    if (ImGui::InputDouble("##tinman_total_cost_post_rate", &m_total_cost_post_labor_rate, 0.0, 0.0, "%.2f", ImGuiInputTextFlags_CharsDecimal))
+        settings_changed = true;
+    ImGui::SameLine();
+    imgui.text("$/h");
+
+    if (settings_changed)
+        save_total_cost_settings();
+
+    char buffer[128];
+    begin_row(_u8L("Power profile"));
+    std::snprintf(buffer, sizeof(buffer), "%s, %.0f W", power_profile.name.c_str(), power_profile.average_running_watts);
+    imgui.text(buffer);
+
+    begin_row(_u8L("Energy"));
+    std::snprintf(buffer, sizeof(buffer), "$%.2f (%.2f kWh)", energy_cost, energy_kwh);
+    imgui.text(buffer);
+
+    begin_row(_u8L("Material"));
+    std::snprintf(buffer, sizeof(buffer), "$%.2f", ps.total_cost);
+    imgui.text(buffer);
+
+    begin_row(_u8L("Setup"));
+    std::snprintf(buffer, sizeof(buffer), "$%.2f", setup_cost);
+    imgui.text(buffer);
+
+    begin_row(_u8L("Post"));
+    std::snprintf(buffer, sizeof(buffer), "$%.2f", post_cost);
+    imgui.text(buffer);
+
+    begin_row(_u8L("Prints per spool"));
+    if (ps.total_weight > 0.0)
+        std::snprintf(buffer, sizeof(buffer), "%llu full prints @ %.1fg", prints_per_spool, ps.total_weight);
+    else
+        std::snprintf(buffer, sizeof(buffer), "N/A");
+    imgui.text(buffer);
+
+    begin_row(_u8L("Total"));
+    std::snprintf(buffer, sizeof(buffer), "$%.2f", total_cost);
+    imgui.text(buffer);
 }
 
 void GCodeViewer::init(ConfigOptionMode mode, PresetBundle* preset_bundle)
@@ -4943,6 +5399,8 @@ void GCodeViewer::render_legend(float &legend_height, int canvas_width, int canv
     imgui.text(total_str + ":");
     ImGui::SameLine(max_len);
     imgui.text(short_time(get_time_dhms(time_mode.time)));
+
+    render_total_cost_section(window_padding, max_len, ps, time_mode);
 
     auto show_mode_button = [this, &imgui, can_show_mode_button](const std::string& label, libvgcode::ETimeMode mode) {
         if (can_show_mode_button(mode)) {

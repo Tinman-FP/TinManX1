@@ -24,6 +24,7 @@
 namespace Slic3r {
 
 class Print;
+struct PrintStatistics;
 class TriangleMesh;
 class PresetBundle;
 
@@ -235,6 +236,14 @@ private:
 
     float m_legend_height;
     PrintEstimatedStatistics m_print_statistics;
+    bool m_total_cost_settings_loaded{ false };
+    std::array<char, 16> m_total_cost_zip{};
+    double m_total_cost_electric_rate_cents{ 0.0 };
+    double m_total_cost_setup_hours{ 0.0 };
+    double m_total_cost_setup_labor_rate{ 0.0 };
+    double m_total_cost_post_hours{ 0.0 };
+    double m_total_cost_post_labor_rate{ 0.0 };
+    int m_total_cost_spool_index{ 0 };
     std::map<std::string, std::string> m_arc_support_preview_metadata;
     std::map<std::string, std::string> m_strength_lens_preview_metadata;
     std::map<libvgcode::EGCodeExtrusionRole, libvgcode::Color> m_strength_lens_saved_role_colors;
@@ -367,6 +376,9 @@ private:
     //void load_shells(const Print& print);
     void render_toolpaths();
     void render_shells(int canvas_width, int canvas_height);
+    void load_total_cost_settings();
+    void save_total_cost_settings();
+    void render_total_cost_section(float window_padding, float label_width, const PrintStatistics& ps, const PrintEstimatedStatistics::Mode& time_mode);
 
     //BBS: GUI refactor: add canvas size
     void render_legend(float &legend_height, int canvas_width, int canvas_height, int right_margin);
