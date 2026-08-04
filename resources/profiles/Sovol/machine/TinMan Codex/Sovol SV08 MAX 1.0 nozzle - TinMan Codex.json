@@ -1,0 +1,21 @@
+{
+    "type": "machine",
+    "name": "Sovol SV08 MAX 1.0 nozzle - TinMan Codex",
+    "inherits": "Sovol SV08 MAX 0.8 nozzle",
+    "from": "system",
+    "instantiation": "true",
+    "printer_model": "Sovol SV08 MAX",
+    "printer_variant": "1.0",
+    "printer_settings_id": "Sovol SV08 MAX 1.0 nozzle - TinMan Codex",
+    "nozzle_diameter": [
+        "1.0"
+    ],
+    "min_layer_height": [
+        "0.20"
+    ],
+    "max_layer_height": [
+        "0.70"
+    ],
+    "default_print_profile": "0.50mm Quality @Sovol SV08 MAX 1.0 nozzle - TinMan Codex",
+    "setting_id": "CAnvJhcB9jAJSKK9"
+}

@@ -1,0 +1,21 @@
+{
+    "type": "machine",
+    "name": "Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
+    "inherits": "Bambu Lab X1 Carbon 0.4 nozzle",
+    "from": "system",
+    "instantiation": "true",
+    "printer_model": "Bambu Lab X1 Carbon",
+    "printer_variant": "0.4",
+    "printer_settings_id": "Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
+    "nozzle_diameter": [
+        "0.4"
+    ],
+    "min_layer_height": [
+        "0.08"
+    ],
+    "max_layer_height": [
+        "0.28"
+    ],
+    "default_print_profile": "0.20mm Quality @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
+    "setting_id": "a3GML7YRxK2BSCeI"
+}

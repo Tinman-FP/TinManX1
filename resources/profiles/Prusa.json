@@ -1,6 +1,6 @@
 {
 	"name": "Prusa",
-	"version": "02.04.00.03",
+	"version": "02.04.00.04",
 	"force_update": "0",
 	"description": "Prusa configurations",
 	"machine_model_list": [
@@ -1393,6 +1393,70 @@
 		{
 			"name": "0.32mm SPEED @CORE One L HF 0.5",
 			"sub_path": "process/0.32mm SPEED @CORE One L HF 0.5.json"
+		},
+		{
+			"name": "0.20mm Quality @Prusa CORE One L 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.20mm Quality @Prusa CORE One L 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Fast @Prusa CORE One L 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Fast @Prusa CORE One L 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.28mm Draft @Prusa CORE One L 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.28mm Draft @Prusa CORE One L 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.16mm Tank @Prusa CORE One L 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.16mm Tank @Prusa CORE One L 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.30mm Quality @Prusa CORE One L 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.30mm Quality @Prusa CORE One L 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.36mm Fast @Prusa CORE One L 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.36mm Fast @Prusa CORE One L 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.42mm Draft @Prusa CORE One L 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.42mm Draft @Prusa CORE One L 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Tank @Prusa CORE One L 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Tank @Prusa CORE One L 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Quality @Prusa CORE One L 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Quality @Prusa CORE One L 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.48mm Fast @Prusa CORE One L 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.48mm Fast @Prusa CORE One L 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.56mm Draft @Prusa CORE One L 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.56mm Draft @Prusa CORE One L 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.32mm Tank @Prusa CORE One L 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.32mm Tank @Prusa CORE One L 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.50mm Quality @Prusa CORE One L 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.50mm Quality @Prusa CORE One L 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.60mm Fast @Prusa CORE One L 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.60mm Fast @Prusa CORE One L 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.70mm Draft @Prusa CORE One L 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.70mm Draft @Prusa CORE One L 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Tank @Prusa CORE One L 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Tank @Prusa CORE One L 1.0 nozzle - TinMan Codex.json"
 		}
 	],
 	"filament_list": [
@@ -2587,10 +2651,6 @@
 			"sub_path": "machine/Prusa CORE One HF 0.8 nozzle.json"
 		},
 		{
-			"name": "Prusa CORE One L 0.4 nozzle",
-			"sub_path": "machine/Prusa CORE One L 0.4 nozzle.json"
-		},
-		{
 			"name": "Prusa CORE One L HF 0.5 nozzle",
 			"sub_path": "machine/Prusa CORE One L HF 0.5 nozzle.json"
 		},
@@ -2671,18 +2731,6 @@
 			"sub_path": "machine/Prusa CORE One 0.8 nozzle.json"
 		},
 		{
-			"name": "Prusa CORE One L 0.5 nozzle",
-			"sub_path": "machine/Prusa CORE One L 0.5 nozzle.json"
-		},
-		{
-			"name": "Prusa CORE One L 0.6 nozzle",
-			"sub_path": "machine/Prusa CORE One L 0.6 nozzle.json"
-		},
-		{
-			"name": "Prusa CORE One L 0.8 nozzle",
-			"sub_path": "machine/Prusa CORE One L 0.8 nozzle.json"
-		},
-		{
 			"name": "Prusa MK4S 0.25 nozzle",
 			"sub_path": "machine/Prusa MK4S 0.25 nozzle.json"
 		},
@@ -2741,6 +2789,35 @@
 		{
 			"name": "Prusa MK4S HF0.8 nozzle",
 			"sub_path": "machine/Prusa MK4S HF0.8 nozzle.json"
+		},
+		{
+			"name": "Prusa CORE One L 0.4 nozzle",
+			"sub_path": "machine/Prusa CORE One L 0.4 nozzle.json"
+		},
+		{
+			"name": "Prusa CORE One L 0.6 nozzle",
+			"sub_path": "machine/Prusa CORE One L 0.6 nozzle.json"
+		},
+		{
+			"name": "Prusa CORE One L 0.8 nozzle",
+			"sub_path": "machine/Prusa CORE One L 0.8 nozzle.json"
+		},
+		{
+			"name": "Prusa CORE One L 0.4 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Prusa CORE One L 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "Prusa CORE One L 0.6 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Prusa CORE One L 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "Prusa CORE One L 0.8 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Prusa CORE One L 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "Prusa CORE One L 1.0 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Prusa CORE One L 1.0 nozzle - TinMan Codex.json"
 		}
-	]
+	],
+	"tinman_codex_machine_contract": "2"
 }

@@ -161,9 +161,9 @@
     "tinmanx1-asa-cgf"
   ],
   "compatible_printers": [
-    "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
-    "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
-    "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
-    "FibreSeek Seeker 3 - Codex"
+    "FibreSeek Seeker 3 0.4 nozzle - TinMan Codex",
+    "FibreSeek Seeker 3 0.6 nozzle - TinMan Codex",
+    "FibreSeek Seeker 3 0.8 nozzle - TinMan Codex",
+    "FibreSeek Seeker 3 1.0 nozzle - TinMan Codex"
   ]
 }

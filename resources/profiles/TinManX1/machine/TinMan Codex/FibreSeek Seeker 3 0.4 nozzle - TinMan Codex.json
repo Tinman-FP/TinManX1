@@ -1,0 +1,24 @@
+{
+    "type": "machine",
+    "name": "FibreSeek Seeker 3 0.4 nozzle - TinMan Codex",
+    "inherits": "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
+    "from": "system",
+    "instantiation": "true",
+    "printer_model": "FibreSeek Seeker 3",
+    "printer_variant": "0.4",
+    "printer_settings_id": "FibreSeek Seeker 3 0.4 nozzle - TinMan Codex",
+    "nozzle_diameter": [
+        "0.4",
+        "0.7"
+    ],
+    "min_layer_height": [
+        "0.08",
+        "0.14"
+    ],
+    "max_layer_height": [
+        "0.28",
+        "0.40"
+    ],
+    "default_print_profile": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4 nozzle - TinMan Codex",
+    "setting_id": "QYG8KlElN9FslW18"
+}

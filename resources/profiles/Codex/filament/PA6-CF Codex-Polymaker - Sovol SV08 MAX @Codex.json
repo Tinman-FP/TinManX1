@@ -15,19 +15,10 @@
         "3"
     ],
     "compatible_printers": [
-        "Sovol SV08 MAX 0.4 nozzle",
-        "Sovol SV08 MAX 0.4 nozzle - Copy",
-        "Sovol SV08 MAX 0.4 nozzle Codex Tinman",
-        "Sovol SV08 MAX 0.4 nozzle Tinman",
-        "Sovol SV08 MAX 0.6 nozzle",
-        "Sovol SV08 MAX 0.6 nozzle Codex Tinman",
-        "Sovol SV08 MAX 0.6 nozzle Tinman",
-        "Sovol SV08 MAX 0.8 nozzle",
-        "Sovol SV08 MAX 0.8 nozzle Codex Tinman",
-        "Sovol SV08 MAX 0.8 nozzle Tinman",
-        "Sovol SV08 MAX 1.0 nozzle Codex Tinman",
-        "Sovol SV08 MAX 1.0 nozzle Tinman",
-        "Sovol SV08 MAX"
+        "Sovol SV08 MAX 0.4 nozzle - TinMan Codex",
+        "Sovol SV08 MAX 0.6 nozzle - TinMan Codex",
+        "Sovol SV08 MAX 0.8 nozzle - TinMan Codex",
+        "Sovol SV08 MAX 1.0 nozzle - TinMan Codex"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],

@@ -1,6 +1,6 @@
 {
   "name": "Qidi",
-  "version": "02.04.02.10",
+  "version": "02.04.02.11",
   "force_update": "0",
   "description": "Qidi configurations",
   "machine_model_list": [
@@ -937,6 +937,134 @@
     {
       "name": "0.60mm Max EZ Draft @QidiMaxEz 1.0",
       "sub_path": "process/0.60mm Max EZ Draft @QidiMaxEz 1.0.json"
+    },
+    {
+      "name": "0.20mm Quality @Qidi X-Plus 4 0.4 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.20mm Quality @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.24mm Fast @Qidi X-Plus 4 0.4 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.24mm Fast @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.28mm Draft @Qidi X-Plus 4 0.4 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.28mm Draft @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.16mm Tank @Qidi X-Plus 4 0.4 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.16mm Tank @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.30mm Quality @Qidi X-Plus 4 0.6 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.30mm Quality @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.36mm Fast @Qidi X-Plus 4 0.6 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.36mm Fast @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.42mm Draft @Qidi X-Plus 4 0.6 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.42mm Draft @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.24mm Tank @Qidi X-Plus 4 0.6 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.24mm Tank @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.40mm Quality @Qidi X-Plus 4 0.8 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.40mm Quality @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.48mm Fast @Qidi X-Plus 4 0.8 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.48mm Fast @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.56mm Draft @Qidi X-Plus 4 0.8 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.56mm Draft @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.32mm Tank @Qidi X-Plus 4 0.8 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.32mm Tank @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.50mm Quality @Qidi X-Plus 4 1.0 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.50mm Quality @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.60mm Fast @Qidi X-Plus 4 1.0 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.60mm Fast @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.70mm Draft @Qidi X-Plus 4 1.0 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.70mm Draft @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.40mm Tank @Qidi X-Plus 4 1.0 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.40mm Tank @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.20mm Quality @QidiMaxEz 0.4 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.20mm Quality @QidiMaxEz 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.24mm Fast @QidiMaxEz 0.4 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.24mm Fast @QidiMaxEz 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.28mm Draft @QidiMaxEz 0.4 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.28mm Draft @QidiMaxEz 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.16mm Tank @QidiMaxEz 0.4 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.16mm Tank @QidiMaxEz 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.30mm Quality @QidiMaxEz 0.6 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.30mm Quality @QidiMaxEz 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.36mm Fast @QidiMaxEz 0.6 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.36mm Fast @QidiMaxEz 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.42mm Draft @QidiMaxEz 0.6 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.42mm Draft @QidiMaxEz 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.24mm Tank @QidiMaxEz 0.6 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.24mm Tank @QidiMaxEz 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.40mm Quality @QidiMaxEz 0.8 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.40mm Quality @QidiMaxEz 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.48mm Fast @QidiMaxEz 0.8 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.48mm Fast @QidiMaxEz 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.56mm Draft @QidiMaxEz 0.8 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.56mm Draft @QidiMaxEz 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.32mm Tank @QidiMaxEz 0.8 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.32mm Tank @QidiMaxEz 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.50mm Quality @QidiMaxEz 1.0 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.50mm Quality @QidiMaxEz 1.0 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.60mm Fast @QidiMaxEz 1.0 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.60mm Fast @QidiMaxEz 1.0 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.70mm Draft @QidiMaxEz 1.0 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.70mm Draft @QidiMaxEz 1.0 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.40mm Tank @QidiMaxEz 1.0 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.40mm Tank @QidiMaxEz 1.0 nozzle - TinMan Codex.json"
     }
   ],
   "filament_list": [
@@ -6127,10 +6255,6 @@
       "sub_path": "machine/Qidi X-Plus 3 0.4 nozzle.json"
     },
     {
-      "name": "Qidi X-Plus 4 0.4 nozzle",
-      "sub_path": "machine/Qidi X-Plus 4 0.4 nozzle.json"
-    },
-    {
       "name": "Qidi X-Smart 3 0.4 nozzle",
       "sub_path": "machine/Qidi X-Smart 3 0.4 nozzle.json"
     },
@@ -6177,18 +6301,6 @@
     {
       "name": "Qidi X-Plus 3 0.8 nozzle",
       "sub_path": "machine/Qidi X-Plus 3 0.8 nozzle.json"
-    },
-    {
-      "name": "Qidi X-Plus 4 0.2 nozzle",
-      "sub_path": "machine/Qidi X-Plus 4 0.2 nozzle.json"
-    },
-    {
-      "name": "Qidi X-Plus 4 0.6 nozzle",
-      "sub_path": "machine/Qidi X-Plus 4 0.6 nozzle.json"
-    },
-    {
-      "name": "Qidi X-Plus 4 0.8 nozzle",
-      "sub_path": "machine/Qidi X-Plus 4 0.8 nozzle.json"
     },
     {
       "name": "Qidi X-Smart 3 0.2 nozzle",
@@ -6249,6 +6361,67 @@
     {
       "name": "Qidi Q2C 0.8 nozzle",
       "sub_path": "machine/Qidi Q2C 0.8 nozzle.json"
+    },
+    {
+      "name": "Qidi X-Plus 4 0.4 nozzle",
+      "sub_path": "machine/Qidi X-Plus 4 0.4 nozzle.json"
+    },
+    {
+      "name": "Qidi X-Plus 4 0.6 nozzle",
+      "sub_path": "machine/Qidi X-Plus 4 0.6 nozzle.json"
+    },
+    {
+      "name": "Qidi X-Plus 4 0.8 nozzle",
+      "sub_path": "machine/Qidi X-Plus 4 0.8 nozzle.json"
+    },
+    {
+      "name": "Qidi X-Plus 4 0.4 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "Qidi X-Plus 4 0.6 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "Qidi X-Plus 4 0.8 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "Qidi X-Plus 4 1.0 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "QidiMaxEz 0.4",
+      "sub_path": "machine/QidiMaxEz 0.4.json"
+    },
+    {
+      "name": "QidiMaxEz 0.6",
+      "sub_path": "machine/QidiMaxEz 0.6.json"
+    },
+    {
+      "name": "QidiMaxEz 0.8",
+      "sub_path": "machine/QidiMaxEz 0.8.json"
+    },
+    {
+      "name": "QidiMaxEz 1.0",
+      "sub_path": "machine/QidiMaxEz 1.0.json"
+    },
+    {
+      "name": "QidiMaxEz 0.4 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/QidiMaxEz 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "QidiMaxEz 0.6 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/QidiMaxEz 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "QidiMaxEz 0.8 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/QidiMaxEz 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "QidiMaxEz 1.0 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/QidiMaxEz 1.0 nozzle - TinMan Codex.json"
     }
-  ]
+  ],
+  "tinman_codex_machine_contract": "2"
 }

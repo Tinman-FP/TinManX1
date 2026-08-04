@@ -150,7 +150,8 @@ ROCKET_COMPARE_EXPECTED = {
         "fiber_max_routes_per_layer": 180,
     },
 }
-PLASTIC_NOZZLES = {"0.4", "0.6", "0.8"}
+PLASTIC_NOZZLES = ("0.4", "0.6", "0.8")
+CANONICAL_NOZZLES = (*PLASTIC_NOZZLES, "1.0")
 COMPOSITE_NOZZLE = "0.7"
 
 
@@ -255,10 +256,11 @@ def check_index() -> dict[str, Any]:
             if expected not in filament_names:
                 fail(f"profile index missing CFC filament {expected}")
 
-    for nozzle in PLASTIC_NOZZLES:
-        composite_machine = f"FibreSeek Seeker 3 {nozzle}+{COMPOSITE_NOZZLE} composite nozzle"
+    for nozzle in CANONICAL_NOZZLES:
+        composite_machine = f"FibreSeek Seeker 3 {nozzle} nozzle - TinMan Codex"
         if composite_machine not in machine_names:
             fail(f"profile index missing composite machine {composite_machine}")
+    for nozzle in PLASTIC_NOZZLES:
         for mode in PROCESS_MODES:
             for prefix in ("0.20mm Plastic + Continuous Fiber", "0.20mm Rocket Compare Composite Only"):
                 process = f"{prefix} {mode} @FibreSeek Seeker 3 {nozzle}+{COMPOSITE_NOZZLE} nozzle"
@@ -311,23 +313,32 @@ def check_machine_common() -> None:
 
 
 def check_composite_machines() -> None:
-    for nozzle in PLASTIC_NOZZLES:
-        path = PROFILE_ROOT / "machine" / f"FibreSeek Seeker 3 {nozzle}+{COMPOSITE_NOZZLE} composite nozzle.json"
+    for nozzle in CANONICAL_NOZZLES:
+        source_nozzle = nozzle if nozzle != "1.0" else "0.8"
+        source_path = PROFILE_ROOT / "machine" / f"FibreSeek Seeker 3 {source_nozzle}+{COMPOSITE_NOZZLE} composite nozzle.json"
+        source = load_json(source_path)
+        if source.get("printer_variant") != source_nozzle:
+            fail(f"{source_path.relative_to(ROOT)} has invalid printer_variant")
+        require_boolish(source, "fiber_enabled", source_path, "1")
+        require_boolish(source, "fiber_shared_nozzle", source_path, "1")
+        if as_list(source.get("filament_map")) != ["1", "2"]:
+            fail(f"{source_path.relative_to(ROOT)} filament_map should isolate slot 2 for CFC")
+
+        path = PROFILE_ROOT / "machine" / "TinMan Codex" / (
+            f"FibreSeek Seeker 3 {nozzle} nozzle - TinMan Codex.json"
+        )
         data = load_json(path)
-        require_boolish(data, "fiber_enabled", path, "1")
-        require_boolish(data, "fiber_shared_nozzle", path, "1")
+        if data.get("inherits") != source.get("name"):
+            fail(f"{path.relative_to(ROOT)} should inherit the validated composite machine")
         if as_list(data.get("nozzle_diameter")) != [nozzle, COMPOSITE_NOZZLE]:
             fail(f"{path.relative_to(ROOT)} nozzle_diameter should be [{nozzle}, {COMPOSITE_NOZZLE}]")
-        if as_list(data.get("filament_map")) != ["1", "2"]:
-            fail(f"{path.relative_to(ROOT)} filament_map should isolate slot 2 for CFC")
 
 
 def check_filaments() -> tuple[int, int]:
     plastic_count = 0
     cfc_count = 0
     composite_printer_names = {
-        *(f"FibreSeek Seeker 3 {nozzle}+{COMPOSITE_NOZZLE} composite nozzle" for nozzle in PLASTIC_NOZZLES),
-        "FibreSeek Seeker 3 - Codex",
+        *(f"FibreSeek Seeker 3 {nozzle} nozzle - TinMan Codex" for nozzle in CANONICAL_NOZZLES),
     }
 
     for path in sorted((PROFILE_ROOT / "filament").glob("*.json")):

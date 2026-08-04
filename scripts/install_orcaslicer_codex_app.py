@@ -27,6 +27,7 @@ TARGET_EXECUTABLE_NAME = EXPECTED_TARGET_NAME
 DEFAULT_TARGET_APP = Path("/Applications/TinManX1.app")
 DEFAULT_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "OrcaSlicer-Codex"
 AUTO_PA_WRAPPER_REL = Path("Contents/Resources/orcaslicer_codex/auto_pa/tinman_auto_pa_postprocess.py")
+LEGACY_PREFLIGHT_REL = Path("tools/orca_codex_launch_preflight.py")
 
 
 def repo_defaults() -> tuple[Path, Path]:
@@ -141,6 +142,18 @@ def install_auto_pa_profile_hook(source_root: Path, target_app: Path, app_suppor
             "--include-system",
         ]
     )
+
+
+def archive_legacy_launch_preflight(app_support: Path) -> Path | None:
+    """Disable the old mutable launch repair pipeline without deleting its source."""
+    preflight = app_support / LEGACY_PREFLIGHT_REL
+    if not preflight.exists():
+        return None
+    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    archive = app_support / "_legacy_launch_preflight_archive" / stamp / preflight.name
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(preflight), str(archive))
+    return archive
 
 
 def update_info_plist(app: Path) -> str:
@@ -312,17 +325,6 @@ def write_native_launcher(launcher: Path, real: Path, default_datadir: str) -> N
                 unsetenv("PYTHONHOME");
                 unsetenv("PYTHONPATH");
 
-                char preflight[PATH_MAX];
-                join_path(preflight, sizeof(preflight), datadir, "tools/orca_codex_launch_preflight.py");
-                if (access(preflight, X_OK) == 0) {{
-                    char summary[PATH_MAX], out[PATH_MAX], err[PATH_MAX];
-                    join_path(summary, sizeof(summary), datadir, "_orcaslicer_codex_launch_preflight_last.json");
-                    join_path(out, sizeof(out), datadir, "_orcaslicer_codex_launch_preflight_last.out");
-                    join_path(err, sizeof(err), datadir, "_orcaslicer_codex_launch_preflight_last.err");
-                    char *preflight_argv[] = {{"/usr/bin/python3", preflight, "--app-support", datadir, "--summary", summary, NULL}};
-                    run_python_helper(preflight, preflight_argv, out, err);
-                }}
-
                 if (!getenv("TINMANX1_SKIP_BAMBU_LAN_REPAIR")) {{
                     char helper[PATH_MAX], out[PATH_MAX], err[PATH_MAX];
                     join_path(helper, sizeof(helper), macos_dir, "../Resources/orcaslicer_codex/tools/repair_bambu_lan_bindings.py");
@@ -449,11 +451,15 @@ def main() -> int:
         except SystemExit as exc:
             print(f"Warning: TinMan auto-PA profile hook failed with exit code {exc.code}", file=sys.stderr)
 
+    archived_preflight = archive_legacy_launch_preflight(args.app_support)
+
     print(f"Installed {args.target_app}")
     print(f"Source {args.source_app}")
     print(f"Version {version}")
     if backup_path:
         print(f"Backup {backup_path}")
+    if archived_preflight:
+        print(f"Archived legacy launch preflight {archived_preflight}")
     return 0
 
 

@@ -1,0 +1,21 @@
+{
+    "type": "machine",
+    "name": "Qidi X-Plus 4 0.6 nozzle - TinMan Codex",
+    "inherits": "Qidi X-Plus 4 0.6 nozzle",
+    "from": "system",
+    "instantiation": "true",
+    "printer_model": "Qidi X-Plus 4",
+    "printer_variant": "0.6",
+    "printer_settings_id": "Qidi X-Plus 4 0.6 nozzle - TinMan Codex",
+    "nozzle_diameter": [
+        "0.6"
+    ],
+    "min_layer_height": [
+        "0.12"
+    ],
+    "max_layer_height": [
+        "0.42"
+    ],
+    "default_print_profile": "0.30mm Quality @Qidi X-Plus 4 0.6 nozzle - TinMan Codex",
+    "setting_id": "0MJ9sYqaQ04ro94a"
+}

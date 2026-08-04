@@ -6,16 +6,16 @@
     "setting_id": "GFST01",
     "instantiation": "true",
     "filament_max_volumetric_speed": [
-        "4",
-        "4"
+        "3.2",
+        "3.2"
     ],
     "filament_deretraction_speed": [
         "nil",
         "nil"
     ],
     "filament_flow_ratio": [
-        "1.08",
-        "1.08"
+        "1.00",
+        "1.00"
     ],
     "filament_flush_temp": [
         "0",
@@ -98,12 +98,12 @@
         "0"
     ],
     "nozzle_temperature": [
-        "300",
-        "300"
+        "280",
+        "280"
     ],
     "nozzle_temperature_initial_layer": [
-        "300",
-        "300"
+        "285",
+        "285"
     ],
     "reduce_fan_stop_start_freq": [
         "0"
@@ -132,8 +132,8 @@
         "Bambu Lab P1S 0.8 nozzle"
     ],
     "nozzle_temperature_range_low": [
-        "270",
-        "270"
+        "260",
+        "260"
     ],
     "nozzle_temperature_range_high": [
         "300",
@@ -184,8 +184,8 @@
         "0"
     ],
     "fan_max_speed": [
-        "0",
-        "0"
+        "20",
+        "20"
     ],
     "overhang_fan_speed": [
         "0",
@@ -200,11 +200,11 @@
         "1"
     ],
     "pressure_advance": [
-        "0.026",
-        "0.026"
+        "0.022",
+        "0.022"
     ],
     "filament_notes": [
-        "TinManX1 PET-CF rescue tune 2026-07-11: after repeated porous PET-CF test prints, use 300C nozzle, 80C bed, fan off, max volumetric 4 mm3/s, flow 1.08, slowdown enabled, and pressure advance enabled. Dry filament and inspect hardened nozzle if voids persist."
+        "TinManX1 PET-CF surface tune 2026-07-27: adjusted after rough Bambu PET-CF prints. Use 285C first layer / 280C print, 80C bed, 50C chamber where supported, flow 1.00, max volumetric 3.2 mm3/s, limited overhang cooling, and pressure advance 0.022. Dry Bambu PET-CF at 80C for 8-12h before printing; if the surface still has popping or pitting, dry longer before changing flow."
     ],
     "tinmanx_petcf_rescue_tune": [
         "2026-07-11 all PET-CF rescue tune with pressure advance"

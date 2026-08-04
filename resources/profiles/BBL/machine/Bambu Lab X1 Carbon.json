@@ -1,7 +1,7 @@
 {
 	"type": "machine_model",
 	"name": "Bambu Lab X1 Carbon",
-	"nozzle_diameter": "0.4;0.2;0.6;0.8",
+	"nozzle_diameter": "0.4;0.6;0.8;1.0",
 	"url": "http://www.bambulab.com/Parameters/printer_model/Bambu Lab X1 Carbon.json",
 	"bed_model": "bbl-3dp-X1.stl",
 	"bed_texture": "bbl-3dp-logo.svg",

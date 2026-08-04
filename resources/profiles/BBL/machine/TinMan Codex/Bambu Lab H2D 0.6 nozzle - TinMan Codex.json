@@ -1,0 +1,24 @@
+{
+    "type": "machine",
+    "name": "Bambu Lab H2D 0.6 nozzle - TinMan Codex",
+    "inherits": "Bambu Lab H2D 0.6 nozzle",
+    "from": "system",
+    "instantiation": "true",
+    "printer_model": "Bambu Lab H2D",
+    "printer_variant": "0.6",
+    "printer_settings_id": "Bambu Lab H2D 0.6 nozzle - TinMan Codex",
+    "nozzle_diameter": [
+        "0.6",
+        "0.6"
+    ],
+    "min_layer_height": [
+        "0.12",
+        "0.12"
+    ],
+    "max_layer_height": [
+        "0.42",
+        "0.42"
+    ],
+    "default_print_profile": "0.30mm Quality @Bambu Lab H2D 0.6 nozzle - TinMan Codex",
+    "setting_id": "tC6op45maxctvmHV"
+}

@@ -366,6 +366,115 @@ VECTOR_KEYS = {
     "filament_type",
 }
 
+PROFILE_RESOURCE_ARTIFACT_SUFFIXES = (
+    ".bak",
+    ".orig",
+    ".tmp",
+    ".swp",
+    ".swo",
+)
+
+BAMBU_PET_CF_TUNING_CONTRACT = {
+    "filament_flow_ratio": "1.00",
+    "nozzle_temperature": "280",
+    "nozzle_temperature_initial_layer": "285",
+    "nozzle_temperature_range_low": "260",
+    "nozzle_temperature_range_high": "300",
+    "enable_pressure_advance": "1",
+    "pressure_advance": "0.022",
+    "fan_min_speed": "0",
+    "fan_max_speed": "20",
+    "filament_max_volumetric_speed": "3.2",
+}
+BAMBU_PET_CF_STALE_NOTE_FRAGMENTS = (
+    "use 300C nozzle",
+    "flow 1.08",
+    "max volumetric 4 mm3/s",
+)
+
+
+def check_profile_resource_artifacts(profiles_dir):
+    """
+    Reject editor backups and local scratch files inside resources/profiles.
+
+    The profile loader walks this tree as product data. A stale .bak beside a
+    real preset is easy to miss locally and makes release/profile audits noisy.
+    Keep backups under work/ or an external backup directory instead.
+    """
+    errors = 0
+    for path in sorted(profiles_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        name = path.name
+        lower_name = name.lower()
+        if (
+            name in {".DS_Store"}
+            or name.startswith("._")
+            or name.endswith("~")
+            or lower_name.endswith(PROFILE_RESOURCE_ARTIFACT_SUFFIXES)
+        ):
+            errors += 1
+            print_error(
+                f"profile resource tree contains backup/scratch artifact "
+                f"{path.relative_to(profiles_dir)}; move it outside resources/profiles"
+            )
+    return errors
+
+
+def normalized_values(value):
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    if value is None:
+        return []
+    return [str(value)]
+
+
+def expected_vector(expected, actual):
+    arity = max(1, len(actual))
+    return [expected] * arity
+
+
+def check_tinman_material_tuning_contracts(profiles_dir):
+    """
+    Guard TinMan-tuned material families that have regressed through partial edits.
+
+    Direct Bambu PET-CF profiles should inherit one conservative product tune
+    across Bambu machines. Brand/vendor-specific PET-CF profiles from other
+    manufacturers are intentionally outside this contract.
+    """
+    errors = 0
+    bbl_filaments = profiles_dir / "BBL" / "filament"
+    if not bbl_filaments.is_dir():
+        return 0
+
+    for path in sorted(bbl_filaments.rglob("Bambu PET-CF*.json")):
+        try:
+            data = json.loads(path.read_bytes())
+        except (ValueError, OSError) as exc:
+            errors += 1
+            print_error(f"Error processing {path.relative_to(profiles_dir)}: {exc}")
+            continue
+        if not str(data.get("name", "")).startswith("Bambu PET-CF @"):
+            continue
+        rel = path.relative_to(profiles_dir)
+        for key, expected in BAMBU_PET_CF_TUNING_CONTRACT.items():
+            actual = normalized_values(data.get(key))
+            if actual != expected_vector(expected, actual):
+                errors += 1
+                print_error(
+                    f"{rel} {key} expected {expected_vector(expected, actual)} "
+                    f"for TinManX1 Bambu PET-CF tune, got {actual}"
+                )
+        for note in normalized_values(data.get("filament_notes")):
+            for stale_fragment in BAMBU_PET_CF_STALE_NOTE_FRAGMENTS:
+                if stale_fragment in note:
+                    errors += 1
+                    print_error(
+                        f"{rel} filament_notes still references stale PET-CF tune "
+                        f"fragment {stale_fragment!r}"
+                    )
+    return errors
+
 def check_vector_type_keys(profiles_dir, vendor_name):
     """
     Check that properties expected to be vectors (JSON arrays) are not stored as scalars.
@@ -452,13 +561,14 @@ def check_conflict_keys(profiles_dir, vendor_name):
     return error_count, warn_count
 
 
-# Bambu (BBL) keeps its authoritative "G*" cloud ids, which are NOT produced by the
-# deterministic formula, so BBL is exempt from the formula match (Rule 2) only. It is
-# still checked for presence, uniqueness, base-no-id and the typo key like every other
-# vendor. Every other vendor (incl. OrcaFilamentLibrary and Custom) must also match the
-# formula.
-SETTING_ID_FORMULA_EXEMPT_VENDORS = {"BBL"}
+# Some curated vendors keep hand-assigned stable ids because those ids are part
+# of their migration/product contract. They are NOT produced by the generic
+# deterministic formula, so they are exempt from the formula match (Rule 2)
+# only. They are still checked for presence, uniqueness, base-no-id and typo
+# keys like every other vendor.
+SETTING_ID_FORMULA_EXEMPT_VENDORS = {"BBL", "Snapmaker", "TinManX1"}
 PROFILE_SUBDIRS = ("filament", "process", "machine")
+NON_VENDOR_PROFILE_DIRS = {"OrcaFilamentLibrary", "polymaker", "user"}
 DISALLOWED_PROFILE_KEYS = {
     # Filament presets expose their swatch through default_filament_colour. The
     # project-level filament_colour key is stripped by Orca's preset validator.
@@ -476,8 +586,8 @@ def check_setting_id_uniqueness(profiles_dir):
       3. Base profiles (instantiation != "true") must not carry a setting_id.  (all vendors)
       4. setting_id must be globally unique - no two files may share one.       (all vendors)
       5. No profile may use the misspelled key "settings_id".                    (all vendors)
-    Formula-exempt vendors (BBL) keep their authoritative ids, so only Rule 2 is skipped
-    for them; they are still held to presence, uniqueness, base-no-id and the typo check.
+    Formula-exempt vendors keep curated ids, so only Rule 2 is skipped for them;
+    they are still held to presence, uniqueness, base-no-id and the typo check.
     """
     errors = 0
     owners = {}  # setting_id -> list of relative_path (every vendor)
@@ -524,8 +634,8 @@ def check_setting_id_uniqueness(profiles_dir):
                         f"run assign_vendor_setting_ids.py"
                     )
                     continue
-                # Rule 2: the stored id must match the deterministic rule. BBL keeps its
-                # authoritative G* ids and is exempt from this check only.
+                # Rule 2: the stored id must match the deterministic rule unless this
+                # vendor keeps curated ids and is exempt from this check only.
                 if not formula_exempt:
                     expected = generate_preset_setting_id(vendor, sub, data.get("name", ""))
                     if sid != expected:
@@ -669,12 +779,14 @@ def main():
         run_checks(args.vendor)
     else:
         for vendor_dir in profiles_dir.iterdir():
-            if not vendor_dir.is_dir() or vendor_dir.name == "OrcaFilamentLibrary":
+            if not vendor_dir.is_dir() or vendor_dir.name in NON_VENDOR_PROFILE_DIRS:
                 continue
             run_checks(vendor_dir.name)
 
     # Global (cross-vendor) check: setting_id must be unique and stay in-namespace.
     # Runs once over the whole tree regardless of the --vendor filter.
+    errors_found += check_profile_resource_artifacts(profiles_dir)
+    errors_found += check_tinman_material_tuning_contracts(profiles_dir)
     errors_found += check_setting_id_uniqueness(profiles_dir)
     errors_found += check_disallowed_profile_keys(profiles_dir)
     errors_found += check_instantiated_renamed_from_uniqueness(profiles_dir)

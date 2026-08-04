@@ -1,0 +1,30 @@
+{
+    "type": "machine",
+    "name": "Snapmaker U1 0.4 nozzle - TinMan Codex",
+    "inherits": "Snapmaker U1 (0.4 nozzle)",
+    "from": "system",
+    "instantiation": "true",
+    "printer_model": "Snapmaker U1",
+    "printer_variant": "0.4",
+    "printer_settings_id": "Snapmaker U1 0.4 nozzle - TinMan Codex",
+    "nozzle_diameter": [
+        "0.4",
+        "0.4",
+        "0.4",
+        "0.4"
+    ],
+    "min_layer_height": [
+        "0.08",
+        "0.08",
+        "0.08",
+        "0.08"
+    ],
+    "max_layer_height": [
+        "0.28",
+        "0.28",
+        "0.28",
+        "0.28"
+    ],
+    "default_print_profile": "0.20mm Quality @Snapmaker U1 0.4 nozzle - TinMan Codex",
+    "setting_id": "U35Wlwsf7cfIyO96"
+}

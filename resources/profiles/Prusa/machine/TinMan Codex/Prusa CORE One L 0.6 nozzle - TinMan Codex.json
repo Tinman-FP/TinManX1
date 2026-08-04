@@ -1,0 +1,21 @@
+{
+    "type": "machine",
+    "name": "Prusa CORE One L 0.6 nozzle - TinMan Codex",
+    "inherits": "Prusa CORE One L 0.6 nozzle",
+    "from": "system",
+    "instantiation": "true",
+    "printer_model": "Prusa CORE One L",
+    "printer_variant": "0.6",
+    "printer_settings_id": "Prusa CORE One L 0.6 nozzle - TinMan Codex",
+    "nozzle_diameter": [
+        "0.6"
+    ],
+    "min_layer_height": [
+        "0.12"
+    ],
+    "max_layer_height": [
+        "0.42"
+    ],
+    "default_print_profile": "0.30mm Quality @Prusa CORE One L 0.6 nozzle - TinMan Codex",
+    "setting_id": "q7MjljYjKB72Pm7O"
+}

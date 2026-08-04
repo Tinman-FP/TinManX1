@@ -1,19 +1,9 @@
 {
     "compatible_printers": [
-        "Creality K2 Plus 0.2 nozzle",
-        "Creality K2 Plus 0.4 nozzle",
-        "Creality K2 Plus 0.4 nozzle - Codex Tinman",
-        "Creality K2 Plus 0.4 nozzle - Copy",
-        "Creality K2 Plus 0.4 nozzle - Tinman",
-        "Creality K2 Plus 0.6 nozzle",
-        "Creality K2 Plus 0.6 nozzle - Codex Tinman",
-        "Creality K2 Plus 0.6 nozzle - Copy",
-        "Creality K2 Plus 0.6 nozzle - Tinman",
-        "Creality K2 Plus 0.6 nozzle - Tinmans Hanger",
-        "Creality K2 Plus 0.8 nozzle",
-        "Creality K2 Plus 0.8 nozzle - Codex Tinman",
-        "Creality K2 Plus 0.8 nozzle - Tinman",
-        "Creality K2 Plus"
+        "Creality K2 Plus 0.4 nozzle - TinMan Codex",
+        "Creality K2 Plus 0.6 nozzle - TinMan Codex",
+        "Creality K2 Plus 0.8 nozzle - TinMan Codex",
+        "Creality K2 Plus 1.0 nozzle - TinMan Codex"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],

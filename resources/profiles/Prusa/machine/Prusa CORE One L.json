@@ -8,5 +8,5 @@
 	"hotend_model": "",
 	"machine_tech": "FFF",
 	"model_id": "Prusa_CORE_One_L",
-	"nozzle_diameter": "0.4;0.5;0.6;0.8"
+	"nozzle_diameter": "0.4;0.6;0.8;1.0"
 }

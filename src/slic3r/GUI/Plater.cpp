@@ -882,7 +882,10 @@ void Sidebar::priv::layout_printer(bool isBBL, bool isDual)
 
     // NEEDFIX requires AMS check or any type of ???
     // Single nozzle & non ams
-    panel_nozzle_dia->Show(!isDual && preset_bundle.get_printer_extruder_count() < 2);
+    // A multi-extruder printer may still use one common nozzle diameter for
+    // the selected machine preset. Only Bambu's true split-nozzle UI hides
+    // this selector; RatRig IDEX and Snapmaker U1 switch the whole preset.
+    panel_nozzle_dia->Show(!isDual);
     extruder_single_sizer->Show(false);
 
     // ORCA ensure printer section is visible after changing printer from printer selection dialog
@@ -3441,7 +3444,8 @@ void Sidebar::update_presets(Preset::Type preset_type)
         auto* nozzle_diameter = dynamic_cast<const ConfigOptionFloats*>(printer_preset.config.option("nozzle_diameter"));
 
         bool is_dual_extruder = nozzle_diameter->size() == 2;
-        p->layout_printer(preset_bundle.use_bbl_network(), isBBL && is_dual_extruder);
+        bool use_split_nozzle_controls = isBBL && is_dual_extruder;
+        p->layout_printer(preset_bundle.use_bbl_network(), use_split_nozzle_controls);
         auto diameters = wxGetApp().preset_bundle->printers.diameters_of_selected_printer();
         auto diameter = printer_preset.config.opt_string("printer_variant");
         auto update_extruder_diameter = [&diameters, &diameter, &nozzle_diameter](int extruder_index,ExtruderGroup & extruder) {
@@ -3466,7 +3470,7 @@ void Sidebar::update_presets(Preset::Type preset_type)
             extruder.diameter = nozzle_dia;
         };
         auto image_path = get_cur_select_bed_image();
-        if (is_dual_extruder) {
+        if (use_split_nozzle_controls) {
             std::string printer_type = printer_preset.get_printer_type(wxGetApp().preset_bundle);
             p->left_extruder->SetTitle(_L(DevPrinterConfigUtil::get_toolhead_display_name(printer_type, DEPUTY_EXTRUDER_ID, ToolHeadComponent::Nozzle, ToolHeadNameCase::TitleCase)));
             p->right_extruder->SetTitle(_L(DevPrinterConfigUtil::get_toolhead_display_name(printer_type, MAIN_EXTRUDER_ID, ToolHeadComponent::Nozzle, ToolHeadNameCase::TitleCase)));

@@ -1,0 +1,12 @@
+{
+    "type": "process",
+    "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4 nozzle - TinMan Codex",
+    "inherits": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4+0.7 nozzle",
+    "from": "system",
+    "instantiation": "true",
+    "print_settings_id": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4 nozzle - TinMan Codex",
+    "compatible_printers": [
+        "FibreSeek Seeker 3 0.4 nozzle - TinMan Codex"
+    ],
+    "setting_id": "NARlDiMFGkwIRyiH"
+}

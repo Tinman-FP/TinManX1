@@ -2,6 +2,7 @@
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Format/DRC.hpp"
 #include "AppConfig.hpp"
+#include "TinManMachineProfileContract.hpp"
 //BBS
 #include "Preset.hpp"
 #include "Exception.hpp"
@@ -897,6 +898,10 @@ void AppConfig::save()
         throw CriticalException("Calling AppConfig::save() from a worker thread!");
     }
 
+    // Startup, setup-wizard, and cloud-sync paths all persist AppConfig. Keep
+    // the curated machine catalog canonical at their shared write boundary.
+    tinmanx_apply_machine_catalog(*this);
+
     // The config is first written to a file with a PID suffix and then moved
     // to avoid race conditions with multiple instances of Slic3r
     const auto path = config_path();
@@ -1196,6 +1201,8 @@ void AppConfig::save()
 {
     if (! is_main_thread_active())
         throw CriticalException("Calling AppConfig::save() from a worker thread!");
+
+    tinmanx_apply_machine_catalog(*this);
 
     // The config is first written to a file with a PID suffix and then moved
     // to avoid race conditions with multiple instances of Slic3r

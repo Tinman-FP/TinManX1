@@ -1,0 +1,24 @@
+{
+    "type": "machine",
+    "name": "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex",
+    "inherits": "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle",
+    "from": "system",
+    "instantiation": "true",
+    "printer_model": "RatRig V-Core 4 IDEX 500 COPY MODE",
+    "printer_variant": "0.8",
+    "printer_settings_id": "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex",
+    "nozzle_diameter": [
+        "0.8",
+        "0.8"
+    ],
+    "min_layer_height": [
+        "0.16",
+        "0.16"
+    ],
+    "max_layer_height": [
+        "0.56",
+        "0.56"
+    ],
+    "default_print_profile": "0.40mm Quality @RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex",
+    "setting_id": "wnzrAHAowJ2vwejh"
+}

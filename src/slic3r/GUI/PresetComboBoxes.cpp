@@ -26,6 +26,7 @@
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/TinManMachineProfileContract.hpp"
 #include "libslic3r/Color.hpp"
 
 #include "GUI.hpp"
@@ -661,6 +662,9 @@ void PresetComboBox::update(std::string select_preset_name)
     for (size_t i = presets.front().is_visible ? 0 : m_collection->num_default_presets(); i < presets.size(); ++i)
     {
         const Preset& preset = presets[i];
+        if (m_type == Preset::TYPE_PRINTER &&
+            !tinmanx_machine_preset_allowed(preset.name, preset.config.opt_string("printer_model")))
+            continue;
         if (m_type == Preset::TYPE_FILAMENT &&
             !tinmanx_filament_preset_allowed_for_slot(m_preset_bundle, m_filament_idx, preset))
             continue;
@@ -1481,6 +1485,9 @@ void PlaterPresetComboBox::update()
     for (size_t i = presets.front().is_visible ? 0 : list_collection->num_default_presets(); i < presets.size(); ++i)
     {
         const Preset& preset = presets[i];
+        if (m_type == Preset::TYPE_PRINTER &&
+            !tinmanx_machine_preset_allowed(preset.name, preset.config.opt_string("printer_model")))
+            continue;
         const bool force_show_tinmanx_fiber_slot_preset =
             flat_tinmanx_fiber_slot_filaments &&
             tinmanx_filament_preset_is_cfc_slot_profile(preset);
