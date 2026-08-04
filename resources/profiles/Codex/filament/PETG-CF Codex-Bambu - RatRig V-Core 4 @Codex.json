@@ -58,10 +58,10 @@
         "30"
     ],
     "fan_max_speed": [
-        "25"
+        "40"
     ],
     "fan_min_speed": [
-        "10"
+        "5"
     ],
     "filament_cost": [
         "35"
@@ -76,7 +76,7 @@
         "1.75"
     ],
     "filament_flow_ratio": [
-        "0.96"
+        "0.95"
     ],
     "filament_flush_temp": [
         "0"
@@ -94,7 +94,7 @@
         "nil"
     ],
     "filament_max_volumetric_speed": [
-        "10"
+        "20"
     ],
     "filament_ramming_volumetric_speed": [
         "-1"
@@ -199,10 +199,10 @@
         "0"
     ],
     "hot_plate_temp": [
-        "80"
+        "70"
     ],
     "hot_plate_temp_initial_layer": [
-        "80"
+        "70"
     ],
     "hole_coef_1": [
         "0"
@@ -232,13 +232,13 @@
         "270"
     ],
     "nozzle_temperature": [
-        "245"
+        "255"
     ],
     "nozzle_temperature_initial_layer": [
-        "250"
+        "255"
     ],
     "overhang_fan_speed": [
-        "60"
+        "100"
     ],
     "overhang_fan_threshold": [
         "10%"
@@ -271,10 +271,10 @@
         "70"
     ],
     "textured_plate_temp": [
-        "80"
+        "70"
     ],
     "textured_plate_temp_initial_layer": [
-        "80"
+        "70"
     ],
     "filament_velocity_adaptation_factor": [
         "1"
@@ -323,5 +323,11 @@
     ],
     "default_filament_colour": [
         "#000000"
+    ],
+    "activate_chamber_temp_control": [
+        "0"
+    ],
+    "chamber_temperature": [
+        "0"
     ]
 }

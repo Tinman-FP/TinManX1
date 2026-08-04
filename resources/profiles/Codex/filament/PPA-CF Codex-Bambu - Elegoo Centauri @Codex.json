@@ -94,7 +94,7 @@
         "nil"
     ],
     "filament_max_volumetric_speed": [
-        "8"
+        "12"
     ],
     "filament_ramming_volumetric_speed": [
         "-1"
@@ -301,10 +301,10 @@
     "description": "When printing this filament, there's a risk of nozzle clogging, oozing, warping and low layer adhesion strength. To get better results, please refer to this wiki: Printing Tips for High Temp / Engineering materials.",
     "setting_id": "L5x93dRybEfz1gEw",
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "chamber_temperature": [
-        "55"
+        "0"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],

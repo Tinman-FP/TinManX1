@@ -1,0 +1,120 @@
+{
+    "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
+        "Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex",
+        "Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex",
+        "Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex"
+    ],
+    "compatible_printers_condition": "",
+    "compatible_prints": [],
+    "compatible_prints_condition": "",
+    "filament_retraction_length": [
+        "nil"
+    ],
+    "filament_retract_when_changing_layer": [
+        "nil"
+    ],
+    "filament_z_hop": [
+        "nil"
+    ],
+    "filament_wipe": [
+        "nil"
+    ],
+    "filament_wipe_distance": [
+        "nil"
+    ],
+    "activate_chamber_temp_control": [
+        "0"
+    ],
+    "chamber_temperature": [
+        "0"
+    ],
+    "chamber_temperatures": [
+        "0"
+    ],
+    "close_fan_the_first_x_layers": [
+        "3"
+    ],
+    "default_filament_colour": [
+        "#000000"
+    ],
+    "fan_min_speed": [
+        "0"
+    ],
+    "fan_max_speed": [
+        "10"
+    ],
+    "filament_cost": [
+        "54.95"
+    ],
+    "filament_density": [
+        "1.18"
+    ],
+    "filament_diameter": [
+        "1.75"
+    ],
+    "filament_flow_ratio": [
+        "0.98"
+    ],
+    "filament_max_volumetric_speed": [
+        "10"
+    ],
+    "filament_notes": "3D-Fuel Pro PCTG-CF10 profile seeded from 3D-Fuel Bambu X1C 0.4mm profile published 2026-03-24. Use hardened nozzle. Avoid grid infill; prefer gyroid, cubic, honeycomb, or rectilinear for PCTG. Default color set to black.",
+    "filament_settings_id": [
+        "PCTG-CF Codex-3D-Fuel Pro - Bambu X1C HF @Codex"
+    ],
+    "filament_type": [
+        "PCTG-CF"
+    ],
+    "filament_vendor": [
+        "Codex"
+    ],
+    "from": "system",
+    "hot_plate_temp": [
+        "80"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "80"
+    ],
+    "inherits": "Generic PCTG @System",
+    "is_custom_defined": "0",
+    "name": "PCTG-CF Codex-3D-Fuel Pro - Bambu X1C HF @Codex",
+    "nozzle_temperature": [
+        "260"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "260"
+    ],
+    "nozzle_temperature_range_high": [
+        "300"
+    ],
+    "nozzle_temperature_range_low": [
+        "250"
+    ],
+    "overhang_fan_speed": [
+        "70"
+    ],
+    "required_nozzle_HRC": [
+        "40"
+    ],
+    "temperature_vitrification": [
+        "84"
+    ],
+    "textured_plate_temp": [
+        "80"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "80"
+    ],
+    "version": "2.3.1.10",
+    "enable_pressure_advance": [
+        "0"
+    ],
+    "pressure_advance": [
+        "0.02"
+    ],
+    "filament_id": "CODX8E6CADA4",
+    "instantiation": "true",
+    "type": "filament",
+    "setting_id": "77vat3t314SLVJge"
+}

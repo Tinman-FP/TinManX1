@@ -312,5 +312,11 @@
     ],
     "filament_price_source": [
         "Generic 1 kg retail average"
+    ],
+    "activate_chamber_temp_control": [
+        "0"
+    ],
+    "chamber_temperature": [
+        "0"
     ]
 }

@@ -10,7 +10,7 @@
         "0"
     ],
     "chamber_temperatures": [
-        "0"
+        "60"
     ],
     "close_fan_the_first_x_layers": [
         "3"
@@ -94,7 +94,7 @@
         "nil"
     ],
     "filament_max_volumetric_speed": [
-        "8"
+        "12"
     ],
     "filament_ramming_volumetric_speed": [
         "-1"
@@ -304,7 +304,7 @@
         "1"
     ],
     "chamber_temperature": [
-        "45"
+        "60"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],

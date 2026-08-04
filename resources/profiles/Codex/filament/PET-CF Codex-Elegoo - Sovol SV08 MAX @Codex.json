@@ -272,5 +272,8 @@
     ],
     "chamber_temperature": [
         "50"
+    ],
+    "chamber_temperatures": [
+        "50"
     ]
 }

@@ -141,5 +141,8 @@
     ],
     "filament_price_source_variant": [
         "1.75mm / 1kg / Black"
+    ],
+    "chamber_temperatures": [
+        "0"
     ]
 }

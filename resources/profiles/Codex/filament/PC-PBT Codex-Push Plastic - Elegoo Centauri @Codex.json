@@ -303,10 +303,10 @@
     "setting_id": "PcodBTN3xqhf3dzC",
     "filament_id": "CODX2E1EDC65",
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "chamber_temperature": [
-        "55"
+        "0"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],

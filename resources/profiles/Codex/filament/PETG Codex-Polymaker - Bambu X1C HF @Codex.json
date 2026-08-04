@@ -1,0 +1,165 @@
+{
+    "bed_type": [
+        "Cool Plate"
+    ],
+    "close_fan_the_first_x_layers": [
+        "3"
+    ],
+    "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
+        "Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex",
+        "Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex",
+        "Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex"
+    ],
+    "compatible_printers_condition": "",
+    "compatible_prints": [],
+    "compatible_prints_condition": "",
+    "cool_plate_temp": [
+        "0"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "0"
+    ],
+    "description": "Official Polymaker Orca preset source: PolyLite PETG for Snapmaker U1 (2026-04-14T14:06:15+08:00). Imported on 2026-04-22 and made compatible with all local Orca printers.",
+    "enable_pressure_advance": [
+        "1"
+    ],
+    "eng_plate_temp": [
+        "70"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "70"
+    ],
+    "fan_cooling_layer_time": [
+        "30"
+    ],
+    "fan_max_speed": [
+        "90"
+    ],
+    "fan_min_speed": [
+        "40"
+    ],
+    "filament_cost": [
+        "20"
+    ],
+    "filament_density": [
+        "1.25"
+    ],
+    "filament_diameter": [
+        "1.75"
+    ],
+    "filament_end_gcode": [
+        "; filament end gcode \n"
+    ],
+    "filament_flow_ratio": [
+        "0.95"
+    ],
+    "filament_id": "CODX64D65F72",
+    "filament_max_volumetric_speed": [
+        "11.5"
+    ],
+    "filament_minimal_purge_on_wipe_tower": [
+        "15"
+    ],
+    "filament_settings_id": [
+        "PETG Codex-Polymaker - Bambu X1C HF @Codex"
+    ],
+    "filament_soluble": [
+        "0"
+    ],
+    "filament_start_gcode": [
+        "; Filament gcode\n"
+    ],
+    "filament_type": [
+        "PETG"
+    ],
+    "filament_vendor": [
+        "Codex"
+    ],
+    "from": "system",
+    "full_fan_speed_layer": [
+        "0"
+    ],
+    "hot_plate_temp": [
+        "70"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "70"
+    ],
+    "idle_temperature": "0",
+    "instantiation": "true",
+    "is_custom_defined": "0",
+    "name": "PETG Codex-Polymaker - Bambu X1C HF @Codex",
+    "nozzle_temperature": [
+        "255"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "255"
+    ],
+    "nozzle_temperature_range_high": [
+        "270"
+    ],
+    "nozzle_temperature_range_low": [
+        "220"
+    ],
+    "overhang_fan_speed": [
+        "90"
+    ],
+    "overhang_fan_threshold": [
+        "10%"
+    ],
+    "pressure_advance": [
+        "0.05"
+    ],
+    "reduce_fan_stop_start_freq": [
+        "1"
+    ],
+    "setting_id": "wCzBmBDuYNlCLlRx",
+    "slow_down_for_layer_cooling": [
+        "1"
+    ],
+    "slow_down_layer_time": [
+        "12"
+    ],
+    "slow_down_min_speed": [
+        "20"
+    ],
+    "supertack_plate_temp": [
+        "70"
+    ],
+    "supertack_plate_temp_initial_layer": [
+        "70"
+    ],
+    "temperature_vitrification": [
+        "81"
+    ],
+    "textured_plate_temp": [
+        "70"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "70"
+    ],
+    "type": "filament",
+    "version": "2.3.1.10",
+    "filament_price_source": [
+        "Generic 1 kg retail average"
+    ],
+    "default_filament_colour": [
+        "#000000"
+    ],
+    "additional_cooling_fan_speed": [
+        "0"
+    ],
+    "filament_shrink": [
+        "100%"
+    ],
+    "activate_chamber_temp_control": [
+        "0"
+    ],
+    "chamber_temperature": [
+        "0"
+    ],
+    "chamber_temperatures": [
+        "0"
+    ]
+}

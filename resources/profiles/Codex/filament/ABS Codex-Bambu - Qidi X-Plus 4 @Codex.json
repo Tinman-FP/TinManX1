@@ -10,10 +10,10 @@
         "0"
     ],
     "chamber_temperatures": [
-        "0"
+        "65"
     ],
     "close_fan_the_first_x_layers": [
-        "5"
+        "3"
     ],
     "complete_print_exhaust_fan_speed": [
         "70"
@@ -52,7 +52,7 @@
         "90"
     ],
     "eng_plate_temp_initial_layer": [
-        "100"
+        "90"
     ],
     "fan_cooling_layer_time": [
         "30"
@@ -76,7 +76,7 @@
         "1.75"
     ],
     "filament_flow_ratio": [
-        "0.94"
+        "0.95"
     ],
     "filament_flush_temp": [
         "0"
@@ -94,7 +94,7 @@
         "nil"
     ],
     "filament_max_volumetric_speed": [
-        "30"
+        "25"
     ],
     "filament_ramming_volumetric_speed": [
         "-1"
@@ -190,7 +190,7 @@
         "10"
     ],
     "filament_shrink": [
-        "95.404%"
+        "100%"
     ],
     "filament_pre_cooling_temperature": [
         "0"
@@ -202,7 +202,7 @@
         "90"
     ],
     "hot_plate_temp_initial_layer": [
-        "100"
+        "90"
     ],
     "hole_coef_1": [
         "0"
@@ -232,10 +232,10 @@
         "280"
     ],
     "nozzle_temperature": [
-        "250"
+        "270"
     ],
     "nozzle_temperature_initial_layer": [
-        "255"
+        "260"
     ],
     "overhang_fan_speed": [
         "80"
@@ -262,7 +262,7 @@
         "1"
     ],
     "slow_down_layer_time": [
-        "0"
+        "12"
     ],
     "slow_down_min_speed": [
         "20"
@@ -274,7 +274,7 @@
         "90"
     ],
     "textured_plate_temp_initial_layer": [
-        "100"
+        "90"
     ],
     "filament_velocity_adaptation_factor": [
         "1"
@@ -311,7 +311,7 @@
         "1"
     ],
     "chamber_temperature": [
-        "50"
+        "65"
     ],
     "enable_pressure_advance": [
         "1"

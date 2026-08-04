@@ -10,7 +10,7 @@
         "0"
     ],
     "chamber_temperatures": [
-        "0"
+        "60"
     ],
     "close_fan_the_first_x_layers": [
         "3"
@@ -58,7 +58,7 @@
         "30"
     ],
     "fan_max_speed": [
-        "60"
+        "40"
     ],
     "fan_min_speed": [
         "10"
@@ -76,7 +76,7 @@
         "1.75"
     ],
     "filament_flow_ratio": [
-        "1"
+        "0.94"
     ],
     "filament_flush_temp": [
         "0"
@@ -94,7 +94,7 @@
         "nil"
     ],
     "filament_max_volumetric_speed": [
-        "18"
+        "29"
     ],
     "filament_ramming_volumetric_speed": [
         "-1"
@@ -262,7 +262,7 @@
         "1"
     ],
     "slow_down_layer_time": [
-        "2"
+        "12"
     ],
     "slow_down_min_speed": [
         "20"
@@ -310,7 +310,7 @@
         "1"
     ],
     "chamber_temperature": [
-        "45"
+        "60"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],

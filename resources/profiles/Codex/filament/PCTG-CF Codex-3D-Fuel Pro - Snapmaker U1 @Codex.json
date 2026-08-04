@@ -101,10 +101,10 @@
     "filament_id": "CODX9C419B59",
     "instantiation": "true",
     "chamber_temperature": [
-        "45"
+        "0"
     ],
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "filament_price_source_url": [
         "https://www.3dfuel.com/products/pro-pctg-cf10-carbon-fiber-1-75mm"
@@ -113,5 +113,8 @@
         "3D-Fuel Pro PCTG-CF10 1 kg spool"
     ],
     "type": "filament",
-    "setting_id": "vQWV8bDALh0Dj2xI"
+    "setting_id": "vQWV8bDALh0Dj2xI",
+    "chamber_temperatures": [
+        "0"
+    ]
 }

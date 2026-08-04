@@ -303,10 +303,10 @@
     "filament_id": "CODX23590A6A",
     "setting_id": "gdbxAiV4C93JRSgm",
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "chamber_temperature": [
-        "45"
+        "0"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],

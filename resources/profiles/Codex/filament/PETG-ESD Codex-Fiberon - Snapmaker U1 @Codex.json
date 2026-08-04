@@ -30,7 +30,7 @@
         "0.95"
     ],
     "filament_max_volumetric_speed": [
-        "12"
+        "20"
     ],
     "filament_is_support": [
         "0"
@@ -39,10 +39,10 @@
         "0"
     ],
     "nozzle_temperature": [
-        "280"
+        "290"
     ],
     "nozzle_temperature_initial_layer": [
-        "280"
+        "290"
     ],
     "nozzle_temperature_range_low": [
         "250"
@@ -51,28 +51,28 @@
         "290"
     ],
     "cool_plate_temp": [
-        "60"
+        "0"
     ],
     "cool_plate_temp_initial_layer": [
-        "60"
+        "0"
     ],
     "eng_plate_temp": [
-        "0"
+        "60"
     ],
     "eng_plate_temp_initial_layer": [
-        "0"
+        "60"
     ],
     "hot_plate_temp": [
-        "80"
+        "60"
     ],
     "hot_plate_temp_initial_layer": [
-        "80"
+        "60"
     ],
     "textured_plate_temp": [
-        "80"
+        "60"
     ],
     "textured_plate_temp_initial_layer": [
-        "80"
+        "60"
     ],
     "chamber_temperature": [
         "0"
@@ -81,10 +81,10 @@
         "0"
     ],
     "fan_min_speed": [
-        "10"
+        "0"
     ],
     "fan_max_speed": [
-        "20"
+        "100"
     ],
     "overhang_fan_speed": [
         "100"
@@ -133,5 +133,35 @@
     ],
     "filament_price_source_variant": [
         "1.75mm / 1kg / Black"
+    ],
+    "fan_cooling_layer_time": [
+        "15"
+    ],
+    "full_fan_speed_layer": [
+        "0"
+    ],
+    "slow_down_layer_time": [
+        "2"
+    ],
+    "slow_down_min_speed": [
+        "20"
+    ],
+    "slow_down_for_layer_cooling": [
+        "1"
+    ],
+    "close_fan_the_first_x_layers": [
+        "3"
+    ],
+    "reduce_fan_stop_start_freq": [
+        "1"
+    ],
+    "additional_cooling_fan_speed": [
+        "0"
+    ],
+    "filament_shrink": [
+        "100%"
+    ],
+    "chamber_temperatures": [
+        "0"
     ]
 }

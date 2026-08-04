@@ -184,5 +184,11 @@
     "version": "2.3.1.10",
     "filament_price_source": [
         "Generic 1 kg retail average"
+    ],
+    "additional_cooling_fan_speed": [
+        "0"
+    ],
+    "filament_shrink": [
+        "100%"
     ]
 }

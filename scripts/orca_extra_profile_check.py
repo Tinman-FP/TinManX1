@@ -1,9 +1,25 @@
 import os
 import json
 import argparse
+import re
+import sys
 from pathlib import Path
 
 from assign_vendor_setting_ids import generate_preset_setting_id
+
+SOURCE_HELPERS = Path(__file__).resolve().parent / "source-helpers"
+sys.path.insert(0, str(SOURCE_HELPERS))
+
+from codex_filament_contracts import (  # noqa: E402
+    ACTIVE_CHAMBER_BUCKETS,
+    FIBERON_PET_CF_FIELD_TUNE,
+    MICRO_SWISS_BUCKETS,
+    REFERENCE_FIELDS,
+    chamber_target,
+    load_contract,
+    reference_for_bucket,
+    vector,
+)
 
 OBSOLETE_KEYS = {
     "acceleration", "scale", "rotate", "duplicate", "duplicate_grid",
@@ -546,22 +562,58 @@ def check_tinman_material_tuning_contracts(profiles_dir):
     for path in sorted((profiles_dir / "Codex/filament").glob("PET-CF Codex-Fiberon - *.json")):
         data = json.loads(path.read_bytes())
         rel = path.relative_to(profiles_dir)
-        errors = check_profile_values(rel, data, PET_CF_TUNING_CONTRACT, errors)
-        errors = check_profile_values(rel, data, {"pressure_advance": "0.028"}, errors)
-        errors = check_pet_cf_notes(rel, data, errors)
-        if " - Elegoo Centauri " in data["name"] or " - Snapmaker U1 " in data["name"]:
+        if " - Bambu H2D " not in data["name"]:
+            errors = check_profile_values(rel, data, PET_CF_TUNING_CONTRACT, errors)
+            errors = check_profile_values(rel, data, {"pressure_advance": "0.028"}, errors)
+            errors = check_pet_cf_notes(rel, data, errors)
+        if any(
+            bucket in data["name"]
+            for bucket in (" - Bambu X1C HF ", " - Elegoo Centauri ", " - Snapmaker U1 ")
+        ):
             errors = check_inactive_chamber(rel, data, errors)
         else:
             errors = check_active_chamber(rel, data, 50, errors)
     return errors
 
 
+CODEX_PROFILE_RE = re.compile(
+    r"^(?P<material>.+?) Codex-(?P<manufacturer>.+?) - (?P<bucket>.+?) @Codex$"
+)
+
+
+def check_codex_reference_values(rel, data, material, manufacturer, bucket, contract, errors):
+    entry = contract["profiles"].get(f"{material}|{manufacturer}")
+    if not entry:
+        print_error(f"{rel} has no reviewed Bambu/Codex reference decision")
+        return errors + 1
+    reference = reference_for_bucket(contract, entry, bucket)
+    if entry.get("mode") != "exact" or not reference:
+        return errors
+
+    values = reference.get("values") or {}
+    for key in REFERENCE_FIELDS:
+        if key not in values:
+            continue
+        if material == "PET-CF" and manufacturer == "Fiberon" and bucket != "Bambu H2D":
+            if key in FIBERON_PET_CF_FIELD_TUNE:
+                continue
+        expected = values[key] if bucket == "Bambu H2D" else vector(
+            values[key], high_flow=bucket in MICRO_SWISS_BUCKETS
+        )
+        actual = data.get(key)
+        if actual != expected:
+            errors += 1
+            print_error(f"{rel} {key} expected Bambu contract {expected}, got {actual}")
+    return errors
+
+
 def check_codex_filament_thermal_contracts(profiles_dir):
-    """Sanity-check every selectable Codex filament profile."""
+    """Sanity-check every selectable Codex filament and machine contract."""
     errors = 0
     codex_filaments = profiles_dir / "Codex" / "filament"
     if not codex_filaments.is_dir():
         return 0
+    contract = load_contract()
 
     positive_keys = (
         "filament_cost",
@@ -573,26 +625,36 @@ def check_codex_filament_thermal_contracts(profiles_dir):
     for path in sorted(codex_filaments.glob("*.json")):
         data = json.loads(path.read_bytes())
         rel = path.relative_to(profiles_dir)
+        match = CODEX_PROFILE_RE.match(str(data.get("name", "")))
+        if not match:
+            errors += 1
+            print_error(f"{rel} does not follow the Codex material/vendor/printer naming contract")
+            continue
+        material = match.group("material")
+        manufacturer = match.group("manufacturer")
+        bucket = match.group("bucket")
+        if bucket == "Bambu":
+            errors += 1
+            print_error(f"{rel} still combines the H2D and X1C filament contracts")
+        if bucket == "Bambu X1C HF" and material in {"PPS", "PPS-CF", "PPS-GF"}:
+            errors += 1
+            print_error(f"{rel} exposes a material without an X1C-compatible Bambu preset")
+
         for key in positive_keys:
             values = positive_numeric_values(data, key)
             if not values:
                 errors += 1
                 print_error(f"{rel} requires a positive {key}, got {data.get(key)!r}")
 
-        active = normalized_values(data.get("activate_chamber_temp_control"))
-        chamber = positive_numeric_values(data, "chamber_temperature", "chamber_temperatures")
-        if chamber and active != ["1"]:
-            errors += 1
-            print_error(f"{rel} has chamber target {chamber} but active control is {active}")
-        if active == ["1"] and not chamber:
-            errors += 1
-            print_error(f"{rel} enables active chamber control without a positive target")
-
-        material = normalized_values(data.get("filament_type"))
-        if material and material[0] in {"PCTG", "PCTG-CF"}:
-            if not chamber or any(value != 45 for value in chamber) or active != ["1"]:
-                errors += 1
-                print_error(f"{rel} must retain the field-validated active 45C PCTG chamber target")
+        entry = contract["profiles"].get(f"{material}|{manufacturer}", {})
+        expected_chamber = chamber_target(material, entry, contract) if bucket in ACTIVE_CHAMBER_BUCKETS else 0
+        if expected_chamber:
+            errors = check_active_chamber(rel, data, expected_chamber, errors)
+        else:
+            errors = check_inactive_chamber(rel, data, errors)
+        errors = check_codex_reference_values(
+            rel, data, material, manufacturer, bucket, contract, errors
+        )
     return errors
 
 def check_vector_type_keys(profiles_dir, vendor_name):

@@ -32,6 +32,7 @@ REPO_ROOT = SCRIPT_DIR.parents[1]
 sys.path.insert(0, str(SCRIPT_DIR.parent))
 
 from assign_vendor_setting_ids import generate_preset_setting_id
+from codex_filament_contracts import apply_contract, load_contract
 
 DEFAULT_BACKUP_ROOT = Path.home() / ".tinmanx1" / "codex-filament-cleanup-backups"
 DEFAULT_MIRROR_ROOTS = [
@@ -47,7 +48,8 @@ PROFILE_RE = re.compile(
 )
 
 TARGET_BUCKETS: dict[str, tuple[str, ...]] = {
-    "Bambu": ("Bambu Lab", "BBL "),
+    "Bambu H2D": ("Bambu Lab H2D",),
+    "Bambu X1C HF": ("Bambu Lab X1 Carbon",),
     "Creality K2 Plus": ("Creality K2 Plus",),
     "Elegoo Centauri": ("Elegoo Centauri",),
     "Prusa Core One": ("Prusa CORE One", "Prusa Core One"),
@@ -71,10 +73,8 @@ def canonical_machine_names(model: str) -> tuple[str, ...]:
 
 
 CANONICAL_BUCKET_PRINTERS: dict[str, tuple[str, ...]] = {
-    "Bambu": (
-        *canonical_machine_names("Bambu Lab H2D"),
-        *canonical_machine_names("Bambu Lab X1 Carbon"),
-    ),
+    "Bambu H2D": canonical_machine_names("Bambu Lab H2D"),
+    "Bambu X1C HF": canonical_machine_names("Bambu Lab X1 Carbon"),
     "Creality K2 Plus": canonical_machine_names("Creality K2 Plus"),
     "Elegoo Centauri": canonical_machine_names("Elegoo Centauri Carbon"),
     "Prusa Core One": canonical_machine_names("Prusa CORE One L"),
@@ -90,6 +90,12 @@ CANONICAL_BUCKET_PRINTERS: dict[str, tuple[str, ...]] = {
     "Snapmaker U1": canonical_machine_names("Snapmaker U1"),
     "Sovol SV08 MAX": canonical_machine_names("Sovol SV08 MAX"),
 }
+
+LEGACY_BUCKET_EXPANSIONS: dict[str, tuple[str, ...]] = {
+    "Bambu": ("Bambu H2D", "Bambu X1C HF"),
+}
+
+X1C_UNSUPPORTED_MATERIALS = {"PPS", "PPS-CF", "PPS-GF"}
 
 BUCKET_ORDER = {name: index for index, name in enumerate(TARGET_BUCKETS)}
 PRODUCT_PREFIXES = (
@@ -286,6 +292,18 @@ def choose_profiles(filament_dir: Path) -> tuple[list[ParsedProfile], list[str],
         if profile.source_bucket == "Universal":
             universal.append(profile)
             continue
+        if profile.source_bucket in LEGACY_BUCKET_EXPANSIONS:
+            for bucket in LEGACY_BUCKET_EXPANSIONS[profile.source_bucket]:
+                if bucket == "Bambu X1C HF" and profile.material_type in X1C_UNSUPPORTED_MATERIALS:
+                    continue
+                bucketed = cloned_for_bucket(profile, bucket)
+                current = candidates.get(bucketed.key)
+                if current is None or bucketed.score > current.score or (
+                    bucketed.score == current.score
+                    and bucketed.original_name < current.original_name
+                ):
+                    candidates[bucketed.key] = bucketed
+            continue
         if profile.target_bucket not in TARGET_BUCKETS:
             skipped.append(profile.original_name)
             continue
@@ -297,6 +315,8 @@ def choose_profiles(filament_dir: Path) -> tuple[list[ParsedProfile], list[str],
 
     for profile in sorted(universal, key=lambda item: (-item.score, item.original_name)):
         for bucket in TARGET_BUCKETS:
+            if bucket == "Bambu X1C HF" and profile.material_type in X1C_UNSUPPORTED_MATERIALS:
+                continue
             bucketed = cloned_for_bucket(profile, bucket)
             candidates.setdefault(bucketed.key, bucketed)
 
@@ -311,8 +331,18 @@ def choose_profiles(filament_dir: Path) -> tuple[list[ParsedProfile], list[str],
     return chosen, [p.original_name for p in universal], skipped
 
 
-def canonical_profile(profile: ParsedProfile, compatible_printers: list[str]) -> dict[str, Any]:
-    data = copy.deepcopy(profile.data)
+def canonical_profile(
+    profile: ParsedProfile,
+    compatible_printers: list[str],
+    filament_contract: dict[str, Any],
+) -> dict[str, Any]:
+    data = apply_contract(
+        profile.data,
+        profile.material_type,
+        profile.manufacturer,
+        profile.target_bucket,
+        filament_contract,
+    )
     setting_id, filament_id = stable_ids(profile.canonical_name)
     data["name"] = profile.canonical_name
     data["filament_settings_id"] = [profile.canonical_name]
@@ -433,10 +463,15 @@ def rewrite_catalog(
         bucket: bucket_compatible_printers(bucket)
         for bucket in TARGET_BUCKETS
     }
+    filament_contract = load_contract()
 
     canonical: list[tuple[str, dict[str, Any], str]] = []
     for selected in chosen:
-        data = canonical_profile(selected, bucket_printers[selected.target_bucket])
+        data = canonical_profile(
+            selected,
+            bucket_printers[selected.target_bucket],
+            filament_contract,
+        )
         canonical.append((selected.canonical_name, data, selected.user_name))
 
     index = load_json(index_path)

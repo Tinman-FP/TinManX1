@@ -303,10 +303,10 @@
     "setting_id": "uJFpmhKfMbj6qwup",
     "filament_id": "CODX494AB1E2",
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "chamber_temperature": [
-        "45"
+        "0"
     ],
     "compatible_printers_condition": "",
     "default_filament_colour": [

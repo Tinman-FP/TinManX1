@@ -188,5 +188,11 @@
     ],
     "default_filament_colour": [
         "#000000"
+    ],
+    "additional_cooling_fan_speed": [
+        "0"
+    ],
+    "filament_shrink": [
+        "100%"
     ]
 }

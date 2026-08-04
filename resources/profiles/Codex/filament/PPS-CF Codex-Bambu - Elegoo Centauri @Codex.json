@@ -139,7 +139,7 @@
         "220"
     ],
     "chamber_temperatures": [
-        "60"
+        "0"
     ],
     "filament_adhesiveness_category": [
         "801"
@@ -165,10 +165,10 @@
         "40"
     ],
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "chamber_temperature": [
-        "55"
+        "0"
     ],
     "compatible_printers": [
         "Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex",
@@ -193,5 +193,11 @@
     ],
     "default_filament_colour": [
         "#000000"
+    ],
+    "additional_cooling_fan_speed": [
+        "0"
+    ],
+    "filament_shrink": [
+        "100%"
     ]
 }

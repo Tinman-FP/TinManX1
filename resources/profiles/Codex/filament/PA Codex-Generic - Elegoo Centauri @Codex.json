@@ -28,10 +28,10 @@
         "100"
     ],
     "overhang_fan_threshold": [
-        "95%"
+        "10%"
     ],
     "overhang_fan_speed": [
-        "30"
+        "95"
     ],
     "slow_down_for_layer_cooling": [
         "1"
@@ -49,7 +49,7 @@
         "0"
     ],
     "fan_cooling_layer_time": [
-        "4"
+        "65"
     ],
     "filament_cost": [
         "35"
@@ -64,7 +64,7 @@
         "1.75"
     ],
     "filament_max_volumetric_speed": [
-        "8"
+        "12"
     ],
     "filament_minimal_purge_on_wipe_tower": [
         "15"
@@ -112,43 +112,43 @@
         "Cool Plate"
     ],
     "nozzle_temperature_initial_layer": [
-        "290"
+        "260"
     ],
     "full_fan_speed_layer": [
         "0"
     ],
     "fan_max_speed": [
-        "60"
+        "85"
     ],
     "fan_min_speed": [
-        "0"
+        "40"
     ],
     "slow_down_min_speed": [
         "10"
     ],
     "slow_down_layer_time": [
-        "2"
+        "8"
     ],
     "filament_start_gcode": [
         "; Filament gcode\n"
     ],
     "nozzle_temperature": [
-        "290"
+        "260"
     ],
     "temperature_vitrification": [
         "108"
     ],
     "nozzle_temperature_range_low": [
-        "270"
+        "240"
     ],
     "nozzle_temperature_range_high": [
-        "300"
+        "280"
     ],
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "chamber_temperature": [
-        "45"
+        "0"
     ],
     "compatible_printers": [
         "Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex",
@@ -168,5 +168,14 @@
     ],
     "default_filament_colour": [
         "#000000"
+    ],
+    "additional_cooling_fan_speed": [
+        "0"
+    ],
+    "filament_shrink": [
+        "100%"
+    ],
+    "chamber_temperatures": [
+        "0"
     ]
 }

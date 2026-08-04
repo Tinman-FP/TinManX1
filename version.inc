@@ -3,7 +3,7 @@
 
 set(SLIC3R_APP_NAME "TinManX1")
 set(SLIC3R_APP_KEY "OrcaSlicer")
-set(TINMANX1_REVISION "v2026.08.04-filament-contracts.1")
+set(TINMANX1_REVISION "v2026.08.04-bambu-hf-filaments.1")
 
 if(NOT DEFINED BBL_INTERNAL_TESTING)
 set(BBL_INTERNAL_TESTING "0")

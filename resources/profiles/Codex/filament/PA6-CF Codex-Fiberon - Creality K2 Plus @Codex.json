@@ -303,10 +303,10 @@
     "filament_id": "CODX49E34700",
     "setting_id": "jgfLlSnqCYDHzl6L",
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "chamber_temperature": [
-        "45"
+        "0"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],

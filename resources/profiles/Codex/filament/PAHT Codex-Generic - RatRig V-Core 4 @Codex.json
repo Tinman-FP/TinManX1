@@ -188,5 +188,8 @@
     ],
     "default_filament_colour": [
         "#000000"
+    ],
+    "chamber_temperatures": [
+        "60"
     ]
 }

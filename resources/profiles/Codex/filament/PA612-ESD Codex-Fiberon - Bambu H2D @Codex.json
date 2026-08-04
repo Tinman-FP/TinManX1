@@ -1,0 +1,140 @@
+{
+    "type": "filament",
+    "name": "PA612-ESD Codex-Fiberon - Bambu H2D @Codex",
+    "from": "system",
+    "instantiation": "true",
+    "filament_vendor": [
+        "Codex"
+    ],
+    "filament_type": [
+        "PA612-ESD"
+    ],
+    "filament_settings_id": [
+        "PA612-ESD Codex-Fiberon - Bambu H2D @Codex"
+    ],
+    "filament_id": "CODXBF585160",
+    "setting_id": "8NNplwgrz6PFREO5",
+    "default_filament_colour": [
+        "#000000"
+    ],
+    "filament_diameter": [
+        "1.75"
+    ],
+    "filament_density": [
+        "1.1"
+    ],
+    "filament_cost": [
+        "129.98"
+    ],
+    "filament_flow_ratio": [
+        "0.89"
+    ],
+    "filament_max_volumetric_speed": [
+        "8"
+    ],
+    "filament_is_support": [
+        "0"
+    ],
+    "filament_soluble": [
+        "0"
+    ],
+    "nozzle_temperature": [
+        "290"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "290"
+    ],
+    "nozzle_temperature_range_low": [
+        "280"
+    ],
+    "nozzle_temperature_range_high": [
+        "300"
+    ],
+    "cool_plate_temp": [
+        "0"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "0"
+    ],
+    "eng_plate_temp": [
+        "100"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "100"
+    ],
+    "hot_plate_temp": [
+        "100"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "100"
+    ],
+    "textured_plate_temp": [
+        "50"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "50"
+    ],
+    "chamber_temperature": [
+        "55"
+    ],
+    "activate_chamber_temp_control": [
+        "1"
+    ],
+    "fan_min_speed": [
+        "0"
+    ],
+    "fan_max_speed": [
+        "10"
+    ],
+    "overhang_fan_speed": [
+        "40"
+    ],
+    "overhang_fan_threshold": [
+        "0%"
+    ],
+    "required_nozzle_HRC": [
+        "40"
+    ],
+    "temperature_vitrification": [
+        "190"
+    ],
+    "filament_retraction_length": [
+        "1"
+    ],
+    "filament_retraction_speed": [
+        "30"
+    ],
+    "filament_deretraction_speed": [
+        "30"
+    ],
+    "compatible_printers": [
+        "Bambu Lab H2D 0.4 nozzle - TinMan Codex",
+        "Bambu Lab H2D 0.6 nozzle - TinMan Codex",
+        "Bambu Lab H2D 0.8 nozzle - TinMan Codex",
+        "Bambu Lab H2D 1.0 nozzle - TinMan Codex"
+    ],
+    "is_custom_defined": "0",
+    "version": "2.4.2.0",
+    "description": "TinManX1 Codex Polymaker official catalog; material=Fiberon PA612-ESD; official source=preset/Fiberon PA612-ESD/Snapmaker/U1/OrcaSlicer/Fiberon PA612-ESD @Snapmaker U1.json; source updated=2026-06-02T13:09:24+08:00",
+    "filament_notes": [
+        ""
+    ],
+    "polymaker_source_material": [
+        "Fiberon PA612-ESD"
+    ],
+    "polymaker_source_preset_path": [
+        "preset/Fiberon PA612-ESD/Snapmaker/U1/OrcaSlicer/Fiberon PA612-ESD @Snapmaker U1.json"
+    ],
+    "polymaker_source_index_updated_at": [
+        "2026-07-02T08:50:28.961Z"
+    ],
+    "filament_price_source_url": [
+        "https://shop.polymaker.com/products/fiberon-pa612-esd"
+    ],
+    "filament_price_source_variant": [
+        "1.75mm / 0.5kg / Black"
+    ],
+    "chamber_temperatures": [
+        "55"
+    ]
+}

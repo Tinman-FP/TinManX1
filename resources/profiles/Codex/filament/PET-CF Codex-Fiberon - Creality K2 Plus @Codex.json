@@ -15,31 +15,25 @@
     "compatible_prints": [],
     "compatible_prints_condition": "",
     "cool_plate_temp": [
-        "0",
         "0"
     ],
     "cool_plate_temp_initial_layer": [
-        "0",
         "0"
     ],
     "description": "Official Polymaker Orca preset source: Fiberon PET-CF17 for BBL X1 (2026-04-14T14:06:15+08:00). Imported on 2026-04-22 and made compatible with all local Orca printers.",
     "eng_plate_temp": [
-        "80",
-        "80"
+        "70"
     ],
     "eng_plate_temp_initial_layer": [
-        "80",
-        "80"
+        "70"
     ],
     "fan_cooling_layer_time": [
         "242"
     ],
     "fan_max_speed": [
-        "20",
         "20"
     ],
     "fan_min_speed": [
-        "0",
         "0"
     ],
     "filament_adaptive_volumetric_speed": [
@@ -70,7 +64,6 @@
         "Direct Drive High Flow"
     ],
     "filament_flow_ratio": [
-        "1.00",
         "1.00"
     ],
     "filament_flush_temp": [
@@ -87,7 +80,6 @@
         "nil"
     ],
     "filament_max_volumetric_speed": [
-        "3.2",
         "3.2"
     ],
     "filament_minimal_purge_on_wipe_tower": [
@@ -172,12 +164,10 @@
         "0"
     ],
     "hot_plate_temp": [
-        "80",
-        "80"
+        "70"
     ],
     "hot_plate_temp_initial_layer": [
-        "80",
-        "80"
+        "70"
     ],
     "idle_temperature": "0",
     "is_custom_defined": "0",
@@ -187,23 +177,18 @@
     ],
     "name": "PET-CF Codex-Fiberon - Creality K2 Plus @Codex",
     "nozzle_temperature": [
-        "280",
         "280"
     ],
     "nozzle_temperature_initial_layer": [
-        "285",
         "285"
     ],
     "nozzle_temperature_range_high": [
-        "300",
         "300"
     ],
     "nozzle_temperature_range_low": [
-        "260",
         "260"
     ],
     "overhang_fan_speed": [
-        "35",
         "35"
     ],
     "overhang_fan_threshold": [
@@ -223,11 +208,9 @@
         "1"
     ],
     "slow_down_layer_time": [
-        "25",
         "25"
     ],
     "slow_down_min_speed": [
-        "6",
         "6"
     ],
     "supertack_plate_temp": [
@@ -242,12 +225,10 @@
         "79.3"
     ],
     "textured_plate_temp": [
-        "80",
-        "80"
+        "70"
     ],
     "textured_plate_temp_initial_layer": [
-        "80",
-        "80"
+        "70"
     ],
     "version": "2.0.0.54",
     "volumetric_speed_coefficients": [
@@ -266,11 +247,9 @@
         "1.75mm / 1kg / Black; 44.99/1kg"
     ],
     "enable_pressure_advance": [
-        "1",
         "1"
     ],
     "pressure_advance": [
-        "0.028",
         "0.028"
     ],
     "filament_notes": [
@@ -291,5 +270,11 @@
     ],
     "chamber_temperatures": [
         "50"
+    ],
+    "additional_cooling_fan_speed": [
+        "0"
+    ],
+    "filament_shrink": [
+        "100%"
     ]
 }

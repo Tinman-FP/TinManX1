@@ -6,6 +6,9 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- split the generated Bambu filament catalog into independent H2D and X1C high-flow contracts so the X1C never inherits active chamber settings and H2D profiles can track Bambu Studio directly
+- added a reviewed Bambu Studio 2.7.1 material-reference snapshot covering every Codex material/vendor pair, importing exact matches while preserving manufacturer recipes for analogous chemistries
+- normalized Micro Swiss-equipped printer profiles against the X1C high-flow values, retained the field-validated Fiberon PET-CF tune, and enforced active chamber targets only on capable printers and qualifying materials
 - consolidated the full Orca-derived TinManX1 source branch with the public release-package ledgers, helper scripts, validation contracts, and profile-maintenance utilities so GitHub has one canonical fork branch for current work
 - added the visible TinManX1 revision `v2026.07.20-unified.1` to startup splash rendering while preserving the based-on-Orca version line
 - added Moonraker metadata-based remaining-time handling, live status stream restoration, and the TinManX1 Qidi Box device panel from the printer-operations workstream

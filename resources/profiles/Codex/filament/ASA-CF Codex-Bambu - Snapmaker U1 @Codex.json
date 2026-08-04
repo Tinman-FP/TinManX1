@@ -312,5 +312,11 @@
     ],
     "default_filament_colour": [
         "#000000"
+    ],
+    "activate_chamber_temp_control": [
+        "0"
+    ],
+    "chamber_temperature": [
+        "0"
     ]
 }

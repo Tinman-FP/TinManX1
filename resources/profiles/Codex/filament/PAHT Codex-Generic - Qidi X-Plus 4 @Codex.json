@@ -184,5 +184,8 @@
     "version": "2.3.1.10",
     "filament_price_source": [
         "Generic 1 kg retail average"
+    ],
+    "chamber_temperatures": [
+        "60"
     ]
 }

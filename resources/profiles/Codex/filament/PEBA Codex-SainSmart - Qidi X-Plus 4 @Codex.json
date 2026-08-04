@@ -143,5 +143,8 @@
     ],
     "slow_down_min_speed": [
         "10"
+    ],
+    "chamber_temperatures": [
+        "0"
     ]
 }

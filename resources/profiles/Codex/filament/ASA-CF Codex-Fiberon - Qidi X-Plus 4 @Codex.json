@@ -75,10 +75,10 @@
         "100"
     ],
     "chamber_temperature": [
-        "0"
+        "60"
     ],
     "activate_chamber_temp_control": [
-        "0"
+        "1"
     ],
     "fan_min_speed": [
         "10"
@@ -137,5 +137,8 @@
     ],
     "filament_price_source_variant": [
         "1.75mm / 0.5kg / Dark Grey"
+    ],
+    "chamber_temperatures": [
+        "60"
     ]
 }

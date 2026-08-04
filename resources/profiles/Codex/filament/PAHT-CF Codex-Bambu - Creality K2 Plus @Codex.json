@@ -94,7 +94,7 @@
         "nil"
     ],
     "filament_max_volumetric_speed": [
-        "8"
+        "12"
     ],
     "filament_ramming_volumetric_speed": [
         "-1"
@@ -307,7 +307,7 @@
         "1"
     ],
     "chamber_temperature": [
-        "55"
+        "60"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],

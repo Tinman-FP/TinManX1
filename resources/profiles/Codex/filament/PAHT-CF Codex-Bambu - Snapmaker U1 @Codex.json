@@ -10,7 +10,7 @@
         "0"
     ],
     "chamber_temperatures": [
-        "60"
+        "0"
     ],
     "close_fan_the_first_x_layers": [
         "3"
@@ -309,7 +309,7 @@
     "is_custom_defined": "0",
     "version": "2.3.1.10",
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "filament_price_source_url": [
         "https://us.store.bambulab.com/products/paht-cf"
@@ -319,5 +319,8 @@
     ],
     "default_filament_colour": [
         "#000000"
+    ],
+    "chamber_temperature": [
+        "0"
     ]
 }

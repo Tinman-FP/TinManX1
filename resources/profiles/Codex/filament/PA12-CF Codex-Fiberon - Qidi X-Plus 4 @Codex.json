@@ -307,10 +307,10 @@
     "filament_id": "CODX4DBFB642",
     "setting_id": "Qx0b7q1PQ7jbDCKI",
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "chamber_temperature": [
-        "45"
+        "0"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],

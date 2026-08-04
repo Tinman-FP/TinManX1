@@ -121,5 +121,8 @@
         "3D-Fuel Pro PCTG-CF10 1 kg spool"
     ],
     "type": "filament",
-    "setting_id": "Voo3TQBqJkGiNC8g"
+    "setting_id": "Voo3TQBqJkGiNC8g",
+    "chamber_temperatures": [
+        "45"
+    ]
 }

@@ -7,220 +7,420 @@
     "process_list": [],
     "filament_list": [
         {
-            "name": "ABS Codex-Bambu - Bambu @Codex",
-            "sub_path": "filament/ABS Codex-Bambu - Bambu @Codex.json"
+            "name": "ABS Codex-Bambu - Bambu H2D @Codex",
+            "sub_path": "filament/ABS Codex-Bambu - Bambu H2D @Codex.json"
         },
         {
-            "name": "ABS Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/ABS Codex-Polymaker - Bambu @Codex.json"
+            "name": "ABS Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/ABS Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "ABS Codex-RatRig Punk - Bambu @Codex",
-            "sub_path": "filament/ABS Codex-RatRig Punk - Bambu @Codex.json"
+            "name": "ABS Codex-RatRig Punk - Bambu H2D @Codex",
+            "sub_path": "filament/ABS Codex-RatRig Punk - Bambu H2D @Codex.json"
         },
         {
-            "name": "ABS-CF Codex-Generic - Bambu @Codex",
-            "sub_path": "filament/ABS-CF Codex-Generic - Bambu @Codex.json"
+            "name": "ABS-CF Codex-Generic - Bambu H2D @Codex",
+            "sub_path": "filament/ABS-CF Codex-Generic - Bambu H2D @Codex.json"
         },
         {
-            "name": "ASA Codex-Generic - Bambu @Codex",
-            "sub_path": "filament/ASA Codex-Generic - Bambu @Codex.json"
+            "name": "ASA Codex-Generic - Bambu H2D @Codex",
+            "sub_path": "filament/ASA Codex-Generic - Bambu H2D @Codex.json"
         },
         {
-            "name": "ASA Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/ASA Codex-Polymaker - Bambu @Codex.json"
+            "name": "ASA Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/ASA Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "ASA-CF Codex-Bambu - Bambu @Codex",
-            "sub_path": "filament/ASA-CF Codex-Bambu - Bambu @Codex.json"
+            "name": "ASA-CF Codex-Bambu - Bambu H2D @Codex",
+            "sub_path": "filament/ASA-CF Codex-Bambu - Bambu H2D @Codex.json"
         },
         {
-            "name": "ASA-CF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/ASA-CF Codex-Fiberon - Bambu @Codex.json"
+            "name": "ASA-CF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/ASA-CF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "HIPS Codex-Generic - Bambu @Codex",
-            "sub_path": "filament/HIPS Codex-Generic - Bambu @Codex.json"
+            "name": "HIPS Codex-Generic - Bambu H2D @Codex",
+            "sub_path": "filament/HIPS Codex-Generic - Bambu H2D @Codex.json"
         },
         {
-            "name": "HT-PLA-CF Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/HT-PLA-CF Codex-Polymaker - Bambu @Codex.json"
+            "name": "HT-PLA-CF Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/HT-PLA-CF Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "HT-PLA-GF Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/HT-PLA-GF Codex-Polymaker - Bambu @Codex.json"
+            "name": "HT-PLA-GF Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/HT-PLA-GF Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA Codex-Generic - Bambu @Codex",
-            "sub_path": "filament/PA Codex-Generic - Bambu @Codex.json"
+            "name": "PA Codex-Generic - Bambu H2D @Codex",
+            "sub_path": "filament/PA Codex-Generic - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/PA Codex-Polymaker - Bambu @Codex.json"
+            "name": "PA Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/PA Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA-CF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PA-CF Codex-Fiberon - Bambu @Codex.json"
+            "name": "PA-CF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PA-CF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA-GF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PA-GF Codex-Fiberon - Bambu @Codex.json"
+            "name": "PA-GF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PA-GF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA12-CF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PA12-CF Codex-Fiberon - Bambu @Codex.json"
+            "name": "PA12-CF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA12-CF Codex-Fila Matrix - Bambu @Codex",
-            "sub_path": "filament/PA12-CF Codex-Fila Matrix - Bambu @Codex.json"
+            "name": "PA12-CF Codex-Fila Matrix - Bambu H2D @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fila Matrix - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA12-CF Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/PA12-CF Codex-Polymaker - Bambu @Codex.json"
+            "name": "PA12-CF Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/PA12-CF Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA6-CF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PA6-CF Codex-Fiberon - Bambu @Codex.json"
+            "name": "PA6-CF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PA6-CF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA6-CF Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/PA6-CF Codex-Polymaker - Bambu @Codex.json"
+            "name": "PA6-CF Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/PA6-CF Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA6-GF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PA6-GF Codex-Fiberon - Bambu @Codex.json"
+            "name": "PA6-GF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PA6-GF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA612-CF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PA612-CF Codex-Fiberon - Bambu @Codex.json"
+            "name": "PA612-CF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PA612-CF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PA612-ESD Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PA612-ESD Codex-Fiberon - Bambu @Codex.json"
+            "name": "PA612-ESD Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PA612-ESD Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PAHT Codex-Bambu - Bambu @Codex",
-            "sub_path": "filament/PAHT Codex-Bambu - Bambu @Codex.json"
+            "name": "PAHT Codex-Bambu - Bambu H2D @Codex",
+            "sub_path": "filament/PAHT Codex-Bambu - Bambu H2D @Codex.json"
         },
         {
-            "name": "PAHT-CF Codex-Bambu - Bambu @Codex",
-            "sub_path": "filament/PAHT-CF Codex-Bambu - Bambu @Codex.json"
+            "name": "PAHT-CF Codex-Bambu - Bambu H2D @Codex",
+            "sub_path": "filament/PAHT-CF Codex-Bambu - Bambu H2D @Codex.json"
         },
         {
-            "name": "PAKV Codex-Filamatrix - Bambu @Codex",
-            "sub_path": "filament/PAKV Codex-Filamatrix - Bambu @Codex.json"
+            "name": "PAKV Codex-Filamatrix - Bambu H2D @Codex",
+            "sub_path": "filament/PAKV Codex-Filamatrix - Bambu H2D @Codex.json"
         },
         {
-            "name": "PC Codex-Generic - Bambu @Codex",
-            "sub_path": "filament/PC Codex-Generic - Bambu @Codex.json"
+            "name": "PC Codex-Generic - Bambu H2D @Codex",
+            "sub_path": "filament/PC Codex-Generic - Bambu H2D @Codex.json"
         },
         {
-            "name": "PC Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/PC Codex-Polymaker - Bambu @Codex.json"
+            "name": "PC Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/PC Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "PC+PBT Codex-Push Plastic - Bambu @Codex",
-            "sub_path": "filament/PC+PBT Codex-Push Plastic - Bambu @Codex.json"
+            "name": "PC+PBT Codex-Push Plastic - Bambu H2D @Codex",
+            "sub_path": "filament/PC+PBT Codex-Push Plastic - Bambu H2D @Codex.json"
         },
         {
-            "name": "PC-CF Codex-Generic - Bambu @Codex",
-            "sub_path": "filament/PC-CF Codex-Generic - Bambu @Codex.json"
+            "name": "PC-CF Codex-Generic - Bambu H2D @Codex",
+            "sub_path": "filament/PC-CF Codex-Generic - Bambu H2D @Codex.json"
         },
         {
-            "name": "PC-PBT Codex-Push Plastic - Bambu @Codex",
-            "sub_path": "filament/PC-PBT Codex-Push Plastic - Bambu @Codex.json"
+            "name": "PC-PBT Codex-Push Plastic - Bambu H2D @Codex",
+            "sub_path": "filament/PC-PBT Codex-Push Plastic - Bambu H2D @Codex.json"
         },
         {
-            "name": "PCTG Codex-Generic - Bambu @Codex",
-            "sub_path": "filament/PCTG Codex-Generic - Bambu @Codex.json"
+            "name": "PCTG Codex-Generic - Bambu H2D @Codex",
+            "sub_path": "filament/PCTG Codex-Generic - Bambu H2D @Codex.json"
         },
         {
-            "name": "PCTG-CF Codex-3D-Fuel Pro - Bambu @Codex",
-            "sub_path": "filament/PCTG-CF Codex-3D-Fuel Pro - Bambu @Codex.json"
+            "name": "PCTG-CF Codex-3D-Fuel Pro - Bambu H2D @Codex",
+            "sub_path": "filament/PCTG-CF Codex-3D-Fuel Pro - Bambu H2D @Codex.json"
         },
         {
-            "name": "PEBA Codex-SainSmart - Bambu @Codex",
-            "sub_path": "filament/PEBA Codex-SainSmart - Bambu @Codex.json"
+            "name": "PEBA Codex-SainSmart - Bambu H2D @Codex",
+            "sub_path": "filament/PEBA Codex-SainSmart - Bambu H2D @Codex.json"
         },
         {
-            "name": "PET-CF Codex-Elegoo - Bambu @Codex",
-            "sub_path": "filament/PET-CF Codex-Elegoo - Bambu @Codex.json"
+            "name": "PET-CF Codex-Elegoo - Bambu H2D @Codex",
+            "sub_path": "filament/PET-CF Codex-Elegoo - Bambu H2D @Codex.json"
         },
         {
-            "name": "PET-CF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PET-CF Codex-Fiberon - Bambu @Codex.json"
+            "name": "PET-CF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PET-CF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PET-GF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PET-GF Codex-Fiberon - Bambu @Codex.json"
+            "name": "PET-GF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PET-GF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PETG Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PETG Codex-Fiberon - Bambu @Codex.json"
+            "name": "PETG Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PETG Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PETG Codex-Generic - Bambu @Codex",
-            "sub_path": "filament/PETG Codex-Generic - Bambu @Codex.json"
+            "name": "PETG Codex-Generic - Bambu H2D @Codex",
+            "sub_path": "filament/PETG Codex-Generic - Bambu H2D @Codex.json"
         },
         {
-            "name": "PETG Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/PETG Codex-Polymaker - Bambu @Codex.json"
+            "name": "PETG Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/PETG Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "PETG-CF Codex-Bambu - Bambu @Codex",
-            "sub_path": "filament/PETG-CF Codex-Bambu - Bambu @Codex.json"
+            "name": "PETG-CF Codex-Bambu - Bambu H2D @Codex",
+            "sub_path": "filament/PETG-CF Codex-Bambu - Bambu H2D @Codex.json"
         },
         {
-            "name": "PETG-CF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PETG-CF Codex-Fiberon - Bambu @Codex.json"
+            "name": "PETG-CF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PETG-CF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PETG-CF Codex-Generic - Bambu @Codex",
-            "sub_path": "filament/PETG-CF Codex-Generic - Bambu @Codex.json"
+            "name": "PETG-CF Codex-Generic - Bambu H2D @Codex",
+            "sub_path": "filament/PETG-CF Codex-Generic - Bambu H2D @Codex.json"
         },
         {
-            "name": "PETG-ESD Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PETG-ESD Codex-Fiberon - Bambu @Codex.json"
+            "name": "PETG-ESD Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PETG-ESD Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PLA Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/PLA Codex-Polymaker - Bambu @Codex.json"
+            "name": "PLA Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/PLA Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "PLA-CF Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/PLA-CF Codex-Polymaker - Bambu @Codex.json"
+            "name": "PLA-CF Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/PLA-CF Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "PLA-GF Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/PLA-GF Codex-Polymaker - Bambu @Codex.json"
+            "name": "PLA-GF Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/PLA-GF Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "PolySmooth Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/PolySmooth Codex-Polymaker - Bambu @Codex.json"
+            "name": "PolySmooth Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/PolySmooth Codex-Polymaker - Bambu H2D @Codex.json"
         },
         {
-            "name": "PPA-CF Codex-Bambu - Bambu @Codex",
-            "sub_path": "filament/PPA-CF Codex-Bambu - Bambu @Codex.json"
+            "name": "PPA-CF Codex-Bambu - Bambu H2D @Codex",
+            "sub_path": "filament/PPA-CF Codex-Bambu - Bambu H2D @Codex.json"
         },
         {
-            "name": "PPS Codex-Generic - Bambu @Codex",
-            "sub_path": "filament/PPS Codex-Generic - Bambu @Codex.json"
+            "name": "PPS Codex-Generic - Bambu H2D @Codex",
+            "sub_path": "filament/PPS Codex-Generic - Bambu H2D @Codex.json"
         },
         {
-            "name": "PPS-CF Codex-Bambu - Bambu @Codex",
-            "sub_path": "filament/PPS-CF Codex-Bambu - Bambu @Codex.json"
+            "name": "PPS-CF Codex-Bambu - Bambu H2D @Codex",
+            "sub_path": "filament/PPS-CF Codex-Bambu - Bambu H2D @Codex.json"
         },
         {
-            "name": "PPS-CF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PPS-CF Codex-Fiberon - Bambu @Codex.json"
+            "name": "PPS-CF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PPS-CF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "PPS-GF Codex-Fiberon - Bambu @Codex",
-            "sub_path": "filament/PPS-GF Codex-Fiberon - Bambu @Codex.json"
+            "name": "PPS-GF Codex-Fiberon - Bambu H2D @Codex",
+            "sub_path": "filament/PPS-GF Codex-Fiberon - Bambu H2D @Codex.json"
         },
         {
-            "name": "TPU Codex-Polymaker - Bambu @Codex",
-            "sub_path": "filament/TPU Codex-Polymaker - Bambu @Codex.json"
+            "name": "TPU Codex-Polymaker - Bambu H2D @Codex",
+            "sub_path": "filament/TPU Codex-Polymaker - Bambu H2D @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Bambu - Bambu X1C HF @Codex",
+            "sub_path": "filament/ABS Codex-Bambu - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "ABS Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/ABS Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "ABS Codex-RatRig Punk - Bambu X1C HF @Codex",
+            "sub_path": "filament/ABS Codex-RatRig Punk - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "ABS-CF Codex-Generic - Bambu X1C HF @Codex",
+            "sub_path": "filament/ABS-CF Codex-Generic - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Generic - Bambu X1C HF @Codex",
+            "sub_path": "filament/ASA Codex-Generic - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "ASA Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/ASA Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Bambu - Bambu X1C HF @Codex",
+            "sub_path": "filament/ASA-CF Codex-Bambu - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "ASA-CF Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/ASA-CF Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "HIPS Codex-Generic - Bambu X1C HF @Codex",
+            "sub_path": "filament/HIPS Codex-Generic - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "HT-PLA-CF Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/HT-PLA-CF Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "HT-PLA-GF Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/HT-PLA-GF Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA Codex-Generic - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA Codex-Generic - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA-CF Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA-CF Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA-GF Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA-GF Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Fila Matrix - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA12-CF Codex-Fila Matrix - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA12-CF Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA12-CF Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA6-CF Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA6-CF Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA6-CF Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA6-GF Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA6-GF Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA612-CF Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA612-CF Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PA612-ESD Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PA612-ESD Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PAHT Codex-Bambu - Bambu X1C HF @Codex",
+            "sub_path": "filament/PAHT Codex-Bambu - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PAHT-CF Codex-Bambu - Bambu X1C HF @Codex",
+            "sub_path": "filament/PAHT-CF Codex-Bambu - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PAKV Codex-Filamatrix - Bambu X1C HF @Codex",
+            "sub_path": "filament/PAKV Codex-Filamatrix - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PC Codex-Generic - Bambu X1C HF @Codex",
+            "sub_path": "filament/PC Codex-Generic - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PC Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/PC Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PC+PBT Codex-Push Plastic - Bambu X1C HF @Codex",
+            "sub_path": "filament/PC+PBT Codex-Push Plastic - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PC-CF Codex-Generic - Bambu X1C HF @Codex",
+            "sub_path": "filament/PC-CF Codex-Generic - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PC-PBT Codex-Push Plastic - Bambu X1C HF @Codex",
+            "sub_path": "filament/PC-PBT Codex-Push Plastic - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PCTG Codex-Generic - Bambu X1C HF @Codex",
+            "sub_path": "filament/PCTG Codex-Generic - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PCTG-CF Codex-3D-Fuel Pro - Bambu X1C HF @Codex",
+            "sub_path": "filament/PCTG-CF Codex-3D-Fuel Pro - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PEBA Codex-SainSmart - Bambu X1C HF @Codex",
+            "sub_path": "filament/PEBA Codex-SainSmart - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Elegoo - Bambu X1C HF @Codex",
+            "sub_path": "filament/PET-CF Codex-Elegoo - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PET-CF Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PET-CF Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PET-GF Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PET-GF Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PETG Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Generic - Bambu X1C HF @Codex",
+            "sub_path": "filament/PETG Codex-Generic - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PETG Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/PETG Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Bambu - Bambu X1C HF @Codex",
+            "sub_path": "filament/PETG-CF Codex-Bambu - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PETG-CF Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PETG-CF Codex-Generic - Bambu X1C HF @Codex",
+            "sub_path": "filament/PETG-CF Codex-Generic - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PETG-ESD Codex-Fiberon - Bambu X1C HF @Codex",
+            "sub_path": "filament/PETG-ESD Codex-Fiberon - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PLA Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/PLA Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PLA-CF Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/PLA-CF Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PLA-GF Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/PLA-GF Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PolySmooth Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/PolySmooth Codex-Polymaker - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "PPA-CF Codex-Bambu - Bambu X1C HF @Codex",
+            "sub_path": "filament/PPA-CF Codex-Bambu - Bambu X1C HF @Codex.json"
+        },
+        {
+            "name": "TPU Codex-Polymaker - Bambu X1C HF @Codex",
+            "sub_path": "filament/TPU Codex-Polymaker - Bambu X1C HF @Codex.json"
         },
         {
             "name": "ABS Codex-Bambu - Creality K2 Plus @Codex",
