@@ -210,6 +210,12 @@ def main() -> int:
                 "secrets.WINGET_TOKEN",
                 "TINMANX1_PACKAGE_VERSION",
             ],
+            ".github/workflows/build_orca.yml": [
+                "grep '^set(TINMANX1_PACKAGE_VERSION \"' version.inc",
+            ],
+            ".github/workflows/build_all.yml": [
+                "grep '^set(TINMANX1_PACKAGE_VERSION \"' version.inc",
+            ],
         }
         for rel, markers in release_contracts.items():
             contract_text = (ROOT / rel).read_text(errors="replace")
