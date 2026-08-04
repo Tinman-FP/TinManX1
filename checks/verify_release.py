@@ -33,6 +33,7 @@ REQUIRED_FILES = [
     "checks/verify_tinman_machine_profile_catalog.py",
     "manifests/tinmanx1-profile-resources.sha256",
     ".github/workflows/validate_public_helpers.yml",
+    ".github/workflows/winget_updater.yml",
     "patches/tinmanx1-v2.4.2-houseclean-native-fiber.patch",
     "resources/profiles/TinManX1.json",
     "resources/profiles/TinManX1/machine/FibreSeek Seeker 3 0.4+0.7 composite nozzle.json",
@@ -174,6 +175,52 @@ def main() -> int:
                 errors.append(f"missing versioned artwork: {rel}")
             elif f"TinManX1 Revision {revision}" not in artwork.read_text(errors="replace"):
                 errors.append(f"{rel} does not match TINMANX1_REVISION {revision}")
+
+    package_match = re.search(
+        r'set\(TINMANX1_PACKAGE_VERSION\s+"(\d+)\.(\d+)\.(\d+)\.(\d+)"\)',
+        version_text,
+    )
+    if package_match is None:
+        errors.append("version.inc does not define a four-part TINMANX1_PACKAGE_VERSION")
+    else:
+        package_version = ".".join(package_match.groups())
+        if any(int(component) > 65535 for component in package_match.groups()):
+            errors.append(f"TINMANX1_PACKAGE_VERSION exceeds Windows limits: {package_version}")
+
+        release_contracts = {
+            "CMakeLists.txt": [
+                'CPACK_PACKAGE_VERSION "${TINMANX1_PACKAGE_VERSION}"',
+                'TinManX1_Windows_Installer_V${TINMANX1_PACKAGE_VERSION}',
+            ],
+            "src/dev-utils/platform/msw/OrcaSlicer.rc.in": [
+                'VALUE "CompanyName", "Tinman-FP"',
+                'VALUE "ProductVersion", "@TINMANX1_PACKAGE_VERSION@"',
+            ],
+            "src/dev-utils/platform/msw/OrcaSlicer-gcodeviewer.rc.in": [
+                'VALUE "CompanyName", "Tinman-FP"',
+                'VALUE "ProductVersion", "@TINMANX1_PACKAGE_VERSION@"',
+            ],
+            "scripts/msix/build_msix.ps1": [
+                'TINMANX1_PACKAGE_VERSION',
+                '$msixVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"',
+            ],
+            ".github/workflows/winget_updater.yml": [
+                "identifier: TinmanFP.TinManX1",
+                "WINGET_AUTOMATION_ENABLED",
+                "secrets.WINGET_TOKEN",
+                "TINMANX1_PACKAGE_VERSION",
+            ],
+        }
+        for rel, markers in release_contracts.items():
+            contract_text = (ROOT / rel).read_text(errors="replace")
+            for marker in markers:
+                if marker not in contract_text:
+                    errors.append(f"{rel} is missing package contract marker: {marker}")
+
+        winget_text = (ROOT / ".github/workflows/winget_updater.yml").read_text(errors="replace")
+        for forbidden in ("SoftFever.OrcaSlicer", "winget-releaser@main"):
+            if forbidden in winget_text:
+                errors.append(f"WinGet workflow contains inherited or mutable reference: {forbidden}")
 
     for patch in (ROOT / "patches").glob("*.patch"):
         if patch.stat().st_size < 1024:

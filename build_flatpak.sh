@@ -221,7 +221,7 @@ fi
 # Get version information
 echo -e "${YELLOW}Getting version information...${NC}"
 if [[ -f "version.inc" ]]; then
-    VER_PURE=$(grep 'set(SoftFever_VERSION' version.inc | cut -d '"' -f2)
+    VER_PURE=$(grep 'set(TINMANX1_PACKAGE_VERSION' version.inc | cut -d '"' -f2)
     VER="V$VER_PURE"
     DATE=$(date +'%Y%m%d')
     echo -e "Version: ${GREEN}$VER${NC}"

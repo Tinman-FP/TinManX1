@@ -1,14 +1,61 @@
-name: Publish to WinGet
+name: Publish TinManX1 to WinGet
+
 on:
   release:
-    types: [ released ]
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: Published TinManX1 release tag to submit
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
 jobs:
   publish:
+    # The first package version must be accepted manually. Enable this repository
+    # variable only after TinmanFP.TinManX1 exists in microsoft/winget-pkgs.
+    if: vars.WINGET_AUTOMATION_ENABLED == 'true'
     runs-on: windows-latest
     steps:
-      - uses: vedantmgoyal9/winget-releaser@main
+      - name: Check out the released source
+        uses: actions/checkout@v6
         with:
-          identifier: SoftFever.OrcaSlicer
-          version: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || inputs.release-tag }}
+
+      - name: Read TinManX1 package version
+        id: package
+        shell: pwsh
+        run: |
+          $content = Get-Content version.inc -Raw
+          if ($content -notmatch 'set\(TINMANX1_PACKAGE_VERSION "(\d+\.\d+\.\d+\.\d+)"\)') {
+            throw 'TINMANX1_PACKAGE_VERSION is missing or invalid'
+          }
+          "version=$($Matches[1])" >> $env:GITHUB_OUTPUT
+
+      - name: Verify released Windows installers
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release-tag }}
+        run: |
+          $assets = gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --json assets | ConvertFrom-Json
+          $pattern = '^TinManX1_Windows_Installer_V\d+(?:\.\d+){3}_(?:x64|arm64)\.exe$'
+          $installers = @($assets.assets | Where-Object { $_.name -match $pattern })
+          if ($installers.Count -eq 0) {
+            throw "Release $env:RELEASE_TAG has no versioned TinManX1 Windows installer"
+          }
+          $installers.name | ForEach-Object { Write-Output "WinGet installer: $_" }
+
+      - name: Submit WinGet update
+        # Pinned instead of following a mutable branch.
+        uses: vedantmgoyal9/winget-releaser@b3a5dae0047c6180023acba3f548c55fdf6b7193
+        with:
+          identifier: TinmanFP.TinManX1
+          version: ${{ steps.package.outputs.version }}
+          release-tag: ${{ github.event.release.tag_name || inputs.release-tag }}
+          release-notes-url: ${{ github.event.release.html_url }}
           token: ${{ secrets.WINGET_TOKEN }}
-          installers-regex: '\.exe$'
+          installers-regex: 'TinManX1_Windows_Installer_V[0-9.]+_(x64|arm64)\.exe$'

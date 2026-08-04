@@ -6,6 +6,10 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- established the independent TinManX1 Windows package identity `TinmanFP.TinManX1` and four-part product version `2026.8.4.1` while retaining Orca Slicer 2.4.2 compatibility attribution
+- aligned NSIS, Windows executable resources, Win32 manifests, MSIX metadata, and cross-platform release artifact names with the TinManX1 package version
+- replaced the inherited Orca WinGet publisher with a gated, pinned TinManX1 workflow and release-asset preflight checks
+- added release-contract validation that prevents inherited WinGet identifiers, mutable publisher actions, stale splash revisions, and inconsistent Windows package metadata from returning unnoticed
 - split the generated Bambu filament catalog into independent H2D and X1C high-flow contracts so the X1C never inherits active chamber settings and H2D profiles can track Bambu Studio directly
 - added a reviewed Bambu Studio 2.7.1 material-reference snapshot covering every Codex material/vendor pair, importing exact matches while preserving manufacturer recipes for analogous chemistries
 - normalized Micro Swiss-equipped printer profiles against the X1C high-flow values, retained the field-validated Fiberon PET-CF tune, and enforced active chamber targets only on capable printers and qualifying materials
