@@ -116,8 +116,10 @@
         "M83": 2,
         "MOVE_OUT_BRUSH_STATION": 4,
         "MOVE_TO_BRUSH_STATION": 4,
+        "SET_PRESSURE_ADVANCE": 1,
         "SET_PRINT_STATS_INFO": 3,
-        "SET_VELOCITY_LIMIT": 1,
+        "SET_TOOL_CORNER_VELOCITY": 1,
+        "SET_VELOCITY_LIMIT": 2,
         "T0": 2,
         "T1": 3
       },
