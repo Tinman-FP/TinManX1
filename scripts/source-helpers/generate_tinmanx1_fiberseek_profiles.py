@@ -790,6 +790,13 @@ def compatible_composite_printers() -> list[str]:
     return [composite_machine_name(n) for n in PLASTIC_NOZZLES] + LEGACY_COMPOSITE_MACHINE_NAMES
 
 
+def compatible_composite_filament_printers() -> list[str]:
+    return [
+        f"{MACHINE_MODEL} {nozzle} nozzle - TinMan Codex"
+        for nozzle in ("0.4", "0.6", "0.8", "1.0")
+    ]
+
+
 def compatible_filament_printers() -> list[str]:
     return compatible_plastic_printers() + compatible_composite_printers()
 
@@ -1007,7 +1014,7 @@ def composite_filament(material: str, values: dict, fiber: dict) -> dict:
         "fiber_priming_line_height": arr("0.2"),
         "fiber_material_kind": arr("composite_matrix"),
         "fiber_source_material_id": arr(f"tinmanx1-{material_slug(material).lower()}-{fiber['profile_suffix'].lower()}"),
-        "compatible_printers": compatible_composite_printers(),
+        "compatible_printers": compatible_composite_filament_printers(),
     }
     return with_optional_filament_retraction(profile, values, prefix="fiber_")
 
