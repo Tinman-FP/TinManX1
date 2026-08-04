@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PROFILES = ROOT / "resources" / "profiles"
 MANIFEST = ROOT / "manifests" / "tinmanx1-profile-resources.sha256"
 MACHINE_HELPER = ROOT / "scripts" / "source-helpers" / "normalize_tinman_machine_catalog.py"
+PET_CF_HELPER = ROOT / "scripts" / "source-helpers" / "repair_tinman_pet_cf_contract.py"
 DEFAULT_APP_PROFILES = Path("/Applications/TinManX1.app/Contents/Resources/profiles")
 DEFAULT_SYSTEM_PROFILES = Path.home() / "Library/Application Support/OrcaSlicer-Codex/system"
 DEFAULT_BACKUP_ROOT = Path.home() / ".tinmanx1" / "profile-deployment-backups"
@@ -46,7 +47,8 @@ def curated_paths() -> list[Path]:
             if item.get("name") in target_models:
                 paths.add(Path(vendor) / item["sub_path"])
 
-    for path in (PROFILES / "BBL" / "filament").rglob("Bambu PET-CF*.json"):
+    pet_cf_contract = runpy.run_path(str(PET_CF_HELPER))
+    for path, _family in pet_cf_contract["candidate_paths"](PROFILES):
         paths.add(path.relative_to(PROFILES))
     return sorted(paths, key=lambda path: path.as_posix())
 

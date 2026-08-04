@@ -374,19 +374,22 @@ PROFILE_RESOURCE_ARTIFACT_SUFFIXES = (
     ".swo",
 )
 
-BAMBU_PET_CF_TUNING_CONTRACT = {
+PET_CF_TUNING_CONTRACT = {
     "filament_flow_ratio": "1.00",
     "nozzle_temperature": "280",
     "nozzle_temperature_initial_layer": "285",
     "nozzle_temperature_range_low": "260",
     "nozzle_temperature_range_high": "300",
     "enable_pressure_advance": "1",
-    "pressure_advance": "0.022",
     "fan_min_speed": "0",
     "fan_max_speed": "20",
+    "overhang_fan_speed": "35",
+    "overhang_fan_threshold": "25%",
+    "slow_down_layer_time": "25",
+    "slow_down_min_speed": "6",
     "filament_max_volumetric_speed": "3.2",
 }
-BAMBU_PET_CF_STALE_NOTE_FRAGMENTS = (
+PET_CF_STALE_NOTE_FRAGMENTS = (
     "use 300C nozzle",
     "flow 1.08",
     "max volumetric 4 mm3/s",
@@ -434,13 +437,75 @@ def expected_vector(expected, actual):
     return [expected] * arity
 
 
+def positive_numeric_values(data, *keys):
+    values = []
+    for key in keys:
+        for value in normalized_values(data.get(key)):
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                continue
+            if numeric > 0:
+                values.append(numeric)
+    return values
+
+
+def check_profile_values(rel, data, contract, errors):
+    for key, expected in contract.items():
+        actual = normalized_values(data.get(key))
+        if actual != expected_vector(expected, actual):
+            errors += 1
+            print_error(
+                f"{rel} {key} expected {expected_vector(expected, actual)} "
+                f"for TinManX1 PET-CF tune, got {actual}"
+            )
+    return errors
+
+
+def check_pet_cf_notes(rel, data, errors):
+    for note in normalized_values(data.get("filament_notes")):
+        for stale_fragment in PET_CF_STALE_NOTE_FRAGMENTS:
+            if stale_fragment in note:
+                errors += 1
+                print_error(
+                    f"{rel} filament_notes still references stale PET-CF tune "
+                    f"fragment {stale_fragment!r}"
+                )
+    return errors
+
+
+def check_active_chamber(rel, data, expected_temperature, errors):
+    active = normalized_values(data.get("activate_chamber_temp_control"))
+    chamber = positive_numeric_values(data, "chamber_temperature", "chamber_temperatures")
+    if active != ["1"] or not chamber or any(value != expected_temperature for value in chamber):
+        errors += 1
+        print_error(
+            f"{rel} expected active {expected_temperature:g}C chamber control, "
+            f"got active={active}, chamber={chamber}"
+        )
+    return errors
+
+
+def check_inactive_chamber(rel, data, errors):
+    active = normalized_values(data.get("activate_chamber_temp_control"))
+    chamber = positive_numeric_values(data, "chamber_temperature", "chamber_temperatures")
+    if active != ["0"] or chamber:
+        errors += 1
+        print_error(
+            f"{rel} expected inactive chamber control for a machine without "
+            f"active chamber heating, got active={active}, chamber={chamber}"
+        )
+    return errors
+
+
 def check_tinman_material_tuning_contracts(profiles_dir):
     """
     Guard TinMan-tuned material families that have regressed through partial edits.
 
-    Direct Bambu PET-CF profiles should inherit one conservative product tune
-    across Bambu machines. Brand/vendor-specific PET-CF profiles from other
-    manufacturers are intentionally outside this contract.
+    Guard field-validated Bambu, QIDI Plus 4, and Fiberon Codex PET-CF tunes.
+
+    Other manufacturer PET-CF profiles remain outside this contract because
+    they have different material formulations and validated source settings.
     """
     errors = 0
     bbl_filaments = profiles_dir / "BBL" / "filament"
@@ -457,22 +522,77 @@ def check_tinman_material_tuning_contracts(profiles_dir):
         if not str(data.get("name", "")).startswith("Bambu PET-CF @"):
             continue
         rel = path.relative_to(profiles_dir)
-        for key, expected in BAMBU_PET_CF_TUNING_CONTRACT.items():
-            actual = normalized_values(data.get(key))
-            if actual != expected_vector(expected, actual):
+        errors = check_profile_values(rel, data, PET_CF_TUNING_CONTRACT, errors)
+        errors = check_profile_values(rel, data, {"pressure_advance": "0.022"}, errors)
+        errors = check_pet_cf_notes(rel, data, errors)
+        name = str(data.get("name", ""))
+        if any(machine in name for machine in ("BBL H2D", "BBL H2S", "BBL X1E", "BBL X2D")):
+            errors = check_active_chamber(rel, data, 50, errors)
+        else:
+            errors = check_inactive_chamber(rel, data, errors)
+
+    qidi_filaments = profiles_dir / "Qidi" / "filament"
+    qidi_paths = [qidi_filaments / "QIDI PET-CF.json"]
+    qidi_paths.extend(sorted(qidi_filaments.glob("QIDI PET-CF @Qidi X-Plus 4 * nozzle.json")))
+    for path in qidi_paths:
+        if not path.is_file():
+            continue
+        data = json.loads(path.read_bytes())
+        rel = path.relative_to(profiles_dir)
+        errors = check_profile_values(rel, data, PET_CF_TUNING_CONTRACT, errors)
+        errors = check_pet_cf_notes(rel, data, errors)
+        errors = check_active_chamber(rel, data, 50, errors)
+
+    for path in sorted((profiles_dir / "Codex/filament").glob("PET-CF Codex-Fiberon - *.json")):
+        data = json.loads(path.read_bytes())
+        rel = path.relative_to(profiles_dir)
+        errors = check_profile_values(rel, data, PET_CF_TUNING_CONTRACT, errors)
+        errors = check_profile_values(rel, data, {"pressure_advance": "0.028"}, errors)
+        errors = check_pet_cf_notes(rel, data, errors)
+        if " - Elegoo Centauri " in data["name"] or " - Snapmaker U1 " in data["name"]:
+            errors = check_inactive_chamber(rel, data, errors)
+        else:
+            errors = check_active_chamber(rel, data, 50, errors)
+    return errors
+
+
+def check_codex_filament_thermal_contracts(profiles_dir):
+    """Sanity-check every selectable Codex filament profile."""
+    errors = 0
+    codex_filaments = profiles_dir / "Codex" / "filament"
+    if not codex_filaments.is_dir():
+        return 0
+
+    positive_keys = (
+        "filament_cost",
+        "filament_flow_ratio",
+        "filament_max_volumetric_speed",
+        "nozzle_temperature",
+        "nozzle_temperature_initial_layer",
+    )
+    for path in sorted(codex_filaments.glob("*.json")):
+        data = json.loads(path.read_bytes())
+        rel = path.relative_to(profiles_dir)
+        for key in positive_keys:
+            values = positive_numeric_values(data, key)
+            if not values:
                 errors += 1
-                print_error(
-                    f"{rel} {key} expected {expected_vector(expected, actual)} "
-                    f"for TinManX1 Bambu PET-CF tune, got {actual}"
-                )
-        for note in normalized_values(data.get("filament_notes")):
-            for stale_fragment in BAMBU_PET_CF_STALE_NOTE_FRAGMENTS:
-                if stale_fragment in note:
-                    errors += 1
-                    print_error(
-                        f"{rel} filament_notes still references stale PET-CF tune "
-                        f"fragment {stale_fragment!r}"
-                    )
+                print_error(f"{rel} requires a positive {key}, got {data.get(key)!r}")
+
+        active = normalized_values(data.get("activate_chamber_temp_control"))
+        chamber = positive_numeric_values(data, "chamber_temperature", "chamber_temperatures")
+        if chamber and active != ["1"]:
+            errors += 1
+            print_error(f"{rel} has chamber target {chamber} but active control is {active}")
+        if active == ["1"] and not chamber:
+            errors += 1
+            print_error(f"{rel} enables active chamber control without a positive target")
+
+        material = normalized_values(data.get("filament_type"))
+        if material and material[0] in {"PCTG", "PCTG-CF"}:
+            if not chamber or any(value != 45 for value in chamber) or active != ["1"]:
+                errors += 1
+                print_error(f"{rel} must retain the field-validated active 45C PCTG chamber target")
     return errors
 
 def check_vector_type_keys(profiles_dir, vendor_name):
@@ -787,6 +907,7 @@ def main():
     # Runs once over the whole tree regardless of the --vendor filter.
     errors_found += check_profile_resource_artifacts(profiles_dir)
     errors_found += check_tinman_material_tuning_contracts(profiles_dir)
+    errors_found += check_codex_filament_thermal_contracts(profiles_dir)
     errors_found += check_setting_id_uniqueness(profiles_dir)
     errors_found += check_disallowed_profile_keys(profiles_dir)
     errors_found += check_instantiated_renamed_from_uniqueness(profiles_dir)

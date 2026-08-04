@@ -1,15 +1,20 @@
 45ee66b5d5be2b0bed34e4edb7ab1e96ee058bbed2a3217e65c08589d2edc366  BBL.json
-3fdf293d3d3bfd6e1dc461830a9f6fccb139ec274bb70b0bfeb6802b72e1fdae  BBL/filament/Bambu PET-CF @BBL A1.json
-7f79458332c24968aa29722cf3ff2be3e19ec48fd1340624bafa40e934cea2f0  BBL/filament/Bambu PET-CF @BBL H2D.json
-b7211486f802ce7730e217f33fbd809fb6e1158f2a98f6600e6e6632419d9940  BBL/filament/Bambu PET-CF @BBL H2DP.json
-999d20f62a1a85ec4963d70a92d70b604800785808308e8bb67af267c87ab7e0  BBL/filament/Bambu PET-CF @BBL H2S.json
-b15b3afd4f6705f8f4cf70072176c48326b559b5d255f072d8cf833ee230f8f0  BBL/filament/Bambu PET-CF @BBL P2S.json
-4eaff811b87dce908810fc31bf910557f5951cc3ebcae635050167568814828e  BBL/filament/Bambu PET-CF @BBL X1C.json
-766613e22b392bbd8dd3f9ccf5528deaa07a0be4584cbd2c3c8406b960bc35be  BBL/filament/Bambu PET-CF @BBL X1E.json
-de004c0d2bef4e0870f0667150d526a620535962ea9386ef32dcae7f38c8c692  BBL/filament/Bambu PET-CF @BBL X2D 0.4 nozzle.json
-0eca6358cf271ff0b58c28915e43e231405ea2e61dfbe44d01892452e7e4d8a6  BBL/filament/Bambu PET-CF @BBL X2D.json
-4b630cd7bc43860faeb36565f0713c523a307ff54408a058f05247d8111e6d6d  BBL/filament/Bambu PET-CF @base.json
-7169f9fd2af7b8abfefb684540ce10bc858ce784709b7d0936d1d4b9327d3c84  BBL/filament/P1P/Bambu PET-CF @BBL P1P.json
+232ad88ca146aab4ccf65d1cba60bbada1b7e3bfc512b94a79172ffb8c95b6e6  BBL/filament/Bambu PET-CF @BBL A1.json
+a75f851f58d5573a078c4ad4af78568f55703ac333920a1e9693d554a955594d  BBL/filament/Bambu PET-CF @BBL H2D.json
+bc893cca196bcf142b56261d7b6da32ba9bae6a77d9168c5c60148f6e331bbbd  BBL/filament/Bambu PET-CF @BBL H2DP.json
+1a42f8bd4a0f301e62fda4955c98545cfd3f51e43ddfb00cc2123a1030d294ea  BBL/filament/Bambu PET-CF @BBL H2S.json
+7880a2a48f3ddba5b7635a9eaafcd7f150cad7864c88bae2b39273717913612f  BBL/filament/Bambu PET-CF @BBL P2S.json
+56d658468dac502792a2f8178b08f0735a2cd5cc767a74fdddf4e988f320f96e  BBL/filament/Bambu PET-CF @BBL X1C.json
+168a7b695e10ea2163675f1c4b57c45f7f6025be8a5ec558519679eed2df604e  BBL/filament/Bambu PET-CF @BBL X1E.json
+846f859ac6613e2a06589d358db672c8e6bc30a75c200f4e296fddf1e4590fac  BBL/filament/Bambu PET-CF @BBL X2D 0.4 nozzle.json
+b4d91fc4dcffc096e7f0e27ddb27f49c81e09b9e2104a0af27d81e9ea1c1013c  BBL/filament/Bambu PET-CF @BBL X2D.json
+5f16a164c6efd8bafb07097140d4ef7634f1b30b01d192a5b380ad0f403a2004  BBL/filament/Bambu PET-CF @base.json
+7afef2b13924eb2bb2ce39b7dc99cc90807d1baa9d189eca82f50fd7d172e0c8  BBL/filament/P1P/Bambu PET-CF @BBL P1P.json
+e420cddbc17f5a39cee78e9ccbaac23cddf9c1ac2dbc6904d783eb4f04459c44  BBL/filament/Polymaker/Fiberon PET-CF @BBL H2D.json
+bfce6e20af133ffd7ec7f7d8cd99baabc6678242dca16b5985834a3c5ad17e79  BBL/filament/Polymaker/Fiberon PET-CF @BBL X1C.json
+7fe46097f8423b91318699e49ddb9f0da14df06593da55c6b7fb92d4888b96fd  BBL/filament/Polymaker/Fiberon PET-CF @base.json
+24d05e7e94e3922319cefb33a8a0fbf17fbcc751af2abd23639f4d487b046bc6  BBL/filament/Polymaker/Fiberon PET-CF17 @BBL X1.json
+57ae91c3a7f554faf0ab8489687c5460f0eda8b6e4de6da137d94c1484166cbd  BBL/filament/Polymaker/Fiberon PET-CF17 @base.json
 acbe442db8e9b0b223a7ef6076d7b4c530d9b6ee39f896c75361029f787ca44e  BBL/machine/Bambu Lab H2D.json
 24767fc9c75113d7a139dfea8ef860522f3ce039baea617ce69248bd85e6bffa  BBL/machine/Bambu Lab X1 Carbon.json
 45ddbc3abe7ad7e68ae68e45780352d987fb1b6f5d588da626ab06cd3d86266c  BBL/machine/TinMan Codex/Bambu Lab H2D 0.4 nozzle - TinMan Codex.json
@@ -349,14 +354,14 @@ de5b1db04525e24963060ff226d9296338705d930bc5d034ea14cd085dc749cd  Codex/filament
 450a976827ae19882c754fd579e2f323ff1d984ea0046981c3a26e3f95b2cce1  Codex/filament/PET-CF Codex-Elegoo - RatRig V-Core 4 @Codex.json
 69880bf4bf494cda3b497e11d8161e97c74868cc38a3141c8cc312e42921cd66  Codex/filament/PET-CF Codex-Elegoo - Snapmaker U1 @Codex.json
 f5df76090eec20bc9136683c61338fc3543d877a094901bb22ced3e7be55c39e  Codex/filament/PET-CF Codex-Elegoo - Sovol SV08 MAX @Codex.json
-128553ec1dad65e82a22c5b7924a392e510adc312ab601181dcb4e866698825e  Codex/filament/PET-CF Codex-Fiberon - Bambu @Codex.json
-da96e5c3b71f74d73849cd129b257a14a15fc73a5176762b2da0e221570c14bc  Codex/filament/PET-CF Codex-Fiberon - Creality K2 Plus @Codex.json
-ebf21d4be4c150fd0bb9fbb42306faf8eae305c2c0dee207819273470470019f  Codex/filament/PET-CF Codex-Fiberon - Elegoo Centauri @Codex.json
-bfe921ab9a2d78936cd1cdd87252ee2f20625f10eedec25fa2166bc0b03ca80b  Codex/filament/PET-CF Codex-Fiberon - Prusa Core One @Codex.json
-94eb9ceb1e13675d2b5d22ec5538536b6a9dc9c23003d86196b512f069b9c4f6  Codex/filament/PET-CF Codex-Fiberon - Qidi X-Plus 4 @Codex.json
-bba8cffe7e59351a5e6ca4d667ca306af200d69d9e6a67d56a73bffd48f593e7  Codex/filament/PET-CF Codex-Fiberon - RatRig V-Core 4 @Codex.json
-a758ddf11630cce3a93f5dded07acfa1f37b0ed63251f2a7f7a406f37a308ee1  Codex/filament/PET-CF Codex-Fiberon - Snapmaker U1 @Codex.json
-3c7270b0d2ba8e96197a00555a33d79239d3d0afa07287bc03051633b4a355ad  Codex/filament/PET-CF Codex-Fiberon - Sovol SV08 MAX @Codex.json
+fbf43112fe65fe4a035d7f801b8affef6c0ed5eb792578c99f5d12e3f78f22cc  Codex/filament/PET-CF Codex-Fiberon - Bambu @Codex.json
+ed1777d8b4e6a59db78347bb7cb7ee4f51827f9ce5248d6a5aae079286ab4838  Codex/filament/PET-CF Codex-Fiberon - Creality K2 Plus @Codex.json
+f4a477b626ba846c17bebf4c0c6ee325af296b0b3838f3b51d82c9fc6cc980f3  Codex/filament/PET-CF Codex-Fiberon - Elegoo Centauri @Codex.json
+e21276c5fe912086ef2ec90c3cea58a237d4fde33249f0d24ee5cfbcc18278cc  Codex/filament/PET-CF Codex-Fiberon - Prusa Core One @Codex.json
+20cdd6e1bc5ec3dcbe9e9d23e1a410b459030dcb0bb10128449940ffd14f5688  Codex/filament/PET-CF Codex-Fiberon - Qidi X-Plus 4 @Codex.json
+77586bea962e87a3dc940cf89e053534cbaf98e0a58f3952328f832e57f756e9  Codex/filament/PET-CF Codex-Fiberon - RatRig V-Core 4 @Codex.json
+91771ab1723e5cc802f6898bca7099c75810f5b36b62a143c4525cf0400861e3  Codex/filament/PET-CF Codex-Fiberon - Snapmaker U1 @Codex.json
+d80fc3af999a86aec863d7a99702ddc408994384f53a4ba1e6561ea941a06782  Codex/filament/PET-CF Codex-Fiberon - Sovol SV08 MAX @Codex.json
 8a4d93e5d418ed3f904cfd55a2389904799b5ac4e1daa2e23a39d25bd24cc4b4  Codex/filament/PET-GF Codex-Fiberon - Bambu @Codex.json
 af86a47cb5bc5ea302a9df14ebd7686272811db222a216c43188db63835b29a0  Codex/filament/PET-GF Codex-Fiberon - Creality K2 Plus @Codex.json
 c20705b5612b11a518c2ae1b2f4e5cafe72d89e0091ecab1487a9dabafe23be5  Codex/filament/PET-GF Codex-Fiberon - Elegoo Centauri @Codex.json
@@ -549,6 +554,10 @@ ff7956a7f88d8d35d767993c1b24d8c75239858bd6c4d0aeaf715f652b57b0f4  Elegoo/process
 4ab3688852a004bc3b599d46410b82efaba16418d64d488284f32e5933e57fde  Elegoo/process/TinMan Codex/0.56mm Draft @Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex.json
 7b1b6414ec0850e8f951f795bf44704385f33a2088d8060f7e79591e6f970e6d  Elegoo/process/TinMan Codex/0.60mm Fast @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex.json
 478424ce933c5badabf934ce6e491ee0fb891d47bd6e524d03cce491986b5f61  Elegoo/process/TinMan Codex/0.70mm Draft @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex.json
+469be379a269f838df7649d4dafaca4bf399d8a400393b78d5ea625ac094e088  OrcaFilamentLibrary/filament/Bambu/Bambu PET-CF @System.json
+f4b4615577c709396ebbf014abb94efe8d376fbbc0d1fb2808f95dc202fe2328  OrcaFilamentLibrary/filament/Bambu/Bambu PET-CF @base.json
+45cf32d2a7af5ff56a20454bda6c46cd535294c79c46bcb93a929f98232e5af2  OrcaFilamentLibrary/filament/Polymaker/Fiberon PET-CF @System.json
+01ab278bf495c1216ae24ba17f8745accc51f723c619d38588895caa55a7b6c4  OrcaFilamentLibrary/filament/Polymaker/Fiberon PET-CF @base.json
 1ff5ef80d585049e35f66e34918832bd556f2254aa35c81ed1e1ab3986b25d81  Prusa.json
 1184f3881f411102c09b369760fba5c763292f8a7d29f022f591c02d56048641  Prusa/machine/Prusa CORE One L.json
 5dfa0e25803ef69c57cca4036bbf769b415406882fd5de8960f9bdaed9ad9185  Prusa/machine/TinMan Codex/Prusa CORE One L 0.4 nozzle - TinMan Codex.json
@@ -572,6 +581,10 @@ d9bdf1d8280004396e425621409b5c85d5fb845ac4fca4ebbeb779288c660c79  Prusa/process/
 64bd161de93f3f1495b415d48d0a8a4ec51b1a2d29ffc98753a0544591bbb42e  Prusa/process/TinMan Codex/0.60mm Fast @Prusa CORE One L 1.0 nozzle - TinMan Codex.json
 f8a3a01d8d60522bcc47bdd656b2cc56e0d8b10cb45c959aadea2bd24247e62c  Prusa/process/TinMan Codex/0.70mm Draft @Prusa CORE One L 1.0 nozzle - TinMan Codex.json
 2d758b5da5ef2466952fe1c7289e7e6e9bc410292f288a50f47d1ff2d8b7a7ee  Qidi.json
+1e8b420d9df3f0d7a845f80126977c25f33d2b8684818977b979534933561bad  Qidi/filament/QIDI PET-CF @Qidi X-Plus 4 0.4 nozzle.json
+0433721955265d36fd7ed5d92c962b2c57631963a86552f115fcf13d59c74218  Qidi/filament/QIDI PET-CF @Qidi X-Plus 4 0.6 nozzle.json
+6041566349484a6ecebad87827a7b8078b2a63fc1c711ee77a4023a3fae8bdff  Qidi/filament/QIDI PET-CF @Qidi X-Plus 4 0.8 nozzle.json
+d45b53b04eb9effb06336a8e1db483924d39b9ac96bcd04345a74e7a9e0d99bb  Qidi/filament/QIDI PET-CF.json
 c27753168b475fe3b56188fb91aaa946d1e41389ba74fd8de337cc5aaf5d577b  Qidi/machine/Qidi X-Plus 4.json
 4d8904f2991396cf8b9c349005805dad4c2b714b9572784984e0360ed1745c00  Qidi/machine/QidiMaxEz.json
 b5d365a79a18121148dece2bdd6d1c3294fd7a0a9a65903dcfa4f224b2b1222a  Qidi/machine/TinMan Codex/Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json
@@ -825,26 +838,26 @@ a76df41ae7ab2edeecb5097800dbf0a19e032c0140812a2e81908b02932eb945  TinManX1/machi
 9ebd4d008bf0a1d5cf324d66107c789ed33c674a49e0ee0c8a60d544e3f45649  TinManX1/machine/TinMan Codex/FibreSeek Seeker 3 0.8 nozzle - TinMan Codex.json
 4b9ea2f7884c09b62e12bfab1bf27526eef8872b3d14b7016709933c33bcb460  TinManX1/machine/TinMan Codex/FibreSeek Seeker 3 1.0 nozzle - TinMan Codex.json
 f0956e680c3bc1013c51d24ce37ff4f5f3a2dafc73ba2d388eb925df24a49872  TinManX1/machine/TinManX1 FibreSeek machine common.json
-6352e4b227aa277e37e25aad34f0798bf87e0b6942cf757514af882a45dbcb89  TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json
-ce8cf7091f19f9daf2fadbe1adc896397ac09c5dd100b38e21c596e2d91c3e5c  TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json
-45c76e338ff602089b5a823d28bb9a3b0aced0d7dc32930120a8042602c76a14  TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle.json
-e7e2563dee1ac02b6b05cb7a4fc562e7a25928057d0e6d30bd86e6357662722f  TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.4+0.7 nozzle.json
-cde08f33cd07f856e3b7ebb20c858b9799bfcab828a553f0f7435c366dcc67ac  TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.6+0.7 nozzle.json
-9b83d018ea6e48b6b1601ad0b40658410c404a7d2936dd98486297a77c073ce8  TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.8+0.7 nozzle.json
-90581fd7aeee570e3469f2d3f534ae8766ef5b5cf58ff0e7c43ed7d87fd80998  TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4+0.7 nozzle.json
-cc26cb8b495744573dbe9ba5bf7ec85ca62f5886f97541194275867e9137ec91  TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6+0.7 nozzle.json
-b80daadc828410549d3fcda6681892e48b61e9cadbb6d61df6357a14e7b58d22  TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8+0.7 nozzle.json
+8a9664e760cb60dbeb14176520cdfe30980aa6785f62347f7505e3b3ce23eb73  TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json
+8d4b0c41fe2cbab7c872aca945ba82ee4a175dd55cf9aae8cc300147e58932c7  TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json
+44a2f72e3712db11808020f5ba95bdc3a69a6dcdd07098532697c8be0b8f5fdc  TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle.json
+818f794b09878069539c32c18734a5fe557277e312c2dfbca61cf41134bba0ec  TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.4+0.7 nozzle.json
+6faa089599f20f6c332524772b9f7ed345c76d44b03828cd131e8d5ee71e02ed  TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.6+0.7 nozzle.json
+b09b003c7771a84a67ed067eeb00e17dd9df55bcbbbe09bd6b6be3609f012456  TinManX1/process/0.20mm Plastic + Continuous Fiber Light @FibreSeek Seeker 3 0.8+0.7 nozzle.json
+e38ee82228b94176a6f4c8cc3aec80030eb3de93ab66fe88ae20faa4c70b2ad3  TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4+0.7 nozzle.json
+b4c84daa418131f55a835730140c5351968598c16c0012d6210b78cc87a97829  TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6+0.7 nozzle.json
+630742c1e5932a86279cd450529fd2b3cf9d0a7ba900c871b9fd3d4c33699f6d  TinManX1/process/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8+0.7 nozzle.json
 6968a4c4d5e4a2fdcd3977f94f6b9ac2f477e1953d2750bd08c66f6c61f608ab  TinManX1/process/0.20mm Plastic Only @FibreSeek Seeker 3 0.4 nozzle.json
 55da50b7a8e655fe5b7b50d0d668f3408684256518c9a9e0328df714f6b5b9c1  TinManX1/process/0.20mm Plastic Only @FibreSeek Seeker 3 0.6 nozzle.json
-290c0c680c8174976be11e5a12afc566610cd57d394c5c657be627e62129ed4a  TinManX1/process/0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json
-896b52732395666883ec4417427a44c134a9a3ff5b61a94e175c8d39fa1dd4ae  TinManX1/process/0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json
-64bd13f951939f7b004e0ebc0e6f863d63b446f25b3a530e8ff7cedd149e30e9  TinManX1/process/0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle.json
-fea8a299b104dbb055a278c9750708382609a1a790320d684925487deaf38b37  TinManX1/process/0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.4+0.7 nozzle.json
-5eeab6f0c54da8676d34183e5acc9ea1f9a8ce5cbd4245df7be52b2456ab42cd  TinManX1/process/0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.6+0.7 nozzle.json
-e8440547b289194e7ccc7cb2171064f62c8b3541d6e35d80d4356b9a3290b223  TinManX1/process/0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.8+0.7 nozzle.json
-6fdb9a9c6d6772a906c9acdb08b3c649ce0c85602f7362655168d973296bc3fc  TinManX1/process/0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.4+0.7 nozzle.json
-15b880c17cdbcb6365aebfab043684b7b250376a61ff5fa21871b3b05a29c3a0  TinManX1/process/0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.6+0.7 nozzle.json
-e25d7c78deecce6062ff952789405d9884cfb9595343f4eaa8f77ff4eec205d1  TinManX1/process/0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.8+0.7 nozzle.json
+5815004c99a46bfa35ad9b56a03a588d7977b9029bbd4b94f9e627c0436a3d67  TinManX1/process/0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json
+751fe0f849f22ac677c511bb93f0bb74bf1c04bd0180a53f0c01af5768cf0127  TinManX1/process/0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json
+11142b716112195f72c54293305ac0da31b0ff2697127d9bf93728c35d5f664e  TinManX1/process/0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle.json
+bcf123a061fb76af9ee95edecfd4f0d2d2c691b579f5b0230ddaa2500157c971  TinManX1/process/0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.4+0.7 nozzle.json
+2e8283b187f582cb1877a8f180d94c6e652de838a1dd1c39cd98e8ed4d6c7926  TinManX1/process/0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.6+0.7 nozzle.json
+cdb1cb4dff33456ae75b6de0524d98981c6203e15cb2596506b53c488d410f0b  TinManX1/process/0.20mm Rocket Compare Composite Only Light @FibreSeek Seeker 3 0.8+0.7 nozzle.json
+9f5ee58515fcf5cc9a5ae1a462d332c818cfcdd560b8ea4a86d2215b7b7ebf3e  TinManX1/process/0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.4+0.7 nozzle.json
+51697d40f4facc85b70cd4bc92bfce79e4876ec749d7ab7fd4e7f42890f2c0e9  TinManX1/process/0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.6+0.7 nozzle.json
+4b2c27d69ba2cb25ccb5ebba560652306fe45b41b3dffe11bd029bada63c1695  TinManX1/process/0.20mm Rocket Compare Composite Only Medium @FibreSeek Seeker 3 0.8+0.7 nozzle.json
 4f75629950fc8e8b9c29faa5f12e21443381e24c5f5cb93139f0f52c7ac27d2b  TinManX1/process/0.32mm Plastic Only @FibreSeek Seeker 3 0.8 nozzle.json
 55cb846273e5a9509c2d2ef0d163c1b8266f6a84b16b5d6c0af13cc87af362b1  TinManX1/process/TinMan Codex/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4 nozzle - TinMan Codex.json
 96c0fa0c6ed08599289b4cac13c23ffd217d652e6c899f219dbf205d9a3ee64b  TinManX1/process/TinMan Codex/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6 nozzle - TinMan Codex.json

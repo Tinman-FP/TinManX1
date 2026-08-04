@@ -7,19 +7,19 @@
     "instantiation": "true",
     "compatible_printers": [],
     "filament_flow_ratio": [
-        "1.08"
+        "1.00"
     ],
     "filament_max_volumetric_speed": [
-        "4"
+        "3.2"
     ],
     "nozzle_temperature": [
-        "300"
+        "280"
     ],
     "nozzle_temperature_initial_layer": [
-        "300"
+        "285"
     ],
     "nozzle_temperature_range_low": [
-        "270"
+        "260"
     ],
     "nozzle_temperature_range_high": [
         "300"
@@ -58,16 +58,16 @@
         "0"
     ],
     "fan_max_speed": [
-        "0"
-    ],
-    "overhang_fan_speed": [
-        "0"
-    ],
-    "slow_down_layer_time": [
         "20"
     ],
+    "overhang_fan_speed": [
+        "35"
+    ],
+    "slow_down_layer_time": [
+        "25"
+    ],
     "slow_down_min_speed": [
-        "8"
+        "6"
     ],
     "filament_retraction_length": [
         "0.8"
@@ -79,9 +79,21 @@
         "0.028"
     ],
     "filament_notes": [
-        "TinManX1 PET-CF rescue tune 2026-07-11: after repeated porous PET-CF test prints, use 300C nozzle, 80C bed, fan off, max volumetric 4 mm3/s, flow 1.08, slowdown enabled, and pressure advance enabled. Dry filament and inspect hardened nozzle if voids persist."
+        "TinManX1 PET-CF field tune 2026-08-04: supersedes the July 11 300C / 1.08-flow rescue profile. Use 285C first layer / 280C print, 80C bed, 50C active chamber on supported TinMan machines, flow 1.00, max volumetric 3.2 mm3/s, limited overhang cooling, and pressure advance 0.028. Fiberon permits room-temperature chambers; the controlled 50C target is the TinMan field-quality setting. Dry at 100C for 10h."
     ],
     "tinmanx_petcf_rescue_tune": [
         "2026-07-11 all PET-CF rescue tune with pressure advance"
+    ],
+    "overhang_fan_threshold": [
+        "25%"
+    ],
+    "activate_chamber_temp_control": [
+        "0"
+    ],
+    "chamber_temperature": [
+        "0"
+    ],
+    "chamber_temperatures": [
+        "0"
     ]
 }

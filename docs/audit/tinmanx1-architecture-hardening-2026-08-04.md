@@ -37,12 +37,15 @@ Reference links:
 
 - Removed a stale profile backup artifact from the product profile tree into ignored work quarantine.
 - Added a profile-resource hygiene check that rejects backup, swap, scratch, AppleDouble, and `.DS_Store` files inside `resources/profiles`.
-- Normalized direct Bambu PET-CF presets across supported Bambu machines to the TinManX1 PET-CF surface tune: 285C first layer, 280C print, 1.00 flow, pressure advance 0.022, fan max 20, and 3.2 mm3/s max volumetric speed.
-- Added a PET-CF tuning contract check so direct Bambu PET-CF profiles cannot drift back to the old 300C / 1.08 flow rescue tune unnoticed.
+- Normalized Bambu, Fiberon, QIDI Plus 4, and generated Codex PET-CF presets to the final TinManX1 surface tune: 285C first layer, 280C print, 1.00 flow, fan max 20, and 3.2 mm3/s max volumetric speed. Pressure advance remains family- and nozzle-specific.
+- Added one reusable PET-CF repair contract for repository resources, installed resources, runtime caches, and user presets. The matching release check rejects the superseded July 11 300C / 1.08-flow rescue tune and validates the complete final field-tune surface.
+- Added semantic sanity checks across every generated Codex filament profile for price, flow, volumetric rate, nozzle temperature, active chamber control, and the 45C PCTG chamber contract.
 - Updated the profile checker so curated Bambu, Snapmaker, and TinManX1 profile IDs remain validated for presence and uniqueness without forcing them through the generic deterministic ID formula.
 - Replaced machine-profile discovery from stale workstation state with a declared TinMan Codex contract: 13 curated machine or RatRig mode entries, each exposing only 0.4, 0.6, 0.8, and 1.0 mm variants.
 - Kept upstream machine presets as hidden inheritance bases and generated one compatible quality process for every selector-facing TinMan Codex machine profile. FibreSeek retains its fixed 0.7 mm continuous-fiber nozzle internally.
 - Added a recoverable live migration that backs up and removes legacy user machine copies, rewrites the enabled model list, and keeps physical-printer compatibility links pointed at the canonical profiles.
+- Removed the printer-owned fiber cut distance, restart length, and cut G-code keys from 18 process presets. Their authoritative values remain in the FibreSeek machine contract, eliminating runtime preset-schema removal errors without changing cut behavior.
+- Changed the FibreSeek profile generator to rebuild only its root-owned files and preserve nested curated machine/process directories and index entries. Running the generator can no longer erase the TinMan Codex selector profiles.
 - Added a compiled machine-profile contract at the preset-loading boundary. Startup, cloud sync, local/bundle loading, and both machine selectors now reject historical curated-machine copies and reapply the 13-model, four-nozzle enabled catalog, so cloud restore cannot undo the cleanup.
 - Applied the same contract at both `AppConfig::save()` boundaries. Persisted configuration is canonical even when a future caller bypasses the normal preset-loading path.
 - Added focused C++ tests for canonical and historical Qidi, Snapmaker, FibreSeek, RatRig, cloud-prefixed, and unrelated experimental profile names.
@@ -55,7 +58,7 @@ Reference links:
 - Modeled `Codex` as a bundled filament-import staging vendor in the deployment manifest. Orca legitimately removes its system-cache copy after importing the profiles into `user/default`; app-bundle integrity remains mandatory while the runtime cache check covers only retained vendors.
 - Fixed the Prepare-tab nozzle selector contract for common-diameter multi-extruder machines. Snapmaker U1 and RatRig IDEX now switch their complete 0.4, 0.6, 0.8, or 1.0 mm machine preset through the unified selector; Bambu dual-nozzle machines retain independent left/right controls.
 - Added four materially different processes for every RatRig normal/copy/mirror and Snapmaker U1 nozzle variant: Tank, Quality, Fast, and Draft. The modes define nozzle-scaled layer heights and line widths, progressively distinct speed/acceleration ceilings, and explicit shell/infill strength policies; Quality is the default.
-- Added a 757-file profile deployment manifest with backed-up synchronization and checksum verification across the repository, installed app bundle, and Application Support cache.
+- Added an 866-file profile deployment manifest with backed-up synchronization and checksum verification across the repository, installed app bundle, and Application Support cache.
 
 ## Recommended Next Moves
 
