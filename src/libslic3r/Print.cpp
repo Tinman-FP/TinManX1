@@ -36,6 +36,7 @@
 #include <tbb/parallel_for.h>
 
 #include <cctype>
+#include <chrono>
 #include <cstdlib>
 #include <mutex>
 #include <sstream>
@@ -234,10 +235,10 @@ static boost::filesystem::path orcaslicer_codex_native_fiber_planner_script()
         const fs::path resources_path(resources_dir());
         candidates.emplace_back(resources_path / "orcaslicer_codex" / "fiber_planner" / filename);
         candidates.emplace_back(resources_path / "orcaslicer_codex" / "sidecars" / filename);
-        candidates.emplace_back(resources_path.parent_path() / "scripts" / filename);
+        candidates.emplace_back(resources_path.parent_path() / "scripts" / "source-helpers" / filename);
     }
-    candidates.emplace_back(fs::current_path() / "scripts" / filename);
-    candidates.emplace_back(fs::current_path().parent_path() / "scripts" / filename);
+    candidates.emplace_back(fs::current_path() / "scripts" / "source-helpers" / filename);
+    candidates.emplace_back(fs::current_path().parent_path() / "scripts" / "source-helpers" / filename);
     candidates.emplace_back(fs::current_path().parent_path() / "Resources" / "orcaslicer_codex" / "fiber_planner" / filename);
 
     for (const fs::path &candidate : candidates)
@@ -260,6 +261,20 @@ static boost::filesystem::path orcaslicer_codex_python()
     return fs::path("python3");
 }
 
+static int orcaslicer_codex_native_fiber_planner_timeout_seconds()
+{
+    constexpr long default_timeout = 4 * 60 * 60;
+    const char *value = std::getenv("ORCASLICER_CODEX_NATIVE_FIBER_TIMEOUT_SECONDS");
+    if (value == nullptr || *value == '\0')
+        return int(default_timeout);
+
+    char *end = nullptr;
+    const long parsed = std::strtol(value, &end, 10);
+    if (end == value || *end != '\0' || parsed <= 0)
+        return int(default_timeout);
+    return int(std::clamp(parsed, 1L, 24L * 60L * 60L));
+}
+
 static bool run_orcaslicer_codex_native_fiber_planner(const Print& print, const std::string& gcode_path)
 {
     const DynamicPrintConfig config = print.full_print_config();
@@ -272,6 +287,7 @@ static bool run_orcaslicer_codex_native_fiber_planner(const Print& print, const 
         throw Slic3r::RuntimeError("FibreSeek native planner is enabled, but orcaslicer_codex_native_fiber_planner.py was not found in app resources or scripts.");
 
     const fs::path summary_path(gcode_path + ".native_fiber.summary.json");
+    const fs::path stderr_path(gcode_path + ".native_fiber.stderr.log");
     const std::string emit_mode = []() {
         if (const char *env_value = std::getenv("ORCASLICER_CODEX_NATIVE_FIBER_EMIT_MODE"))
             return std::string(env_value);
@@ -351,13 +367,13 @@ static bool run_orcaslicer_codex_native_fiber_planner(const Print& print, const 
     append_positive_float_arg("--fiber-start-speed", fiber_start_speed);
     append_positive_int_arg("--max-routes-per-layer", fiber_max_routes_per_layer);
 
-    std::string std_err;
-    process::ipstream err_stream;
+    boost::system::error_code file_error;
+    fs::remove(stderr_path, file_error);
 #ifdef _WIN32
     process::child child(
         orcaslicer_codex_python().string(),
         process::args(planner_args),
-        process::std_err > err_stream);
+        process::std_err > stderr_path.string());
 #else
     std::vector<std::string> sanitized_python_args {
         "-u", "PYTHONHOME",
@@ -369,13 +385,34 @@ static bool run_orcaslicer_codex_native_fiber_planner(const Print& print, const 
     process::child child(
         "/usr/bin/env",
         process::args(sanitized_python_args),
-        process::std_err > err_stream);
+        process::std_err > stderr_path.string());
 #endif
 
-    std::string line;
-    while (err_stream && std::getline(err_stream, line))
-        std_err += line + "\n";
-    child.wait();
+    const int timeout_seconds = orcaslicer_codex_native_fiber_planner_timeout_seconds();
+    const bool completed = child.wait_for(std::chrono::seconds(timeout_seconds));
+    if (!completed) {
+        std::error_code terminate_error;
+        child.terminate(terminate_error);
+        child.wait(terminate_error);
+    }
+
+    std::string std_err;
+    {
+        boost::nowide::ifstream stderr_stream(stderr_path.string());
+        std::ostringstream buffer;
+        buffer << stderr_stream.rdbuf();
+        std_err = buffer.str();
+    }
+    file_error.clear();
+    fs::remove(stderr_path, file_error);
+
+    if (!completed) {
+        std::ostringstream message;
+        message << "FibreSeek native planner exceeded its " << timeout_seconds << " second safety timeout";
+        if (!std_err.empty())
+            message << ":\n" << std_err;
+        throw Slic3r::RuntimeError(message.str());
+    }
 
     if (child.exit_code() != 0) {
         std::ostringstream message;

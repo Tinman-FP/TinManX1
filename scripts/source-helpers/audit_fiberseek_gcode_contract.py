@@ -212,7 +212,6 @@ def audit_gcode(gcode_path: Path, summary_path: Path | None, require_alternation
     advisories: list[str] = []
 
     command_counts = Counter(command for line in lines if (command := command_of(line)))
-    exact_commands = Counter(exact_command(line) for line in lines if exact_command(line))
     routes = parse_routes(lines)
     route_count = len(routes)
     route_layers = sorted({route["layer"] for route in routes})

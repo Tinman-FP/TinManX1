@@ -24,7 +24,7 @@ part by profile tuning alone.
 Command:
 
 ```bash
-python3 scripts/compare_fiberseek_gcode.py \
+python3 scripts/source-helpers/compare_fiberseek_gcode.py \
   --layer-csv latest_prop_compare_by_z.csv \
   --route-csv latest_prop_compare_routes.csv \
   Heavy.gcode \

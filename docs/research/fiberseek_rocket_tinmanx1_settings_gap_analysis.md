@@ -200,7 +200,7 @@ the user.
    releases.
 
    Current TinManX1 status: present for G-code comparisons. The public
-   `scripts/compare_fiberseek_gcode.py` tool compares a local Rocket G-code file
+   `scripts/source-helpers/compare_fiberseek_gcode.py` tool compares a local Rocket G-code file
    against a TinManX1 G-code file for critical command families, setpoints, tool
    ownership, cut/load behavior, route metadata, timing, and material summaries.
    It also runs the TinManX1 contract audit by default and keeps Rocket exports

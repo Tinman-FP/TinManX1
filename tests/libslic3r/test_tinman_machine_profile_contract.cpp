@@ -13,6 +13,8 @@ TEST_CASE("TinMan curated machines expose only canonical nozzle presets", "[Pres
         "Qidi X-Plus 4 1.0 nozzle - TinMan Codex", "Qidi X-Plus 4"));
     CHECK(tinmanx_machine_preset_allowed(
         "__subscribed/team/Qidi X-Plus 4 0.8 nozzle - TinMan Codex", "Qidi X-Plus 4"));
+    CHECK(tinmanx_machine_preset_allowed(
+        "__subscribed/team/Qidi X-Plus 4 0.6 nozzle - TinMan Codex", "qIdI pLuS 4"));
 
     CHECK_FALSE(tinmanx_machine_preset_allowed(
         "Qidi X-Plus 4 0.6 nozzle", "Qidi X-Plus 4"));
@@ -24,6 +26,8 @@ TEST_CASE("TinMan curated machines expose only canonical nozzle presets", "[Pres
         "FibreSeek Seeker 3 - Codex", "SEEKER 3"));
     CHECK_FALSE(tinmanx_machine_preset_allowed(
         "RatRig V-Core 4 IDEX 500 COPY MODE 0.5 nozzle", "RatRig V-Core 4 IDEX 500 COPY MODE"));
+    CHECK_FALSE(tinmanx_machine_preset_allowed(
+        "Qidi X-Plus 4 0.4 nozzle - TinMan Codex Copy", "Qidi X-Plus 4"));
 
     CHECK(tinmanx_machine_preset_allowed("My Experimental Printer", "My Experimental Printer"));
 }
@@ -36,6 +40,8 @@ TEST_CASE("TinMan curated machines expose only their canonical process presets",
         "0.20mm Quality @Prusa CORE One L 0.4 nozzle - TinMan Codex", printer));
     CHECK(tinmanx_process_preset_allowed(
         "0.20mm Quality @Prusa CORE One L 0.4 nozzle - TinMan Codex - Copy", printer));
+    CHECK(tinmanx_process_preset_allowed(
+        "team/process/0.20mm Tank @Prusa CORE One L 0.4 nozzle - TinMan Codex", printer));
     CHECK_FALSE(tinmanx_process_preset_allowed(
         "0.10mm FAST DETAIL @CORE One L 0.4", printer));
 

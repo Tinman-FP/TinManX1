@@ -400,12 +400,12 @@ Use the existing helpers as the first gate layer:
 
 ```bash
 python3 scripts/prototype_fiberseek_composite_routes.py --self-test
-python3 scripts/compare_fiberseek_gcode.py --self-test
-python3 scripts/check_tinmanx1_fiber_wiring.py
-python3 scripts/smoke_orcaslicer_codex_native_fiber_planner.py
+python3 scripts/source-helpers/compare_fiberseek_gcode.py --self-test
+python3 scripts/source-helpers/check_tinmanx1_fiber_wiring.py
+python3 scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py
 ```
 
-`scripts/check_tinmanx1_fiber_wiring.py` now covers the source-level
+`scripts/source-helpers/check_tinmanx1_fiber_wiring.py` now covers the source-level
 composite-only gate: it verifies that `fiber_manufacturing_mode` exists in
 `PrintConfig`, appears in the GUI/profile surface, is known to profile
 generation/linting, and prevents composite-only jobs from falling through the

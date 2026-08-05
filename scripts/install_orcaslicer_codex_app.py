@@ -28,6 +28,7 @@ DEFAULT_TARGET_APP = Path("/Applications/TinManX1.app")
 DEFAULT_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "OrcaSlicer-Codex"
 AUTO_PA_WRAPPER_REL = Path("Contents/Resources/orcaslicer_codex/auto_pa/tinman_auto_pa_postprocess.py")
 LEGACY_PREFLIGHT_REL = Path("tools/orca_codex_launch_preflight.py")
+GENERATED_RESOURCE_PATTERNS = ("__pycache__", "*.pyc", "*-venv", ".venv", "venv")
 
 
 def repo_defaults() -> tuple[Path, Path]:
@@ -59,12 +60,16 @@ def run(args: list[str]) -> None:
 
 def copy_optional_file(src: Path, dst: Path) -> None:
     if src.exists():
+        if dst.exists() and src.resolve() == dst.resolve():
+            return
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
 
 
 def copy_optional_tree(src: Path, dst: Path) -> None:
     if src.exists():
+        if dst.exists() and src.resolve() == dst.resolve():
+            return
         if dst.exists():
             shutil.rmtree(dst)
         dst.parent.mkdir(parents=True, exist_ok=True)
@@ -87,17 +92,18 @@ def install_feature_resources(source_root: Path, app: Path) -> None:
     arc_support = resources / "arc_support"
     sidecars = resources / "sidecars"
     auto_pa = resources / "auto_pa"
+    helpers = source_root / "scripts" / "source-helpers"
 
     copy_optional_file(
-        source_root / "scripts" / "orcaslicer_codex_arc_support_inplace_adapter.py",
+        helpers / "orcaslicer_codex_arc_support_inplace_adapter.py",
         arc_support / "orcaslicer_codex_arc_support_inplace_adapter.py",
     )
     copy_optional_file(
-        source_root / "scripts" / "orcaslicer_codex_arc_support_transform.py",
+        helpers / "orcaslicer_codex_arc_support_transform.py",
         arc_support / "orcaslicer_codex_arc_support_transform.py",
     )
     copy_optional_tree(
-        source_root / "third_party" / "gpl" / "arc-overhang",
+        source_root / "resources" / "orcaslicer_codex" / "third_party" / "gpl" / "arc-overhang",
         resources / "third_party" / "gpl" / "arc-overhang",
     )
     copy_optional_tree(
@@ -105,11 +111,11 @@ def install_feature_resources(source_root: Path, app: Path) -> None:
         auto_pa,
     )
     copy_optional_file(
-        source_root / "scripts" / "orcaslicer_codex_strength_lens_sidecar.py",
+        helpers / "orcaslicer_codex_strength_lens_sidecar.py",
         sidecars / "orcaslicer_codex_strength_lens_sidecar.py",
     )
     copy_optional_file(
-        source_root / "scripts" / "orcaslicer_codex_fiber_metadata_sidecar.py",
+        helpers / "orcaslicer_codex_fiber_metadata_sidecar.py",
         sidecars / "orcaslicer_codex_fiber_metadata_sidecar.py",
     )
     copy_optional_file(
@@ -417,7 +423,12 @@ def main() -> int:
     if staged_app.exists():
         shutil.rmtree(staged_app)
     args.stage_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(args.source_app, staged_app, symlinks=False)
+    shutil.copytree(
+        args.source_app,
+        staged_app,
+        symlinks=False,
+        ignore=shutil.ignore_patterns(*GENERATED_RESOURCE_PATTERNS),
+    )
 
     if args.target_app.exists():
         preserve_existing_identity_assets(args.target_app, staged_app)

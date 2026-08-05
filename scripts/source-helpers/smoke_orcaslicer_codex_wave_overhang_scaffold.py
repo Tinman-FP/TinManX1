@@ -8,7 +8,7 @@ import re
 import sys
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 WAVE_REVISION = "379c18470f251b3839db12726a2c3a4e4135bfb8"
 WAVE_SOURCE_URL = "https://github.com/dennisklappe/OrcaSlicer-WaveOverhangs"
 
@@ -119,7 +119,13 @@ def main() -> int:
 
     for option in WAVE_OPTIONS:
         hpp_pattern = re.compile(rf"\(\(\s*ConfigOption[^,]*,\s*{re.escape(option)}\s*\)\)")
-        require(hpp_pattern.search(hpp) is not None, f"PrintConfig.hpp missing storage for {option}")
+        direct_hpp_pattern = re.compile(
+            rf"\bConfigOption[A-Za-z0-9_]*(?:<[^>]+>)?\s+{re.escape(option)}\s*;"
+        )
+        require(
+            hpp_pattern.search(hpp) is not None or direct_hpp_pattern.search(hpp) is not None,
+            f"PrintConfig.hpp missing storage for {option}",
+        )
         require(f'this->add("{option}",' in cpp, f"PrintConfig.cpp missing definition for {option}")
         require(option in tab, f"Tab.cpp missing UI row for {option}")
 
@@ -128,7 +134,7 @@ def main() -> int:
     require("WAVE_OVERHANG_START" in option_block(cpp, "wave_overhang_debug_gcode"), "debug marker contract missing")
     require("support_remaining_areas_after_wave_overhangs" in manip, "ConfigManipulation missing hybrid support-remainder toggle")
     require("wo_enabled" in manip and "woaAndersons" in manip and "woaKaiser" in manip, "ConfigManipulation missing wave visibility gates")
-    require('add_options_page(L("Wave overhangs")' in tab, "settings page missing")
+    require('new_optgroup(L("Wave overhangs")' in tab, "settings group missing")
 
     require("bool wave_overhang = false" in extrusion, "ExtrusionPath missing Wave Overhang tag")
     require("wave_overhang(rhs.wave_overhang)" in extrusion, "ExtrusionPath constructors must copy Wave Overhang tag")

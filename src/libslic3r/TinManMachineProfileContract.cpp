@@ -2,9 +2,7 @@
 
 #include "AppConfig.hpp"
 
-#include <algorithm>
 #include <array>
-#include <cctype>
 #include <string_view>
 
 namespace Slic3r {
@@ -69,37 +67,77 @@ constexpr std::array<MachineAlias, 29> machine_aliases {{
     {"Fibreseek3", "FibreSeek Seeker 3"},
 }};
 
-std::string lower_ascii(std::string value)
+constexpr char lower_ascii(char value)
 {
-    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
-    return value;
+    return value >= 'A' && value <= 'Z' ? static_cast<char>(value + ('a' - 'A')) : value;
 }
 
-std::string bare_preset_name(const std::string &name)
+bool contains_ascii_case_insensitive(std::string_view haystack, std::string_view needle)
+{
+    if (needle.empty())
+        return true;
+    if (needle.size() > haystack.size())
+        return false;
+
+    for (size_t offset = 0; offset <= haystack.size() - needle.size(); ++offset) {
+        size_t index = 0;
+        while (index < needle.size() && lower_ascii(haystack[offset + index]) == lower_ascii(needle[index]))
+            ++index;
+        if (index == needle.size())
+            return true;
+    }
+    return false;
+}
+
+std::string_view bare_preset_name(std::string_view name)
 {
     const size_t slash = name.find_last_of('/');
     return slash == std::string::npos ? name : name.substr(slash + 1);
 }
 
-std::string_view matched_model(const std::string &preset_name, const std::string &machine_hint)
+std::string_view matched_model(std::string_view preset_name, std::string_view machine_hint)
 {
-    const std::string name_lower = lower_ascii(preset_name);
-    const std::string hint_lower = lower_ascii(machine_hint);
     std::string_view best_model;
     size_t best_length = 0;
 
     for (const MachineAlias &entry : machine_aliases) {
-        const std::string alias_lower = lower_ascii(std::string(entry.alias));
-        if ((name_lower.find(alias_lower) != std::string::npos ||
-             hint_lower.find(alias_lower) != std::string::npos) &&
+        if ((contains_ascii_case_insensitive(preset_name, entry.alias) ||
+             contains_ascii_case_insensitive(machine_hint, entry.alias)) &&
             entry.alias.size() > best_length) {
             best_model = entry.model;
             best_length = entry.alias.size();
         }
     }
     return best_model;
+}
+
+bool is_canonical_machine_name(std::string_view name, std::string_view model, std::string_view nozzle)
+{
+    constexpr std::string_view separator = " ";
+    constexpr std::string_view suffix = " nozzle - TinMan Codex";
+    if (name.size() != model.size() + separator.size() + nozzle.size() + suffix.size())
+        return false;
+
+    size_t offset = 0;
+    const auto consume = [&](std::string_view token, size_t &position) {
+        if (name.substr(position, token.size()) != token)
+            return false;
+        position += token.size();
+        return true;
+    };
+    return consume(model, offset) && consume(separator, offset) && consume(nozzle, offset) && consume(suffix, offset);
+}
+
+const AppConfig::VendorMap &canonical_machine_catalog()
+{
+    static const AppConfig::VendorMap vendors = [] {
+        AppConfig::VendorMap result;
+        constexpr std::array<const char *, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
+        for (const MachineFamily &family : machine_families)
+            result[std::string(family.vendor)][std::string(family.model)].insert(nozzles.begin(), nozzles.end());
+        return result;
+    }();
+    return vendors;
 }
 
 } // namespace
@@ -110,11 +148,12 @@ bool tinmanx_machine_preset_allowed(const std::string &preset_name, const std::s
     if (model.empty())
         return true;
 
-    const std::string bare_name = bare_preset_name(preset_name);
+    const std::string_view bare_name = bare_preset_name(preset_name);
     constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
-    return std::any_of(nozzles.begin(), nozzles.end(), [&](std::string_view nozzle) {
-        return bare_name == std::string(model) + " " + std::string(nozzle) + " nozzle - TinMan Codex";
-    });
+    for (const std::string_view nozzle : nozzles)
+        if (is_canonical_machine_name(bare_name, model, nozzle))
+            return true;
+    return false;
 }
 
 bool tinmanx_process_preset_allowed(const std::string &preset_name, const std::string &active_printer_name)
@@ -123,19 +162,22 @@ bool tinmanx_process_preset_allowed(const std::string &preset_name, const std::s
     if (model.empty() || !tinmanx_machine_preset_allowed(active_printer_name))
         return true;
 
-    const std::string process_name = bare_preset_name(preset_name);
-    const std::string printer_name = bare_preset_name(active_printer_name);
-    return process_name.find("@" + printer_name) != std::string::npos;
+    const std::string_view process_name = bare_preset_name(preset_name);
+    const std::string_view printer_name = bare_preset_name(active_printer_name);
+    size_t marker = process_name.find('@');
+    while (marker != std::string_view::npos) {
+        if (process_name.substr(marker + 1, printer_name.size()) == printer_name)
+            return true;
+        marker = process_name.find('@', marker + 1);
+    }
+    return false;
 }
 
 void tinmanx_apply_machine_catalog(AppConfig &config)
 {
-    std::map<std::string, std::map<std::string, std::set<std::string>>> vendors;
-    constexpr std::array<const char *, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
-    for (const MachineFamily &family : machine_families)
-        vendors[std::string(family.vendor)][std::string(family.model)].insert(nozzles.begin(), nozzles.end());
+    const AppConfig::VendorMap &vendors = canonical_machine_catalog();
     if (config.vendors() != vendors)
-        config.set_vendors(std::move(vendors));
+        config.set_vendors(vendors);
 }
 
 } // namespace Slic3r
