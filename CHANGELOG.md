@@ -7,6 +7,7 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 Included:
 
 - consolidated TinManX1 helper authoring under `scripts/source-helpers`, removed 16,000 lines of duplicate script copies, and added release-time byte-for-byte checks against packaged runtime helpers
+- aligned the FibreSeek profile generator with the canonical four-nozzle catalog and added an idempotence gate so regeneration cannot silently restore retired profile variants
 - repaired dormant Arc Overhang, Wave Overhang, Strength Lens, and FibreSeek smoke paths so they execute the same code and resource locations shipped in the app
 - hardened Arc Overhang against converting ordinary support-only G-code into arc infill while preserving its guarded bridge/overhang workflow
 - removed repeated allocation and catalog reconstruction from curated machine/process filtering, with mixed-case cloud-preset regression coverage

@@ -51,6 +51,11 @@ jobs:
       - name: Validate FibreSeek layup editor contract
         run: python3 scripts/source-helpers/validate_tinmanx1_fiber_layup_editor_contract.py
 
+      - name: Verify FibreSeek profile generator is idempotent
+        run: |
+          python3 scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py
+          git diff --exit-code -- resources/profiles/TinManX1.json resources/profiles/TinManX1
+
       - name: Generate and lint FibreSeek profile pack
         run: |
           python3 scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py --fiber-layup-template first-layer-off-tetragrid

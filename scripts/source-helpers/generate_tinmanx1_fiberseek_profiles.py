@@ -28,7 +28,7 @@ ROOT = find_repo_root(Path(__file__).resolve())
 HELPER_DIR = Path(__file__).resolve().parent
 PROFILE_ROOT = ROOT / "resources" / "profiles"
 PACK_ROOT = PROFILE_ROOT / "TinManX1"
-PACK_VERSION = "02.04.00.15"
+PACK_VERSION = "02.04.00.16"
 MACHINE_MODEL = "FibreSeek Seeker 3"
 LEGACY_COMPOSITE_MACHINE_NAMES = ["FibreSeek Seeker 3 - Codex"]
 
@@ -393,6 +393,7 @@ PLASTIC_NOZZLES = {
 }
 COMPOSITE_NOZZLE = "0.7"
 COMPOSITE_LINE_WIDTH = "0.80"
+CANONICAL_NOZZLES = ("0.4", "0.6", "0.8", "1.0")
 FIBRESEEK_BED_VOLUME = {
     "printable_area": ["0x0", "305x0", "305x305", "0x305"],
     "printable_height": "245",
@@ -793,12 +794,12 @@ def compatible_composite_printers() -> list[str]:
 def compatible_composite_filament_printers() -> list[str]:
     return [
         f"{MACHINE_MODEL} {nozzle} nozzle - TinMan Codex"
-        for nozzle in ("0.4", "0.6", "0.8", "1.0")
+        for nozzle in CANONICAL_NOZZLES
     ]
 
 
 def compatible_filament_printers() -> list[str]:
-    return compatible_plastic_printers() + compatible_composite_printers()
+    return compatible_composite_filament_printers()
 
 
 def compatible_process_printers(plastic_nozzle: str, fiber: bool) -> list[str]:
@@ -1020,13 +1021,11 @@ def composite_filament(material: str, values: dict, fiber: dict) -> dict:
 
 
 def machine_model() -> dict:
-    variants = list(PLASTIC_NOZZLES)
-    variants.extend(f"{nozzle}+{COMPOSITE_NOZZLE}" for nozzle in PLASTIC_NOZZLES)
     return {
         "type": "machine_model",
         "name": MACHINE_MODEL,
         "model_id": "TinManX1-FibreSeek-Seeker-3",
-        "nozzle_diameter": ";".join(variants),
+        "nozzle_diameter": ";".join(CANONICAL_NOZZLES),
         "machine_tech": "FFF",
         "family": "TinManX1",
         "default_materials": ";".join(
@@ -1186,7 +1185,7 @@ def composite_machine(plastic_nozzle: str, spec: dict) -> dict:
         "instantiation": "true",
         "printer_model": MACHINE_MODEL,
         **FIBRESEEK_BED_VOLUME,
-        "printer_variant": f"{plastic_nozzle}+{COMPOSITE_NOZZLE}",
+        "printer_variant": plastic_nozzle,
         "extruder_colour": ["#D84B4B", "#111111"],
         "extruder_offset": ["0x0", "0x0"],
         "extruder_type": ["Direct Drive", "Direct Drive"],
@@ -1451,6 +1450,7 @@ def build_pack(layup_template: str = "none"):
         "machine_list": [
             {"name": "TinManX1 FibreSeek machine common", "sub_path": "machine/TinManX1 FibreSeek machine common.json"}
         ],
+        "tinman_codex_machine_contract": "2",
     }
 
     write_json(PACK_ROOT / "machine" / f"{MACHINE_MODEL}.json", machine_model())
@@ -1460,7 +1460,6 @@ def build_pack(layup_template: str = "none"):
     for nozzle, spec in PLASTIC_NOZZLES.items():
         m = plastic_machine(nozzle, spec)
         path = f"machine/{m['name']}.json"
-        top["machine_list"].append({"name": m["name"], "sub_path": path})
         write_json(PACK_ROOT / path, m)
 
         cm = composite_machine(nozzle, spec)
