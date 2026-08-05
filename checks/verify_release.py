@@ -148,6 +148,12 @@ PUBLIC_SCAN_PATHS = [
     "version.inc",
 ]
 
+PUBLIC_LINE_ALLOWLIST = {
+    "patches/tinmanx1-v2.4.2-houseclean-native-fiber.patch": [
+        re.compile(r'^-DEFAULT_HOST = "192\.168\.88\.9"$'),
+    ],
+}
+
 
 def iter_files() -> list[Path]:
     files: list[Path] = []
@@ -286,10 +292,17 @@ def main() -> int:
         except UnicodeDecodeError:
             errors.append(f"binary-looking file included: {path.relative_to(ROOT)}")
             continue
-        for pattern in PRIVATE_PATTERNS:
-            if pattern.search(text):
-                errors.append(f"private/sensitive pattern in {path.relative_to(ROOT)}: {pattern.pattern}")
-                break
+        relative = path.relative_to(ROOT).as_posix()
+        allowed_lines = PUBLIC_LINE_ALLOWLIST.get(relative, [])
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            if any(allowed.fullmatch(line) for allowed in allowed_lines):
+                continue
+            for pattern in PRIVATE_PATTERNS:
+                if pattern.search(line):
+                    errors.append(
+                        f"private/sensitive pattern in {relative}:{line_number}: {pattern.pattern}"
+                    )
+                    break
 
     if errors:
         for error in errors:
