@@ -77,7 +77,7 @@ jobs:
           gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --dir artifacts \
             -p 'TinManX1_Windows_V*' \
             -p 'TinManX1_Mac_universal_*' \
-            -p 'OrcaSlicer_Linux_ubuntu_*' \
+            -p 'TinManX1_Linux_ubuntu_*' \
             -p 'OrcaSlicer-Linux-flatpak_*' \
             -p 'PDB'
           echo "Downloaded artifact folders:"

@@ -204,6 +204,12 @@ def main() -> int:
                 'TINMANX1_PACKAGE_VERSION',
                 '$msixVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"',
             ],
+            "src/dev-utils/platform/unix/build_appimage.sh.in": [
+                '@SLIC3R_APP_NAME@_Linux_V@TINMANX1_PACKAGE_VERSION@.AppImage',
+            ],
+            "src/dev-utils/platform/unix/build_linux_image.sh.in": [
+                '@SLIC3R_APP_NAME@_Linux_V@TINMANX1_PACKAGE_VERSION@.AppImage',
+            ],
             ".github/workflows/winget_updater.yml": [
                 "identifier: TinmanFP.TinManX1",
                 "WINGET_AUTOMATION_ENABLED",
@@ -212,9 +218,13 @@ def main() -> int:
             ],
             ".github/workflows/build_orca.yml": [
                 "grep '^set(TINMANX1_PACKAGE_VERSION \"' version.inc",
+                'TinManX1_Linux_V${{ env.ver_pure }}.AppImage',
             ],
             ".github/workflows/build_all.yml": [
                 "grep '^set(TINMANX1_PACKAGE_VERSION \"' version.inc",
+            ],
+            ".github/workflows/publish_release.yml": [
+                "-p 'TinManX1_Linux_ubuntu_*'",
             ],
         }
         for rel, markers in release_contracts.items():
