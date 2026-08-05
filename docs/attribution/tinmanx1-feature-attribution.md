@@ -29,7 +29,7 @@ The TinManX1 port keeps the upstream bridge/overhang-infill model: bridge-derive
 
 - Source: prior local TinManX Strength Lens sidecar work.
 - Port source note: sanitized local TinManX Strength Lens sidecar source.
-- Ported Codex entrypoint: `scripts/orcaslicer_codex_strength_lens_sidecar.py`
+- Ported Codex entrypoint: `scripts/source-helpers/orcaslicer_codex_strength_lens_sidecar.py`
 - Reference credit: MechaniCalc Strength of Materials (`https://mechanicalc.com/reference/strength-of-materials`) for advisory load-case and stress-language vocabulary.
 - Reference credit: Autodesk Fusion 360 Simulation learning path (`https://www.autodesk.com/learn/ondemand/curated/getting-started-with-simulation/KW9u4cqugIm75g2EoAc9q`) for future solver workflow vocabulary.
 - Reference credit: SOLIDWORKS FEM/numerical-method explanation (`https://blogs.solidworks.com/tech/2019/10/fem-analysis-do-not-be-afraid-of-numerical-methods-when-calculating-strength.html`) for mesh/load/restraint framing.
@@ -44,9 +44,9 @@ The TinManX1 port emits advisory-only viewport metadata. The Prepare view now su
 - Source: prior local TinManX FibreSeek metadata sidecar work.
 - Source: TinManX1 native planner, profile generator, comparison, and audit work developed from William Tinney's FibreSeek workflow requirements and local validation.
 - Port source note: sanitized local TinManX FibreSeek metadata sidecar source plus TinManX1-owned native planner tooling.
-- Ported Codex entrypoint: `scripts/orcaslicer_codex_fiber_metadata_sidecar.py`
-- Native planner entrypoint: `scripts/orcaslicer_codex_native_fiber_planner.py`
-- Validation entrypoints: `scripts/audit_fiberseek_gcode_contract.py`, `scripts/check_tinmanx1_fiber_wiring.py`, and `scripts/compare_fiberseek_gcode.py`
+- Ported Codex entrypoint: `scripts/source-helpers/orcaslicer_codex_fiber_metadata_sidecar.py`
+- Native planner entrypoint: `scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py`
+- Validation entrypoints: `scripts/source-helpers/audit_fiberseek_gcode_contract.py`, `scripts/source-helpers/check_tinmanx1_fiber_wiring.py`, and `scripts/source-helpers/compare_fiberseek_gcode.py`
 - Local reference boundary: Rocket/FibreSeek behavior was used only as private interoperability evidence for command sequencing, profile comparison, and hardware constraints. Proprietary Rocket/FibreSeek assets, databases, UI strings, and private G-code exports are not redistributed.
 
 The TinManX1 port preserves continuous-fiber lane metadata and review gates for Preview/Summary use. The native planner emits experimental FibreSeek-style command blocks and summaries, but it does not certify hardware readiness, start uploads, or replace real-machine qualification.

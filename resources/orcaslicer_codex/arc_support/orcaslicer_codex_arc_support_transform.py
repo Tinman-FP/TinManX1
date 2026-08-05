@@ -41,12 +41,12 @@ import re
 import shutil
 import sys
 import types
-from typing import Any
+from typing import Any, Optional
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_PATH = Path(__file__).resolve()
+SCRIPT_DIR = SCRIPT_PATH.parent
 SOURCE_REVISION = "0693ef29a0eb3e96fdc336841cd714e071f3ed9a"
-LOCAL_ARC_PYTHON = REPO_ROOT.parent / "arc-support-venv" / "bin" / "python"
 SUPPORT_STRATEGY = "arc"
 BASE_SUPPORT_PATH = "bridge_overhang_generation"
 POSTPROCESS_STAGE = "replace_bridge_infill_with_arc_overhangs"
@@ -69,11 +69,20 @@ MIN_ARC_SUPPORT_COVERAGE_RATIO = float(os.environ.get(
 ARC_SOURCE_FEATURES = ("Bridge", "Overhang wall")
 
 
-def _python_candidates() -> list[str | None]:
+def _repo_root() -> Optional[Path]:
+    for candidate in SCRIPT_PATH.parents:
+        if (candidate / "resources" / "orcaslicer_codex").is_dir() and (candidate / "src" / "libslic3r").is_dir():
+            return candidate
+    return None
+
+
+def _python_candidates() -> list[Optional[str]]:
+    repo_root = _repo_root()
     return [
         os.environ.get("ORCASLICER_CODEX_ARC_PYTHON"),
         os.environ.get("TINMANX_ARC_PYTHON"),
-        str(LOCAL_ARC_PYTHON),
+        str(SCRIPT_DIR / "arc-support-venv" / "bin" / "python"),
+        str(repo_root / "arc-support-venv" / "bin" / "python") if repo_root else None,
         shutil.which("python3"),
         shutil.which("python3.12"),
         shutil.which("python3.11"),
@@ -132,13 +141,14 @@ def _file_size(path: Path) -> int:
 
 
 def _default_engine_path() -> Path:
-    script_dir = Path(__file__).resolve().parent
+    repo_root = _repo_root()
+    bundled_engine = SCRIPT_DIR.parent / "third_party" / "gpl" / "arc-overhang" / "softfever_slicer_post_processing_script.py"
     candidates = [
         os.environ.get("ORCASLICER_CODEX_ARC_SUPPORT_ENGINE"),
         os.environ.get("TINMANX_ARC_SUPPORT_ENGINE"),
-        str(REPO_ROOT / "third_party" / "gpl" / "arc-overhang" / "softfever_slicer_post_processing_script.py"),
-        str(script_dir / "third_party" / "gpl" / "arc-overhang" / "softfever_slicer_post_processing_script.py"),
-        str(script_dir.parent / "third_party" / "gpl" / "arc-overhang" / "softfever_slicer_post_processing_script.py"),
+        str(bundled_engine),
+        str(repo_root / "resources" / "orcaslicer_codex" / "third_party" / "gpl" / "arc-overhang" / "softfever_slicer_post_processing_script.py") if repo_root else None,
+        str(SCRIPT_DIR / "third_party" / "gpl" / "arc-overhang" / "softfever_slicer_post_processing_script.py"),
     ]
     for candidate in candidates:
         if not candidate:
@@ -146,7 +156,7 @@ def _default_engine_path() -> Path:
         path = Path(candidate).expanduser()
         if path.exists():
             return path.resolve()
-    return REPO_ROOT / "third_party" / "gpl" / "arc-overhang" / "softfever_slicer_post_processing_script.py"
+    return bundled_engine
 
 
 def _count_markers(lines: list[str]) -> dict[str, int]:
@@ -159,9 +169,18 @@ def _count_markers(lines: list[str]) -> dict[str, int]:
         "normal_support_type_markers": sum(1 for line in lines if line.startswith(";TYPE:Support")),
         "normal_support_extrusion_moves": _count_normal_support_extrusion_moves(lines),
         "bridge_type_markers": sum(1 for line in lines if "Bridge" in line and line.startswith(";TYPE:")),
+        "arc_source_type_markers": sum(
+            1
+            for line in lines
+            if line.startswith(";TYPE:") and any(feature in line for feature in ARC_SOURCE_FEATURES)
+        ),
         "layer_change_markers": sum(1 for line in lines if line.startswith(";LAYER_CHANGE")),
         "toolchange_markers": sum(1 for line in lines if line.startswith("T") and line[1:2].isdigit()),
     }
+
+
+def _is_support_only_input(marker_counts: dict[str, int]) -> bool:
+    return marker_counts["normal_support_extrusion_moves"] > 0 and marker_counts["arc_source_type_markers"] == 0
 
 
 def _is_extrusion_move(line: str) -> bool:
@@ -625,6 +644,7 @@ def transform_gcode(input_path: Path, output_path: Path, audit_path: Path, engin
 
     before_lines = _read_lines(input_path)
     before = _count_markers(before_lines)
+    support_only_input = _is_support_only_input(before)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     audit_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(input_path, output_path)
@@ -662,6 +682,12 @@ def transform_gcode(input_path: Path, output_path: Path, audit_path: Path, engin
 
     after_lines = _read_lines(output_path)
     after_lines, kept_arc_infill_sections, removed_empty_arc_sections = _clean_arc_infill_sections(after_lines)
+    if support_only_input:
+        status = "failed"
+        error = "Arc Overhang input contains normal support extrusion moves but no bridge/overhang source geometry."
+        after_lines = before_lines
+        kept_arc_infill_sections = 0
+        removed_empty_arc_sections = 0
     removed_normal_support_moves = 0
     removed_normal_support_markers = 0
     removed_normal_support_unretracts = 0
@@ -675,7 +701,7 @@ def transform_gcode(input_path: Path, output_path: Path, audit_path: Path, engin
         status = "failed"
         error = "Guarded machine-start/toolchange command mutation detected; refusing Arc Overhang output."
     if status == "ok" and after["arc_infill_extrusion_moves"] == 0:
-        if before["bridge_type_markers"] > 0 or before["normal_support_type_markers"] > 0:
+        if before["arc_source_type_markers"] > 0 or before["normal_support_type_markers"] > 0:
             status = "skipped_no_arc_moves"
             error = "Arc Overhang transform generated no printable arc moves; original G-code was preserved."
         else:
@@ -699,7 +725,7 @@ def transform_gcode(input_path: Path, output_path: Path, audit_path: Path, engin
         after = _count_markers(after_lines)
         command_guard = _machine_start_toolchange_guard(before_lines, after_lines)
         output_sha256 = _file_sha256(output_path)
-    elif status in PASS_THROUGH_STATUSES and not STRICT_ARC_SUPPORT:
+    elif status in PASS_THROUGH_STATUSES and not STRICT_ARC_SUPPORT and not support_only_input:
         status = f"{FALLBACK_PREFIX}{status}"
         _write_passthrough_output(output_path, before_lines, status, error)
         after_lines = _read_lines(output_path)

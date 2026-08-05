@@ -3515,7 +3515,6 @@ def metadata_value_replacements(cfg: PlannerConfig) -> dict[str, str]:
     start_max_speed = cfg.fiber_slow_feedrate / 60.0
     normal_max_speed = cfg.fiber_feedrate / 60.0
     finish_max_speed = cfg.fiber_finish_feedrate / 60.0
-    min_speed = cfg.fiber_cut_tail_feedrate / 60.0
     return {
         "fiber_reinforcement_mode": cfg.reinforcement_mode,
         "fiber_material_tuning": cfg.material_tuning_name or "none",
@@ -3777,7 +3776,6 @@ def main() -> int:
             "standalone_cuttable_min_route_length": standalone_cuttable_min_route_length(cfg),
             "perimeter_min_route_length": cfg.perimeter_min_route_length,
             "thin_feature_min_route_lengths": cfg.thin_feature_min_route_lengths,
-            "start_length": cfg.start_length,
             "fiber_width": cfg.fiber_width,
             "fiber_feedrate": cfg.fiber_feedrate,
             "fiber_slow_feedrate": cfg.fiber_slow_feedrate,

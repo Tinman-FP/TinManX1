@@ -41,6 +41,10 @@ REQUIRED_FILES = [
     "resources/profiles/TinManX1/filament/TinManX1 PETG @FibreSeek Seeker 3.json",
     "resources/profiles/TinManX1/filament/CFC PETG + X-CCF @FibreSeek Seeker 3.json",
     "scripts/source-helpers/audit_fiberseek_gcode_contract.py",
+    "scripts/source-helpers/orcaslicer_codex_arc_support_inplace_adapter.py",
+    "scripts/source-helpers/orcaslicer_codex_arc_support_transform.py",
+    "scripts/source-helpers/orcaslicer_codex_fiber_metadata_sidecar.py",
+    "scripts/source-helpers/orcaslicer_codex_strength_lens_sidecar.py",
     "scripts/source-helpers/build_tinmanx1_fiber_layup_payload.py",
     "scripts/source-helpers/check_tinmanx1_fiber_wiring.py",
     "scripts/source-helpers/compare_fiberseek_gcode.py",
@@ -55,6 +59,29 @@ REQUIRED_FILES = [
     "scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py",
     "scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py",
     "scripts/source-helpers/validate_tinmanx1_fiber_layup_editor_contract.py",
+]
+
+MIRRORED_RUNTIME_HELPERS = [
+    (
+        "scripts/source-helpers/orcaslicer_codex_arc_support_inplace_adapter.py",
+        "resources/orcaslicer_codex/arc_support/orcaslicer_codex_arc_support_inplace_adapter.py",
+    ),
+    (
+        "scripts/source-helpers/orcaslicer_codex_arc_support_transform.py",
+        "resources/orcaslicer_codex/arc_support/orcaslicer_codex_arc_support_transform.py",
+    ),
+    (
+        "scripts/source-helpers/orcaslicer_codex_fiber_metadata_sidecar.py",
+        "resources/orcaslicer_codex/sidecars/orcaslicer_codex_fiber_metadata_sidecar.py",
+    ),
+    (
+        "scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py",
+        "resources/orcaslicer_codex/fiber_planner/orcaslicer_codex_native_fiber_planner.py",
+    ),
+    (
+        "scripts/source-helpers/orcaslicer_codex_strength_lens_sidecar.py",
+        "resources/orcaslicer_codex/sidecars/orcaslicer_codex_strength_lens_sidecar.py",
+    ),
 ]
 
 ATTRIBUTION_MARKERS = [
@@ -148,6 +175,12 @@ def main() -> int:
             errors.append(f"missing required file: {rel}")
         elif path.stat().st_size == 0:
             errors.append(f"required file is empty: {rel}")
+
+    for source_rel, runtime_rel in MIRRORED_RUNTIME_HELPERS:
+        source = ROOT / source_rel
+        runtime = ROOT / runtime_rel
+        if source.is_file() and runtime.is_file() and source.read_bytes() != runtime.read_bytes():
+            errors.append(f"packaged helper drift: {runtime_rel} differs from {source_rel}")
 
     license_text = (ROOT / "LICENSE").read_text(errors="replace")
     if "GNU AFFERO GENERAL PUBLIC LICENSE" not in license_text:

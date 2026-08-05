@@ -6,7 +6,7 @@ Top-level scripts:
 - `verify_orcaslicer_codex.py` validates an installed TinManX1 app on a local machine.
 - `install_orcaslicer_codex_app.py` supports local app installation workflows.
 
-`source-helpers/` contains helper scripts that are also present in the source patches:
+`source-helpers/` is the single editable source for TinManX1 helper scripts:
 
 - Arc Support transform and in-place adapter helpers
 - Strength Lens sidecar
@@ -18,5 +18,7 @@ Top-level scripts:
 - Wave, Arc, and Strength/Fibre smoke guards
 - Local-only TinManX1 Bambu network plug-in installer. It copies plug-in binaries from an existing local BambuStudio/OrcaSlicer install into the TinManX1 data directory and updates `OrcaSlicer.conf`; native networking binaries remain excluded from the repository.
 - Local-only TinManX1 Bambu LAN binding repair helper. It matches local printer TLS certificate CNs to saved Bambu serial numbers and updates stale `local_machines` IPs without reading or printing access codes.
+
+Helpers needed at runtime are mirrored under `resources/orcaslicer_codex/` for packaging. `checks/verify_release.py` rejects any drift between those packaged copies and their source-helper counterparts.
 
 Public scripts default away from real printer hosts where possible. Pass explicit host details only in a private local environment.

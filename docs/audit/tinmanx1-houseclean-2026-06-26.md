@@ -12,11 +12,11 @@ This note records the local validation performed before publishing the TinManX1 
 ## Validation Commands
 
 ```bash
-python3 -m py_compile resources/orcaslicer_codex/fiber_planner/orcaslicer_codex_native_fiber_planner.py scripts/smoke_orcaslicer_codex_native_fiber_planner.py
-python3 scripts/smoke_orcaslicer_codex_native_fiber_planner.py
-bash scripts/smoke_orcaslicer_codex_arc_support_runtime.sh
-bash scripts/smoke_orcaslicer_codex_strength_fiber_sidecars.sh
-python3 scripts/smoke_orcaslicer_codex_wave_overhang_scaffold.py
+python3 -m py_compile resources/orcaslicer_codex/fiber_planner/orcaslicer_codex_native_fiber_planner.py scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py
+python3 scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py
+bash scripts/source-helpers/smoke_orcaslicer_codex_arc_support_runtime.sh
+bash scripts/source-helpers/smoke_orcaslicer_codex_strength_fiber_sidecars.sh
+python3 scripts/source-helpers/smoke_orcaslicer_codex_wave_overhang_scaffold.py
 ninja -C build/arm64 src/OrcaSlicer.app/Contents/MacOS/OrcaSlicer
 ```
 

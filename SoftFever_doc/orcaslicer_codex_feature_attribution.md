@@ -29,7 +29,7 @@ The TinManX1 port keeps the upstream bridge/overhang-infill model: bridge-derive
 
 - Source: prior local TinManX Strength Lens sidecar work.
 - Port source note: sanitized local TinManX Strength Lens sidecar source.
-- Ported Codex entrypoint: `scripts/orcaslicer_codex_strength_lens_sidecar.py`
+- Ported Codex entrypoint: `scripts/source-helpers/orcaslicer_codex_strength_lens_sidecar.py`
 - Reference credit: MechaniCalc Strength of Materials (`https://mechanicalc.com/reference/strength-of-materials`) for advisory load-case and stress-language vocabulary.
 - Reference credit: Autodesk Fusion 360 Simulation learning path (`https://www.autodesk.com/learn/ondemand/curated/getting-started-with-simulation/KW9u4cqugIm75g2EoAc9q`) for future solver workflow vocabulary.
 - Reference credit: SOLIDWORKS FEM/numerical-method explanation (`https://blogs.solidworks.com/tech/2019/10/fem-analysis-do-not-be-afraid-of-numerical-methods-when-calculating-strength.html`) for mesh/load/restraint framing.
@@ -43,7 +43,7 @@ The TinManX1 port emits advisory-only viewport metadata. The Prepare view now su
 
 - Source: prior local TinManX FibreSeek metadata sidecar work.
 - Port source note: sanitized local TinManX FibreSeek metadata sidecar source.
-- Ported Codex entrypoint: `scripts/orcaslicer_codex_fiber_metadata_sidecar.py`
+- Ported Codex entrypoint: `scripts/source-helpers/orcaslicer_codex_fiber_metadata_sidecar.py`
 
 The TinManX1 port preserves continuous-fiber lane metadata and review gates for Preview/Summary use. It does not emit machine commands, start uploads, or mark hardware validation as complete.
 

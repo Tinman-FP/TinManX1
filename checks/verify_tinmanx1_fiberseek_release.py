@@ -13,13 +13,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 PYTHON_FILES = [
-    "scripts/audit_fiberseek_gcode_contract.py",
-    "scripts/check_tinmanx1_fiber_wiring.py",
-    "scripts/compare_fiberseek_gcode.py",
-    "scripts/generate_tinmanx1_fiberseek_profiles.py",
-    "scripts/lint_tinmanx1_fiberseek_profiles.py",
-    "scripts/orcaslicer_codex_native_fiber_planner.py",
-    "scripts/smoke_orcaslicer_codex_native_fiber_planner.py",
+    "scripts/source-helpers/audit_fiberseek_gcode_contract.py",
+    "scripts/source-helpers/check_tinmanx1_fiber_wiring.py",
+    "scripts/source-helpers/compare_fiberseek_gcode.py",
+    "scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py",
+    "scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py",
+    "scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py",
+    "scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py",
     "resources/orcaslicer_codex/fiber_planner/orcaslicer_codex_native_fiber_planner.py",
 ]
 
@@ -43,13 +43,13 @@ HYGIENE_PATHS = [
     "resources/orcaslicer_codex/fiber_planner",
     "resources/profiles/TinManX1",
     "resources/profiles/TinManX1.json",
-    "scripts/audit_fiberseek_gcode_contract.py",
-    "scripts/check_tinmanx1_fiber_wiring.py",
-    "scripts/compare_fiberseek_gcode.py",
-    "scripts/generate_tinmanx1_fiberseek_profiles.py",
-    "scripts/lint_tinmanx1_fiberseek_profiles.py",
-    "scripts/orcaslicer_codex_native_fiber_planner.py",
-    "scripts/smoke_orcaslicer_codex_native_fiber_planner.py",
+    "scripts/source-helpers/audit_fiberseek_gcode_contract.py",
+    "scripts/source-helpers/check_tinmanx1_fiber_wiring.py",
+    "scripts/source-helpers/compare_fiberseek_gcode.py",
+    "scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py",
+    "scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py",
+    "scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py",
+    "scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py",
     "src/libslic3r/Preset.cpp",
 ]
 
@@ -149,10 +149,10 @@ def check_public_hygiene() -> None:
 def main() -> int:
     compile_python()
     check_preset_whitelist()
-    run([sys.executable, "scripts/check_tinmanx1_fiber_wiring.py"])
-    run([sys.executable, "scripts/lint_tinmanx1_fiberseek_profiles.py"])
-    run([sys.executable, "scripts/smoke_orcaslicer_codex_native_fiber_planner.py"])
-    run([sys.executable, "scripts/compare_fiberseek_gcode.py", "--self-test"])
+    run([sys.executable, "scripts/source-helpers/check_tinmanx1_fiber_wiring.py"])
+    run([sys.executable, "scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py"])
+    run([sys.executable, "scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py"])
+    run([sys.executable, "scripts/source-helpers/compare_fiberseek_gcode.py", "--self-test"])
     check_public_hygiene()
     print("TinManX1 FibreSeek release verification passed.")
     return 0

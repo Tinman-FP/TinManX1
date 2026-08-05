@@ -46,8 +46,8 @@ The release audit requires these sequence-level behaviors:
 - Continuous-fiber preview and summary metadata are emitted with route count,
   fiber layers, used length, and used mass.
 
-Use `scripts/audit_fiberseek_gcode_contract.py` for strict TinManX1 output
-validation. Use `scripts/compare_fiberseek_gcode.py <rocket.gcode>
+Use `scripts/source-helpers/audit_fiberseek_gcode_contract.py` for strict TinManX1 output
+validation. Use `scripts/source-helpers/compare_fiberseek_gcode.py <rocket.gcode>
 <tinmanx1.gcode>` for neutral Rocket/TinManX1 comparison reports; it compares
 command families, thermal setpoints, tool ownership, cut/load behavior, route
 metadata, and summary values without storing Rocket files in the public tree.
@@ -55,7 +55,7 @@ metadata, and summary values without storing Rocket files in the public tree.
 ## Latest Local Validation Snapshot
 
 The latest local TinManX1 heavy PETG/PETG CCF feel-good slice passed
-`scripts/audit_fiberseek_gcode_contract.py` with:
+`scripts/source-helpers/audit_fiberseek_gcode_contract.py` with:
 
 - 278 continuous-fiber routes.
 - 39 fiber layers.

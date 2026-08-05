@@ -6,7 +6,15 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
-- established the independent TinManX1 Windows package identity `TinmanFP.TinManX1` and four-part product version `2026.8.4.1` while retaining Orca Slicer 2.4.2 compatibility attribution
+- consolidated TinManX1 helper authoring under `scripts/source-helpers`, removed 16,000 lines of duplicate script copies, and added release-time byte-for-byte checks against packaged runtime helpers
+- repaired dormant Arc Overhang, Wave Overhang, Strength Lens, and FibreSeek smoke paths so they execute the same code and resource locations shipped in the app
+- hardened Arc Overhang against converting ordinary support-only G-code into arc infill while preserving its guarded bridge/overhang workflow
+- removed repeated allocation and catalog reconstruction from curated machine/process filtering, with mixed-case cloud-preset regression coverage
+- added a configurable FibreSeek planner watchdog so a stalled Python process cannot hang slicing indefinitely or leave partially written G-code
+- excluded ignored virtual environments and Python caches when staging local app bundles, preventing generated development files from inflating release packages
+- removed duplicate planner metadata keys and dead helper code, and added focused Python correctness lint coverage for the maintained helper tree
+- updated the visible TinManX1 revision to `v2026.08.05-stability.1`
+- established the independent TinManX1 Windows package identity `TinmanFP.TinManX1` and four-part product version `2026.8.5.1` while retaining Orca Slicer 2.4.2 compatibility attribution
 - aligned NSIS, Windows executable resources, Win32 manifests, MSIX metadata, and cross-platform release artifact names with the TinManX1 package version
 - aligned native Linux AppImage generator and workflow names with the TinManX1 package identity instead of the upstream Orca version
 - restored full build-matrix CI for pull requests and pushes targeting the actual TinManX1 default branch

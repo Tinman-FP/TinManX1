@@ -162,7 +162,7 @@ Implementation task: add an out-of-tree or source-helper harness that can:
    list or configured by argument.
 3. Download or read the resulting `result.json.gz`.
 4. Extract Rocket's compressed result, resolved session profile, and G-code.
-5. Run `scripts/compare_fiberseek_gcode.py` against matching TinManX1 output.
+5. Run `scripts/source-helpers/compare_fiberseek_gcode.py` against matching TinManX1 output.
 
 This harness should remain clean-room: use Rocket as an oracle and record
 behavioral metrics, but do not copy vendor preset blobs or source into
@@ -428,7 +428,7 @@ Metrics to compare:
 
 Current analyzer artifacts:
 
-- `scripts/compare_fiberseek_gcode.py` emits full JSON, including per-Z M1001
+- `scripts/source-helpers/compare_fiberseek_gcode.py` emits full JSON, including per-Z M1001
   load buckets, reconstructed route-block geometry, U-positive fiber-road XY,
   V-positive matrix-road XY, shape classes, closure gap, and bounding-box
   distributions.

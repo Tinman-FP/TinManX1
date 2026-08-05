@@ -4,7 +4,8 @@ unset PYTHONHOME
 unset PYTHONPATH
 unset PYTHONEXECUTABLE
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+helpers="$repo_root/scripts/source-helpers"
 tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/TinManX1-strength-fiber.XXXXXX")"
 trap 'rm -rf "$tmp_dir"' EXIT
 
@@ -51,12 +52,12 @@ config_path.write_text(json.dumps(config, indent=2, sort_keys=True), encoding="u
 slice_path.write_text(json.dumps(slice_result, indent=2, sort_keys=True), encoding="utf-8")
 PY
 
-"$repo_root/scripts/orcaslicer_codex_fiber_metadata_sidecar.py" \
+"$helpers/orcaslicer_codex_fiber_metadata_sidecar.py" \
   --config-json "$config_json" \
   --out "$fiber_overlay" \
   --force-fallback
 
-"$repo_root/scripts/orcaslicer_codex_strength_lens_sidecar.py" \
+"$helpers/orcaslicer_codex_strength_lens_sidecar.py" \
   --slice-result "$slice_result" \
   --fiber-preview-overlay "$fiber_overlay" \
   --out "$strength_overlay" \
@@ -111,12 +112,12 @@ import sys
 
 repo_root = pathlib.Path(sys.argv[1])
 checks = {
-    "scripts/orcaslicer_codex_strength_lens_sidecar.py": [
+    "scripts/source-helpers/orcaslicer_codex_strength_lens_sidecar.py": [
         "orcaslicer_codex_strength_lens_sidecar",
         "ORCASLICER_CODEX_STRENGTH_LENS_BUILDER",
         "advisory_only",
     ],
-    "scripts/orcaslicer_codex_fiber_metadata_sidecar.py": [
+    "scripts/source-helpers/orcaslicer_codex_fiber_metadata_sidecar.py": [
         "orcaslicer_codex_fiber_metadata_sidecar",
         "ORCASLICER_CODEX_FIBER_PREVIEW_BUILDER",
         "no_live_machine_commands",

@@ -208,8 +208,8 @@ def require_ui_surface(keys: set[str]) -> None:
 
 
 def require_profile_generation_and_lint(process_keys: set[str]) -> None:
-    generator = read("scripts/generate_tinmanx1_fiberseek_profiles.py")
-    linter = read("scripts/lint_tinmanx1_fiberseek_profiles.py")
+    generator = read("scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py")
+    linter = read("scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py")
     missing_generator = [key for key in sorted(process_keys) if f'"{key}"' not in generator]
     if missing_generator:
         fail("profile generator missing process fiber keys: " + ", ".join(missing_generator))
@@ -237,10 +237,10 @@ def require_planner_handoff() -> None:
     print_object_cpp = read("src/libslic3r/PrintObject.cpp")
     gcode_cpp = read("src/libslic3r/GCode.cpp")
     gcode_hpp = read("src/libslic3r/GCode.hpp")
-    planner = read("scripts/orcaslicer_codex_native_fiber_planner.py")
+    planner = read("scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py")
     bundled = read("resources/orcaslicer_codex/fiber_planner/orcaslicer_codex_native_fiber_planner.py")
     if planner != bundled:
-        fail("bundled native fiber planner copy differs from scripts/orcaslicer_codex_native_fiber_planner.py")
+        fail("bundled native fiber planner copy differs from scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py")
 
     require_all(
         print_cpp,
@@ -248,6 +248,9 @@ def require_planner_handoff() -> None:
             '"fiber_manufacturing_mode"',
             "FiberManufacturingMode::CompositeOnly",
             "orcaslicer_codex_composite_only_requested(config)",
+            "ORCASLICER_CODEX_NATIVE_FIBER_TIMEOUT_SECONDS",
+            "child.wait_for",
+            "child.terminate",
         ],
         "Print.cpp composite-only planner routing",
     )

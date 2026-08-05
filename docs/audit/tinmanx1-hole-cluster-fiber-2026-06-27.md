@@ -20,7 +20,7 @@ The corrected planner rejects broad cluster halos. A bounded local racetrack exp
 ## Validation
 
 ```bash
-python3 scripts/smoke_orcaslicer_codex_native_fiber_planner.py
+python3 scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py
 python3 /Applications/TinManX1.app/Contents/Resources/orcaslicer_codex/fiber_planner/orcaslicer_codex_native_fiber_planner.py --in-gcode <current gear-guide temp gcode> --out <tmp gcode> --summary-out <tmp summary> --fiber-reinforcement-mode heavy --fiber-generate-perimeters 1 --fiber-generate-infill 1 --fiber-infill-pattern tetragrid --fiber-infill-source plastic-traces --fiber-start-layer 0 --fiber-routes-per-cut 1
 ```
 
