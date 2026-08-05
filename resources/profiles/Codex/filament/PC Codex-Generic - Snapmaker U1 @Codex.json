@@ -49,16 +49,16 @@
         "50"
     ],
     "eng_plate_temp": [
-        "100"
+        "110"
     ],
     "eng_plate_temp_initial_layer": [
-        "100"
+        "110"
     ],
     "fan_cooling_layer_time": [
         "30"
     ],
     "fan_max_speed": [
-        "60"
+        "40"
     ],
     "fan_min_speed": [
         "10"
@@ -76,7 +76,7 @@
         "1.75"
     ],
     "filament_flow_ratio": [
-        "1"
+        "0.94"
     ],
     "filament_flush_temp": [
         "0"
@@ -199,10 +199,10 @@
         "0"
     ],
     "hot_plate_temp": [
-        "100"
+        "110"
     ],
     "hot_plate_temp_initial_layer": [
-        "100"
+        "110"
     ],
     "hole_coef_1": [
         "0"
@@ -262,7 +262,7 @@
         "1"
     ],
     "slow_down_layer_time": [
-        "2"
+        "12"
     ],
     "slow_down_min_speed": [
         "20"
@@ -271,36 +271,19 @@
         "120"
     ],
     "textured_plate_temp": [
-        "100"
+        "110"
     ],
     "textured_plate_temp_initial_layer": [
-        "100"
+        "110"
     ],
     "filament_velocity_adaptation_factor": [
         "1"
     ],
     "compatible_printers": [
-        "Snapmaker U1 (0.2 nozzle)",
-        "Snapmaker U1 (0.4 nozzle)",
-        "Snapmaker U1 (0.4 nozzle) - Copy",
-        "Snapmaker U1 (0.4 nozzle) - Tinman",
-        "Snapmaker U1 0.4 HS - Codex Tinman",
-        "Snapmaker U1 0.4 HS - Codex Tinman (Installed)",
-        "Snapmaker U1 (0.4+0.6 nozzle)",
-        "Snapmaker U1 (0.6 nozzle)",
-        "Snapmaker U1 (0.6 nozzle) - Codex Tinman",
-        "Snapmaker U1 (0.6 nozzle) - Tinman",
-        "Snapmaker U1 0.6 SS - Codex Tinman",
-        "Snapmaker U1 0.6 SS - Codex Tinman (Installed)",
-        "Snapmaker U1 0.6 SS - Codex Tinman (Installed) (Installed)",
-        "Snapmaker U1 (0.8 nozzle)",
-        "Snapmaker U1 (0.8 nozzle) - Codex Tinman",
-        "Snapmaker U1 (0.8 nozzle) - Tinman",
-        "Snapmaker U1 0.8 HS - Codex Tinman",
-        "CURRENT U1 NOZZLE - 0.4 HS - Codex Tinman",
-        "fdm_U1",
-        "Snapmaker U1",
-        "Snapmaker U1 (0.4 nozzle) - Codex Tinman"
+        "Snapmaker U1 0.4 nozzle - TinMan Codex",
+        "Snapmaker U1 0.6 nozzle - TinMan Codex",
+        "Snapmaker U1 0.8 nozzle - TinMan Codex",
+        "Snapmaker U1 1.0 nozzle - TinMan Codex"
     ],
     "filament_start_gcode": [
         "; Filament gcode\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}"
@@ -329,5 +312,11 @@
     ],
     "default_filament_colour": [
         "#000000"
+    ],
+    "activate_chamber_temp_control": [
+        "0"
+    ],
+    "chamber_temperature": [
+        "0"
     ]
 }

@@ -114,7 +114,7 @@
   "fiber_machine_contract_payload": "{\"composite_extruder\": {\"contact_radius\": 1.2, \"contact_radius_extended\": 1.8, \"cut_distance\": 58, \"fan_index\": 2, \"has_fan\": true, \"heatup_speed_c_per_s\": 3.2, \"nozzle_diameter\": 0.7, \"restart_length\": 55}, \"machine\": \"FibreSeek Seeker 3\", \"motion\": {\"blocks_buffer_size\": 16, \"travel_speed_xy\": 500, \"travel_speed_z\": 5}, \"plastic_extruder\": {\"fan_index\": 1, \"has_fan\": true, \"heatup_speed_c_per_s\": 5.5}, \"thermal\": {\"bed_heatup_speed_c_per_s\": 0.9, \"chamber_heatup_speed_c_per_s\": 1.0}}",
   "inherits": "TinManX1 FibreSeek machine common",
   "setting_id": "TMX-FS3-M-X0.6-0.7",
-  "printer_variant": "0.6+0.7",
+  "printer_variant": "0.6",
   "extruder_colour": [
     "#D84B4B",
     "#111111"

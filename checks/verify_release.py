@@ -27,9 +27,13 @@ REQUIRED_FILES = [
     "docs/audit/tinmanx1-houseclean-2026-06-26.md",
     "docs/audit/tinmanx1-hole-cluster-fiber-2026-06-27.md",
     "docs/audit/tinmanx1-hole-loop-guard-2026-06-27.md",
+    "docs/audit/tinmanx1-architecture-hardening-2026-08-04.md",
     "checks/contracts/fiber_layup_editor_contract.json",
     "checks/golden/native_fiber_planner_golden.json",
+    "checks/verify_tinman_machine_profile_catalog.py",
+    "manifests/tinmanx1-profile-resources.sha256",
     ".github/workflows/validate_public_helpers.yml",
+    ".github/workflows/winget_updater.yml",
     "patches/tinmanx1-v2.4.2-houseclean-native-fiber.patch",
     "resources/profiles/TinManX1.json",
     "resources/profiles/TinManX1/machine/FibreSeek Seeker 3 0.4+0.7 composite nozzle.json",
@@ -43,6 +47,11 @@ REQUIRED_FILES = [
     "scripts/source-helpers/golden_orcaslicer_codex_native_fiber_planner.py",
     "scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py",
     "scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py",
+    "scripts/source-helpers/normalize_tinman_machine_catalog.py",
+    "scripts/source-helpers/tinman_profile_manifest.py",
+    "src/libslic3r/TinManMachineProfileContract.cpp",
+    "src/libslic3r/TinManMachineProfileContract.hpp",
+    "tests/libslic3r/test_tinman_machine_profile_contract.cpp",
     "scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py",
     "scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py",
     "scripts/source-helpers/validate_tinmanx1_fiber_layup_editor_contract.py",
@@ -148,6 +157,90 @@ def main() -> int:
     for marker in ATTRIBUTION_MARKERS:
         if marker not in attribution_text:
             errors.append(f"missing attribution marker: {marker}")
+
+    version_text = (ROOT / "version.inc").read_text(errors="replace")
+    revision_match = re.search(r'set\(TINMANX1_REVISION\s+"([^"]+)"\)', version_text)
+    if revision_match is None:
+        errors.append("version.inc does not define TINMANX1_REVISION")
+    else:
+        revision = revision_match.group(1)
+        for rel in (
+            "resources/images/splash_logo.svg",
+            "resources/images/splash_logo_dark.svg",
+            "resources/images/TinManX1_about.svg",
+            "resources/images/TinManX1_about_dark.svg",
+        ):
+            artwork = ROOT / rel
+            if not artwork.is_file():
+                errors.append(f"missing versioned artwork: {rel}")
+            elif f"TinManX1 Revision {revision}" not in artwork.read_text(errors="replace"):
+                errors.append(f"{rel} does not match TINMANX1_REVISION {revision}")
+
+    package_match = re.search(
+        r'set\(TINMANX1_PACKAGE_VERSION\s+"(\d+)\.(\d+)\.(\d+)\.(\d+)"\)',
+        version_text,
+    )
+    if package_match is None:
+        errors.append("version.inc does not define a four-part TINMANX1_PACKAGE_VERSION")
+    else:
+        package_version = ".".join(package_match.groups())
+        if any(int(component) > 65535 for component in package_match.groups()):
+            errors.append(f"TINMANX1_PACKAGE_VERSION exceeds Windows limits: {package_version}")
+
+        release_contracts = {
+            "CMakeLists.txt": [
+                'CPACK_PACKAGE_VERSION "${TINMANX1_PACKAGE_VERSION}"',
+                'TinManX1_Windows_Installer_V${TINMANX1_PACKAGE_VERSION}',
+            ],
+            "src/dev-utils/platform/msw/OrcaSlicer.rc.in": [
+                'VALUE "CompanyName", "Tinman-FP"',
+                'VALUE "ProductVersion", "@TINMANX1_PACKAGE_VERSION@"',
+            ],
+            "src/dev-utils/platform/msw/OrcaSlicer-gcodeviewer.rc.in": [
+                'VALUE "CompanyName", "Tinman-FP"',
+                'VALUE "ProductVersion", "@TINMANX1_PACKAGE_VERSION@"',
+            ],
+            "scripts/msix/build_msix.ps1": [
+                'TINMANX1_PACKAGE_VERSION',
+                '$msixVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"',
+            ],
+            "src/dev-utils/platform/unix/build_appimage.sh.in": [
+                '@SLIC3R_APP_NAME@_Linux_V@TINMANX1_PACKAGE_VERSION@.AppImage',
+            ],
+            "src/dev-utils/platform/unix/build_linux_image.sh.in": [
+                '@SLIC3R_APP_NAME@_Linux_V@TINMANX1_PACKAGE_VERSION@.AppImage',
+            ],
+            ".github/workflows/winget_updater.yml": [
+                "identifier: TinmanFP.TinManX1",
+                "WINGET_AUTOMATION_ENABLED",
+                "secrets.WINGET_TOKEN",
+                "TINMANX1_PACKAGE_VERSION",
+            ],
+            ".github/workflows/build_orca.yml": [
+                "grep '^set(TINMANX1_PACKAGE_VERSION \"' version.inc",
+                'TinManX1_Linux_V${{ env.ver_pure }}.AppImage',
+                "choco install nsis --yes --no-progress",
+                "NSIS was not available after 3 install attempts",
+            ],
+            ".github/workflows/build_all.yml": [
+                "grep '^set(TINMANX1_PACKAGE_VERSION \"' version.inc",
+                "- tinmanx1-v2.4.2-rebase",
+                "comment_mode: off",
+            ],
+            ".github/workflows/publish_release.yml": [
+                "-p 'TinManX1_Linux_ubuntu_*'",
+            ],
+        }
+        for rel, markers in release_contracts.items():
+            contract_text = (ROOT / rel).read_text(errors="replace")
+            for marker in markers:
+                if marker not in contract_text:
+                    errors.append(f"{rel} is missing package contract marker: {marker}")
+
+        winget_text = (ROOT / ".github/workflows/winget_updater.yml").read_text(errors="replace")
+        for forbidden in ("SoftFever.OrcaSlicer", "winget-releaser@main"):
+            if forbidden in winget_text:
+                errors.append(f"WinGet workflow contains inherited or mutable reference: {forbidden}")
 
     for patch in (ROOT / "patches").glob("*.patch"):
         if patch.stat().st_size < 1024:

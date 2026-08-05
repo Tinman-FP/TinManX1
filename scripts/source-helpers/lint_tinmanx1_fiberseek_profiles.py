@@ -326,8 +326,8 @@ def check_filaments() -> tuple[int, int]:
     plastic_count = 0
     cfc_count = 0
     composite_printer_names = {
-        *(f"FibreSeek Seeker 3 {nozzle}+{COMPOSITE_NOZZLE} composite nozzle" for nozzle in PLASTIC_NOZZLES),
-        "FibreSeek Seeker 3 - Codex",
+        f"FibreSeek Seeker 3 {nozzle} nozzle - TinMan Codex"
+        for nozzle in ("0.4", "0.6", "0.8", "1.0")
     }
 
     for path in sorted((PROFILE_ROOT / "filament").glob("*.json")):
@@ -423,12 +423,12 @@ def check_processes() -> int:
                 require_float(data, "fiber_feedrate_percent", path, 100)
                 require_float(data, "fiber_correction_move_speed", path, 2)
                 require_float(data, "fiber_correction_move_feedrate_percent", path, 0)
-                require_float(data, "fiber_cut_distance", path, 58)
-                require_float(data, "fiber_restart_length", path, 55)
-                cut_gcode = require_string(data, "fiber_cut_gcode", path)
-                for needle in ("M2800", "M400", "CUT DISTANCE 54.8"):
-                    if needle not in cut_gcode:
-                        fail(f"{path.relative_to(ROOT)} fiber_cut_gcode missing {needle}")
+                for printer_only_key in ("fiber_cut_distance", "fiber_restart_length", "fiber_cut_gcode"):
+                    if printer_only_key in data:
+                        fail(
+                            f"{path.relative_to(ROOT)} contains printer-only key "
+                            f"{printer_only_key}"
+                        )
                 require_int(data, "fiber_routes_per_cut", path, 1)
                 if compare_mode:
                     compare_expected = ROCKET_COMPARE_EXPECTED[mode_label]

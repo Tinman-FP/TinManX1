@@ -1,0 +1,167 @@
+{
+    "type": "filament",
+    "name": "PLA Codex-Polymaker - Bambu X1C HF @Codex",
+    "from": "system",
+    "instantiation": "true",
+    "filament_vendor": [
+        "Codex"
+    ],
+    "filament_type": [
+        "PLA"
+    ],
+    "filament_settings_id": [
+        "PLA Codex-Polymaker - Bambu X1C HF @Codex"
+    ],
+    "filament_id": "CODX3F2DCEB3",
+    "setting_id": "URw4d7Tjqiov90Ok",
+    "default_filament_colour": [
+        "#000000"
+    ],
+    "filament_diameter": [
+        "1.75"
+    ],
+    "filament_density": [
+        "1.24"
+    ],
+    "filament_cost": [
+        "22.99"
+    ],
+    "filament_flow_ratio": [
+        "0.95"
+    ],
+    "filament_max_volumetric_speed": [
+        "15"
+    ],
+    "filament_is_support": [
+        "0"
+    ],
+    "filament_soluble": [
+        "0"
+    ],
+    "nozzle_temperature": [
+        "220"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "220"
+    ],
+    "nozzle_temperature_range_low": [
+        "190"
+    ],
+    "nozzle_temperature_range_high": [
+        "240"
+    ],
+    "cool_plate_temp": [
+        "35"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "35"
+    ],
+    "eng_plate_temp": [
+        "0"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "0"
+    ],
+    "hot_plate_temp": [
+        "55"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "55"
+    ],
+    "textured_plate_temp": [
+        "55"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "55"
+    ],
+    "chamber_temperature": [
+        "0"
+    ],
+    "activate_chamber_temp_control": [
+        "0"
+    ],
+    "fan_min_speed": [
+        "100"
+    ],
+    "fan_max_speed": [
+        "100"
+    ],
+    "overhang_fan_speed": [
+        "100"
+    ],
+    "overhang_fan_threshold": [
+        "50%"
+    ],
+    "required_nozzle_HRC": [
+        "3"
+    ],
+    "temperature_vitrification": [
+        "59"
+    ],
+    "filament_retraction_length": [
+        "1"
+    ],
+    "filament_retraction_speed": [
+        "30"
+    ],
+    "filament_deretraction_speed": [
+        "30"
+    ],
+    "compatible_printers": [
+        "Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
+        "Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex",
+        "Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex",
+        "Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex"
+    ],
+    "is_custom_defined": "0",
+    "version": "2.4.2.0",
+    "description": "TinManX1 Codex Polymaker official catalog; material=PolyLite CosPLA; official source=preset/PolyLite CosPLA/Snapmaker/U1/OrcaSlicer/PolyLite CosPLA @Snapmaker U1.json; source updated=2026-06-17T16:06:55+08:00",
+    "filament_notes": [
+        ""
+    ],
+    "polymaker_source_material": [
+        "PolyLite CosPLA"
+    ],
+    "polymaker_source_preset_path": [
+        "preset/PolyLite CosPLA/Snapmaker/U1/OrcaSlicer/PolyLite CosPLA @Snapmaker U1.json"
+    ],
+    "polymaker_source_index_updated_at": [
+        "2026-07-02T08:50:28.961Z"
+    ],
+    "filament_price_source_url": [
+        "https://shop.polymaker.com/products/polylite-cospla"
+    ],
+    "filament_price_source_variant": [
+        "1.75mm / 1kg / Version A - Durability with extra sand-ability"
+    ],
+    "fan_cooling_layer_time": [
+        "100"
+    ],
+    "full_fan_speed_layer": [
+        "0"
+    ],
+    "slow_down_layer_time": [
+        "4"
+    ],
+    "slow_down_min_speed": [
+        "20"
+    ],
+    "slow_down_for_layer_cooling": [
+        "1"
+    ],
+    "close_fan_the_first_x_layers": [
+        "1"
+    ],
+    "reduce_fan_stop_start_freq": [
+        "1"
+    ],
+    "additional_cooling_fan_speed": [
+        "70"
+    ],
+    "filament_shrink": [
+        "100%"
+    ],
+    "chamber_temperatures": [
+        "0"
+    ]
+}

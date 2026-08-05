@@ -1,26 +1,9 @@
 {
     "compatible_printers": [
-        "Elegoo Centauri Carbon 0.4 nozzle - Codex Tinman",
-        "Elegoo Centauri Carbon 0.4 nozzle - Codex Tinman 2",
-        "Elegoo Centauri Carbon 0.4 nozzle - Copy",
-        "Elegoo Centauri Carbon 0.4 nozzle - COSMOS Tinman",
-        "Elegoo Centauri Carbon 0.4 nozzle - COSMOS Tinman 2",
-        "Elegoo Centauri Carbon 0.4 nozzle - Tinman",
-        "Elegoo Centauri Carbon 0.4 nozzle - Tinman 2",
-        "Elegoo Centauri Carbon 2 0.4 nozzle - Copy",
-        "Elegoo Centauri Carbon 0.6 nozzle - Codex Tinman",
-        "Elegoo Centauri Carbon 0.6 nozzle - Codex TinmanCC1",
-        "Elegoo Centauri Carbon 0.6 nozzle - Codex TinmanCC2",
-        "Elegoo Centauri Carbon 0.6 nozzle - COSMOS Tinman",
-        "Elegoo Centauri Carbon 0.6 nozzle - COSMOS Tinman 2",
-        "Elegoo Centauri Carbon 0.6 nozzle - TinmanCC1",
-        "Elegoo Centauri Carbon 0.6 nozzle - TinmanCC2",
-        "Elegoo Centauri Carbon 0.8 nozzle - Codex TinmanCC1",
-        "Elegoo Centauri Carbon 0.8 nozzle - Codex TinmanCC2",
-        "Elegoo Centauri Carbon 0.8 nozzle - COSMOS Tinman",
-        "Elegoo Centauri Carbon 0.8 nozzle - COSMOS Tinman 2",
-        "Elegoo Centauri Carbon 0.8 nozzle - TinmanCC1",
-        "Elegoo Centauri Carbon 0.8 nozzle - TinmanCC2"
+        "Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex",
+        "Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex",
+        "Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex",
+        "Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],
@@ -118,10 +101,10 @@
     "filament_id": "CODXB7BB2CFB",
     "instantiation": "true",
     "chamber_temperature": [
-        "45"
+        "0"
     ],
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "filament_price_source_url": [
         "https://www.3dfuel.com/products/pro-pctg-cf10-carbon-fiber-1-75mm"
@@ -130,5 +113,8 @@
         "3D-Fuel Pro PCTG-CF10 1 kg spool"
     ],
     "type": "filament",
-    "setting_id": "DxKO4ErI7vi7QuGU"
+    "setting_id": "DxKO4ErI7vi7QuGU",
+    "chamber_temperatures": [
+        "0"
+    ]
 }

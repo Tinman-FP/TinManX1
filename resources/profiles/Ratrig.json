@@ -1,6 +1,6 @@
 {
 	"name": "RatRig",
-	"version": "02.04.00.02",
+	"version": "02.04.00.03",
 	"force_update": "0",
 	"description": "RatRig configurations",
 	"machine_model_list": [
@@ -269,6 +269,198 @@
 		{
 			"name": "0.35mm Extra Big @RatRig V-Core 4 IDEX 0.8",
 			"sub_path": "process/0.35mm Extra Big @RatRig V-Core 4 IDEX 0.8.json"
+		},
+		{
+			"name": "0.20mm Quality @RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.20mm Quality @RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Fast @RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Fast @RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.28mm Draft @RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.28mm Draft @RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.16mm Tank @RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.16mm Tank @RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.30mm Quality @RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.30mm Quality @RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.36mm Fast @RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.36mm Fast @RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.42mm Draft @RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.42mm Draft @RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Tank @RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Tank @RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Quality @RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Quality @RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.48mm Fast @RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.48mm Fast @RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.56mm Draft @RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.56mm Draft @RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.32mm Tank @RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.32mm Tank @RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.50mm Quality @RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.50mm Quality @RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.60mm Fast @RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.60mm Fast @RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.70mm Draft @RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.70mm Draft @RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Tank @RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Tank @RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.20mm Quality @RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.20mm Quality @RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Fast @RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Fast @RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.28mm Draft @RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.28mm Draft @RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.16mm Tank @RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.16mm Tank @RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.30mm Quality @RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.30mm Quality @RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.36mm Fast @RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.36mm Fast @RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.42mm Draft @RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.42mm Draft @RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Tank @RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Tank @RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Quality @RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Quality @RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.48mm Fast @RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.48mm Fast @RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.56mm Draft @RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.56mm Draft @RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.32mm Tank @RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.32mm Tank @RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.50mm Quality @RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.50mm Quality @RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.60mm Fast @RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.60mm Fast @RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.70mm Draft @RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.70mm Draft @RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Tank @RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Tank @RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.20mm Quality @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.20mm Quality @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Fast @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Fast @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.28mm Draft @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.28mm Draft @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.16mm Tank @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.16mm Tank @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.30mm Quality @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.30mm Quality @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.36mm Fast @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.36mm Fast @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.42mm Draft @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.42mm Draft @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Tank @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Tank @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Quality @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Quality @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.48mm Fast @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.48mm Fast @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.56mm Draft @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.56mm Draft @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.32mm Tank @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.32mm Tank @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.50mm Quality @RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.50mm Quality @RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.60mm Fast @RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.60mm Fast @RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.70mm Draft @RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.70mm Draft @RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Tank @RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Tank @RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex.json"
 		}
 	],
 	"filament_list": [
@@ -611,12 +803,16 @@
 			"sub_path": "machine/RatRig V-Core 4 IDEX 400 MIRROR MODE 0.8 nozzle.json"
 		},
 		{
-			"name": "RatRig V-Core 4 IDEX 500 0.4 nozzle",
-			"sub_path": "machine/RatRig V-Core 4 IDEX 500 0.4 nozzle.json"
+			"name": "RatRig V-Minion 0.4 nozzle",
+			"sub_path": "machine/RatRig V-Minion 0.4 nozzle.json"
 		},
 		{
-			"name": "RatRig V-Core 4 IDEX 500 0.5 nozzle",
-			"sub_path": "machine/RatRig V-Core 4 IDEX 500 0.5 nozzle.json"
+			"name": "RatRig V-Cast 0.6 nozzle",
+			"sub_path": "machine/RatRig V-Cast 0.6 nozzle.json"
+		},
+		{
+			"name": "RatRig V-Core 4 IDEX 500 0.4 nozzle",
+			"sub_path": "machine/RatRig V-Core 4 IDEX 500 0.4 nozzle.json"
 		},
 		{
 			"name": "RatRig V-Core 4 IDEX 500 0.6 nozzle",
@@ -627,12 +823,24 @@
 			"sub_path": "machine/RatRig V-Core 4 IDEX 500 0.8 nozzle.json"
 		},
 		{
-			"name": "RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle",
-			"sub_path": "machine/RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle.json"
+			"name": "RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex.json"
 		},
 		{
-			"name": "RatRig V-Core 4 IDEX 500 COPY MODE 0.5 nozzle",
-			"sub_path": "machine/RatRig V-Core 4 IDEX 500 COPY MODE 0.5 nozzle.json"
+			"name": "RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle",
+			"sub_path": "machine/RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle.json"
 		},
 		{
 			"name": "RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle",
@@ -643,12 +851,24 @@
 			"sub_path": "machine/RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle.json"
 		},
 		{
-			"name": "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle",
-			"sub_path": "machine/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle.json"
+			"name": "RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex.json"
 		},
 		{
-			"name": "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.5 nozzle",
-			"sub_path": "machine/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.5 nozzle.json"
+			"name": "RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle",
+			"sub_path": "machine/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle.json"
 		},
 		{
 			"name": "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle",
@@ -659,12 +879,21 @@
 			"sub_path": "machine/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle.json"
 		},
 		{
-			"name": "RatRig V-Minion 0.4 nozzle",
-			"sub_path": "machine/RatRig V-Minion 0.4 nozzle.json"
+			"name": "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex.json"
 		},
 		{
-			"name": "RatRig V-Cast 0.6 nozzle",
-			"sub_path": "machine/RatRig V-Cast 0.6 nozzle.json"
+			"name": "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex.json"
 		}
-	]
+	],
+	"tinman_codex_machine_contract": "2"
 }

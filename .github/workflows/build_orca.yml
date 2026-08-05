@@ -75,7 +75,7 @@ jobs:
       - name: Get the version and date on Ubuntu and macOS
         if: runner.os != 'Windows'
         run: |
-          ver_pure=$(grep 'set(SoftFever_VERSION' version.inc | cut -d '"' -f2)
+          ver_pure=$(grep '^set(TINMANX1_PACKAGE_VERSION "' version.inc | cut -d '"' -f2)
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             ver="PR-${{ github.event.number }}"
             git_commit_hash="${{ github.event.pull_request.head.sha }}"
@@ -107,7 +107,7 @@ jobs:
               $git_commit_hash = "${{ github.event.pull_request.head.sha }}"
           } else {
               $versionContent = Get-Content version.inc -Raw
-              if ($versionContent -match 'set\(SoftFever_VERSION "(.*?)"\)') {
+              if ($versionContent -match 'set\(TINMANX1_PACKAGE_VERSION "(.*?)"\)') {
                   $ver = $matches[1]
               }
               $ver = "V$ver"
@@ -341,9 +341,43 @@ jobs:
 
       - name: Install nsis
         if: runner.os == 'Windows' && !vars.SELF_HOSTED
+        shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           dir "C:/Program Files (x86)/Windows Kits/10/Include"
-          choco install nsis
+
+          function Find-MakeNsis {
+            $command = Get-Command makensis.exe -ErrorAction SilentlyContinue
+            if ($command) { return $command.Source }
+
+            $candidate = Join-Path ${env:ProgramFiles(x86)} "NSIS/makensis.exe"
+            if (Test-Path $candidate) { return $candidate }
+            return $null
+          }
+
+          $makensis = Find-MakeNsis
+          for ($attempt = 1; -not $makensis -and $attempt -le 3; $attempt++) {
+            Write-Host "Installing NSIS with Chocolatey (attempt $attempt of 3)"
+            choco install nsis --yes --no-progress
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "Chocolatey exited with code $LASTEXITCODE"
+            }
+            $makensis = Find-MakeNsis
+            if (-not $makensis -and $attempt -lt 3) {
+              Start-Sleep -Seconds (15 * $attempt)
+            }
+          }
+
+          if (-not $makensis) {
+            throw "NSIS was not available after 3 install attempts"
+          }
+
+          $nsisDir = Split-Path $makensis
+          $nsisDir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & $makensis /VERSION
+          if ($LASTEXITCODE -ne 0) {
+            throw "makensis version probe failed with exit code $LASTEXITCODE"
+          }
 
       - name: Build slicer Win
         if: runner.os == 'Windows'
@@ -484,8 +518,8 @@ jobs:
           if $tests; then flags=-istrlL; else flags=-isrlL; fi
           ./build_linux.sh "$flags"
           ./scripts/check_appimage_libs.sh ./build/package ./build/package/bin/orca-slicer
-          appimage=./build/OrcaSlicer_Linux_AppImage${{ env.ubuntu-ver-str }}${{ env.arch_suffix }}_${{ env.ver }}.AppImage
-          mv -n ./build/OrcaSlicer_Linux_V${{ env.ver_pure }}.AppImage "$appimage"
+          appimage=./build/TinManX1_Linux_AppImage${{ env.ubuntu-ver-str }}${{ env.arch_suffix }}_${{ env.ver }}.AppImage
+          mv -n ./build/TinManX1_Linux_V${{ env.ver_pure }}.AppImage "$appimage"
           chmod +x "$appimage"
           if $tests; then tar -cvpf build_tests.tar build/tests; fi
 
@@ -524,8 +558,8 @@ jobs:
         if: ${{ ! env.ACT && runner.os == 'Linux' }}
         uses: actions/upload-artifact@v7
         with:
-          name: OrcaSlicer_Linux_ubuntu_${{ env.ubuntu-ver }}${{ env.arch_suffix }}_${{ env.ver }}
-          path: "./build/OrcaSlicer_Linux_AppImage${{ env.ubuntu-ver-str }}${{ env.arch_suffix }}_${{ env.ver }}.AppImage"
+          name: TinManX1_Linux_ubuntu_${{ env.ubuntu-ver }}${{ env.arch_suffix }}_${{ env.ver }}
+          path: "./build/TinManX1_Linux_AppImage${{ env.ubuntu-ver-str }}${{ env.arch_suffix }}_${{ env.ver }}.AppImage"
 
       - name: Upload OrcaSlicer_profile_validator Ubuntu
         if: ${{ ! env.ACT && runner.os == 'Linux' && !vars.SELF_HOSTED && inputs.arch != 'aarch64' }}
@@ -540,8 +574,8 @@ jobs:
         with:
           upload_url: https://uploads.github.com/repos/OrcaSlicer/OrcaSlicer/releases/137995723/assets{?name,label}
           release_id: 137995723
-          asset_path: ./build/OrcaSlicer_Linux_AppImage${{ env.ubuntu-ver-str }}${{ env.arch_suffix }}_${{ env.ver }}.AppImage
-          asset_name: OrcaSlicer_Linux_AppImage${{ env.ubuntu-ver-str }}${{ env.arch_suffix }}_nightly${{ env.nightly_suffix }}.AppImage
+          asset_path: ./build/TinManX1_Linux_AppImage${{ env.ubuntu-ver-str }}${{ env.arch_suffix }}_${{ env.ver }}.AppImage
+          asset_name: TinManX1_Linux_AppImage${{ env.ubuntu-ver-str }}${{ env.arch_suffix }}_nightly${{ env.nightly_suffix }}.AppImage
           asset_content_type: application/octet-stream
           max_releases: 1 # optional, if there are more releases than this matching the asset_name, the oldest ones are going to be deleted
       - name: Deploy Ubuntu release

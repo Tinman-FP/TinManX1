@@ -1,9 +1,25 @@
 import os
 import json
 import argparse
+import re
+import sys
 from pathlib import Path
 
 from assign_vendor_setting_ids import generate_preset_setting_id
+
+SOURCE_HELPERS = Path(__file__).resolve().parent / "source-helpers"
+sys.path.insert(0, str(SOURCE_HELPERS))
+
+from codex_filament_contracts import (  # noqa: E402
+    ACTIVE_CHAMBER_BUCKETS,
+    FIBERON_PET_CF_FIELD_TUNE,
+    MICRO_SWISS_BUCKETS,
+    REFERENCE_FIELDS,
+    chamber_target,
+    load_contract,
+    reference_for_bucket,
+    vector,
+)
 
 OBSOLETE_KEYS = {
     "acceleration", "scale", "rotate", "duplicate", "duplicate_grid",
@@ -366,6 +382,281 @@ VECTOR_KEYS = {
     "filament_type",
 }
 
+PROFILE_RESOURCE_ARTIFACT_SUFFIXES = (
+    ".bak",
+    ".orig",
+    ".tmp",
+    ".swp",
+    ".swo",
+)
+
+PET_CF_TUNING_CONTRACT = {
+    "filament_flow_ratio": "1.00",
+    "nozzle_temperature": "280",
+    "nozzle_temperature_initial_layer": "285",
+    "nozzle_temperature_range_low": "260",
+    "nozzle_temperature_range_high": "300",
+    "enable_pressure_advance": "1",
+    "fan_min_speed": "0",
+    "fan_max_speed": "20",
+    "overhang_fan_speed": "35",
+    "overhang_fan_threshold": "25%",
+    "slow_down_layer_time": "25",
+    "slow_down_min_speed": "6",
+    "filament_max_volumetric_speed": "3.2",
+}
+PET_CF_STALE_NOTE_FRAGMENTS = (
+    "use 300C nozzle",
+    "flow 1.08",
+    "max volumetric 4 mm3/s",
+)
+
+
+def check_profile_resource_artifacts(profiles_dir):
+    """
+    Reject editor backups and local scratch files inside resources/profiles.
+
+    The profile loader walks this tree as product data. A stale .bak beside a
+    real preset is easy to miss locally and makes release/profile audits noisy.
+    Keep backups under work/ or an external backup directory instead.
+    """
+    errors = 0
+    for path in sorted(profiles_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        name = path.name
+        lower_name = name.lower()
+        if (
+            name in {".DS_Store"}
+            or name.startswith("._")
+            or name.endswith("~")
+            or lower_name.endswith(PROFILE_RESOURCE_ARTIFACT_SUFFIXES)
+        ):
+            errors += 1
+            print_error(
+                f"profile resource tree contains backup/scratch artifact "
+                f"{path.relative_to(profiles_dir)}; move it outside resources/profiles"
+            )
+    return errors
+
+
+def normalized_values(value):
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    if value is None:
+        return []
+    return [str(value)]
+
+
+def expected_vector(expected, actual):
+    arity = max(1, len(actual))
+    return [expected] * arity
+
+
+def positive_numeric_values(data, *keys):
+    values = []
+    for key in keys:
+        for value in normalized_values(data.get(key)):
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                continue
+            if numeric > 0:
+                values.append(numeric)
+    return values
+
+
+def check_profile_values(rel, data, contract, errors):
+    for key, expected in contract.items():
+        actual = normalized_values(data.get(key))
+        if actual != expected_vector(expected, actual):
+            errors += 1
+            print_error(
+                f"{rel} {key} expected {expected_vector(expected, actual)} "
+                f"for TinManX1 PET-CF tune, got {actual}"
+            )
+    return errors
+
+
+def check_pet_cf_notes(rel, data, errors):
+    for note in normalized_values(data.get("filament_notes")):
+        for stale_fragment in PET_CF_STALE_NOTE_FRAGMENTS:
+            if stale_fragment in note:
+                errors += 1
+                print_error(
+                    f"{rel} filament_notes still references stale PET-CF tune "
+                    f"fragment {stale_fragment!r}"
+                )
+    return errors
+
+
+def check_active_chamber(rel, data, expected_temperature, errors):
+    active = normalized_values(data.get("activate_chamber_temp_control"))
+    chamber = positive_numeric_values(data, "chamber_temperature", "chamber_temperatures")
+    if active != ["1"] or not chamber or any(value != expected_temperature for value in chamber):
+        errors += 1
+        print_error(
+            f"{rel} expected active {expected_temperature:g}C chamber control, "
+            f"got active={active}, chamber={chamber}"
+        )
+    return errors
+
+
+def check_inactive_chamber(rel, data, errors):
+    active = normalized_values(data.get("activate_chamber_temp_control"))
+    chamber = positive_numeric_values(data, "chamber_temperature", "chamber_temperatures")
+    if active != ["0"] or chamber:
+        errors += 1
+        print_error(
+            f"{rel} expected inactive chamber control for a machine without "
+            f"active chamber heating, got active={active}, chamber={chamber}"
+        )
+    return errors
+
+
+def check_tinman_material_tuning_contracts(profiles_dir):
+    """
+    Guard TinMan-tuned material families that have regressed through partial edits.
+
+    Guard field-validated Bambu, QIDI Plus 4, and Fiberon Codex PET-CF tunes.
+
+    Other manufacturer PET-CF profiles remain outside this contract because
+    they have different material formulations and validated source settings.
+    """
+    errors = 0
+    bbl_filaments = profiles_dir / "BBL" / "filament"
+    if not bbl_filaments.is_dir():
+        return 0
+
+    for path in sorted(bbl_filaments.rglob("Bambu PET-CF*.json")):
+        try:
+            data = json.loads(path.read_bytes())
+        except (ValueError, OSError) as exc:
+            errors += 1
+            print_error(f"Error processing {path.relative_to(profiles_dir)}: {exc}")
+            continue
+        if not str(data.get("name", "")).startswith("Bambu PET-CF @"):
+            continue
+        rel = path.relative_to(profiles_dir)
+        errors = check_profile_values(rel, data, PET_CF_TUNING_CONTRACT, errors)
+        errors = check_profile_values(rel, data, {"pressure_advance": "0.022"}, errors)
+        errors = check_pet_cf_notes(rel, data, errors)
+        name = str(data.get("name", ""))
+        if any(machine in name for machine in ("BBL H2D", "BBL H2S", "BBL X1E", "BBL X2D")):
+            errors = check_active_chamber(rel, data, 50, errors)
+        else:
+            errors = check_inactive_chamber(rel, data, errors)
+
+    qidi_filaments = profiles_dir / "Qidi" / "filament"
+    qidi_paths = [qidi_filaments / "QIDI PET-CF.json"]
+    qidi_paths.extend(sorted(qidi_filaments.glob("QIDI PET-CF @Qidi X-Plus 4 * nozzle.json")))
+    for path in qidi_paths:
+        if not path.is_file():
+            continue
+        data = json.loads(path.read_bytes())
+        rel = path.relative_to(profiles_dir)
+        errors = check_profile_values(rel, data, PET_CF_TUNING_CONTRACT, errors)
+        errors = check_pet_cf_notes(rel, data, errors)
+        errors = check_active_chamber(rel, data, 50, errors)
+
+    for path in sorted((profiles_dir / "Codex/filament").glob("PET-CF Codex-Fiberon - *.json")):
+        data = json.loads(path.read_bytes())
+        rel = path.relative_to(profiles_dir)
+        if " - Bambu H2D " not in data["name"]:
+            errors = check_profile_values(rel, data, PET_CF_TUNING_CONTRACT, errors)
+            errors = check_profile_values(rel, data, {"pressure_advance": "0.028"}, errors)
+            errors = check_pet_cf_notes(rel, data, errors)
+        if any(
+            bucket in data["name"]
+            for bucket in (" - Bambu X1C HF ", " - Elegoo Centauri ", " - Snapmaker U1 ")
+        ):
+            errors = check_inactive_chamber(rel, data, errors)
+        else:
+            errors = check_active_chamber(rel, data, 50, errors)
+    return errors
+
+
+CODEX_PROFILE_RE = re.compile(
+    r"^(?P<material>.+?) Codex-(?P<manufacturer>.+?) - (?P<bucket>.+?) @Codex$"
+)
+
+
+def check_codex_reference_values(rel, data, material, manufacturer, bucket, contract, errors):
+    entry = contract["profiles"].get(f"{material}|{manufacturer}")
+    if not entry:
+        print_error(f"{rel} has no reviewed Bambu/Codex reference decision")
+        return errors + 1
+    reference = reference_for_bucket(contract, entry, bucket)
+    if entry.get("mode") != "exact" or not reference:
+        return errors
+
+    values = reference.get("values") or {}
+    for key in REFERENCE_FIELDS:
+        if key not in values:
+            continue
+        if material == "PET-CF" and manufacturer == "Fiberon" and bucket != "Bambu H2D":
+            if key in FIBERON_PET_CF_FIELD_TUNE:
+                continue
+        expected = values[key] if bucket == "Bambu H2D" else vector(
+            values[key], high_flow=bucket in MICRO_SWISS_BUCKETS
+        )
+        actual = data.get(key)
+        if actual != expected:
+            errors += 1
+            print_error(f"{rel} {key} expected Bambu contract {expected}, got {actual}")
+    return errors
+
+
+def check_codex_filament_thermal_contracts(profiles_dir):
+    """Sanity-check every selectable Codex filament and machine contract."""
+    errors = 0
+    codex_filaments = profiles_dir / "Codex" / "filament"
+    if not codex_filaments.is_dir():
+        return 0
+    contract = load_contract()
+
+    positive_keys = (
+        "filament_cost",
+        "filament_flow_ratio",
+        "filament_max_volumetric_speed",
+        "nozzle_temperature",
+        "nozzle_temperature_initial_layer",
+    )
+    for path in sorted(codex_filaments.glob("*.json")):
+        data = json.loads(path.read_bytes())
+        rel = path.relative_to(profiles_dir)
+        match = CODEX_PROFILE_RE.match(str(data.get("name", "")))
+        if not match:
+            errors += 1
+            print_error(f"{rel} does not follow the Codex material/vendor/printer naming contract")
+            continue
+        material = match.group("material")
+        manufacturer = match.group("manufacturer")
+        bucket = match.group("bucket")
+        if bucket == "Bambu":
+            errors += 1
+            print_error(f"{rel} still combines the H2D and X1C filament contracts")
+        if bucket == "Bambu X1C HF" and material in {"PPS", "PPS-CF", "PPS-GF"}:
+            errors += 1
+            print_error(f"{rel} exposes a material without an X1C-compatible Bambu preset")
+
+        for key in positive_keys:
+            values = positive_numeric_values(data, key)
+            if not values:
+                errors += 1
+                print_error(f"{rel} requires a positive {key}, got {data.get(key)!r}")
+
+        entry = contract["profiles"].get(f"{material}|{manufacturer}", {})
+        expected_chamber = chamber_target(material, entry, contract) if bucket in ACTIVE_CHAMBER_BUCKETS else 0
+        if expected_chamber:
+            errors = check_active_chamber(rel, data, expected_chamber, errors)
+        else:
+            errors = check_inactive_chamber(rel, data, errors)
+        errors = check_codex_reference_values(
+            rel, data, material, manufacturer, bucket, contract, errors
+        )
+    return errors
+
 def check_vector_type_keys(profiles_dir, vendor_name):
     """
     Check that properties expected to be vectors (JSON arrays) are not stored as scalars.
@@ -452,13 +743,14 @@ def check_conflict_keys(profiles_dir, vendor_name):
     return error_count, warn_count
 
 
-# Bambu (BBL) keeps its authoritative "G*" cloud ids, which are NOT produced by the
-# deterministic formula, so BBL is exempt from the formula match (Rule 2) only. It is
-# still checked for presence, uniqueness, base-no-id and the typo key like every other
-# vendor. Every other vendor (incl. OrcaFilamentLibrary and Custom) must also match the
-# formula.
-SETTING_ID_FORMULA_EXEMPT_VENDORS = {"BBL"}
+# Some curated vendors keep hand-assigned stable ids because those ids are part
+# of their migration/product contract. They are NOT produced by the generic
+# deterministic formula, so they are exempt from the formula match (Rule 2)
+# only. They are still checked for presence, uniqueness, base-no-id and typo
+# keys like every other vendor.
+SETTING_ID_FORMULA_EXEMPT_VENDORS = {"BBL", "Snapmaker", "TinManX1"}
 PROFILE_SUBDIRS = ("filament", "process", "machine")
+NON_VENDOR_PROFILE_DIRS = {"OrcaFilamentLibrary", "polymaker", "user"}
 DISALLOWED_PROFILE_KEYS = {
     # Filament presets expose their swatch through default_filament_colour. The
     # project-level filament_colour key is stripped by Orca's preset validator.
@@ -476,8 +768,8 @@ def check_setting_id_uniqueness(profiles_dir):
       3. Base profiles (instantiation != "true") must not carry a setting_id.  (all vendors)
       4. setting_id must be globally unique - no two files may share one.       (all vendors)
       5. No profile may use the misspelled key "settings_id".                    (all vendors)
-    Formula-exempt vendors (BBL) keep their authoritative ids, so only Rule 2 is skipped
-    for them; they are still held to presence, uniqueness, base-no-id and the typo check.
+    Formula-exempt vendors keep curated ids, so only Rule 2 is skipped for them;
+    they are still held to presence, uniqueness, base-no-id and the typo check.
     """
     errors = 0
     owners = {}  # setting_id -> list of relative_path (every vendor)
@@ -524,8 +816,8 @@ def check_setting_id_uniqueness(profiles_dir):
                         f"run assign_vendor_setting_ids.py"
                     )
                     continue
-                # Rule 2: the stored id must match the deterministic rule. BBL keeps its
-                # authoritative G* ids and is exempt from this check only.
+                # Rule 2: the stored id must match the deterministic rule unless this
+                # vendor keeps curated ids and is exempt from this check only.
                 if not formula_exempt:
                     expected = generate_preset_setting_id(vendor, sub, data.get("name", ""))
                     if sid != expected:
@@ -669,12 +961,15 @@ def main():
         run_checks(args.vendor)
     else:
         for vendor_dir in profiles_dir.iterdir():
-            if not vendor_dir.is_dir() or vendor_dir.name == "OrcaFilamentLibrary":
+            if not vendor_dir.is_dir() or vendor_dir.name in NON_VENDOR_PROFILE_DIRS:
                 continue
             run_checks(vendor_dir.name)
 
     # Global (cross-vendor) check: setting_id must be unique and stay in-namespace.
     # Runs once over the whole tree regardless of the --vendor filter.
+    errors_found += check_profile_resource_artifacts(profiles_dir)
+    errors_found += check_tinman_material_tuning_contracts(profiles_dir)
+    errors_found += check_codex_filament_thermal_contracts(profiles_dir)
     errors_found += check_setting_id_uniqueness(profiles_dir)
     errors_found += check_disallowed_profile_keys(profiles_dir)
     errors_found += check_instantiated_renamed_from_uniqueness(profiles_dir)

@@ -930,10 +930,11 @@ configure_file(${LIBDIR}/dev-utils/platform/unix/fhs.hpp.in ${LIBDIR_BIN}/dev-ut
 
 set (CPACK_PACKAGE_NAME "TinManX1")
 set (CPACK_PACKAGE_VENDOR "Tinman-FP")
-set (CPACK_PACKAGE_VERSION_MAJOR "${ORCA_VERSION_MAJOR}")
-set (CPACK_PACKAGE_VERSION_MINOR "${ORCA_VERSION_MINOR}")
-set (CPACK_PACKAGE_VERSION_PATCH "${ORCA_VERSION_PATCH}")
-set (CPACK_PACKAGE_FILE_NAME "TinManX1_Windows_Installer_V${SoftFever_VERSION}")
+set (CPACK_PACKAGE_VERSION "${TINMANX1_PACKAGE_VERSION}")
+set (CPACK_PACKAGE_VERSION_MAJOR "${TINMANX1_PACKAGE_VERSION_MAJOR}")
+set (CPACK_PACKAGE_VERSION_MINOR "${TINMANX1_PACKAGE_VERSION_MINOR}")
+set (CPACK_PACKAGE_VERSION_PATCH "${TINMANX1_PACKAGE_VERSION_PATCH}")
+set (CPACK_PACKAGE_FILE_NAME "TinManX1_Windows_Installer_V${TINMANX1_PACKAGE_VERSION}")
 # Suffix the Windows installer with its target arch so the x64 and arm64 builds
 # produce distinct filenames (matches ARCH_SUFFIX in build_orca.yml). Same
 # CMAKE_SYSTEM_PROCESSOR mapping used by orcaslicer_copy_dlls() above.

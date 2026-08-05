@@ -10,8 +10,8 @@
         "nil"
     ],
     "filament_flow_ratio": [
-        "1.08",
-        "1.08"
+        "1.00",
+        "1.00"
     ],
     "filament_flush_temp": [
         "0",
@@ -26,8 +26,8 @@
         "1"
     ],
     "filament_max_volumetric_speed": [
-        "4",
-        "4"
+        "3.2",
+        "3.2"
     ],
     "filament_ramming_volumetric_speed": [
         "-1",
@@ -98,28 +98,28 @@
         "0"
     ],
     "nozzle_temperature_range_low": [
-        "270",
-        "270"
+        "260",
+        "260"
     ],
     "nozzle_temperature_range_high": [
         "300",
         "300"
     ],
     "nozzle_temperature": [
-        "300",
-        "300"
+        "280",
+        "280"
     ],
     "nozzle_temperature_initial_layer": [
-        "300",
-        "300"
+        "285",
+        "285"
     ],
     "retraction_distances_when_ec": [
         "0",
         "0"
     ],
     "slow_down_layer_time": [
-        "20",
-        "20"
+        "25",
+        "25"
     ],
     "temperature_vitrification": [
         "70"
@@ -162,15 +162,15 @@
         "0"
     ],
     "fan_max_speed": [
-        "0",
-        "0"
+        "20",
+        "20"
     ],
     "overhang_fan_speed": [
-        "0",
-        "0"
+        "35",
+        "35"
     ],
     "filament_notes": [
-        "TinManX1 Plus 4 0.6 nozzle tune: dry at 100C for 10h if print quality degrades; hardened nozzle required; cooling fan off; use max volumetric 6 mm3/s until flow is verified. TinManX1 PET-CF rescue tune 2026-07-11: after repeated porous PET-CF test prints, use 300C nozzle, 80C bed, fan off, max volumetric 4 mm3/s, flow 1.08, slowdown enabled, and pressure advance enabled. Dry filament and inspect hardened nozzle if voids persist."
+        "TinManX1 PET-CF field tune 2026-08-04: supersedes the July 11 300C / 1.08-flow rescue profile. Use 285C first layer / 280C print, 80C bed, 50C active chamber on supported TinMan machines, flow 1.00, max volumetric 3.2 mm3/s, limited overhang cooling, and pressure advance 0.028. Fiberon permits room-temperature chambers; the controlled 50C target is the TinMan field-quality setting. Dry at 100C for 10h."
     ],
     "tinmanx_petcf17_tune": [
         "2026-07-11 Plus 4 0.6 PET-CF17 anti-starvation tune; backup=local profile-backups/petcf17-tune-20260711"
@@ -192,18 +192,30 @@
         "80"
     ],
     "slow_down_min_speed": [
-        "8",
-        "8"
+        "6",
+        "6"
     ],
     "enable_pressure_advance": [
         "1",
         "1"
     ],
     "pressure_advance": [
-        "0.026",
-        "0.026"
+        "0.028",
+        "0.028"
     ],
     "tinmanx_petcf_rescue_tune": [
         "2026-07-11 all PET-CF rescue tune with pressure advance"
+    ],
+    "overhang_fan_threshold": [
+        "25%"
+    ],
+    "activate_chamber_temp_control": [
+        "0"
+    ],
+    "chamber_temperature": [
+        "0"
+    ],
+    "chamber_temperatures": [
+        "0"
     ]
 }

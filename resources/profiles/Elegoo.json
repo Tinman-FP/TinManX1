@@ -1,6 +1,6 @@
 {
     "name": "Elegoo",
-    "version": "02.04.00.06",
+    "version": "02.04.00.07",
     "force_update": "0",
     "description": "Elegoo configurations",
     "machine_model_list": [
@@ -1161,6 +1161,70 @@
         {
             "name": "0.30mm Fine @Elegoo Giga 1.0 nozzle",
             "sub_path": "process/EOSGIGA/0.30mm Fine @Elegoo Giga 1.0 nozzle.json"
+        },
+        {
+            "name": "0.20mm Quality @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.20mm Quality @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.24mm Fast @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.24mm Fast @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.28mm Draft @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.28mm Draft @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.16mm Tank @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.16mm Tank @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.30mm Quality @Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.30mm Quality @Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.36mm Fast @Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.36mm Fast @Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.42mm Draft @Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.42mm Draft @Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.24mm Tank @Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.24mm Tank @Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.40mm Quality @Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.40mm Quality @Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.48mm Fast @Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.48mm Fast @Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.56mm Draft @Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.56mm Draft @Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.32mm Tank @Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.32mm Tank @Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.50mm Quality @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.50mm Quality @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.60mm Fast @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.60mm Fast @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.70mm Draft @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.70mm Draft @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "0.40mm Tank @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex",
+            "sub_path": "process/TinMan Codex/0.40mm Tank @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex.json"
         }
     ],
     "filament_list": [
@@ -2159,22 +2223,6 @@
             "sub_path": "machine/fdm_elegoo_3dp_001_common.json"
         },
         {
-            "name": "Elegoo Centauri Carbon 0.4 nozzle",
-            "sub_path": "machine/ECC/Elegoo Centauri Carbon 0.4 nozzle.json"
-        },
-        {
-            "name": "Elegoo Centauri Carbon 0.2 nozzle",
-            "sub_path": "machine/ECC/Elegoo Centauri Carbon 0.2 nozzle.json"
-        },
-        {
-            "name": "Elegoo Centauri Carbon 0.6 nozzle",
-            "sub_path": "machine/ECC/Elegoo Centauri Carbon 0.6 nozzle.json"
-        },
-        {
-            "name": "Elegoo Centauri Carbon 0.8 nozzle",
-            "sub_path": "machine/ECC/Elegoo Centauri Carbon 0.8 nozzle.json"
-        },
-        {
             "name": "Elegoo Centauri 0.4 nozzle",
             "sub_path": "machine/EC/Elegoo Centauri 0.4 nozzle.json"
         },
@@ -2449,6 +2497,35 @@
         {
             "name": "Elegoo Neptune 0.8 nozzle",
             "sub_path": "machine/EN2SERIES/Elegoo Neptune 0.8 nozzle.json"
+        },
+        {
+            "name": "Elegoo Centauri Carbon 0.4 nozzle",
+            "sub_path": "machine/ECC/Elegoo Centauri Carbon 0.4 nozzle.json"
+        },
+        {
+            "name": "Elegoo Centauri Carbon 0.6 nozzle",
+            "sub_path": "machine/ECC/Elegoo Centauri Carbon 0.6 nozzle.json"
+        },
+        {
+            "name": "Elegoo Centauri Carbon 0.8 nozzle",
+            "sub_path": "machine/ECC/Elegoo Centauri Carbon 0.8 nozzle.json"
+        },
+        {
+            "name": "Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex",
+            "sub_path": "machine/TinMan Codex/Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex",
+            "sub_path": "machine/TinMan Codex/Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex",
+            "sub_path": "machine/TinMan Codex/Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex.json"
+        },
+        {
+            "name": "Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex",
+            "sub_path": "machine/TinMan Codex/Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex.json"
         }
-    ]
+    ],
+    "tinman_codex_machine_contract": "2"
 }

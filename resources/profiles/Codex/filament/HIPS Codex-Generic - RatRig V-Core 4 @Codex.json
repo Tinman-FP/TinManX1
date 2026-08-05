@@ -10,7 +10,7 @@
         "0"
     ],
     "chamber_temperatures": [
-        "40"
+        "0"
     ],
     "close_fan_the_first_x_layers": [
         "3"
@@ -55,10 +55,10 @@
         "90"
     ],
     "fan_cooling_layer_time": [
-        "30"
+        "10"
     ],
     "fan_max_speed": [
-        "15"
+        "60"
     ],
     "fan_min_speed": [
         "0"
@@ -76,7 +76,7 @@
         "1.75"
     ],
     "filament_flow_ratio": [
-        "0.98"
+        "1"
     ],
     "filament_flush_temp": [
         "0"
@@ -94,7 +94,7 @@
         "nil"
     ],
     "filament_max_volumetric_speed": [
-        "10"
+        "8"
     ],
     "filament_ramming_volumetric_speed": [
         "-1"
@@ -199,10 +199,10 @@
         "0"
     ],
     "hot_plate_temp": [
-        "100"
+        "90"
     ],
     "hot_plate_temp_initial_layer": [
-        "105"
+        "90"
     ],
     "hole_coef_1": [
         "0"
@@ -229,22 +229,22 @@
         "220"
     ],
     "nozzle_temperature_range_high": [
-        "250"
+        "270"
     ],
     "nozzle_temperature": [
-        "235"
+        "240"
     ],
     "nozzle_temperature_initial_layer": [
         "240"
     ],
     "overhang_fan_speed": [
-        "25"
+        "80"
     ],
     "overhang_fan_threshold": [
         "25%"
     ],
     "reduce_fan_stop_start_freq": [
-        "1"
+        "0"
     ],
     "required_nozzle_HRC": [
         "3"
@@ -262,7 +262,7 @@
         "1"
     ],
     "slow_down_layer_time": [
-        "3"
+        "6"
     ],
     "slow_down_min_speed": [
         "20"
@@ -271,110 +271,27 @@
         "100"
     ],
     "textured_plate_temp": [
-        "100"
+        "90"
     ],
     "textured_plate_temp_initial_layer": [
-        "100"
+        "90"
     ],
     "filament_velocity_adaptation_factor": [
         "1"
     ],
     "compatible_printers": [
-        "RatRig V-Core 4 300 0.4 nozzle",
-        "RatRig V-Core 4 400 0.4 nozzle",
-        "RatRig V-Core 4 500 0.4 nozzle",
-        "RatRig V-Core 4 HYBRID 300 0.4 nozzle",
-        "RatRig V-Core 4 HYBRID 400 0.4 nozzle",
-        "RatRig V-Core 4 HYBRID 500 0.4 nozzle",
-        "RatRig V-Core 4 HYBRID 500 0.4 nozzle - Copy",
-        "RatRig V-Core 4 IDEX 300 0.4 nozzle",
-        "RatRig V-Core 4 IDEX 300 COPY MODE 0.4 nozzle",
-        "RatRig V-Core 4 IDEX 300 MIRROR MODE 0.4 nozzle",
-        "RatRig V-Core 4 IDEX 400 0.4 nozzle",
-        "RatRig V-Core 4 IDEX 400 COPY MODE 0.4 nozzle",
-        "RatRig V-Core 4 IDEX 400 MIRROR MODE 0.4 nozzle",
-        "RatRig V-Core 4 IDEX 500 0.4 nozzle",
-        "RatRig V-Core 4 IDEX 500 0.4 nozzle - Codex Tinman",
-        "RatRig V-Core 4 IDEX 500 0.4 nozzle - Tinman",
-        "RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle",
-        "RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - Codex Tinman",
-        "RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - Tinman",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - Codex Tinman",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - Tinman",
-        "RatRig V-Core 4 300 0.5 nozzle",
-        "RatRig V-Core 4 400 0.5 nozzle",
-        "RatRig V-Core 4 500 0.5 nozzle",
-        "RatRig V-Core 4 HYBRID 300 0.5 nozzle",
-        "RatRig V-Core 4 HYBRID 400 0.5 nozzle",
-        "RatRig V-Core 4 HYBRID 500 0.5 nozzle",
-        "RatRig V-Core 4 IDEX 300 0.5 nozzle",
-        "RatRig V-Core 4 IDEX 300 COPY MODE 0.5 nozzle",
-        "RatRig V-Core 4 IDEX 300 MIRROR MODE 0.5 nozzle",
-        "RatRig V-Core 4 IDEX 400 0.5 nozzle",
-        "RatRig V-Core 4 IDEX 400 COPY MODE 0.5 nozzle",
-        "RatRig V-Core 4 IDEX 400 MIRROR MODE 0.5 nozzle",
-        "RatRig V-Core 4 IDEX 500 0.5 nozzle",
-        "RatRig V-Core 4 IDEX 500 COPY MODE 0.5 nozzle",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.5 nozzle",
-        "RatRig V-Core 4 300 0.6 nozzle",
-        "RatRig V-Core 4 400 0.6 nozzle",
-        "RatRig V-Core 4 500 0.6 nozzle",
-        "RatRig V-Core 4 HYBRID 300 0.6 nozzle",
-        "RatRig V-Core 4 HYBRID 400 0.6 nozzle",
-        "RatRig V-Core 4 HYBRID 500 0.6 nozzle",
-        "RatRig V-Core 4 IDEX 300 0.6 nozzle",
-        "RatRig V-Core 4 IDEX 300 COPY MODE 0.6 nozzle",
-        "RatRig V-Core 4 IDEX 300 MIRROR MODE 0.6 nozzle",
-        "RatRig V-Core 4 IDEX 400 0.6 nozzle",
-        "RatRig V-Core 4 IDEX 400 COPY MODE 0.6 nozzle",
-        "RatRig V-Core 4 IDEX 400 MIRROR MODE 0.6 nozzle",
-        "RatRig V-Core 4 IDEX 500 0.6 nozzle",
-        "RatRig V-Core 4 IDEX 500 0.6 nozzle - Codex Tinman",
-        "RatRig V-Core 4 IDEX 500 0.6 nozzle - Copy",
-        "RatRig V-Core 4 IDEX 500 0.6 nozzle - Tinman",
-        "RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle",
-        "RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - Codex Tinman",
-        "RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - Tinman",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - Codex Tinman",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - Tinman",
-        "RatRig V-Core 4 300 0.8 nozzle",
-        "RatRig V-Core 4 400 0.8 nozzle",
-        "RatRig V-Core 4 500 0.8 nozzle",
-        "RatRig V-Core 4 HYBRID 300 0.8 nozzle",
-        "RatRig V-Core 4 HYBRID 400 0.8 nozzle",
-        "RatRig V-Core 4 HYBRID 500 0.8 nozzle",
-        "RatRig V-Core 4 IDEX 300 0.8 nozzle",
-        "RatRig V-Core 4 IDEX 300 COPY MODE 0.8 nozzle",
-        "RatRig V-Core 4 IDEX 300 MIRROR MODE 0.8 nozzle",
-        "RatRig V-Core 4 IDEX 400 0.8 nozzle",
-        "RatRig V-Core 4 IDEX 400 COPY MODE 0.8 nozzle",
-        "RatRig V-Core 4 IDEX 400 MIRROR MODE 0.8 nozzle",
-        "RatRig V-Core 4 IDEX 500 0.8 nozzle",
-        "RatRig V-Core 4 IDEX 500 0.8 nozzle - Codex Tinman",
-        "RatRig V-Core 4 IDEX 500 0.8 nozzle - Tinman",
-        "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle",
-        "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - Codex Tinman",
-        "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - Tinman",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - Codex Tinman",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - Tinman",
-        "RatRig V-Core 4 300",
-        "RatRig V-Core 4 400",
-        "RatRig V-Core 4 500",
-        "RatRig V-Core 4 HYBRID 300",
-        "RatRig V-Core 4 HYBRID 400",
-        "RatRig V-Core 4 HYBRID 500",
-        "RatRig V-Core 4 IDEX 300",
-        "RatRig V-Core 4 IDEX 300 COPY MODE",
-        "RatRig V-Core 4 IDEX 300 MIRROR MODE",
-        "RatRig V-Core 4 IDEX 400",
-        "RatRig V-Core 4 IDEX 400 COPY MODE",
-        "RatRig V-Core 4 IDEX 400 MIRROR MODE",
-        "RatRig V-Core 4 IDEX 500",
-        "RatRig V-Core 4 IDEX 500 COPY MODE",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE"
+        "RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex",
+        "RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex",
+        "RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex",
+        "RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex",
+        "RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex",
+        "RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex"
     ],
     "filament_start_gcode": [
         "; Filament gcode\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}"
@@ -409,9 +326,12 @@
     ],
     "version": "2.2.42.2",
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "filament_price_source": [
         "Generic 1 kg retail average"
+    ],
+    "chamber_temperature": [
+        "0"
     ]
 }

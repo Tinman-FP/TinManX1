@@ -30,7 +30,7 @@
         "0.95"
     ],
     "filament_max_volumetric_speed": [
-        "12"
+        "15"
     ],
     "filament_is_support": [
         "0"
@@ -39,16 +39,16 @@
         "0"
     ],
     "nozzle_temperature": [
-        "250"
+        "270"
     ],
     "nozzle_temperature_initial_layer": [
-        "250"
+        "260"
     ],
     "nozzle_temperature_range_low": [
-        "245"
+        "240"
     ],
     "nozzle_temperature_range_high": [
-        "265"
+        "280"
     ],
     "cool_plate_temp": [
         "0"
@@ -81,10 +81,10 @@
         "1"
     ],
     "fan_min_speed": [
-        "0"
+        "10"
     ],
     "fan_max_speed": [
-        "60"
+        "80"
     ],
     "overhang_fan_speed": [
         "80"
@@ -108,30 +108,14 @@
         "30"
     ],
     "compatible_printers": [
-        "Qidi X-Plus 4 0.2 nozzle",
-        "CURRENT QIDI NOZZLE - 0.4 - Codex Tinman",
-        "Qidi Plus 4 0.4 nozzle",
-        "Qidi Plus 4 0.4 nozzle - Tinman",
-        "Qidi X-Plus 4 0.4 nozzle",
-        "Qidi X-Plus 4 0.4 nozzle - Codex Tinman",
-        "Qidi X-Plus 4 0.4 nozzle - Copy",
-        "Qidi X-Plus 4 0.4 nozzle - Tinman",
-        "QidiMaxEz 0.4",
-        "QIDI Plus 4 0.6 nozzle",
-        "Qidi X-Plus 4 0.6 nozzle",
-        "Qidi X-Plus 4 0.6 nozzle - Codex Tinman",
-        "Qidi X-Plus 4 0.6 nozzle - Copy",
-        "Qidi X-Plus 4 0.6 nozzle - Tinman",
-        "QidiMaxEz 0.6",
-        "Qidi X-Plus 4 0.8 nozzle",
-        "Qidi X-Plus 4 0.8 nozzle - Codex Tinman",
-        "Qidi X-Plus 4 0.8 nozzle - Copy",
-        "Qidi X-Plus 4 0.8 nozzle - Tinman",
-        "QidiMaxEz 0.8",
-        "Qidi Plus 4",
-        "Qidi X-Plus 4",
-        "QidiMaxEz",
-        "QidiMaxEz 1.0"
+        "Qidi X-Plus 4 0.4 nozzle - TinMan Codex",
+        "Qidi X-Plus 4 0.6 nozzle - TinMan Codex",
+        "Qidi X-Plus 4 0.8 nozzle - TinMan Codex",
+        "Qidi X-Plus 4 1.0 nozzle - TinMan Codex",
+        "QidiMaxEz 0.4 nozzle - TinMan Codex",
+        "QidiMaxEz 0.6 nozzle - TinMan Codex",
+        "QidiMaxEz 0.8 nozzle - TinMan Codex",
+        "QidiMaxEz 1.0 nozzle - TinMan Codex"
     ],
     "is_custom_defined": "0",
     "version": "2.4.2.0",
@@ -153,5 +137,35 @@
     ],
     "filament_price_source_variant": [
         "1.75mm / 1kg / Black"
+    ],
+    "fan_cooling_layer_time": [
+        "30"
+    ],
+    "full_fan_speed_layer": [
+        "0"
+    ],
+    "slow_down_layer_time": [
+        "3"
+    ],
+    "slow_down_min_speed": [
+        "20"
+    ],
+    "slow_down_for_layer_cooling": [
+        "1"
+    ],
+    "close_fan_the_first_x_layers": [
+        "3"
+    ],
+    "reduce_fan_stop_start_freq": [
+        "1"
+    ],
+    "additional_cooling_fan_speed": [
+        "0"
+    ],
+    "filament_shrink": [
+        "100%"
+    ],
+    "chamber_temperatures": [
+        "60"
     ]
 }

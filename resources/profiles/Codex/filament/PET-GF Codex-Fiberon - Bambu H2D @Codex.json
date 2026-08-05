@@ -1,0 +1,140 @@
+{
+    "type": "filament",
+    "name": "PET-GF Codex-Fiberon - Bambu H2D @Codex",
+    "from": "system",
+    "instantiation": "true",
+    "filament_vendor": [
+        "Codex"
+    ],
+    "filament_type": [
+        "PET-GF"
+    ],
+    "filament_settings_id": [
+        "PET-GF Codex-Fiberon - Bambu H2D @Codex"
+    ],
+    "filament_id": "CODX44F20D1E",
+    "setting_id": "kRot2BXu2oL7U19V",
+    "default_filament_colour": [
+        "#000000"
+    ],
+    "filament_diameter": [
+        "1.75"
+    ],
+    "filament_density": [
+        "1.43"
+    ],
+    "filament_cost": [
+        "29.99"
+    ],
+    "filament_flow_ratio": [
+        "0.88"
+    ],
+    "filament_max_volumetric_speed": [
+        "16"
+    ],
+    "filament_is_support": [
+        "0"
+    ],
+    "filament_soluble": [
+        "0"
+    ],
+    "nozzle_temperature": [
+        "300"
+    ],
+    "nozzle_temperature_initial_layer": [
+        "300"
+    ],
+    "nozzle_temperature_range_low": [
+        "280"
+    ],
+    "nozzle_temperature_range_high": [
+        "300"
+    ],
+    "cool_plate_temp": [
+        "0"
+    ],
+    "cool_plate_temp_initial_layer": [
+        "0"
+    ],
+    "eng_plate_temp": [
+        "70"
+    ],
+    "eng_plate_temp_initial_layer": [
+        "70"
+    ],
+    "hot_plate_temp": [
+        "70"
+    ],
+    "hot_plate_temp_initial_layer": [
+        "70"
+    ],
+    "textured_plate_temp": [
+        "70"
+    ],
+    "textured_plate_temp_initial_layer": [
+        "70"
+    ],
+    "chamber_temperature": [
+        "50"
+    ],
+    "activate_chamber_temp_control": [
+        "1"
+    ],
+    "fan_min_speed": [
+        "0"
+    ],
+    "fan_max_speed": [
+        "40"
+    ],
+    "overhang_fan_speed": [
+        "100"
+    ],
+    "overhang_fan_threshold": [
+        "95%"
+    ],
+    "required_nozzle_HRC": [
+        "40"
+    ],
+    "temperature_vitrification": [
+        "232.6"
+    ],
+    "filament_retraction_length": [
+        "1"
+    ],
+    "filament_retraction_speed": [
+        "30"
+    ],
+    "filament_deretraction_speed": [
+        "30"
+    ],
+    "compatible_printers": [
+        "Bambu Lab H2D 0.4 nozzle - TinMan Codex",
+        "Bambu Lab H2D 0.6 nozzle - TinMan Codex",
+        "Bambu Lab H2D 0.8 nozzle - TinMan Codex",
+        "Bambu Lab H2D 1.0 nozzle - TinMan Codex"
+    ],
+    "is_custom_defined": "0",
+    "version": "2.4.2.0",
+    "description": "TinManX1 Codex Polymaker official catalog; material=Fiberon PET-GF15; official source=preset/Fiberon PET-GF15/Snapmaker/U1/OrcaSlicer/Fiberon PET-GF15 @Snapmaker U1.json; source updated=2026-06-17T16:06:55+08:00",
+    "filament_notes": [
+        ""
+    ],
+    "polymaker_source_material": [
+        "Fiberon PET-GF15"
+    ],
+    "polymaker_source_preset_path": [
+        "preset/Fiberon PET-GF15/Snapmaker/U1/OrcaSlicer/Fiberon PET-GF15 @Snapmaker U1.json"
+    ],
+    "polymaker_source_index_updated_at": [
+        "2026-07-02T08:50:28.961Z"
+    ],
+    "filament_price_source_url": [
+        "https://shop.polymaker.com/products/fiberon-pet-gf15"
+    ],
+    "filament_price_source_variant": [
+        "1.75mm / 1kg / Dark Grey"
+    ],
+    "chamber_temperatures": [
+        "50"
+    ]
+}

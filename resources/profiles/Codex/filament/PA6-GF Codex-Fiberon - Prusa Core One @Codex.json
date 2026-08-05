@@ -27,7 +27,7 @@
         "59.98"
     ],
     "filament_flow_ratio": [
-        "0.98"
+        "0.95"
     ],
     "filament_max_volumetric_speed": [
         "12"
@@ -57,22 +57,22 @@
         "0"
     ],
     "eng_plate_temp": [
-        "100"
+        "40"
     ],
     "eng_plate_temp_initial_layer": [
-        "100"
+        "40"
     ],
     "hot_plate_temp": [
-        "50"
+        "40"
     ],
     "hot_plate_temp_initial_layer": [
-        "50"
+        "40"
     ],
     "textured_plate_temp": [
-        "100"
+        "40"
     ],
     "textured_plate_temp_initial_layer": [
-        "100"
+        "40"
     ],
     "chamber_temperature": [
         "0"
@@ -84,13 +84,13 @@
         "0"
     ],
     "fan_max_speed": [
-        "20"
+        "100"
     ],
     "overhang_fan_speed": [
-        "95"
+        "100"
     ],
     "overhang_fan_threshold": [
-        "10%"
+        "95%"
     ],
     "required_nozzle_HRC": [
         "40"
@@ -108,37 +108,10 @@
         "30"
     ],
     "compatible_printers": [
-        "Prusa CORE One 0.25 nozzle",
-        "Prusa CORE One 0.3 nozzle",
-        "Prusa CORE One 0.4 nozzle",
-        "Prusa CORE One HF 0.4 nozzle",
-        "Prusa CORE One L 0.4 nozzle",
-        "Prusa CORE One L 0.4 nozzle - Codex Tinman",
-        "Prusa CORE One L HF 0.4 nozzle",
-        "Prusa CORE One L HF 0.4 nozzle - Codex Tinman",
-        "Prusa CORE One 0.5 nozzle",
-        "Prusa CORE One HF 0.5 nozzle",
-        "Prusa CORE One L 0.5 nozzle",
-        "Prusa CORE One L 0.5 nozzle - Codex Tinman",
-        "Prusa CORE One L HF 0.5 nozzle",
-        "Prusa CORE One L HF 0.5 nozzle - Codex Tinman",
-        "Prusa CORE One 0.6 nozzle",
-        "Prusa CORE One HF 0.6 nozzle",
-        "Prusa CORE One L 0.6 nozzle",
-        "Prusa CORE One L 0.6 nozzle - Codex Tinman",
-        "Prusa CORE One L 0.6 nozzle - Copy",
-        "Prusa CORE One L HF 0.6 nozzle",
-        "Prusa CORE One L HF 0.6 nozzle - Codex Tinman",
-        "Prusa CORE One 0.8 nozzle",
-        "Prusa CORE One HF 0.8 nozzle",
-        "Prusa CORE One L 0.8 nozzle",
-        "Prusa CORE One L 0.8 nozzle - Codex Tinman",
-        "Prusa CORE One L HF 0.8 nozzle",
-        "Prusa CORE One L HF 0.8 nozzle - Codex Tinman",
-        "Prusa CORE One",
-        "Prusa CORE One HF",
-        "Prusa CORE One L",
-        "Prusa CORE One L HF"
+        "Prusa CORE One L 0.4 nozzle - TinMan Codex",
+        "Prusa CORE One L 0.6 nozzle - TinMan Codex",
+        "Prusa CORE One L 0.8 nozzle - TinMan Codex",
+        "Prusa CORE One L 1.0 nozzle - TinMan Codex"
     ],
     "is_custom_defined": "0",
     "version": "2.4.2.0",
@@ -160,5 +133,35 @@
     ],
     "filament_price_source_variant": [
         "1.75mm (New Packaging) / 0.5kg / Grey"
+    ],
+    "fan_cooling_layer_time": [
+        "15"
+    ],
+    "full_fan_speed_layer": [
+        "2"
+    ],
+    "slow_down_layer_time": [
+        "2"
+    ],
+    "slow_down_min_speed": [
+        "20"
+    ],
+    "slow_down_for_layer_cooling": [
+        "1"
+    ],
+    "close_fan_the_first_x_layers": [
+        "3"
+    ],
+    "reduce_fan_stop_start_freq": [
+        "1"
+    ],
+    "additional_cooling_fan_speed": [
+        "0"
+    ],
+    "filament_shrink": [
+        "100%"
+    ],
+    "chamber_temperatures": [
+        "0"
     ]
 }

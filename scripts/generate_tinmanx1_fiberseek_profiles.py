@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
-import shutil
 from pathlib import Path
 import sys
 
@@ -791,6 +790,13 @@ def compatible_composite_printers() -> list[str]:
     return [composite_machine_name(n) for n in PLASTIC_NOZZLES] + LEGACY_COMPOSITE_MACHINE_NAMES
 
 
+def compatible_composite_filament_printers() -> list[str]:
+    return [
+        f"{MACHINE_MODEL} {nozzle} nozzle - TinMan Codex"
+        for nozzle in ("0.4", "0.6", "0.8", "1.0")
+    ]
+
+
 def compatible_filament_printers() -> list[str]:
     return compatible_plastic_printers() + compatible_composite_printers()
 
@@ -1008,7 +1014,7 @@ def composite_filament(material: str, values: dict, fiber: dict) -> dict:
         "fiber_priming_line_height": arr("0.2"),
         "fiber_material_kind": arr("composite_matrix"),
         "fiber_source_material_id": arr(f"tinmanx1-{material_slug(material).lower()}-{fiber['profile_suffix'].lower()}"),
-        "compatible_printers": compatible_composite_printers(),
+        "compatible_printers": compatible_composite_filament_printers(),
     }
     return with_optional_filament_retraction(profile, values, prefix="fiber_")
 
@@ -1355,9 +1361,6 @@ def fiber_process(plastic_nozzle: str, spec: dict, mode_label: str, mode: dict, 
         "fiber_correction_move_feedrate_percent": "0",
         "fiber_after_cut_plastic_extrusion_multiplier": mode["fiber_after_cut_plastic_extrusion_multiplier"],
         "fiber_z_hop_after_cut": "0",
-        "fiber_cut_distance": "58",
-        "fiber_restart_length": "55",
-        "fiber_cut_gcode": "M2800\nM400\n;CUT DISTANCE 54.8",
         "fiber_first_layer_flow_ratio": "0",
         "fiber_first_layer_line_width": "0",
         "fiber_first_layer_height": "0",
@@ -1414,8 +1417,24 @@ def rocket_compare_process(plastic_nozzle: str, spec: dict, mode_label: str, mod
 
 def build_pack(layup_template: str = "none"):
     layup_payload = layup_payload_for_template(layup_template)
-    if PACK_ROOT.exists():
-        shutil.rmtree(PACK_ROOT)
+    index_path = PROFILE_ROOT / "TinManX1.json"
+    preserved_entries: dict[str, list[dict]] = {}
+    if index_path.is_file():
+        existing_index = json.loads(index_path.read_text())
+        for list_key in ("machine_model_list", "machine_list", "process_list", "filament_list"):
+            preserved_entries[list_key] = [
+                item
+                for item in existing_index.get(list_key, [])
+                if len(Path(item.get("sub_path", "")).parts) > 2
+            ]
+
+    # Rebuild only generator-owned root files. Curated TinMan Codex profiles
+    # live in nested directories and must survive every generator run.
+    for section in ("machine", "process", "filament"):
+        section_root = PACK_ROOT / section
+        if section_root.is_dir():
+            for path in section_root.glob("*.json"):
+                path.unlink()
 
     top = {
         "name": "TinManX1",
@@ -1482,7 +1501,11 @@ def build_pack(layup_template: str = "none"):
             top["filament_list"].append({"name": cf["name"], "sub_path": cf_path})
             write_json(PACK_ROOT / cf_path, cf)
 
-    write_json(PROFILE_ROOT / "TinManX1.json", top)
+    for list_key, items in preserved_entries.items():
+        known_names = {item.get("name") for item in top[list_key]}
+        top[list_key].extend(item for item in items if item.get("name") not in known_names)
+
+    write_json(index_path, top)
 
 
 if __name__ == "__main__":

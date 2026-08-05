@@ -108,27 +108,10 @@
         "30"
     ],
     "compatible_printers": [
-        "Elegoo Centauri Carbon 0.4 nozzle - Codex Tinman",
-        "Elegoo Centauri Carbon 0.4 nozzle - Codex Tinman 2",
-        "Elegoo Centauri Carbon 0.4 nozzle - Copy",
-        "Elegoo Centauri Carbon 0.4 nozzle - COSMOS Tinman",
-        "Elegoo Centauri Carbon 0.4 nozzle - COSMOS Tinman 2",
-        "Elegoo Centauri Carbon 0.4 nozzle - Tinman",
-        "Elegoo Centauri Carbon 0.4 nozzle - Tinman 2",
-        "Elegoo Centauri Carbon 2 0.4 nozzle - Copy",
-        "Elegoo Centauri Carbon 0.6 nozzle - Codex Tinman",
-        "Elegoo Centauri Carbon 0.6 nozzle - Codex TinmanCC1",
-        "Elegoo Centauri Carbon 0.6 nozzle - Codex TinmanCC2",
-        "Elegoo Centauri Carbon 0.6 nozzle - COSMOS Tinman",
-        "Elegoo Centauri Carbon 0.6 nozzle - COSMOS Tinman 2",
-        "Elegoo Centauri Carbon 0.6 nozzle - TinmanCC1",
-        "Elegoo Centauri Carbon 0.6 nozzle - TinmanCC2",
-        "Elegoo Centauri Carbon 0.8 nozzle - Codex TinmanCC1",
-        "Elegoo Centauri Carbon 0.8 nozzle - Codex TinmanCC2",
-        "Elegoo Centauri Carbon 0.8 nozzle - COSMOS Tinman",
-        "Elegoo Centauri Carbon 0.8 nozzle - COSMOS Tinman 2",
-        "Elegoo Centauri Carbon 0.8 nozzle - TinmanCC1",
-        "Elegoo Centauri Carbon 0.8 nozzle - TinmanCC2"
+        "Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex",
+        "Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex",
+        "Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex",
+        "Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex"
     ],
     "is_custom_defined": "0",
     "version": "2.4.2.0",
@@ -150,5 +133,8 @@
     ],
     "filament_price_source_variant": [
         "1.75mm / 0.5kg / Black"
+    ],
+    "chamber_temperatures": [
+        "0"
     ]
 }

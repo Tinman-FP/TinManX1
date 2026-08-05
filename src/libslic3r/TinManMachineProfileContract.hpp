@@ -1,0 +1,25 @@
+#ifndef slic3r_TinManMachineProfileContract_hpp_
+#define slic3r_TinManMachineProfileContract_hpp_
+
+#include <string>
+
+namespace Slic3r {
+
+class AppConfig;
+
+// Non-curated machines are unaffected. Curated machines expose only the four
+// generated "TinMan Codex" nozzle profiles, regardless of local/cloud copies.
+bool tinmanx_machine_preset_allowed(const std::string &preset_name, const std::string &machine_hint = {});
+
+// Curated machines use only processes that explicitly name the selected
+// canonical machine. This prevents inherited vendor conditions from leaking
+// stock process profiles back into the TinMan selector.
+bool tinmanx_process_preset_allowed(const std::string &preset_name, const std::string &active_printer_name);
+
+// Keep startup and cloud-restored model selections on the same declared
+// machine/nozzle catalog used by the generated resources.
+void tinmanx_apply_machine_catalog(AppConfig &config);
+
+} // namespace Slic3r
+
+#endif // slic3r_TinManMachineProfileContract_hpp_

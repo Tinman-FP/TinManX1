@@ -1,7 +1,7 @@
 {
 	"name": "Bambulab",
 	"url": "http://www.bambulab.com/Parameters/vendor/BBL.json",
-	"version": "02.01.00.19",
+	"version": "02.01.00.20",
 	"force_update": "0",
 	"description": "BBL configurations",
 	"machine_model_list": [
@@ -1026,6 +1026,134 @@
 		{
 			"name": "0.56mm Standard @BBL X1C 0.8 nozzle",
 			"sub_path": "process/0.56mm Standard @BBL X1C 0.8 nozzle.json"
+		},
+		{
+			"name": "0.20mm Quality @Bambu Lab H2D 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.20mm Quality @Bambu Lab H2D 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Fast @Bambu Lab H2D 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Fast @Bambu Lab H2D 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.28mm Draft @Bambu Lab H2D 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.28mm Draft @Bambu Lab H2D 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.16mm Tank @Bambu Lab H2D 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.16mm Tank @Bambu Lab H2D 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.30mm Quality @Bambu Lab H2D 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.30mm Quality @Bambu Lab H2D 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.36mm Fast @Bambu Lab H2D 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.36mm Fast @Bambu Lab H2D 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.42mm Draft @Bambu Lab H2D 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.42mm Draft @Bambu Lab H2D 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Tank @Bambu Lab H2D 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Tank @Bambu Lab H2D 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Quality @Bambu Lab H2D 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Quality @Bambu Lab H2D 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.48mm Fast @Bambu Lab H2D 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.48mm Fast @Bambu Lab H2D 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.56mm Draft @Bambu Lab H2D 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.56mm Draft @Bambu Lab H2D 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.32mm Tank @Bambu Lab H2D 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.32mm Tank @Bambu Lab H2D 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.50mm Quality @Bambu Lab H2D 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.50mm Quality @Bambu Lab H2D 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.60mm Fast @Bambu Lab H2D 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.60mm Fast @Bambu Lab H2D 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.70mm Draft @Bambu Lab H2D 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.70mm Draft @Bambu Lab H2D 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Tank @Bambu Lab H2D 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Tank @Bambu Lab H2D 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.20mm Quality @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.20mm Quality @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Fast @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Fast @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.28mm Draft @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.28mm Draft @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.16mm Tank @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.16mm Tank @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.30mm Quality @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.30mm Quality @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.36mm Fast @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.36mm Fast @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.42mm Draft @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.42mm Draft @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Tank @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Tank @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Quality @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Quality @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.48mm Fast @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.48mm Fast @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.56mm Draft @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.56mm Draft @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.32mm Tank @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.32mm Tank @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.50mm Quality @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.50mm Quality @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.60mm Fast @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.60mm Fast @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.70mm Draft @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.70mm Draft @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.40mm Tank @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.40mm Tank @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json"
 		}
 	],
 	"filament_list": [
@@ -9860,16 +9988,8 @@
 			"sub_path": "machine/Bambu Lab X1 0.4 nozzle.json"
 		},
 		{
-			"name": "Bambu Lab X1 Carbon 0.4 nozzle",
-			"sub_path": "machine/Bambu Lab X1 Carbon 0.4 nozzle.json"
-		},
-		{
 			"name": "Bambu Lab X1E 0.4 nozzle",
 			"sub_path": "machine/Bambu Lab X1E 0.4 nozzle.json"
-		},
-		{
-			"name": "Bambu Lab H2D 0.4 nozzle",
-			"sub_path": "machine/Bambu Lab H2D 0.4 nozzle.json"
 		},
 		{
 			"name": "Bambu Lab H2D Pro 0.4 nozzle",
@@ -9964,18 +10084,6 @@
 			"sub_path": "machine/Bambu Lab X1 0.8 nozzle.json"
 		},
 		{
-			"name": "Bambu Lab X1 Carbon 0.2 nozzle",
-			"sub_path": "machine/Bambu Lab X1 Carbon 0.2 nozzle.json"
-		},
-		{
-			"name": "Bambu Lab X1 Carbon 0.6 nozzle",
-			"sub_path": "machine/Bambu Lab X1 Carbon 0.6 nozzle.json"
-		},
-		{
-			"name": "Bambu Lab X1 Carbon 0.8 nozzle",
-			"sub_path": "machine/Bambu Lab X1 Carbon 0.8 nozzle.json"
-		},
-		{
 			"name": "Bambu Lab X1E 0.2 nozzle",
 			"sub_path": "machine/Bambu Lab X1E 0.2 nozzle.json"
 		},
@@ -9986,18 +10094,6 @@
 		{
 			"name": "Bambu Lab X1E 0.8 nozzle",
 			"sub_path": "machine/Bambu Lab X1E 0.8 nozzle.json"
-		},
-		{
-			"name": "Bambu Lab H2D 0.2 nozzle",
-			"sub_path": "machine/Bambu Lab H2D 0.2 nozzle.json"
-		},
-		{
-			"name": "Bambu Lab H2D 0.6 nozzle",
-			"sub_path": "machine/Bambu Lab H2D 0.6 nozzle.json"
-		},
-		{
-			"name": "Bambu Lab H2D 0.8 nozzle",
-			"sub_path": "machine/Bambu Lab H2D 0.8 nozzle.json"
 		},
 		{
 			"name": "Bambu Lab H2D Pro 0.2 nozzle",
@@ -10022,6 +10118,63 @@
 		{
 			"name": "Bambu Lab X2D 0.8 nozzle",
 			"sub_path": "machine/Bambu Lab X2D 0.8 nozzle.json"
+		},
+		{
+			"name": "Bambu Lab H2D 0.4 nozzle",
+			"sub_path": "machine/Bambu Lab H2D 0.4 nozzle.json"
+		},
+		{
+			"name": "Bambu Lab H2D 0.6 nozzle",
+			"sub_path": "machine/Bambu Lab H2D 0.6 nozzle.json"
+		},
+		{
+			"name": "Bambu Lab H2D 0.8 nozzle",
+			"sub_path": "machine/Bambu Lab H2D 0.8 nozzle.json"
+		},
+		{
+			"name": "Bambu Lab H2D 0.4 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Bambu Lab H2D 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "Bambu Lab H2D 0.6 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Bambu Lab H2D 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "Bambu Lab H2D 0.8 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Bambu Lab H2D 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "Bambu Lab H2D 1.0 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Bambu Lab H2D 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "Bambu Lab X1 Carbon 0.4 nozzle",
+			"sub_path": "machine/Bambu Lab X1 Carbon 0.4 nozzle.json"
+		},
+		{
+			"name": "Bambu Lab X1 Carbon 0.6 nozzle",
+			"sub_path": "machine/Bambu Lab X1 Carbon 0.6 nozzle.json"
+		},
+		{
+			"name": "Bambu Lab X1 Carbon 0.8 nozzle",
+			"sub_path": "machine/Bambu Lab X1 Carbon 0.8 nozzle.json"
+		},
+		{
+			"name": "Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json"
 		}
-	]
+	],
+	"tinman_codex_machine_contract": "2"
 }

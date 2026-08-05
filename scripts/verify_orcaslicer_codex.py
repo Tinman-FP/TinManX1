@@ -173,6 +173,11 @@ def check_launcher(state: CheckState, app: Path, app_support: Path) -> None:
     else:
         state.fail("launcher does not run Bambu LAN binding repair helper")
 
+    if "orca_codex_launch_preflight.py" in text:
+        state.fail("launcher still executes the mutable legacy launch preflight")
+    else:
+        state.ok("launcher does not execute the mutable legacy launch preflight")
+
     if real.stat().st_size > 1_000_000:
         state.ok("real executable is present and non-trivial")
     else:
@@ -277,7 +282,7 @@ def check_feature_resources(state: CheckState, app: Path) -> None:
 
 def check_tinmanx_separation(state: CheckState, app: Path, tinmanx_app: Path) -> None:
     if not tinmanx_app.exists():
-        state.warn(f"TinManX app not found: {tinmanx_app}")
+        state.ok(f"legacy TinManX app is absent: {tinmanx_app}")
         return
     if tinmanx_app.is_symlink():
         state.fail(f"TinManX app is a symlink to {tinmanx_app.resolve()}")

@@ -1,0 +1,21 @@
+{
+    "type": "machine",
+    "name": "QidiMaxEz 0.8 nozzle - TinMan Codex",
+    "inherits": "QidiMaxEz 0.8",
+    "from": "system",
+    "instantiation": "true",
+    "printer_model": "QidiMaxEz",
+    "printer_variant": "0.8",
+    "printer_settings_id": "QidiMaxEz 0.8 nozzle - TinMan Codex",
+    "nozzle_diameter": [
+        "0.8"
+    ],
+    "min_layer_height": [
+        "0.16"
+    ],
+    "max_layer_height": [
+        "0.56"
+    ],
+    "default_print_profile": "0.40mm Quality @QidiMaxEz 0.8 nozzle - TinMan Codex",
+    "setting_id": "vNvrimVGCUPYL9sq"
+}

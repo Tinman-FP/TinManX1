@@ -1,6 +1,6 @@
 {
   "name": "TinManX1",
-  "version": "02.04.00.15",
+  "version": "02.04.00.16",
   "force_update": "0",
   "description": "TinManX1 FibreSeek Seeker 3 plastic and continuous-fiber profiles",
   "machine_model_list": [
@@ -97,6 +97,22 @@
     {
       "name": "0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle",
       "sub_path": "process/0.20mm Rocket Compare Composite Only Heavy @FibreSeek Seeker 3 0.8+0.7 nozzle.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 1.0 nozzle - TinMan Codex",
+      "sub_path": "process/TinMan Codex/0.20mm Plastic + Continuous Fiber Medium @FibreSeek Seeker 3 1.0 nozzle - TinMan Codex.json"
     }
   ],
   "filament_list": [
@@ -467,28 +483,33 @@
       "sub_path": "machine/TinManX1 FibreSeek machine common.json"
     },
     {
-      "name": "FibreSeek Seeker 3 0.4 nozzle",
-      "sub_path": "machine/FibreSeek Seeker 3 0.4 nozzle.json"
-    },
-    {
       "name": "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
       "sub_path": "machine/FibreSeek Seeker 3 0.4+0.7 composite nozzle.json"
-    },
-    {
-      "name": "FibreSeek Seeker 3 0.6 nozzle",
-      "sub_path": "machine/FibreSeek Seeker 3 0.6 nozzle.json"
     },
     {
       "name": "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
       "sub_path": "machine/FibreSeek Seeker 3 0.6+0.7 composite nozzle.json"
     },
     {
-      "name": "FibreSeek Seeker 3 0.8 nozzle",
-      "sub_path": "machine/FibreSeek Seeker 3 0.8 nozzle.json"
-    },
-    {
       "name": "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
       "sub_path": "machine/FibreSeek Seeker 3 0.8+0.7 composite nozzle.json"
+    },
+    {
+      "name": "FibreSeek Seeker 3 0.4 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/FibreSeek Seeker 3 0.4 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "FibreSeek Seeker 3 0.6 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/FibreSeek Seeker 3 0.6 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "FibreSeek Seeker 3 0.8 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/FibreSeek Seeker 3 0.8 nozzle - TinMan Codex.json"
+    },
+    {
+      "name": "FibreSeek Seeker 3 1.0 nozzle - TinMan Codex",
+      "sub_path": "machine/TinMan Codex/FibreSeek Seeker 3 1.0 nozzle - TinMan Codex.json"
     }
-  ]
+  ],
+  "tinman_codex_machine_contract": "2"
 }

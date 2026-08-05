@@ -1,0 +1,21 @@
+{
+    "type": "machine",
+    "name": "Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex",
+    "inherits": "Elegoo Centauri Carbon 0.8 nozzle",
+    "from": "system",
+    "instantiation": "true",
+    "printer_model": "Elegoo Centauri Carbon",
+    "printer_variant": "1.0",
+    "printer_settings_id": "Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex",
+    "nozzle_diameter": [
+        "1.0"
+    ],
+    "min_layer_height": [
+        "0.20"
+    ],
+    "max_layer_height": [
+        "0.70"
+    ],
+    "default_print_profile": "0.50mm Quality @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex",
+    "setting_id": "IDV09EbTulFykcRE"
+}

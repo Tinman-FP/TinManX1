@@ -108,30 +108,14 @@
         "30"
     ],
     "compatible_printers": [
-        "Qidi X-Plus 4 0.2 nozzle",
-        "CURRENT QIDI NOZZLE - 0.4 - Codex Tinman",
-        "Qidi Plus 4 0.4 nozzle",
-        "Qidi Plus 4 0.4 nozzle - Tinman",
-        "Qidi X-Plus 4 0.4 nozzle",
-        "Qidi X-Plus 4 0.4 nozzle - Codex Tinman",
-        "Qidi X-Plus 4 0.4 nozzle - Copy",
-        "Qidi X-Plus 4 0.4 nozzle - Tinman",
-        "QidiMaxEz 0.4",
-        "QIDI Plus 4 0.6 nozzle",
-        "Qidi X-Plus 4 0.6 nozzle",
-        "Qidi X-Plus 4 0.6 nozzle - Codex Tinman",
-        "Qidi X-Plus 4 0.6 nozzle - Copy",
-        "Qidi X-Plus 4 0.6 nozzle - Tinman",
-        "QidiMaxEz 0.6",
-        "Qidi X-Plus 4 0.8 nozzle",
-        "Qidi X-Plus 4 0.8 nozzle - Codex Tinman",
-        "Qidi X-Plus 4 0.8 nozzle - Copy",
-        "Qidi X-Plus 4 0.8 nozzle - Tinman",
-        "QidiMaxEz 0.8",
-        "Qidi Plus 4",
-        "Qidi X-Plus 4",
-        "QidiMaxEz",
-        "QidiMaxEz 1.0"
+        "Qidi X-Plus 4 0.4 nozzle - TinMan Codex",
+        "Qidi X-Plus 4 0.6 nozzle - TinMan Codex",
+        "Qidi X-Plus 4 0.8 nozzle - TinMan Codex",
+        "Qidi X-Plus 4 1.0 nozzle - TinMan Codex",
+        "QidiMaxEz 0.4 nozzle - TinMan Codex",
+        "QidiMaxEz 0.6 nozzle - TinMan Codex",
+        "QidiMaxEz 0.8 nozzle - TinMan Codex",
+        "QidiMaxEz 1.0 nozzle - TinMan Codex"
     ],
     "is_custom_defined": "0",
     "version": "2.4.2.0",
@@ -153,5 +137,8 @@
     ],
     "filament_price_source_variant": [
         "1.75mm / 1kg / Black"
+    ],
+    "chamber_temperatures": [
+        "0"
     ]
 }

@@ -2,7 +2,7 @@
 	"type": "machine_model",
 	"name": "Elegoo Centauri Carbon",
 	"model_id": "Elegoo-CC",
-	"nozzle_diameter": "0.4;0.2;0.6;0.8",
+	"nozzle_diameter": "0.4;0.6;0.8;1.0",
 	"machine_tech": "FFF",
 	"family": "Elegoo",
 	"bed_model": "elegoo_centuri_carbon_buildplate_model.stl",

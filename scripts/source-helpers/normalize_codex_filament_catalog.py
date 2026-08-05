@@ -18,6 +18,7 @@ import hashlib
 import json
 import re
 import shutil
+import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -28,6 +29,11 @@ from typing import Any
 DEFAULT_APP_SUPPORT = Path.home() / "Library/Application Support/OrcaSlicer-Codex"
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
+sys.path.insert(0, str(SCRIPT_DIR.parent))
+
+from assign_vendor_setting_ids import generate_preset_setting_id
+from codex_filament_contracts import apply_contract, load_contract
+
 DEFAULT_BACKUP_ROOT = Path.home() / ".tinmanx1" / "codex-filament-cleanup-backups"
 DEFAULT_MIRROR_ROOTS = [
     Path("/Applications/TinManX1.app/Contents/Resources/profiles"),
@@ -42,7 +48,8 @@ PROFILE_RE = re.compile(
 )
 
 TARGET_BUCKETS: dict[str, tuple[str, ...]] = {
-    "Bambu": ("Bambu Lab", "BBL "),
+    "Bambu H2D": ("Bambu Lab H2D",),
+    "Bambu X1C HF": ("Bambu Lab X1 Carbon",),
     "Creality K2 Plus": ("Creality K2 Plus",),
     "Elegoo Centauri": ("Elegoo Centauri",),
     "Prusa Core One": ("Prusa CORE One", "Prusa Core One"),
@@ -58,15 +65,39 @@ TARGET_BUCKETS: dict[str, tuple[str, ...]] = {
     "Sovol SV08 MAX": ("Sovol SV08 MAX",),
 }
 
-BUCKET_ORDER = {name: index for index, name in enumerate(TARGET_BUCKETS)}
-EXCLUDED_COMPAT_TOKENS = {
-    "Qidi X-Plus 3",
-    "Qidi X-Plus 0.",
-    "Qidi X-Plus -",
-    "Qidi Q1",
-    "Qidi X-Smart",
+CANONICAL_NOZZLES = ("0.4", "0.6", "0.8", "1.0")
+
+
+def canonical_machine_names(model: str) -> tuple[str, ...]:
+    return tuple(f"{model} {nozzle} nozzle - TinMan Codex" for nozzle in CANONICAL_NOZZLES)
+
+
+CANONICAL_BUCKET_PRINTERS: dict[str, tuple[str, ...]] = {
+    "Bambu H2D": canonical_machine_names("Bambu Lab H2D"),
+    "Bambu X1C HF": canonical_machine_names("Bambu Lab X1 Carbon"),
+    "Creality K2 Plus": canonical_machine_names("Creality K2 Plus"),
+    "Elegoo Centauri": canonical_machine_names("Elegoo Centauri Carbon"),
+    "Prusa Core One": canonical_machine_names("Prusa CORE One L"),
+    "Qidi X-Plus 4": (
+        *canonical_machine_names("Qidi X-Plus 4"),
+        *canonical_machine_names("QidiMaxEz"),
+    ),
+    "RatRig V-Core 4": (
+        *canonical_machine_names("RatRig V-Core 4 IDEX 500"),
+        *canonical_machine_names("RatRig V-Core 4 IDEX 500 COPY MODE"),
+        *canonical_machine_names("RatRig V-Core 4 IDEX 500 MIRROR MODE"),
+    ),
+    "Snapmaker U1": canonical_machine_names("Snapmaker U1"),
+    "Sovol SV08 MAX": canonical_machine_names("Sovol SV08 MAX"),
 }
 
+LEGACY_BUCKET_EXPANSIONS: dict[str, tuple[str, ...]] = {
+    "Bambu": ("Bambu H2D", "Bambu X1C HF"),
+}
+
+X1C_UNSUPPORTED_MATERIALS = {"PPS", "PPS-CF", "PPS-GF"}
+
+BUCKET_ORDER = {name: index for index, name in enumerate(TARGET_BUCKETS)}
 PRODUCT_PREFIXES = (
     "Fiberon ",
     "Panchroma ",
@@ -128,7 +159,7 @@ def write_json(path: Path, data: dict[str, Any]) -> None:
 
 def stable_ids(name: str) -> tuple[str, str]:
     digest = hashlib.sha1(name.encode("utf-8")).hexdigest()
-    return f"codex-{digest[:12]}", f"CODX{digest[:8].upper()}"
+    return generate_preset_setting_id("Codex", "filament", name), f"CODX{digest[:8].upper()}"
 
 
 def list_user_filament_dirs(app_support: Path) -> list[Path]:
@@ -222,47 +253,8 @@ def parse_profile(path: Path, data: dict[str, Any]) -> ParsedProfile | None:
     )
 
 
-def collect_machine_names(app_support: Path, catalog_profiles: list[dict[str, Any]]) -> set[str]:
-    names: set[str] = set()
-    for profile in catalog_profiles:
-        compatible = profile.get("compatible_printers") or []
-        if isinstance(compatible, list):
-            names.update(str(item) for item in compatible if item)
-    for machine_path in (app_support / "system").glob("*/machine/*.json"):
-        try:
-            data = load_json(machine_path)
-        except (OSError, json.JSONDecodeError):
-            continue
-        name = data.get("name") or machine_path.stem
-        if name:
-            names.add(str(name))
-    return names
-
-
-def bucket_compatible_printers(bucket: str, machine_names: set[str]) -> list[str]:
-    tokens = TARGET_BUCKETS[bucket]
-    matched = []
-    for name in machine_names:
-        if any(token in name for token in EXCLUDED_COMPAT_TOKENS):
-            continue
-        if any(token in name for token in tokens):
-            matched.append(name)
-    if not matched:
-        matched.append(bucket)
-    return sorted(set(matched), key=lambda value: (extract_nozzle(value), value.lower()))
-
-
-def extract_nozzle(name: str) -> float:
-    match = re.search(r"(\d+(?:\.\d+)?)\s*nozzle", name, re.IGNORECASE)
-    if not match:
-        match = re.search(r"\b0\.(\d+)\b", name)
-        if match:
-            return float("0." + match.group(1))
-        return 99.0
-    try:
-        return float(match.group(1))
-    except ValueError:
-        return 99.0
+def bucket_compatible_printers(bucket: str) -> list[str]:
+    return list(CANONICAL_BUCKET_PRINTERS[bucket])
 
 
 def cloned_for_bucket(profile: ParsedProfile, bucket: str) -> ParsedProfile:
@@ -300,6 +292,18 @@ def choose_profiles(filament_dir: Path) -> tuple[list[ParsedProfile], list[str],
         if profile.source_bucket == "Universal":
             universal.append(profile)
             continue
+        if profile.source_bucket in LEGACY_BUCKET_EXPANSIONS:
+            for bucket in LEGACY_BUCKET_EXPANSIONS[profile.source_bucket]:
+                if bucket == "Bambu X1C HF" and profile.material_type in X1C_UNSUPPORTED_MATERIALS:
+                    continue
+                bucketed = cloned_for_bucket(profile, bucket)
+                current = candidates.get(bucketed.key)
+                if current is None or bucketed.score > current.score or (
+                    bucketed.score == current.score
+                    and bucketed.original_name < current.original_name
+                ):
+                    candidates[bucketed.key] = bucketed
+            continue
         if profile.target_bucket not in TARGET_BUCKETS:
             skipped.append(profile.original_name)
             continue
@@ -311,6 +315,8 @@ def choose_profiles(filament_dir: Path) -> tuple[list[ParsedProfile], list[str],
 
     for profile in sorted(universal, key=lambda item: (-item.score, item.original_name)):
         for bucket in TARGET_BUCKETS:
+            if bucket == "Bambu X1C HF" and profile.material_type in X1C_UNSUPPORTED_MATERIALS:
+                continue
             bucketed = cloned_for_bucket(profile, bucket)
             candidates.setdefault(bucketed.key, bucketed)
 
@@ -325,15 +331,25 @@ def choose_profiles(filament_dir: Path) -> tuple[list[ParsedProfile], list[str],
     return chosen, [p.original_name for p in universal], skipped
 
 
-def canonical_profile(profile: ParsedProfile, compatible_printers: list[str]) -> dict[str, Any]:
-    data = copy.deepcopy(profile.data)
+def canonical_profile(
+    profile: ParsedProfile,
+    compatible_printers: list[str],
+    filament_contract: dict[str, Any],
+) -> dict[str, Any]:
+    data = apply_contract(
+        profile.data,
+        profile.material_type,
+        profile.manufacturer,
+        profile.target_bucket,
+        filament_contract,
+    )
     setting_id, filament_id = stable_ids(profile.canonical_name)
     data["name"] = profile.canonical_name
     data["filament_settings_id"] = [profile.canonical_name]
     data["filament_vendor"] = ["Codex"]
     data["filament_type"] = [profile.material_type]
     data["default_filament_colour"] = [BLACK]
-    data["filament_colour"] = [BLACK]
+    data.pop("filament_colour", None)
     data["compatible_printers"] = compatible_printers
     data["from"] = "system"
     data["type"] = "filament"
@@ -402,6 +418,26 @@ def backup_live_state(app_support: Path, backup_root: Path) -> Path:
     return backup
 
 
+def ensure_codex_catalog(app_support: Path, dry_run: bool) -> Path:
+    live_dir = app_support / "system" / "Codex" / "filament"
+    if live_dir.is_dir():
+        return live_dir
+    repo_vendor = REPO_ROOT / "resources" / "profiles" / "Codex"
+    repo_dir = repo_vendor / "filament"
+    if not repo_dir.is_dir():
+        raise SystemExit(f"missing Codex filament catalog: {repo_dir}")
+    if dry_run:
+        return repo_dir
+    live_vendor = app_support / "system" / "Codex"
+    live_vendor.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(repo_vendor, live_vendor)
+    shutil.copy2(
+        REPO_ROOT / "resources" / "profiles" / "Codex.json",
+        app_support / "system" / "Codex.json",
+    )
+    return live_dir
+
+
 def clear_user_filament_sidecars(directory: Path) -> int:
     count = 0
     for path in directory.glob("*"):
@@ -420,17 +456,22 @@ def rewrite_catalog(
 ) -> tuple[int, int, int, list[str]]:
     system_root = app_support / "system"
     index_path = system_root / "Codex.json"
+    if dry_run and not index_path.is_file():
+        index_path = REPO_ROOT / "resources" / "profiles" / "Codex.json"
     filament_dir = system_root / "Codex" / "filament"
-    profiles = [profile.data for profile in chosen]
-    machine_names = collect_machine_names(app_support, profiles)
     bucket_printers = {
-        bucket: bucket_compatible_printers(bucket, machine_names)
+        bucket: bucket_compatible_printers(bucket)
         for bucket in TARGET_BUCKETS
     }
+    filament_contract = load_contract()
 
     canonical: list[tuple[str, dict[str, Any], str]] = []
     for selected in chosen:
-        data = canonical_profile(selected, bucket_printers[selected.target_bucket])
+        data = canonical_profile(
+            selected,
+            bucket_printers[selected.target_bucket],
+            filament_contract,
+        )
         canonical.append((selected.canonical_name, data, selected.user_name))
 
     index = load_json(index_path)
@@ -513,7 +554,7 @@ def validate(app_support: Path, enabled_names: list[str]) -> list[str]:
         if key in seen:
             errors.append(f"duplicate material/manufacturer/printer key: {key}")
         seen.add(key)
-        if data.get("default_filament_colour") != [BLACK] or data.get("filament_colour") != [BLACK]:
+        if data.get("default_filament_colour") != [BLACK] or "filament_colour" in data:
             errors.append(f"profile does not have black swatch: {name}")
         if data.get("filament_vendor") != ["Codex"]:
             errors.append(f"profile vendor is not Codex: {name}")
@@ -523,6 +564,9 @@ def validate(app_support: Path, enabled_names: list[str]) -> list[str]:
                 errors.append(f"Qidi profile includes Centauri compatibility: {name}")
             if any("X-Plus 3" in item or "Q1" in item for item in compatible):
                 errors.append(f"Qidi profile includes non-Plus-4 Qidi compatibility: {name}")
+        expected_compatible = list(CANONICAL_BUCKET_PRINTERS.get(parsed.group("printer"), ()))
+        if expected_compatible and data.get("compatible_printers") != expected_compatible:
+            errors.append(f"profile does not match canonical machine contract: {name}")
     return errors
 
 
@@ -536,11 +580,10 @@ def main() -> int:
     args = parser.parse_args()
 
     app_support = args.app_support
-    filament_dir = app_support / "system/Codex/filament"
-    if not filament_dir.is_dir():
-        raise SystemExit(f"missing Codex filament catalog: {filament_dir}")
     if not (app_support / "OrcaSlicer.conf").is_file():
         raise SystemExit(f"missing OrcaSlicer.conf under {app_support}")
+
+    filament_dir = ensure_codex_catalog(app_support, args.dry_run)
 
     chosen, universal, skipped = choose_profiles(filament_dir)
     if not args.dry_run:

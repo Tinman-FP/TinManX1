@@ -3,6 +3,7 @@
 #include "Config.hpp"
 #include "Exception.hpp"
 #include "Preset.hpp"
+#include "TinManMachineProfileContract.hpp"
 #include "PresetBundle.hpp"
 #include "AppConfig.hpp"
 
@@ -3434,6 +3435,9 @@ size_t PresetCollection::update_compatible_internal(const PresetWithVendorProfil
         const PresetWithVendorProfile this_preset_with_vendor_profile = this->get_preset_with_vendor_profile(preset_edited);
         bool    was_compatible  = preset_edited.is_compatible;
         preset_edited.is_compatible = is_compatible_with_printer(this_preset_with_vendor_profile, active_printer, &config);
+        if (m_type == Preset::TYPE_PRINT && preset_edited.is_compatible)
+            preset_edited.is_compatible = tinmanx_process_preset_allowed(
+                preset_edited.name, active_printer.preset.name);
         if (preset_edited.is_compatible)
             some_compatible++;
 	    if (active_print != nullptr)
