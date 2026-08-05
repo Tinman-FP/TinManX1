@@ -12,6 +12,7 @@ Included:
 - removed repeated allocation and catalog reconstruction from curated machine/process filtering, with mixed-case cloud-preset regression coverage
 - added a configurable FibreSeek planner watchdog so a stalled Python process cannot hang slicing indefinitely or leave partially written G-code
 - excluded ignored virtual environments and Python caches when staging local app bundles, preventing generated development files from inflating release packages
+- removed machine-specific LAN addresses from public Qidi system presets and extended release hygiene checks to keep connection data out of portable profiles
 - removed duplicate planner metadata keys and dead helper code, and added focused Python correctness lint coverage for the maintained helper tree
 - updated the visible TinManX1 revision to `v2026.08.05-stability.1`
 - established the independent TinManX1 Windows package identity `TinmanFP.TinManX1` and four-part product version `2026.8.5.1` while retaining Orca Slicer 2.4.2 compatibility attribution

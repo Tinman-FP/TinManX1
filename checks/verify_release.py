@@ -140,6 +140,7 @@ PUBLIC_SCAN_PATHS = [
     "patches",
     "resources/orcaslicer_codex",
     "resources/profiles/Codex",
+    "resources/profiles/Qidi/machine",
     "resources/profiles/TinManX1",
     "resources/profiles/TinManX1.json",
     "resources/profiles/polymaker",

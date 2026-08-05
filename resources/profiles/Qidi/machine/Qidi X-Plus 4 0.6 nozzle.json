@@ -25,7 +25,5 @@
     ],
     "retraction_minimum_travel": [
         "3"
-    ],
-    "print_host": "192.168.50.145",
-    "print_host_webui": "192.168.50.145"
+    ]
 }
