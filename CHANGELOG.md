@@ -9,6 +9,7 @@ Included:
 - established the independent TinManX1 Windows package identity `TinmanFP.TinManX1` and four-part product version `2026.8.4.1` while retaining Orca Slicer 2.4.2 compatibility attribution
 - aligned NSIS, Windows executable resources, Win32 manifests, MSIX metadata, and cross-platform release artifact names with the TinManX1 package version
 - aligned native Linux AppImage generator and workflow names with the TinManX1 package identity instead of the upstream Orca version
+- restored full build-matrix CI for pull requests and pushes targeting the actual TinManX1 default branch
 - replaced the inherited Orca WinGet publisher with a gated, pinned TinManX1 workflow and release-asset preflight checks
 - added release-contract validation that prevents inherited WinGet identifiers, mutable publisher actions, stale splash revisions, and inconsistent Windows package metadata from returning unnoticed
 - split the generated Bambu filament catalog into independent H2D and X1C high-flow contracts so the X1C never inherits active chamber settings and H2D profiles can track Bambu Studio directly

@@ -222,6 +222,7 @@ def main() -> int:
             ],
             ".github/workflows/build_all.yml": [
                 "grep '^set(TINMANX1_PACKAGE_VERSION \"' version.inc",
+                "- tinmanx1-v2.4.2-rebase",
             ],
             ".github/workflows/publish_release.yml": [
                 "-p 'TinManX1_Linux_ubuntu_*'",
