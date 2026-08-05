@@ -341,9 +341,43 @@ jobs:
 
       - name: Install nsis
         if: runner.os == 'Windows' && !vars.SELF_HOSTED
+        shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           dir "C:/Program Files (x86)/Windows Kits/10/Include"
-          choco install nsis
+
+          function Find-MakeNsis {
+            $command = Get-Command makensis.exe -ErrorAction SilentlyContinue
+            if ($command) { return $command.Source }
+
+            $candidate = Join-Path ${env:ProgramFiles(x86)} "NSIS/makensis.exe"
+            if (Test-Path $candidate) { return $candidate }
+            return $null
+          }
+
+          $makensis = Find-MakeNsis
+          for ($attempt = 1; -not $makensis -and $attempt -le 3; $attempt++) {
+            Write-Host "Installing NSIS with Chocolatey (attempt $attempt of 3)"
+            choco install nsis --yes --no-progress
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "Chocolatey exited with code $LASTEXITCODE"
+            }
+            $makensis = Find-MakeNsis
+            if (-not $makensis -and $attempt -lt 3) {
+              Start-Sleep -Seconds (15 * $attempt)
+            }
+          }
+
+          if (-not $makensis) {
+            throw "NSIS was not available after 3 install attempts"
+          }
+
+          $nsisDir = Split-Path $makensis
+          $nsisDir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          & $makensis /VERSION
+          if ($LASTEXITCODE -ne 0) {
+            throw "makensis version probe failed with exit code $LASTEXITCODE"
+          }
 
       - name: Build slicer Win
         if: runner.os == 'Windows'

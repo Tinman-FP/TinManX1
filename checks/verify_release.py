@@ -219,6 +219,8 @@ def main() -> int:
             ".github/workflows/build_orca.yml": [
                 "grep '^set(TINMANX1_PACKAGE_VERSION \"' version.inc",
                 'TinManX1_Linux_V${{ env.ver_pure }}.AppImage',
+                "choco install nsis --yes --no-progress",
+                "NSIS was not available after 3 install attempts",
             ],
             ".github/workflows/build_all.yml": [
                 "grep '^set(TINMANX1_PACKAGE_VERSION \"' version.inc",

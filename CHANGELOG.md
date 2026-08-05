@@ -11,6 +11,7 @@ Included:
 - aligned native Linux AppImage generator and workflow names with the TinManX1 package identity instead of the upstream Orca version
 - restored full build-matrix CI for pull requests and pushes targeting the actual TinManX1 default branch
 - kept passing unit tests green by publishing their check summary without requiring PR-comment write access
+- hardened Windows installer builds with retried, self-verifying NSIS installation when Chocolatey's package feed is transiently unavailable
 - replaced the inherited Orca WinGet publisher with a gated, pinned TinManX1 workflow and release-asset preflight checks
 - added release-contract validation that prevents inherited WinGet identifiers, mutable publisher actions, stale splash revisions, and inconsistent Windows package metadata from returning unnoticed
 - split the generated Bambu filament catalog into independent H2D and X1C high-flow contracts so the X1C never inherits active chamber settings and H2D profiles can track Bambu Studio directly
