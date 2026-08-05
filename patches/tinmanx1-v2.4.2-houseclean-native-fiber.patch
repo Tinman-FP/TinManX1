@@ -589,10 +589,10 @@ index 60d68e2459..5bb689b8f8 100644
            fi
 diff --git a/.github/workflows/validate_public_helpers.yml b/.github/workflows/validate_public_helpers.yml
 new file mode 100644
-index 0000000000..c10d3f95bf
+index 0000000000..80eceb4c0e
 --- /dev/null
 +++ b/.github/workflows/validate_public_helpers.yml
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,62 @@
 +name: Validate Public Helpers
 +
 +on:
@@ -645,6 +645,11 @@ index 0000000000..c10d3f95bf
 +
 +      - name: Validate FibreSeek layup editor contract
 +        run: python3 scripts/source-helpers/validate_tinmanx1_fiber_layup_editor_contract.py
++
++      - name: Verify FibreSeek profile generator is idempotent
++        run: |
++          python3 scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py
++          git diff --exit-code -- resources/profiles/TinManX1.json resources/profiles/TinManX1
 +
 +      - name: Generate and lint FibreSeek profile pack
 +        run: |
@@ -817,10 +822,10 @@ index 0000000000..b814222338
 +If a future change adapts additional code or research, add it here before release.
 diff --git a/CHANGELOG.md b/CHANGELOG.md
 new file mode 100644
-index 0000000000..1d772497b7
+index 0000000000..a464c94c67
 --- /dev/null
 +++ b/CHANGELOG.md
-@@ -0,0 +1,229 @@
+@@ -0,0 +1,230 @@
 +# Changelog
 +
 +## Unreleased
@@ -830,6 +835,7 @@ index 0000000000..1d772497b7
 +Included:
 +
 +- consolidated TinManX1 helper authoring under `scripts/source-helpers`, removed 16,000 lines of duplicate script copies, and added release-time byte-for-byte checks against packaged runtime helpers
++- aligned the FibreSeek profile generator with the canonical four-nozzle catalog and added an idempotence gate so regeneration cannot silently restore retired profile variants
 +- repaired dormant Arc Overhang, Wave Overhang, Strength Lens, and FibreSeek smoke paths so they execute the same code and resource locations shipped in the app
 +- hardened Arc Overhang against converting ordinary support-only G-code into arc infill while preserving its guarded bridge/overhang workflow
 +- removed repeated allocation and catalog reconstruction from curated machine/process filtering, with mixed-case cloud-preset regression coverage
@@ -271160,10 +271166,10 @@ index 0000000000..4714fae059
 +    raise SystemExit(main())
 diff --git a/scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py b/scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py
 new file mode 100755
-index 0000000000..39e5aae0ff
+index 0000000000..8399b19eeb
 --- /dev/null
 +++ b/scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py
-@@ -0,0 +1,1520 @@
+@@ -0,0 +1,1519 @@
 +#!/usr/bin/env python3
 +"""Generate TinManX1 FibreSeek system presets.
 +
@@ -271194,7 +271200,7 @@ index 0000000000..39e5aae0ff
 +HELPER_DIR = Path(__file__).resolve().parent
 +PROFILE_ROOT = ROOT / "resources" / "profiles"
 +PACK_ROOT = PROFILE_ROOT / "TinManX1"
-+PACK_VERSION = "02.04.00.15"
++PACK_VERSION = "02.04.00.16"
 +MACHINE_MODEL = "FibreSeek Seeker 3"
 +LEGACY_COMPOSITE_MACHINE_NAMES = ["FibreSeek Seeker 3 - Codex"]
 +
@@ -271559,6 +271565,7 @@ index 0000000000..39e5aae0ff
 +}
 +COMPOSITE_NOZZLE = "0.7"
 +COMPOSITE_LINE_WIDTH = "0.80"
++CANONICAL_NOZZLES = ("0.4", "0.6", "0.8", "1.0")
 +FIBRESEEK_BED_VOLUME = {
 +    "printable_area": ["0x0", "305x0", "305x305", "0x305"],
 +    "printable_height": "245",
@@ -271959,12 +271966,12 @@ index 0000000000..39e5aae0ff
 +def compatible_composite_filament_printers() -> list[str]:
 +    return [
 +        f"{MACHINE_MODEL} {nozzle} nozzle - TinMan Codex"
-+        for nozzle in ("0.4", "0.6", "0.8", "1.0")
++        for nozzle in CANONICAL_NOZZLES
 +    ]
 +
 +
 +def compatible_filament_printers() -> list[str]:
-+    return compatible_plastic_printers() + compatible_composite_printers()
++    return compatible_composite_filament_printers()
 +
 +
 +def compatible_process_printers(plastic_nozzle: str, fiber: bool) -> list[str]:
@@ -272186,13 +272193,11 @@ index 0000000000..39e5aae0ff
 +
 +
 +def machine_model() -> dict:
-+    variants = list(PLASTIC_NOZZLES)
-+    variants.extend(f"{nozzle}+{COMPOSITE_NOZZLE}" for nozzle in PLASTIC_NOZZLES)
 +    return {
 +        "type": "machine_model",
 +        "name": MACHINE_MODEL,
 +        "model_id": "TinManX1-FibreSeek-Seeker-3",
-+        "nozzle_diameter": ";".join(variants),
++        "nozzle_diameter": ";".join(CANONICAL_NOZZLES),
 +        "machine_tech": "FFF",
 +        "family": "TinManX1",
 +        "default_materials": ";".join(
@@ -272352,7 +272357,7 @@ index 0000000000..39e5aae0ff
 +        "instantiation": "true",
 +        "printer_model": MACHINE_MODEL,
 +        **FIBRESEEK_BED_VOLUME,
-+        "printer_variant": f"{plastic_nozzle}+{COMPOSITE_NOZZLE}",
++        "printer_variant": plastic_nozzle,
 +        "extruder_colour": ["#D84B4B", "#111111"],
 +        "extruder_offset": ["0x0", "0x0"],
 +        "extruder_type": ["Direct Drive", "Direct Drive"],
@@ -272617,6 +272622,7 @@ index 0000000000..39e5aae0ff
 +        "machine_list": [
 +            {"name": "TinManX1 FibreSeek machine common", "sub_path": "machine/TinManX1 FibreSeek machine common.json"}
 +        ],
++        "tinman_codex_machine_contract": "2",
 +    }
 +
 +    write_json(PACK_ROOT / "machine" / f"{MACHINE_MODEL}.json", machine_model())
@@ -272626,7 +272632,6 @@ index 0000000000..39e5aae0ff
 +    for nozzle, spec in PLASTIC_NOZZLES.items():
 +        m = plastic_machine(nozzle, spec)
 +        path = f"machine/{m['name']}.json"
-+        top["machine_list"].append({"name": m["name"], "sub_path": path})
 +        write_json(PACK_ROOT / path, m)
 +
 +        cm = composite_machine(nozzle, spec)
