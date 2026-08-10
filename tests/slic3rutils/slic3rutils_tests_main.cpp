@@ -2,6 +2,7 @@
 
 #include "slic3r/Utils/Http.hpp"
 #include "slic3r/Utils/OrcaCloudServiceAgent.hpp"
+#include "slic3r/Utils/SnapmakerPrinterAgent.hpp"
 
 namespace {
 
@@ -109,6 +110,24 @@ TEST_CASE("Orca cloud nested session resolves display name consistently", "[Orca
     })) == "orca_username");
 }
 
+TEST_CASE("Snapmaker live filament data outranks stale saved metadata", "[SnapmakerPrinterAgent]")
+{
+    using Slic3r::SnapmakerPrinterAgent;
+
+    CHECK(SnapmakerPrinterAgent::resolve_filament_type("ASA-CF", "", "PET-CF") == "ASA-CF");
+    CHECK(SnapmakerPrinterAgent::resolve_filament_type("PLA", "HT-PLA-GF", "PET-CF") == "HT-PLA-GF");
+    CHECK(SnapmakerPrinterAgent::resolve_filament_type("PEBA", "", "PET-CF") == "PEBA");
+}
+
+TEST_CASE("Snapmaker saved filament metadata remains a missing-live-data fallback", "[SnapmakerPrinterAgent]")
+{
+    using Slic3r::SnapmakerPrinterAgent;
+
+    CHECK(SnapmakerPrinterAgent::resolve_filament_type("", "", "PCTG-CF") == "PCTG-CF");
+    CHECK(SnapmakerPrinterAgent::resolve_filament_type("", "", "PEBA") == "PEBA");
+    CHECK(SnapmakerPrinterAgent::resolve_filament_type("", "", "") == "PLA");
+}
+
 TEST_CASE("Http digest authentication", "[Http][NotWorking]") {
     Slic3r::Http g = Slic3r::Http::get("https://httpbingo.org/digest-auth/auth/guest/guest");
 
@@ -146,4 +165,3 @@ TEST_CASE("Http basic authentication", "[Http][NotWorking]") {
 
     REQUIRE(status == 200);
 }
-

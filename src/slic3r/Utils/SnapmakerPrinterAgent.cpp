@@ -67,6 +67,8 @@ std::string material_type_from_label(const std::string& label)
         {"PETG-GF",   "PETG-GF"},
         {"PET-CF",    "PET-CF"},
         {"PET-GF",    "PET-GF"},
+        {"PCTG-CF",   "PCTG-CF"},
+        {"PCTG-GF",   "PCTG-GF"},
         {"PA-CF",     "PA-CF"},
         {"PA-GF",     "PA-GF"},
         {"ASA-CF",    "ASA-CF"},
@@ -80,7 +82,7 @@ std::string material_type_from_label(const std::string& label)
             return material;
     }
 
-    const std::string simple_types[] = {"PLA", "PETG", "PET", "ABS", "ASA", "PC", "PA", "TPU", "PVA", "HIPS"};
+    const std::string simple_types[] = {"PLA", "PETG", "PET", "ABS", "ASA", "PC", "PA", "TPU", "PEBA", "PVA", "HIPS"};
     for (const std::string& material : simple_types) {
         if (value == material)
             return material;
@@ -104,7 +106,7 @@ std::string SnapmakerPrinterAgent::combine_filament_type(const std::string& type
     const std::string sub  = trim_and_upper(sub_type);
 
     if (base.empty())
-        return "PLA";
+        return {};
 
     if (sub.empty() || sub == "NONE")
         return base;
@@ -133,6 +135,18 @@ std::string SnapmakerPrinterAgent::combine_filament_type(const std::string& type
 
     // Unrecognized sub-type (brand names like Polylite, Basic, etc.) -- use base type only
     return base;
+}
+
+std::string SnapmakerPrinterAgent::resolve_filament_type(const std::string& type,
+                                                         const std::string& sub_type,
+                                                         const std::string& saved_label)
+{
+    const std::string reported_type = combine_filament_type(type, sub_type);
+    if (!reported_type.empty())
+        return reported_type;
+
+    const std::string saved_type = material_type_from_label(saved_label);
+    return saved_type.empty() ? "PLA" : saved_type;
 }
 
 bool SnapmakerPrinterAgent::fetch_filament_info(std::string dev_id)
@@ -223,11 +237,10 @@ bool SnapmakerPrinterAgent::fetch_filament_info(std::string dev_id)
 
         if (tray.has_filament) {
             const std::string saved_key  = "u1_t" + std::to_string(i) + "_filament";
-            const std::string saved_type = material_type_from_label(save_variables.value(saved_key, std::string()));
-            tray.tray_type               = !saved_type.empty()
-                                               ? saved_type
-                                               : combine_filament_type(safe_at(filament_type, i, empty_str),
-                                                                       safe_at(filament_sub_type, i, empty_str));
+            const std::string saved_label = save_variables.value(saved_key, std::string());
+            tray.tray_type = resolve_filament_type(safe_at(filament_type, i, empty_str),
+                                                   safe_at(filament_sub_type, i, empty_str),
+                                                   saved_label);
             tray.tray_color    = safe_at(filament_color, i, default_color);
 
             auto* bundle = GUI::wxGetApp().preset_bundle;

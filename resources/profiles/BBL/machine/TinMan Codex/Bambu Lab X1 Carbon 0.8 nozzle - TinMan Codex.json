@@ -17,5 +17,8 @@
         "0.56"
     ],
     "default_print_profile": "0.40mm Quality @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex",
-    "setting_id": "oENrlGerk75zf5Zk"
+    "setting_id": "oENrlGerk75zf5Zk",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Bambu X1C HF @Codex"
+    ]
 }

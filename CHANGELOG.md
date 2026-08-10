@@ -6,6 +6,11 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- fixed Snapmaker U1 filament synchronization so the live machine slot material outranks stale saved metadata, while retaining saved metadata as a fallback when firmware reports no usable live material
+- added regression coverage for ASA-CF versus stale PET-CF metadata, HT-PLA-GF subtype resolution, PEBA, and PCTG-CF fallback handling
+- fixed curated printer selection so the displayed printer, bed, nozzle, process, and saved profile always resolve to the same TinMan Codex preset
+- migrated hidden stock-machine selections at startup and replaced `Default Filament` with each machine's explicit compatible Codex PLA default
+- updated the visible TinManX1 revision to `v2026.08.09-preset-sync.1`
 - consolidated TinManX1 helper authoring under `scripts/source-helpers`, removed 16,000 lines of duplicate script copies, and added release-time byte-for-byte checks against packaged runtime helpers
 - aligned the FibreSeek profile generator with the canonical four-nozzle catalog and added an idempotence gate so regeneration cannot silently restore retired profile variants
 - repaired dormant Arc Overhang, Wave Overhang, Strength Lens, and FibreSeek smoke paths so they execute the same code and resource locations shipped in the app

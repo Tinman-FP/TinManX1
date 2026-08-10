@@ -2718,10 +2718,14 @@ void PresetBundle::update_selections(AppConfig &config)
         // stays true and the not-found/visible/compatible predicate alone would miss it.
         if (auto it = filaments.find_preset_internal(fp); fp == ORCA_DEFAULT_FILAMENT_PLACEHOLDER || it == filaments.end() || !it->is_visible || !it->is_compatible) {
             if (first_visible_filament_name.empty())
-                first_visible_filament_name = filaments.first_compatible().name;
+                first_visible_filament_name = filaments.first_compatible([](const Preset &preset) {
+                    return preset.name == PresetBundle::ORCA_DEFAULT_FILAMENT_PLACEHOLDER ? 0 : 1;
+                }).name;
             fp = first_visible_filament_name;
         }
     }
+    if (!filament_presets.empty() && filament_presets.front() != ORCA_DEFAULT_FILAMENT_PLACEHOLDER)
+        filaments.select_preset_by_name_strict(filament_presets.front());
 
 }
 
@@ -2741,6 +2745,7 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     // std::string initial_sla_print_profile_name    = remove_ini_suffix(config.get("presets", PRESET_SLA_PRINT_NAME));
     // std::string initial_sla_material_profile_name = remove_ini_suffix(config.get("presets", PRESET_SLA_MATERIALS_NAME));
 	std::string initial_printer_profile_name      = remove_ini_suffix(config.get("presets", PRESET_PRINTER_NAME));
+    const std::string persisted_printer_profile_name = initial_printer_profile_name;
 
     // Activate print / filament / printer profiles from either the config,
     // or from the preferred_model_id suggestion passed in by ConfigWizard.
@@ -2749,15 +2754,58 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     // will be selected by the following call of this->update_compatible(PresetSelectCompatibleType::Always).
 
     const Preset *initial_printer = printers.find_preset(initial_printer_profile_name);
+    if (initial_printer == nullptr) {
+        const std::string canonical_name = tinmanx_canonical_machine_preset_name(initial_printer_profile_name);
+        if (const Preset *canonical = printers.find_preset(canonical_name); canonical != nullptr) {
+            initial_printer_profile_name = canonical_name;
+            initial_printer = canonical;
+        }
+    }
+    if (initial_printer != nullptr &&
+        !tinmanx_machine_preset_allowed(initial_printer->name, initial_printer->config.opt_string("printer_model"))) {
+        const std::string canonical_name = tinmanx_canonical_machine_preset_name(
+            initial_printer->name,
+            initial_printer->config.opt_string("printer_model"),
+            initial_printer->config.opt_string("printer_variant"));
+        if (const Preset *canonical = printers.find_preset(canonical_name); canonical != nullptr) {
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": migrated hidden printer preset "
+                                    << initial_printer_profile_name << " to " << canonical_name;
+            initial_printer_profile_name = canonical_name;
+            initial_printer = canonical;
+        }
+    }
     // If executed due to a Config Wizard update, preferred_printer contains the first newly installed printer, otherwise nullptr.
     const Preset *preferred_printer = printers.find_system_preset_by_model_and_variant(preferred_selection.printer_model_id, preferred_selection.printer_variant);
+    if (preferred_printer != nullptr &&
+        !tinmanx_machine_preset_allowed(preferred_printer->name, preferred_printer->config.opt_string("printer_model"))) {
+        const std::string canonical_name = tinmanx_canonical_machine_preset_name(
+            preferred_printer->name,
+            preferred_printer->config.opt_string("printer_model"),
+            preferred_printer->config.opt_string("printer_variant"));
+        preferred_printer = printers.find_preset(canonical_name);
+    }
     printers.select_preset_by_name(preferred_printer ? preferred_printer->name : initial_printer_profile_name, true);
     CNumericLocalesSetter locales_setter;
 
     // Orca: load from orca_presets
     // const auto os_presets = config.get_machine_settings(initial_printer_profile_name);
-    std::string initial_print_profile_name        = config.get_printer_setting(initial_printer_profile_name, PRESET_PRINT_NAME);
-    std::string initial_filament_profile_name     = config.get_printer_setting(initial_printer_profile_name, PRESET_FILAMENT_NAME);
+    const std::string settings_printer_profile_name =
+        config.has_printer_setting(initial_printer_profile_name, PRESET_PRINTER_NAME) ?
+            initial_printer_profile_name : persisted_printer_profile_name;
+    std::string initial_print_profile_name        = config.get_printer_setting(settings_printer_profile_name, PRESET_PRINT_NAME);
+    std::string initial_filament_profile_name     = config.get_printer_setting(settings_printer_profile_name, PRESET_FILAMENT_NAME);
+
+    const Preset &selected_printer = printers.get_selected_preset();
+    const std::string &default_print_profile = selected_printer.config.opt_string("default_print_profile");
+    if (initial_print_profile_name.empty() || initial_print_profile_name == "Default Setting" ||
+        !tinmanx_process_preset_allowed(initial_print_profile_name, selected_printer.name))
+        initial_print_profile_name = default_print_profile;
+
+    const std::vector<std::string> &default_filament_profiles =
+        selected_printer.config.option<ConfigOptionStrings>("default_filament_profile")->values;
+    if ((initial_filament_profile_name.empty() || initial_filament_profile_name == ORCA_DEFAULT_FILAMENT_PLACEHOLDER) &&
+        !default_filament_profiles.empty())
+        initial_filament_profile_name = default_filament_profiles.front();
 
     //BBS: set default print/filament profiles to BBL's default setting
     if (preferred_printer)
@@ -2791,7 +2839,7 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     for (unsigned int i = 1; i < 1000; ++ i) {
         char name[64];
         sprintf(name, "filament_%02u", i);
-        auto f_name = config.get_printer_setting(initial_printer_profile_name, name);
+        auto f_name = config.get_printer_setting(settings_printer_profile_name, name);
         if (f_name.empty())
             break;
         this->filament_presets.emplace_back(remove_ini_suffix(f_name));
@@ -2801,7 +2849,7 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
 
     // Load data from AppConfig to ProjectConfig when Studio is initialized.
     std::vector<std::string> filament_colors;
-    auto f_colors = config.get_printer_setting(initial_printer_profile_name, "filament_colors");
+    auto f_colors = config.get_printer_setting(settings_printer_profile_name, "filament_colors");
     if (!f_colors.empty()) {
         boost::algorithm::split(filament_colors, f_colors, boost::algorithm::is_any_of(","));
     }
@@ -2809,15 +2857,15 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     project_config.option<ConfigOptionStrings>("filament_colour")->values = filament_colors;
 
     std::vector<std::string> multi_filament_colors;
-    if (config.has_printer_setting(initial_printer_profile_name, "filament_multi_colors")) {
-        boost::algorithm::split(multi_filament_colors, config.get_printer_setting(initial_printer_profile_name, "filament_multi_colors"), boost::algorithm::is_any_of(","));
+    if (config.has_printer_setting(settings_printer_profile_name, "filament_multi_colors")) {
+        boost::algorithm::split(multi_filament_colors, config.get_printer_setting(settings_printer_profile_name, "filament_multi_colors"), boost::algorithm::is_any_of(","));
     }
     if (multi_filament_colors.size() == 0) project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = filament_colors;
     else project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = multi_filament_colors;
 
     std::vector<std::string> filament_color_types;
-    if (config.has_printer_setting(initial_printer_profile_name, "filament_color_types")) {
-        boost::algorithm::split(filament_color_types, config.get_printer_setting(initial_printer_profile_name, "filament_color_types"), boost::algorithm::is_any_of(","));
+    if (config.has_printer_setting(settings_printer_profile_name, "filament_color_types")) {
+        boost::algorithm::split(filament_color_types, config.get_printer_setting(settings_printer_profile_name, "filament_color_types"), boost::algorithm::is_any_of(","));
     }
     filament_color_types.resize(filament_presets.size(), "1");
     project_config.option<ConfigOptionStrings>("filament_colour_type")->values = filament_color_types;
@@ -2826,24 +2874,24 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     project_config.option<ConfigOptionInts>("filament_map")->values = filament_maps;
 
     std::vector<std::string> extruder_ams_count_str;
-    if (config.has_printer_setting(initial_printer_profile_name, "extruder_ams_count")) {
-        boost::algorithm::split(extruder_ams_count_str, config.get_printer_setting(initial_printer_profile_name, "extruder_ams_count"), boost::algorithm::is_any_of(","));
+    if (config.has_printer_setting(settings_printer_profile_name, "extruder_ams_count")) {
+        boost::algorithm::split(extruder_ams_count_str, config.get_printer_setting(settings_printer_profile_name, "extruder_ams_count"), boost::algorithm::is_any_of(","));
     }
     this->extruder_ams_counts = get_extruder_ams_count(extruder_ams_count_str);
 
     std::vector<std::string> matrix;
-    if (config.has_printer_setting(initial_printer_profile_name, "flush_volumes_matrix")) {
-        boost::algorithm::split(matrix, config.get_printer_setting(initial_printer_profile_name, "flush_volumes_matrix"), boost::algorithm::is_any_of("|"));
+    if (config.has_printer_setting(settings_printer_profile_name, "flush_volumes_matrix")) {
+        boost::algorithm::split(matrix, config.get_printer_setting(settings_printer_profile_name, "flush_volumes_matrix"), boost::algorithm::is_any_of("|"));
         auto flush_volumes_matrix = matrix | boost::adaptors::transformed(boost::lexical_cast<double, std::string>);
         project_config.option<ConfigOptionFloats>("flush_volumes_matrix")->values = std::vector<double>(flush_volumes_matrix.begin(), flush_volumes_matrix.end());
     }
-    if (config.has_printer_setting(initial_printer_profile_name, "flush_volumes_vector")) {
-        boost::algorithm::split(matrix, config.get_printer_setting(initial_printer_profile_name, "flush_volumes_vector"), boost::algorithm::is_any_of("|"));
+    if (config.has_printer_setting(settings_printer_profile_name, "flush_volumes_vector")) {
+        boost::algorithm::split(matrix, config.get_printer_setting(settings_printer_profile_name, "flush_volumes_vector"), boost::algorithm::is_any_of("|"));
         auto flush_volumes_vector = matrix | boost::adaptors::transformed(boost::lexical_cast<double, std::string>);
         project_config.option<ConfigOptionFloats>("flush_volumes_vector")->values = std::vector<double>(flush_volumes_vector.begin(), flush_volumes_vector.end());
     }
-    if (config.has_printer_setting(initial_printer_profile_name, "flush_multiplier")) {
-        boost::algorithm::split(matrix, config.get_printer_setting(initial_printer_profile_name, "flush_multiplier"), boost::algorithm::is_any_of("|"));
+    if (config.has_printer_setting(settings_printer_profile_name, "flush_multiplier")) {
+        boost::algorithm::split(matrix, config.get_printer_setting(settings_printer_profile_name, "flush_multiplier"), boost::algorithm::is_any_of("|"));
         auto flush_multipliers = matrix | boost::adaptors::transformed(boost::lexical_cast<double, std::string>);
         project_config.option<ConfigOptionFloats>("flush_multiplier")->values = std::vector<double>(flush_multipliers.begin(), flush_multipliers.end());
     }
@@ -2879,10 +2927,14 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
         // Orca: also match the ORCA_DEFAULT_FILAMENT_PLACEHOLDER placeholder — see update_selections.
         if (auto it = filaments.find_preset_internal(fp); fp == ORCA_DEFAULT_FILAMENT_PLACEHOLDER || it == filaments.end() || !it->is_visible || !it->is_compatible) {
             if (first_visible_filament_name.empty())
-                first_visible_filament_name = filaments.first_compatible().name;
+                first_visible_filament_name = filaments.first_compatible([](const Preset &preset) {
+                    return preset.name == PresetBundle::ORCA_DEFAULT_FILAMENT_PLACEHOLDER ? 0 : 1;
+                }).name;
             fp = first_visible_filament_name;
         }
     }
+    if (!filament_presets.empty() && filament_presets.front() != ORCA_DEFAULT_FILAMENT_PLACEHOLDER)
+        filaments.select_preset_by_name_strict(filament_presets.front());
 
     const Preset& current_printer = printers.get_selected_preset();
     const Preset* base_printer = printers.get_preset_base(current_printer);
@@ -3825,6 +3877,8 @@ Preset *PresetBundle::get_similar_printer_preset(std::string printer_model, std:
     auto printer_variant_old = printers.get_selected_preset().config.opt_string("printer_variant");
     std::map<std::string, Preset*> printer_presets;
     for (auto &preset : printers.m_presets) {
+        if (!tinmanx_machine_preset_allowed(preset.name, printer_model))
+            continue;
         if (printer_variant.empty() && !preset.is_system)
             continue;
         if (preset.config.opt_string("printer_model") == printer_model)

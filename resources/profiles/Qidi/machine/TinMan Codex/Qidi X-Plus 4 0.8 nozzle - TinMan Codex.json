@@ -17,5 +17,8 @@
         "0.56"
     ],
     "default_print_profile": "0.40mm Quality @Qidi X-Plus 4 0.8 nozzle - TinMan Codex",
-    "setting_id": "i2lsBuwfvo1XD6kJ"
+    "setting_id": "i2lsBuwfvo1XD6kJ",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Qidi X-Plus 4 @Codex"
+    ]
 }

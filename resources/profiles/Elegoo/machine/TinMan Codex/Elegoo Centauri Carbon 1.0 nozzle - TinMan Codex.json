@@ -17,5 +17,8 @@
         "0.70"
     ],
     "default_print_profile": "0.50mm Quality @Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex",
-    "setting_id": "IDV09EbTulFykcRE"
+    "setting_id": "IDV09EbTulFykcRE",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Elegoo Centauri @Codex"
+    ]
 }

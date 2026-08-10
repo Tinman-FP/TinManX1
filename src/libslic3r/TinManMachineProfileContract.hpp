@@ -11,6 +11,13 @@ class AppConfig;
 // generated "TinMan Codex" nozzle profiles, regardless of local/cloud copies.
 bool tinmanx_machine_preset_allowed(const std::string &preset_name, const std::string &machine_hint = {});
 
+// Return the selector-facing TinMan profile for a curated machine/nozzle.
+// An empty result means the machine is outside the curated catalog or the
+// nozzle is not one of the four supported variants.
+std::string tinmanx_canonical_machine_preset_name(const std::string &preset_name,
+                                                  const std::string &machine_hint = {},
+                                                  const std::string &nozzle_variant = {});
+
 // Curated machines use only processes that explicitly name the selected
 // canonical machine. This prevents inherited vendor conditions from leaking
 // stock process profiles back into the TinMan selector.

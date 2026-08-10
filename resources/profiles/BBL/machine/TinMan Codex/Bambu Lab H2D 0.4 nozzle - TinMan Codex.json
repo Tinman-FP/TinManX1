@@ -20,5 +20,8 @@
         "0.28"
     ],
     "default_print_profile": "0.20mm Quality @Bambu Lab H2D 0.4 nozzle - TinMan Codex",
-    "setting_id": "wjpAqmAZoibGydvb"
+    "setting_id": "wjpAqmAZoibGydvb",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Bambu H2D @Codex"
+    ]
 }

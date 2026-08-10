@@ -20,5 +20,8 @@
         "0.28"
     ],
     "default_print_profile": "0.20mm Quality @RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex",
-    "setting_id": "WFDfjMmus3kbVOft"
+    "setting_id": "WFDfjMmus3kbVOft",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - RatRig V-Core 4 @Codex"
+    ]
 }

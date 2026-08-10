@@ -2,6 +2,7 @@
 
 #include "AppConfig.hpp"
 
+#include <algorithm>
 #include <array>
 #include <string_view>
 
@@ -154,6 +155,36 @@ bool tinmanx_machine_preset_allowed(const std::string &preset_name, const std::s
         if (is_canonical_machine_name(bare_name, model, nozzle))
             return true;
     return false;
+}
+
+std::string tinmanx_canonical_machine_preset_name(const std::string &preset_name,
+                                                  const std::string &machine_hint,
+                                                  const std::string &nozzle_variant)
+{
+    const std::string_view model = matched_model(preset_name, machine_hint);
+    if (model.empty())
+        return {};
+
+    constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
+    std::string_view nozzle = nozzle_variant;
+    const auto is_supported_nozzle = [&] {
+        return std::find(nozzles.begin(), nozzles.end(), nozzle) != nozzles.end();
+    };
+    if (!is_supported_nozzle()) {
+        nozzle = {};
+        const std::string_view bare_name = bare_preset_name(preset_name);
+        for (const std::string_view candidate : nozzles) {
+            const std::string marker = std::string(candidate) + " nozzle";
+            if (contains_ascii_case_insensitive(bare_name, marker)) {
+                nozzle = candidate;
+                break;
+            }
+        }
+    }
+    if (nozzle.empty())
+        return {};
+
+    return std::string(model) + " " + std::string(nozzle) + " nozzle - TinMan Codex";
 }
 
 bool tinmanx_process_preset_allowed(const std::string &preset_name, const std::string &active_printer_name)

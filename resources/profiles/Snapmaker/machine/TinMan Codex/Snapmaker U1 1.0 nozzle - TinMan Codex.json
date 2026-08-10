@@ -26,5 +26,8 @@
         "0.70"
     ],
     "default_print_profile": "0.50mm Quality @Snapmaker U1 1.0 nozzle - TinMan Codex",
-    "setting_id": "EIAGqi2M8cCYWYfN"
+    "setting_id": "EIAGqi2M8cCYWYfN",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Snapmaker U1 @Codex"
+    ]
 }

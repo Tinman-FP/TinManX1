@@ -177,6 +177,21 @@ PROFILE_FILE_INDENTS: dict[str, int | str] = {
     "Snapmaker/machine/Snapmaker U1.json": 4,
 }
 
+DEFAULT_CODEX_FILAMENTS = {
+    "Bambu Lab H2D": "PLA Codex-Polymaker - Bambu H2D @Codex",
+    "Bambu Lab X1 Carbon": "PLA Codex-Polymaker - Bambu X1C HF @Codex",
+    "Creality K2 Plus": "PLA Codex-Polymaker - Creality K2 Plus @Codex",
+    "Elegoo Centauri Carbon": "PLA Codex-Polymaker - Elegoo Centauri @Codex",
+    "Prusa CORE One L": "PLA Codex-Polymaker - Prusa Core One @Codex",
+    "Qidi X-Plus 4": "PLA Codex-Polymaker - Qidi X-Plus 4 @Codex",
+    "QidiMaxEz": "PLA Codex-Polymaker - Qidi X-Plus 4 @Codex",
+    "RatRig V-Core 4 IDEX 500": "PLA Codex-Polymaker - RatRig V-Core 4 @Codex",
+    "RatRig V-Core 4 IDEX 500 COPY MODE": "PLA Codex-Polymaker - RatRig V-Core 4 @Codex",
+    "RatRig V-Core 4 IDEX 500 MIRROR MODE": "PLA Codex-Polymaker - RatRig V-Core 4 @Codex",
+    "Snapmaker U1": "PLA Codex-Polymaker - Snapmaker U1 @Codex",
+    "Sovol SV08 MAX": "PLA Codex-Polymaker - Sovol SV08 MAX @Codex",
+}
+
 
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
@@ -413,7 +428,7 @@ def canonical_machine(
 ) -> dict[str, Any]:
     name = family.canonical_name(nozzle)
     diameters, minimum, maximum = nozzle_arrays(source, family, nozzle)
-    return {
+    data = {
         "type": "machine",
         "name": name,
         "inherits": source_name,
@@ -430,6 +445,9 @@ def canonical_machine(
         ),
         "setting_id": setting_id(family.vendor, "machine", name),
     }
+    if default_filament := DEFAULT_CODEX_FILAMENTS.get(family.model):
+        data["default_filament_profile"] = [default_filament]
+    return data
 
 
 def profile_data_for_item(vendor: str, item: dict[str, Any]) -> dict[str, Any] | None:

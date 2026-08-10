@@ -17,5 +17,8 @@
         "0.70"
     ],
     "default_print_profile": "0.50mm Quality @Creality K2 Plus 1.0 nozzle - TinMan Codex",
-    "setting_id": "KVvgwJfadf2s1rci"
+    "setting_id": "KVvgwJfadf2s1rci",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Creality K2 Plus @Codex"
+    ]
 }

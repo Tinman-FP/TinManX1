@@ -17,5 +17,8 @@
         "0.70"
     ],
     "default_print_profile": "0.50mm Quality @Sovol SV08 MAX 1.0 nozzle - TinMan Codex",
-    "setting_id": "CAnvJhcB9jAJSKK9"
+    "setting_id": "CAnvJhcB9jAJSKK9",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Sovol SV08 MAX @Codex"
+    ]
 }

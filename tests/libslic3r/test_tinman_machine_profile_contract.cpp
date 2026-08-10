@@ -32,6 +32,22 @@ TEST_CASE("TinMan curated machines expose only canonical nozzle presets", "[Pres
     CHECK(tinmanx_machine_preset_allowed("My Experimental Printer", "My Experimental Printer"));
 }
 
+TEST_CASE("TinMan canonicalizes persisted curated printer selections", "[Preset][TinMan]")
+{
+    CHECK(tinmanx_canonical_machine_preset_name(
+        "Prusa CORE One L 0.6 nozzle", "Prusa CORE One L", "0.6") ==
+        "Prusa CORE One L 0.6 nozzle - TinMan Codex");
+    CHECK(tinmanx_canonical_machine_preset_name(
+        "CURRENT Snapmaker U1 (0.8 nozzle)", "fdm_U1") ==
+        "Snapmaker U1 0.8 nozzle - TinMan Codex");
+    CHECK(tinmanx_canonical_machine_preset_name(
+        "QIDI Plus 4 1.0 nozzle", "Qidi Plus 4") ==
+        "Qidi X-Plus 4 1.0 nozzle - TinMan Codex");
+
+    CHECK(tinmanx_canonical_machine_preset_name("My Experimental Printer", "My Experimental Printer").empty());
+    CHECK(tinmanx_canonical_machine_preset_name("Prusa CORE One L 0.5 nozzle", "Prusa CORE One L").empty());
+}
+
 TEST_CASE("TinMan curated machines expose only their canonical process presets", "[Preset][TinMan]")
 {
     const std::string printer = "Prusa CORE One L 0.4 nozzle - TinMan Codex";

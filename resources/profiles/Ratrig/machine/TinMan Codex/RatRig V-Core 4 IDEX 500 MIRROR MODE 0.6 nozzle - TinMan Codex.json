@@ -20,5 +20,8 @@
         "0.42"
     ],
     "default_print_profile": "0.30mm Quality @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex",
-    "setting_id": "Hs63sAeyjAPQFypJ"
+    "setting_id": "Hs63sAeyjAPQFypJ",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - RatRig V-Core 4 @Codex"
+    ]
 }

@@ -17,5 +17,8 @@
         "0.70"
     ],
     "default_print_profile": "0.50mm Quality @Prusa CORE One L 1.0 nozzle - TinMan Codex",
-    "setting_id": "4NBAvxHQSbvRgxAL"
+    "setting_id": "4NBAvxHQSbvRgxAL",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Prusa Core One @Codex"
+    ]
 }
