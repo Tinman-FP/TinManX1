@@ -1418,8 +1418,12 @@ def build_pack(layup_template: str = "none"):
     layup_payload = layup_payload_for_template(layup_template)
     index_path = PROFILE_ROOT / "TinManX1.json"
     preserved_entries: dict[str, list[dict]] = {}
+    machine_contract_version = "3"
     if index_path.is_file():
         existing_index = json.loads(index_path.read_text())
+        machine_contract_version = existing_index.get(
+            "tinman_codex_machine_contract", machine_contract_version
+        )
         for list_key in ("machine_model_list", "machine_list", "process_list", "filament_list"):
             preserved_entries[list_key] = [
                 item
@@ -1450,7 +1454,7 @@ def build_pack(layup_template: str = "none"):
         "machine_list": [
             {"name": "TinManX1 FibreSeek machine common", "sub_path": "machine/TinManX1 FibreSeek machine common.json"}
         ],
-        "tinman_codex_machine_contract": "2",
+        "tinman_codex_machine_contract": machine_contract_version,
     }
 
     write_json(PACK_ROOT / "machine" / f"{MACHINE_MODEL}.json", machine_model())
