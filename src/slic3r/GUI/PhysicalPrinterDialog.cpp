@@ -19,6 +19,7 @@
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/TinManMachineProfileContract.hpp"
 
 #include "Widgets/DialogButtons.hpp"
 
@@ -899,6 +900,10 @@ void PhysicalPrinterDialog::OnOK(wxEvent& event)
         if (!print_host.empty() && m_config->opt_string("print_host_webui").empty())
             m_config->set_key_value("print_host_webui", new ConfigOptionString(print_host));
     }
+
+    if (wxGetApp().app_config != nullptr &&
+        tinmanx_remember_machine_connection(*wxGetApp().app_config, m_preset_name, *m_config))
+        wxGetApp().app_config->save();
 
     wxGetApp().get_tab(Preset::TYPE_PRINTER)->save_preset("", false, false, true, m_preset_name);
     event.Skip();

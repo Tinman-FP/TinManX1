@@ -2,6 +2,7 @@
 
 #include "libslic3r/TinManMachineProfileContract.hpp"
 #include "libslic3r/AppConfig.hpp"
+#include "libslic3r/PrintConfig.hpp"
 #include "slic3r/Utils/MoonrakerStorage.hpp"
 
 using namespace Slic3r;
@@ -86,6 +87,47 @@ TEST_CASE("TinMan machine catalog replaces cloud-restored variants", "[Preset][T
         CHECK(config.get_variant("Qidi", "Qidi X-Plus 4", nozzle));
         CHECK(config.get_variant("TinManX1", "FibreSeek Seeker 3", nozzle));
     }
+}
+
+TEST_CASE("TinMan connection overlay follows a machine across nozzle presets", "[Preset][TinMan]")
+{
+    AppConfig app_config;
+    DynamicPrintConfig source;
+    source.set_key_value("printer_model", new ConfigOptionString("Qidi X-Plus 4"));
+    source.set_key_value("printer_agent", new ConfigOptionString("qidi"));
+    source.set_key_value("print_host", new ConfigOptionString("192.0.2.145"));
+    source.set_key_value("print_host_webui", new ConfigOptionString("http://192.0.2.145"));
+
+    CHECK(tinmanx_remember_machine_connection(
+        app_config, "Qidi X-Plus 4 0.6 nozzle - TinMan Codex - Copy", source));
+    CHECK(app_config.get("ip_address", "Qidi X-Plus 4 1.0 nozzle - TinMan Codex") ==
+          "192.0.2.145");
+
+    DynamicPrintConfig target;
+    target.set_key_value("print_host", new ConfigOptionString());
+    target.set_key_value("print_host_webui", new ConfigOptionString());
+    target.set_key_value("printer_model", new ConfigOptionString("Qidi X-Plus 4"));
+    target.set_key_value("printer_agent", new ConfigOptionString("qidi"));
+    CHECK(tinmanx_restore_machine_connection(
+        app_config, "Qidi X-Plus 4 1.0 nozzle - TinMan Codex", target));
+    CHECK(target.opt_string("print_host") == "192.0.2.145");
+    CHECK(target.opt_string("print_host_webui") == "http://192.0.2.145");
+    CHECK(target.opt_string("printer_agent") == "qidi");
+}
+
+TEST_CASE("TinMan connection overlay migrates legacy canonical IP entries", "[Preset][TinMan]")
+{
+    AppConfig app_config;
+    app_config.set_str("ip_address", "Snapmaker U1 0.4 nozzle - TinMan Codex", "192.0.2.3");
+
+    DynamicPrintConfig target;
+    target.set_key_value("printer_model", new ConfigOptionString("Snapmaker U1"));
+    target.set_key_value("print_host", new ConfigOptionString());
+    target.set_key_value("print_host_webui", new ConfigOptionString());
+    CHECK(tinmanx_restore_machine_connection(
+        app_config, "Snapmaker U1 0.8 nozzle - TinMan Codex", target));
+    CHECK(target.opt_string("print_host") == "192.0.2.3");
+    CHECK(target.opt_string("print_host_webui") == "192.0.2.3");
 }
 
 TEST_CASE("Moonraker print uploads use only the virtual SD gcode root", "[Preset][TinMan][Moonraker]")

@@ -6,6 +6,7 @@
 namespace Slic3r {
 
 class AppConfig;
+class DynamicPrintConfig;
 
 // Non-curated machines are unaffected. Curated machines expose only the four
 // generated "TinMan Codex" nozzle profiles, regardless of local/cloud copies.
@@ -26,6 +27,16 @@ bool tinmanx_process_preset_allowed(const std::string &preset_name, const std::s
 // Keep startup and cloud-restored model selections on the same declared
 // machine/nozzle catalog used by the generated resources.
 void tinmanx_apply_machine_catalog(AppConfig &config);
+
+// Keep local print-host credentials outside generated machine presets. The
+// overlay is keyed by physical machine family, so every supported nozzle uses
+// the same connection without creating a visible "Copy" preset.
+bool tinmanx_remember_machine_connection(AppConfig &app_config,
+                                         const std::string &preset_name,
+                                         const DynamicPrintConfig &printer_config);
+bool tinmanx_restore_machine_connection(const AppConfig &app_config,
+                                        const std::string &preset_name,
+                                        DynamicPrintConfig &printer_config);
 
 } // namespace Slic3r
 

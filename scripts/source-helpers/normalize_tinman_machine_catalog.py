@@ -12,8 +12,9 @@ names are hidden.
 
 With --apply-live the script also creates a recoverable backup, mirrors the
 generated resources into the installed app and Application Support, removes
-legacy user machine copies, and rewrites the enabled-model list to the curated
-catalog. It intentionally does not alter filament tuning values.
+legacy user machine copies, migrates their connection details into a private
+per-machine overlay, and rewrites the enabled-model list to the curated catalog.
+It intentionally does not alter filament tuning values.
 """
 
 from __future__ import annotations
@@ -41,6 +42,22 @@ NOZZLES = ("0.4", "0.6", "0.8", "1.0")
 CONTRACT_VERSION = "2"
 NAMESPACE = uuid.UUID("c1f4d9e2-7a3b-5c8d-9e0f-1a2b3c4d5e6f")
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+CONNECTION_SECTION = "tinman_machine_connections"
+CONNECTION_OPTIONS = (
+    "bbl_use_printhost",
+    "host_type",
+    "printer_agent",
+    "print_host",
+    "print_host_webui",
+    "printhost_apikey",
+    "flashforge_serial_number",
+    "printhost_cafile",
+    "printhost_port",
+    "printhost_authorization_type",
+    "printhost_user",
+    "printhost_password",
+    "printhost_ssl_ignore_revoke",
+)
 
 
 @dataclass(frozen=True)
@@ -753,6 +770,92 @@ def nozzle_from_name(name: str) -> str | None:
     return match.group(1) if match else None
 
 
+def serialized_connection_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if isinstance(value, list):
+        return ";".join(str(item) for item in value)
+    return str(value)
+
+
+def collect_live_connections(app_support: Path, conf: dict[str, Any]) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
+    """Resolve one current address and any explicit host options per family."""
+    addresses: dict[str, str] = {}
+    details: dict[str, dict[str, str]] = {}
+    overlay = conf.get(CONNECTION_SECTION)
+    if isinstance(overlay, dict):
+        for family in FAMILIES:
+            prefix = f"{family.model}::"
+            family_details = {
+                key[len(prefix):]: str(value)
+                for key, value in overlay.items()
+                if key.startswith(prefix) and key[len(prefix):] in CONNECTION_OPTIONS
+            }
+            if family_details:
+                details[family.model] = family_details
+                address = family_details.get("print_host") or family_details.get("print_host_webui")
+                if address:
+                    addresses[family.model] = address
+
+    # Saved user copies contain the richest connection settings, so retain
+    # those before the obsolete presets are removed from the visible catalog.
+    for path in sorted((app_support / "user").glob("*/machine/*.json")):
+        try:
+            data = load_json(path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        family = family_for_name(f"{path.stem} {data.get('printer_model', '')}")
+        if not family:
+            continue
+        host = str(data.get("print_host") or data.get("print_host_webui") or "")
+        if not host:
+            continue
+        family_details = details.setdefault(family.model, {})
+        for option in CONNECTION_OPTIONS:
+            if option in data:
+                value = serialized_connection_value(data[option])
+                if value:
+                    family_details[option] = value
+        addresses[family.model] = host
+
+    ip_addresses = conf.get("ip_address")
+    if not isinstance(ip_addresses, dict):
+        ip_addresses = {}
+    # Prefer an existing canonical mapping, then recover any older alias.
+    for family in FAMILIES:
+        if family.model in addresses:
+            continue
+        for nozzle in NOZZLES:
+            address = str(ip_addresses.get(family.canonical_name(nozzle), ""))
+            if address:
+                addresses[family.model] = address
+                break
+        if family.model in addresses:
+            continue
+        for name, value in ip_addresses.items():
+            if family_for_name(str(name)) == family and value:
+                addresses[family.model] = str(value)
+                break
+
+    # Local device discovery fills families that never had a preset-side host,
+    # notably the serial-bound Bambu machines.
+    bambu_types = {"O1D": "Bambu Lab H2D", "BL-P001": "Bambu Lab X1 Carbon"}
+    local_machines = conf.get("local_machines")
+    if isinstance(local_machines, dict):
+        for machine in local_machines.values():
+            if not isinstance(machine, dict):
+                continue
+            printer_type = str(machine.get("printer_type", ""))
+            family = family_for_name(f"{machine.get('dev_name', '')} {printer_type}")
+            if family is None and printer_type in bambu_types:
+                family = next(item for item in FAMILIES if item.model == bambu_types[printer_type])
+            address = str(machine.get("dev_ip", ""))
+            if family and address and family.model not in addresses:
+                addresses[family.model] = address
+
+    return addresses, details
+
+
 def backup_live_state(app_support: Path, backup_root: Path) -> Path:
     backup = backup_root / datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
     backup.mkdir(parents=True, exist_ok=False)
@@ -866,6 +969,7 @@ def rewrite_printer_compatibility(app_support: Path) -> int:
 def rewrite_live_config(app_support: Path) -> tuple[int, int]:
     conf_path = app_support / "OrcaSlicer.conf"
     conf = load_json(conf_path)
+    addresses, connection_details = collect_live_connections(app_support, conf)
     conf["models"] = [
         {"model": family.model, "nozzle_diameter": ";".join(NOZZLES), "vendor": family.vendor}
         for family in FAMILIES
@@ -898,6 +1002,31 @@ def rewrite_live_config(app_support: Path) -> tuple[int, int]:
         conf["tinmanx1_profile_pack"] = pack
     pack["machine_contract_version"] = CONTRACT_VERSION
     pack["machine_contract_applied_at"] = int(time.time())
+
+    ip_addresses = conf.get("ip_address")
+    if not isinstance(ip_addresses, dict):
+        ip_addresses = {}
+        conf["ip_address"] = ip_addresses
+    overlay = conf.get(CONNECTION_SECTION)
+    if not isinstance(overlay, dict):
+        overlay = {}
+        conf[CONNECTION_SECTION] = overlay
+    for family in FAMILIES:
+        address = addresses.get(family.model)
+        if not address:
+            continue
+        for nozzle in NOZZLES:
+            ip_addresses[family.canonical_name(nozzle)] = address
+        # Bambu devices remain serial-bound in local_machines. Their canonical
+        # address aliases are useful, but third-party print-host settings are not.
+        if family.vendor == "BBL":
+            continue
+        family_details = connection_details.get(family.model, {})
+        family_details.setdefault("print_host", address)
+        family_details.setdefault("print_host_webui", address)
+        for option, value in family_details.items():
+            if option in CONNECTION_OPTIONS:
+                overlay[f"{family.model}::{option}"] = value
     write_json(conf_path, conf)
 
     removed = 0

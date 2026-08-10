@@ -72,6 +72,7 @@
 #include "libslic3r/Model.hpp"
 #include "libslic3r/I18N.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/TinManMachineProfileContract.hpp"
 #include "libslic3r/Thread.hpp"
 #include "libslic3r/miniz_extension.hpp"
 #include "libslic3r/Utils.hpp"
@@ -3550,6 +3551,10 @@ void GUI_App::switch_printer_agent(bool refresh_machine)
         return;
     }
 
+    Preset &edited_printer = preset_bundle->printers.get_edited_preset();
+    if (app_config != nullptr)
+        tinmanx_restore_machine_connection(*app_config, edited_printer.name, edited_printer.config);
+
     // Read printer_agent from config, falling back to default
     std::string effective_agent_id = ORCA_PRINTER_AGENT_ID;
     std::string cloud_agent_id = ORCA_CLOUD_PROVIDER;
@@ -3557,7 +3562,7 @@ void GUI_App::switch_printer_agent(bool refresh_machine)
         effective_agent_id = BBL_PRINTER_AGENT_ID;
         cloud_agent_id = BBL_CLOUD_PROVIDER;
     } else {
-        const DynamicPrintConfig& config = preset_bundle->printers.get_edited_preset().config;
+        const DynamicPrintConfig& config = edited_printer.config;
         if (config.has("printer_agent")) {
             const std::string& value = config.option<ConfigOptionString>("printer_agent")->value;
             if (!value.empty())
@@ -7512,6 +7517,11 @@ bool GUI_App::load_language(wxString language, bool initial)
 {
     BOOST_LOG_TRIVIAL(info) << boost::format("%1%: language %2%, initial: %3%") %__FUNCTION__ %language %initial;
     if (initial) {
+#ifdef __APPLE__
+        // wxWidgets otherwise searches its build-time install prefix for
+        // catalogs. Keep the packaged app independent of the build tree.
+        wxSetEnv(wxS("WXPREFIX"), from_u8(resources_dir()));
+#endif
     	// There is a static list of lookup path prefixes in wxWidgets. Add ours.
 	    wxFileTranslationsLoader::AddCatalogLookupPathPrefix(from_u8(localization_dir()));
     	// Get the active language from PrusaSlicer.ini, or empty string if the key does not exist.
@@ -7711,7 +7721,9 @@ bool GUI_App::load_language(wxString language, bool initial)
     //FIXME wxWidgets cause havoc if the current locale is deleted. We just forget it causing memory leaks for now.
     m_wxLocale.release();
     m_wxLocale = Slic3r::make_unique<wxLocale>();
-    m_wxLocale->Init(locale_language_info->Language);
+    // TinManX1 loads its application catalog explicitly below. Avoid wxWidgets'
+    // default wxwin.mo search, which may retain a build-time locale path.
+    m_wxLocale->Init(locale_language_info->Language, wxLOCALE_DONT_LOAD_DEFAULT);
     // Override language at the active wxTranslations class (which is stored in the active m_wxLocale)
     // to load possibly different dictionary, for example, load Czech dictionary for Slovak language.
     wxTranslations::Get()->SetLanguage(language_dict);

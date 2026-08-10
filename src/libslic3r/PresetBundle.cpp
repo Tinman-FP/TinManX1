@@ -2754,6 +2754,8 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     // will be selected by the following call of this->update_compatible(PresetSelectCompatibleType::Always).
 
     const Preset *initial_printer = printers.find_preset(initial_printer_profile_name);
+    if (initial_printer != nullptr)
+        tinmanx_remember_machine_connection(config, initial_printer->name, initial_printer->config);
     if (initial_printer == nullptr) {
         const std::string canonical_name = tinmanx_canonical_machine_preset_name(initial_printer_profile_name);
         if (const Preset *canonical = printers.find_preset(canonical_name); canonical != nullptr) {
@@ -2785,6 +2787,10 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
         preferred_printer = printers.find_preset(canonical_name);
     }
     printers.select_preset_by_name(preferred_printer ? preferred_printer->name : initial_printer_profile_name, true);
+    {
+        Preset &edited_printer = printers.get_edited_preset();
+        tinmanx_restore_machine_connection(config, edited_printer.name, edited_printer.config);
+    }
     CNumericLocalesSetter locales_setter;
 
     // Orca: load from orca_presets

@@ -1,6 +1,7 @@
 #include "TinManMachineProfileContract.hpp"
 
 #include "AppConfig.hpp"
+#include "PrintConfig.hpp"
 
 #include <algorithm>
 #include <array>
@@ -66,6 +67,23 @@ constexpr std::array<MachineAlias, 29> machine_aliases {{
     {"SEEKER 3", "FibreSeek Seeker 3"},
     {"Elegoo Centauri Carbon2", "Elegoo Centauri Carbon"},
     {"Fibreseek3", "FibreSeek Seeker 3"},
+}};
+
+constexpr std::string_view connection_section = "tinman_machine_connections";
+constexpr std::array<std::string_view, 13> connection_options {{
+    "bbl_use_printhost",
+    "host_type",
+    "printer_agent",
+    "print_host",
+    "print_host_webui",
+    "printhost_apikey",
+    "flashforge_serial_number",
+    "printhost_cafile",
+    "printhost_port",
+    "printhost_authorization_type",
+    "printhost_user",
+    "printhost_password",
+    "printhost_ssl_ignore_revoke",
 }};
 
 constexpr char lower_ascii(char value)
@@ -141,6 +159,28 @@ const AppConfig::VendorMap &canonical_machine_catalog()
     return vendors;
 }
 
+std::string connection_key(std::string_view model, std::string_view option)
+{
+    return std::string(model) + "::" + std::string(option);
+}
+
+std::string legacy_machine_address(const AppConfig &app_config,
+                                   std::string_view model,
+                                   std::string_view preset_name)
+{
+    if (app_config.has("ip_address", std::string(preset_name)))
+        return app_config.get("ip_address", std::string(preset_name));
+
+    constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
+    for (const std::string_view nozzle : nozzles) {
+        const std::string canonical = std::string(model) + " " + std::string(nozzle) +
+                                      " nozzle - TinMan Codex";
+        if (app_config.has("ip_address", canonical))
+            return app_config.get("ip_address", canonical);
+    }
+    return {};
+}
+
 } // namespace
 
 bool tinmanx_machine_preset_allowed(const std::string &preset_name, const std::string &machine_hint)
@@ -209,6 +249,97 @@ void tinmanx_apply_machine_catalog(AppConfig &config)
     const AppConfig::VendorMap &vendors = canonical_machine_catalog();
     if (config.vendors() != vendors)
         config.set_vendors(vendors);
+}
+
+bool tinmanx_remember_machine_connection(AppConfig &app_config,
+                                         const std::string &preset_name,
+                                         const DynamicPrintConfig &printer_config)
+{
+    const std::string machine_hint = printer_config.has("printer_model") ?
+        printer_config.opt_string("printer_model") : std::string();
+    const std::string_view model = matched_model(preset_name, machine_hint);
+    if (model.empty())
+        return false;
+
+    const std::string print_host = printer_config.has("print_host") ?
+        printer_config.opt_string("print_host") : std::string();
+    const std::string webui = printer_config.has("print_host_webui") ?
+        printer_config.opt_string("print_host_webui") : std::string();
+    if (print_host.empty() && webui.empty())
+        return false;
+
+    bool changed = false;
+    for (const std::string_view option : connection_options) {
+        const ConfigOption *config_option = printer_config.option(std::string(option));
+        if (config_option == nullptr)
+            continue;
+        const std::string value = config_option->serialize();
+        if (value.empty())
+            continue;
+        const std::string key = connection_key(model, option);
+        if (app_config.get(std::string(connection_section), key) != value) {
+            app_config.set_str(std::string(connection_section), key, value);
+            changed = true;
+        }
+    }
+
+    const std::string address = !print_host.empty() ? print_host : webui;
+    constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
+    for (const std::string_view nozzle : nozzles) {
+        const std::string canonical = std::string(model) + " " + std::string(nozzle) +
+                                      " nozzle - TinMan Codex";
+        if (app_config.get("ip_address", canonical) != address) {
+            app_config.set_str("ip_address", canonical, address);
+            changed = true;
+        }
+    }
+    return changed;
+}
+
+bool tinmanx_restore_machine_connection(const AppConfig &app_config,
+                                        const std::string &preset_name,
+                                        DynamicPrintConfig &printer_config)
+{
+    const std::string machine_hint = printer_config.has("printer_model") ?
+        printer_config.opt_string("printer_model") : std::string();
+    const std::string_view model = matched_model(preset_name, machine_hint);
+    if (model.empty())
+        return false;
+
+    bool restored = false;
+    for (const std::string_view option : connection_options) {
+        const std::string key = connection_key(model, option);
+        const std::string option_name(option);
+        const ConfigOption *current_option = printer_config.option(option_name);
+        if (!app_config.has(std::string(connection_section), key) || current_option == nullptr)
+            continue;
+        const std::string value = app_config.get(std::string(connection_section), key);
+        if (value.empty())
+            continue;
+        if (current_option->serialize() == value) {
+            restored = true;
+            continue;
+        }
+        ConfigOption *restored_option = current_option->clone();
+        if (!restored_option->deserialize(value)) {
+            delete restored_option;
+            continue;
+        }
+        printer_config.set_key_value(option_name, restored_option);
+        restored = true;
+    }
+
+    if (!restored) {
+        const std::string address = legacy_machine_address(app_config, model, preset_name);
+        if (!address.empty()) {
+            if (printer_config.has("print_host"))
+                printer_config.set_key_value("print_host", new ConfigOptionString(address));
+            if (printer_config.has("print_host_webui"))
+                printer_config.set_key_value("print_host_webui", new ConfigOptionString(address));
+            restored = true;
+        }
+    }
+    return restored;
 }
 
 } // namespace Slic3r

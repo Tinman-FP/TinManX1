@@ -6,6 +6,12 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- moved private LAN connection settings out of generated printer copies into a persistent per-machine overlay shared by every canonical nozzle profile
+- migrated saved printer-copy addresses, legacy address aliases, and locally discovered Bambu bindings into the canonical four-nozzle catalog without publishing private network data
+- made startup profile cleanup restore the selected printer's connection before device-agent selection, preventing addresses from disappearing after relaunch
+- confined macOS translation lookup to the packaged app resources, removing a build-tree locale scan that could delay startup by more than a minute
+- added native regression coverage for cross-nozzle connection persistence and legacy-address migration
+- updated the visible TinManX1 revision to `v2026.08.10-printer-connections.1`
 - restored every CORE One L TinMan process to Prusa's standard-nozzle lineage instead of mixing standard machine presets with high-flow process inheritance
 - restored Prusa's common `0.20 mm`, `500 mm/s^2` first-layer contract, stock line widths, and stock first-layer speeds for the 0.4, 0.6, and 0.8 mm CORE One L nozzles; the 1.0 mm profile conservatively extends those ratios because Prusa does not publish a stock 1.0 mm profile
 - capped CORE One L process accelerations to Prusa's validated standard-profile envelope while preserving distinct Tank, Quality, Fast, and Draft behavior above the first layer
