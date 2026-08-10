@@ -134,6 +134,19 @@ FIBERON_PET_CF_FIELD_TUNE = {
     "pressure_advance": ["0.028"],
 }
 
+# A plate-sized 0.6 mm X1C print exposed two problems in the generic Bambu
+# baseline: the fixed PA value overrode flow-dynamics calibration, and the
+# first cooled layer remained too soft at the perimeter. Keep the conservative
+# Bambu flow ceiling while applying the measured X1C correction.
+X1C_PCTG_FIELD_TUNE = {
+    "nozzle_temperature": ["250"],
+    "nozzle_temperature_initial_layer": ["255"],
+    "fan_min_speed": ["20"],
+    "close_fan_the_first_x_layers": ["2"],
+    "enable_pressure_advance": ["0"],
+    "pressure_advance": ["0.03"],
+}
+
 
 def load_contract(path: Path = DEFAULT_CONTRACT) -> dict[str, Any]:
     return json.loads(path.read_text())
@@ -215,6 +228,9 @@ def apply_contract(
 
     if material == "PET-CF" and manufacturer == "Fiberon" and bucket != "Bambu H2D":
         data.update(copy.deepcopy(FIBERON_PET_CF_FIELD_TUNE))
+
+    if material == "PCTG" and manufacturer == "Generic" and bucket == "Bambu X1C HF":
+        data.update(copy.deepcopy(X1C_PCTG_FIELD_TUNE))
 
     target = chamber_target(material, entry, contract) if bucket in ACTIVE_CHAMBER_BUCKETS else 0
     active = "1" if target > 0 else "0"

@@ -6,7 +6,7 @@
         "0"
     ],
     "close_fan_the_first_x_layers": [
-        "3"
+        "2"
     ],
     "compatible_printers": [
         "Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex",
@@ -33,7 +33,7 @@
         "70"
     ],
     "enable_pressure_advance": [
-        "1"
+        "0"
     ],
     "eng_plate_temp": [
         "70"
@@ -48,13 +48,13 @@
         "40"
     ],
     "fan_min_speed": [
-        "10"
+        "20"
     ],
     "filament_cost": [
         "30"
     ],
     "filament_density": [
-        "1.27"
+        "1.29"
     ],
     "filament_deretraction_speed": [
         "nil"
@@ -78,9 +78,38 @@
     "filament_max_volumetric_speed": [
         "6"
     ],
+    "filament_dev_chamber_drying_bed_temperature": [
+        "80"
+    ],
+    "filament_dev_ams_drying_time": [
+        "12",
+        "12",
+        "12",
+        "12"
+    ],
+    "filament_dev_ams_drying_ams_limitations": [
+        "1",
+        "0"
+    ],
+    "filament_dev_ams_drying_heat_distortion_temperature": [
+        "75"
+    ],
+    "filament_dev_drying_cooling_temperature": [
+        "55"
+    ],
+    "filament_dev_ams_drying_temperature": [
+        "65",
+        "65",
+        "55",
+        "55"
+    ],
+    "filament_dev_drying_softening_temperature": [
+        "60"
+    ],
     "filament_minimal_purge_on_wipe_tower": [
         "15"
     ],
+    "filament_notes": "X1C PCTG quality baseline. Keep automatic flow dynamics calibration enabled when sending the job; this preset intentionally does not override the measured K value. Dry at 65 C for 12 h when surface roughness, stringing, or nozzle buildup appears.",
     "filament_retract_before_wipe": [
         "nil"
     ],
@@ -158,7 +187,7 @@
     "is_custom_defined": "0",
     "name": "PCTG Codex-Generic - Bambu X1C HF @Codex",
     "nozzle_temperature": [
-        "255"
+        "250"
     ],
     "nozzle_temperature_initial_layer": [
         "255"
@@ -176,7 +205,7 @@
         "10%"
     ],
     "pressure_advance": [
-        "0.08"
+        "0.03"
     ],
     "reduce_fan_stop_start_freq": [
         "1"
@@ -200,7 +229,7 @@
         "0"
     ],
     "temperature_vitrification": [
-        "70"
+        "90"
     ],
     "textured_plate_temp": [
         "70"
