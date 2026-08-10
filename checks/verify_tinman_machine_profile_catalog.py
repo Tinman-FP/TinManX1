@@ -31,6 +31,7 @@ process_modes = CONTRACT["process_modes"]
 process_name = CONTRACT["process_name"]
 mode_settings = CONTRACT["mode_settings"]
 prusa_core_one_l_source_process_name = CONTRACT["prusa_core_one_l_source_process_name"]
+nozzle_flow_types = CONTRACT["nozzle_flow_types"]
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -195,6 +196,11 @@ def validate_repo() -> list[str]:
                 diameters = data.get("nozzle_diameter") or []
                 if not diameters or diameters[0] != nozzle:
                     errors.append(f"{name}: primary nozzle diameter mismatch")
+                expected_flow_types = nozzle_flow_types(family, len(diameters))
+                if data.get("default_nozzle_volume_type") != expected_flow_types:
+                    errors.append(
+                        f"{name}: nozzle-flow default mismatch; expected {expected_flow_types}"
+                    )
                 if family.composite_second_nozzle and (
                     len(diameters) < 2 or diameters[1] != family.composite_second_nozzle
                 ):
@@ -279,6 +285,26 @@ def validate_live(app_support: Path) -> list[str]:
     }
     if actual_models != expected_models:
         errors.append("live enabled-model list does not match the curated contract")
+
+    saved_flow_types = conf.get("nozzle_volume_types") or {}
+    for family in FAMILIES:
+        for nozzle in NOZZLES:
+            name = family.canonical_name(nozzle)
+            profile_path = (
+                PROFILES_ROOT
+                / family.vendor
+                / "machine"
+                / "TinMan Codex"
+                / f"{name}.json"
+            )
+            profile = load_json(profile_path)
+            expected = ",".join(
+                nozzle_flow_types(family, len(profile.get("nozzle_diameter") or []) or 1)
+            )
+            if saved_flow_types.get(name) != expected:
+                errors.append(
+                    f"live nozzle-flow selection differs: {name} expected {expected!r}"
+                )
 
     for vendor in sorted({family.vendor for family in FAMILIES}):
         repo_index = PROFILES_ROOT / f"{vendor}.json"

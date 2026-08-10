@@ -39,7 +39,7 @@ DEFAULT_APP_PROFILES = Path("/Applications/TinManX1.app/Contents/Resources/profi
 DEFAULT_BACKUP_ROOT = Path.home() / ".tinmanx1" / "machine-profile-cleanup-backups"
 
 NOZZLES = ("0.4", "0.6", "0.8", "1.0")
-CONTRACT_VERSION = "2"
+CONTRACT_VERSION = "3"
 NAMESPACE = uuid.UUID("c1f4d9e2-7a3b-5c8d-9e0f-1a2b3c4d5e6f")
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 CONNECTION_SECTION = "tinman_machine_connections"
@@ -67,6 +67,7 @@ class MachineFamily:
     source_names: dict[str, str]
     aliases: tuple[str, ...] = ()
     composite_second_nozzle: str | None = None
+    high_flow_nozzles: bool = True
 
     def canonical_name(self, nozzle: str) -> str:
         return f"{self.model} {nozzle} nozzle - TinMan Codex"
@@ -153,6 +154,7 @@ FAMILIES = (
         "Snapmaker U1",
         {nozzle: f"Snapmaker U1 ({nozzle} nozzle)" for nozzle in NOZZLES[:-1]},
         aliases=("CURRENT Snapmaker U1", "CURRENT U1", "fdm_U1"),
+        high_flow_nozzles=False,
     ),
     MachineFamily("Sovol", "Sovol SV08 MAX", source_series("Sovol SV08 MAX {nozzle} nozzle")),
     MachineFamily(
@@ -354,6 +356,11 @@ def nozzle_arrays(source: dict[str, Any], family: MachineFamily, nozzle: str) ->
         minimum[1] = "0.14"
         maximum[1] = "0.40"
     return diameters, minimum, maximum
+
+
+def nozzle_flow_types(family: MachineFamily, count: int) -> list[str]:
+    flow_type = "High Flow" if family.high_flow_nozzles else "Standard"
+    return [flow_type] * count
 
 
 def process_score(
@@ -579,6 +586,7 @@ def canonical_machine(
         "printer_variant": nozzle,
         "printer_settings_id": name,
         "nozzle_diameter": diameters,
+        "default_nozzle_volume_type": nozzle_flow_types(family, len(diameters)),
         "min_layer_height": minimum,
         "max_layer_height": maximum,
         "default_print_profile": process_name(
@@ -996,6 +1004,28 @@ def rewrite_live_config(app_support: Path) -> tuple[int, int]:
     current_family = family_for_name(current) or next(family for family in FAMILIES if family.model == "Qidi X-Plus 4")
     current_nozzle = nozzle_from_name(current) or "0.6"
     conf.setdefault("presets", {})["machine"] = current_family.canonical_name(current_nozzle)
+
+    # Orca persists nozzle-flow selections separately from machine presets and
+    # gives those saved values precedence over default_nozzle_volume_type. Keep
+    # both canonical and hidden inheritance-base entries aligned with the
+    # actual TinMan hardware so an old Standard value cannot revive the Bambu
+    # mismatch warning after a restart.
+    nozzle_volume_types = conf.get("nozzle_volume_types")
+    if not isinstance(nozzle_volume_types, dict):
+        nozzle_volume_types = {}
+        conf["nozzle_volume_types"] = nozzle_volume_types
+    for family in FAMILIES:
+        machine_profiles = indexed_profiles(family.vendor, "machine")
+        for nozzle in NOZZLES:
+            names = (family.canonical_name(nozzle), family.source_name(nozzle))
+            for name in names:
+                entry = machine_profiles.get(name)
+                if entry is None:
+                    continue
+                _, machine_data = entry
+                count = len(machine_data.get("nozzle_diameter") or []) or 1
+                nozzle_volume_types[name] = ",".join(nozzle_flow_types(family, count))
+
     pack = conf.get("tinmanx1_profile_pack")
     if not isinstance(pack, dict):
         pack = {"legacy_value": pack} if pack not in (None, "") else {}

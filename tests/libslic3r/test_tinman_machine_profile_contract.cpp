@@ -77,6 +77,9 @@ TEST_CASE("TinMan machine catalog replaces cloud-restored variants", "[Preset][T
     AppConfig config;
     config.set_variant("Qidi", "Qidi X-Plus 4", "0.2", true);
     config.set_variant("COSMOS", "Centauri COSMOS Tinman", "0.4", true);
+    config.set_str("nozzle_volume_types", "Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex", "Standard");
+    config.set_str("nozzle_volume_types", "Bambu Lab H2D 0.6 nozzle", "Standard,Standard");
+    config.set_str("nozzle_volume_types", "Snapmaker U1 0.6 nozzle - TinMan Codex", "High Flow,High Flow,High Flow,High Flow");
 
     tinmanx_apply_machine_catalog(config);
 
@@ -87,6 +90,10 @@ TEST_CASE("TinMan machine catalog replaces cloud-restored variants", "[Preset][T
         CHECK(config.get_variant("Qidi", "Qidi X-Plus 4", nozzle));
         CHECK(config.get_variant("TinManX1", "FibreSeek Seeker 3", nozzle));
     }
+    CHECK(config.get("nozzle_volume_types", "Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex") == "High Flow");
+    CHECK(config.get("nozzle_volume_types", "Bambu Lab H2D 0.6 nozzle") == "High Flow,High Flow");
+    CHECK(config.get("nozzle_volume_types", "RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex") == "High Flow,High Flow");
+    CHECK(config.get("nozzle_volume_types", "Snapmaker U1 0.6 nozzle - TinMan Codex") == "Standard,Standard,Standard,Standard");
 }
 
 TEST_CASE("TinMan connection overlay follows a machine across nozzle presets", "[Preset][TinMan]")

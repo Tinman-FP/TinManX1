@@ -6,6 +6,9 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- marked every curated TinMan machine except the Snapmaker U1 as High Flow at the machine-profile level, including correctly sized dual-nozzle vectors for the H2D, RatRig IDEX, and FibreSeek families
+- migrated persisted nozzle-flow selections at startup and during live catalog deployment so stale Standard entries cannot override the machine profile and trigger Bambu nozzle-mismatch warnings; the U1 remains explicitly Standard
+- updated the visible TinManX1 revision to `v2026.08.10-high-flow-nozzles.1`
 - corrected the Bambu X1C PCTG preset after a plate-sized 0.6 mm field print: removed the fixed `K=0.08` override so X1C flow-dynamics calibration remains authoritative, lowered the post-first-layer nozzle target to `250 C`, and introduced 20% cooling from layer three while retaining the Bambu-validated `0.95` flow and `6 mm3/s` volumetric limit
 - imported Bambu Studio's current generic-PCTG density, glass-transition, and AMS drying metadata, including the `65 C`/12 h drying baseline
 - updated the visible TinManX1 revision to `v2026.08.10-x1c-pctg.1`

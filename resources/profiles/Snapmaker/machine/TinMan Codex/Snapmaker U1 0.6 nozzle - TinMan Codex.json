@@ -13,6 +13,12 @@
         "0.6",
         "0.6"
     ],
+    "default_nozzle_volume_type": [
+        "Standard",
+        "Standard",
+        "Standard",
+        "Standard"
+    ],
     "min_layer_height": [
         "0.12",
         "0.12",

@@ -11,6 +11,10 @@
         "0.4",
         "0.4"
     ],
+    "default_nozzle_volume_type": [
+        "High Flow",
+        "High Flow"
+    ],
     "min_layer_height": [
         "0.08",
         "0.08"

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <map>
 #include <string_view>
 
 namespace Slic3r {
@@ -19,22 +20,24 @@ struct MachineAlias {
 struct MachineFamily {
     std::string_view vendor;
     std::string_view model;
+    size_t nozzle_count;
+    bool high_flow_nozzles;
 };
 
 constexpr std::array<MachineFamily, 13> machine_families {{
-    {"BBL", "Bambu Lab H2D"},
-    {"BBL", "Bambu Lab X1 Carbon"},
-    {"Creality", "Creality K2 Plus"},
-    {"Elegoo", "Elegoo Centauri Carbon"},
-    {"Prusa", "Prusa CORE One L"},
-    {"Qidi", "Qidi X-Plus 4"},
-    {"Qidi", "QidiMaxEz"},
-    {"Ratrig", "RatRig V-Core 4 IDEX 500"},
-    {"Ratrig", "RatRig V-Core 4 IDEX 500 COPY MODE"},
-    {"Ratrig", "RatRig V-Core 4 IDEX 500 MIRROR MODE"},
-    {"Snapmaker", "Snapmaker U1"},
-    {"Sovol", "Sovol SV08 MAX"},
-    {"TinManX1", "FibreSeek Seeker 3"},
+    {"BBL", "Bambu Lab H2D", 2, true},
+    {"BBL", "Bambu Lab X1 Carbon", 1, true},
+    {"Creality", "Creality K2 Plus", 1, true},
+    {"Elegoo", "Elegoo Centauri Carbon", 1, true},
+    {"Prusa", "Prusa CORE One L", 1, true},
+    {"Qidi", "Qidi X-Plus 4", 1, true},
+    {"Qidi", "QidiMaxEz", 1, true},
+    {"Ratrig", "RatRig V-Core 4 IDEX 500", 2, true},
+    {"Ratrig", "RatRig V-Core 4 IDEX 500 COPY MODE", 2, true},
+    {"Ratrig", "RatRig V-Core 4 IDEX 500 MIRROR MODE", 2, true},
+    {"Snapmaker", "Snapmaker U1", 4, false},
+    {"Sovol", "Sovol SV08 MAX", 1, true},
+    {"TinManX1", "FibreSeek Seeker 3", 2, true},
 }};
 
 constexpr std::array<MachineAlias, 29> machine_aliases {{
@@ -70,6 +73,7 @@ constexpr std::array<MachineAlias, 29> machine_aliases {{
 }};
 
 constexpr std::string_view connection_section = "tinman_machine_connections";
+constexpr std::string_view nozzle_volume_section = "nozzle_volume_types";
 constexpr std::array<std::string_view, 13> connection_options {{
     "bbl_use_printhost",
     "host_type",
@@ -164,6 +168,25 @@ std::string connection_key(std::string_view model, std::string_view option)
     return std::string(model) + "::" + std::string(option);
 }
 
+std::string nozzle_flow_value(const MachineFamily &family, size_t nozzle_count)
+{
+    const std::string_view flow_type = family.high_flow_nozzles ? "High Flow" : "Standard";
+    std::string value;
+    for (size_t index = 0; index < nozzle_count; ++index) {
+        if (!value.empty())
+            value.push_back(',');
+        value.append(flow_type);
+    }
+    return value;
+}
+
+const MachineFamily *family_for_model(std::string_view model)
+{
+    const auto found = std::find_if(machine_families.begin(), machine_families.end(),
+        [model](const MachineFamily &family) { return family.model == model; });
+    return found == machine_families.end() ? nullptr : &*found;
+}
+
 std::string legacy_machine_address(const AppConfig &app_config,
                                    std::string_view model,
                                    std::string_view preset_name)
@@ -249,6 +272,34 @@ void tinmanx_apply_machine_catalog(AppConfig &config)
     const AppConfig::VendorMap &vendors = canonical_machine_catalog();
     if (config.vendors() != vendors)
         config.set_vendors(vendors);
+
+    std::map<std::string, std::string> saved_flow_types;
+    if (config.has_section(std::string(nozzle_volume_section)))
+        saved_flow_types = config.get_section(std::string(nozzle_volume_section));
+
+    // Orca gives this persisted section precedence over the machine profile's
+    // default. Migrate every recognized legacy/source entry as well as the
+    // canonical profiles so stale Standard values cannot reintroduce nozzle
+    // mismatch warnings after startup or cloud synchronization.
+    for (auto &[name, value] : saved_flow_types) {
+        const std::string_view model = matched_model(name, {});
+        const MachineFamily *family = family_for_model(model);
+        if (family == nullptr)
+            continue;
+        const size_t count = std::max<size_t>(1, std::count(value.begin(), value.end(), ',') + 1);
+        value = nozzle_flow_value(*family, count);
+    }
+
+    constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
+    for (const MachineFamily &family : machine_families) {
+        const std::string flow_value = nozzle_flow_value(family, family.nozzle_count);
+        for (const std::string_view nozzle : nozzles) {
+            const std::string canonical = std::string(family.model) + " " + std::string(nozzle) +
+                                          " nozzle - TinMan Codex";
+            saved_flow_types[canonical] = flow_value;
+        }
+    }
+    config.set_section(std::string(nozzle_volume_section), saved_flow_types);
 }
 
 bool tinmanx_remember_machine_connection(AppConfig &app_config,
