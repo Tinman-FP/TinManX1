@@ -892,12 +892,20 @@ void PhysicalPrinterDialog::check_host_key_valid()
 
 void PhysicalPrinterDialog::OnOK(wxEvent& event)
 {
+    const std::string printer_agent = m_config->opt_string("printer_agent");
+    if (printer_agent == "snapmaker" || printer_agent == "moonraker") {
+        m_config->set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htMoonraker));
+        const std::string print_host = m_config->opt_string("print_host");
+        if (!print_host.empty() && m_config->opt_string("print_host_webui").empty())
+            m_config->set_key_value("print_host_webui", new ConfigOptionString(print_host));
+    }
+
     wxGetApp().get_tab(Preset::TYPE_PRINTER)->save_preset("", false, false, true, m_preset_name);
     event.Skip();
 
-    // Defer printer agent switch to ensure preset save completes first
+    // Defer the agent switch and connection refresh until the preset save completes.
     wxGetApp().CallAfter([] {
-        wxGetApp().switch_printer_agent();
+        wxGetApp().switch_printer_agent(true);
     });
 }
 

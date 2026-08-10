@@ -2,6 +2,7 @@
 
 #include "libslic3r/TinManMachineProfileContract.hpp"
 #include "libslic3r/AppConfig.hpp"
+#include "slic3r/Utils/MoonrakerStorage.hpp"
 
 using namespace Slic3r;
 
@@ -40,6 +41,9 @@ TEST_CASE("TinMan canonicalizes persisted curated printer selections", "[Preset]
     CHECK(tinmanx_canonical_machine_preset_name(
         "CURRENT Snapmaker U1 (0.8 nozzle)", "fdm_U1") ==
         "Snapmaker U1 0.8 nozzle - TinMan Codex");
+    CHECK(tinmanx_canonical_machine_preset_name(
+        "Snapmaker U1 0.6 nozzle - TinMan Codex - Copy", "Snapmaker U1", "0.6") ==
+        "Snapmaker U1 0.6 nozzle - TinMan Codex");
     CHECK(tinmanx_canonical_machine_preset_name(
         "QIDI Plus 4 1.0 nozzle", "Qidi Plus 4") ==
         "Qidi X-Plus 4 1.0 nozzle - TinMan Codex");
@@ -82,4 +86,31 @@ TEST_CASE("TinMan machine catalog replaces cloud-restored variants", "[Preset][T
         CHECK(config.get_variant("Qidi", "Qidi X-Plus 4", nozzle));
         CHECK(config.get_variant("TinManX1", "FibreSeek Seeker 3", nozzle));
     }
+}
+
+TEST_CASE("Moonraker print uploads use only the virtual SD gcode root", "[Preset][TinMan][Moonraker]")
+{
+    using namespace Slic3r::MoonrakerStorage;
+
+    CHECK(is_printable_root("gcodes", "rw"));
+    CHECK(is_printable_root("gcodes", "rwd"));
+    CHECK_FALSE(is_printable_root("gcodes", "r"));
+    CHECK_FALSE(is_printable_root("config", "rw"));
+    CHECK_FALSE(is_printable_root("timelapse", "rw"));
+
+    CHECK(print_root("") == "gcodes");
+    CHECK(print_root("gcodes") == "gcodes");
+    CHECK(print_root("config") == "gcodes");
+    CHECK(print_root("timelapse") == "gcodes");
+
+    boost::property_tree::ptree standard_response;
+    standard_response.put("result.item.path", "renamed-standard.gcode");
+    CHECK(uploaded_path(standard_response, "fallback.gcode") == "renamed-standard.gcode");
+
+    boost::property_tree::ptree snapmaker_response;
+    snapmaker_response.put("item.path", "renamed-snapmaker.gcode");
+    CHECK(uploaded_path(snapmaker_response, "fallback.gcode") == "renamed-snapmaker.gcode");
+
+    const boost::property_tree::ptree empty_response;
+    CHECK(uploaded_path(empty_response, "fallback.gcode") == "fallback.gcode");
 }

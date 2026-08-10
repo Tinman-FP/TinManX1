@@ -3543,7 +3543,7 @@ unsigned GUI_App::get_colour_approx_luma(const wxColour &colour)
         ));
 }
 
-void GUI_App::switch_printer_agent()
+void GUI_App::switch_printer_agent(bool refresh_machine)
 {
     if (!m_agent) {
         BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": no agent exists";
@@ -3610,9 +3610,12 @@ void GUI_App::switch_printer_agent()
 
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": printer agent switched to " << effective_agent_id;
 
-        // Auto-switch MachineObject
-        select_machine(effective_agent_id);
     }
+
+    // A connection dialog may update the host without changing the agent type.
+    // Refresh explicitly so the saved address is selected and connected now.
+    if (refresh_machine || current_agent_id != effective_agent_id)
+        select_machine(effective_agent_id);
 }
 
 void GUI_App::select_machine(const std::string& agent_id)

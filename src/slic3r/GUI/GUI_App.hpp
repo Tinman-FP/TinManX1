@@ -361,7 +361,7 @@ public:
     NetworkAgent* getAgent() { return m_agent; }
 
     // Dynamic printer agent switching
-    void switch_printer_agent();
+    void switch_printer_agent(bool refresh_machine = false);
 
     FilamentColorCodeQuery* get_filament_color_code_query();
     bool is_editor() const { return m_app_mode == EAppMode::Editor; }

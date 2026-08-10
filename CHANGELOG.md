@@ -6,6 +6,10 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- fixed Snapmaker U1 print uploads being sent to Moonraker's writable but non-printable `config` root; TinManX1 now exposes and uses only the U1's `gcodes` root, including when an older saved storage preference points elsewhere
+- fixed Snapmaker connection presets so saving a LAN address keeps the Prepare selector and printer thumbnail on Snapmaker instead of visually falling back to Bambu H2D
+- declared the Snapmaker U1 as a Moonraker host, mirrors a missing web UI address from its printer address, and refreshes the selected device immediately after connection settings are saved
+- updated the visible TinManX1 revision to `v2026.08.09-snapmaker-print.1`
 - fixed Snapmaker U1 filament synchronization so the live machine slot material outranks stale saved metadata, while retaining saved metadata as a fallback when firmware reports no usable live material
 - added regression coverage for ASA-CF versus stale PET-CF metadata, HT-PLA-GF subtype resolution, PEBA, and PCTG-CF fallback handling
 - fixed curated printer selection so the displayed printer, bed, nozzle, process, and saved profile always resolve to the same TinMan Codex preset

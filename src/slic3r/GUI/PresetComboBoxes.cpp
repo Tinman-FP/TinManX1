@@ -662,14 +662,15 @@ void PresetComboBox::update(std::string select_preset_name)
     for (size_t i = presets.front().is_visible ? 0 : m_collection->num_default_presets(); i < presets.size(); ++i)
     {
         const Preset& preset = presets[i];
+        const bool is_selected = preset.name == select_preset_name;
         if (m_type == Preset::TYPE_PRINTER &&
+            !is_selected &&
             !tinmanx_machine_preset_allowed(preset.name, preset.config.opt_string("printer_model")))
             continue;
         if (m_type == Preset::TYPE_FILAMENT &&
             !tinmanx_filament_preset_allowed_for_slot(m_preset_bundle, m_filament_idx, preset))
             continue;
 
-        const bool is_selected = preset.name == select_preset_name;
         if (!m_show_all && !is_selected && (!preset.is_visible || !preset.is_compatible))
             continue;
 
@@ -1485,9 +1486,6 @@ void PlaterPresetComboBox::update()
     for (size_t i = presets.front().is_visible ? 0 : list_collection->num_default_presets(); i < presets.size(); ++i)
     {
         const Preset& preset = presets[i];
-        if (m_type == Preset::TYPE_PRINTER &&
-            !tinmanx_machine_preset_allowed(preset.name, preset.config.opt_string("printer_model")))
-            continue;
         const bool force_show_tinmanx_fiber_slot_preset =
             flat_tinmanx_fiber_slot_filaments &&
             tinmanx_filament_preset_is_cfc_slot_profile(preset);
@@ -1509,6 +1507,15 @@ void PlaterPresetComboBox::update()
                             m_type == Preset::TYPE_PRINTER && m_preset_bundle->physical_printers.has_selection() ? false :
                             i == m_collection->get_selected_idx();
 
+        const bool canonical_machine_preset = m_type != Preset::TYPE_PRINTER ||
+            tinmanx_machine_preset_allowed(preset.name, preset.config.opt_string("printer_model"));
+        // A host address is saved as a user preset derived from one of the four
+        // curated nozzle profiles. Keep only the active derivative in the combo;
+        // otherwise filtering it leaves the widget with no selection and it
+        // paints the first unrelated model while the real config stays active.
+        if (!canonical_machine_preset && !is_selected)
+            continue;
+
         if (m_type == Preset::TYPE_FILAMENT &&
             !tinmanx_filament_preset_allowed_for_slot(m_preset_bundle, m_filament_idx, preset))
             continue;
@@ -1526,6 +1533,12 @@ void PlaterPresetComboBox::update()
         bool single_bar = false;
         wxString name = from_u8(preset.name);
         preset_aliases[name] = get_preset_name(preset).utf8_string(); // ORCA
+        if (m_type == Preset::TYPE_PRINTER && is_selected && !canonical_machine_preset) {
+            const std::string printer_model = preset.config.opt_string("printer_model");
+            if (!tinmanx_canonical_machine_preset_name(
+                    preset.name, printer_model, preset.config.opt_string("printer_variant")).empty())
+                preset_aliases[name] = printer_model;
+        }
         if (group_process_presets_by_fiber)
             preset_process_groups[name] = tinmanx_process_family_group(preset, true);
 
