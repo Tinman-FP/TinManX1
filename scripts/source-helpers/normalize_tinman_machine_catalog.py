@@ -30,7 +30,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 PROFILES_ROOT = REPO_ROOT / "resources" / "profiles"
@@ -193,6 +192,95 @@ DEFAULT_CODEX_FILAMENTS = {
 }
 
 
+# Prusa uses one deliberately conservative first-layer contract across every
+# standard CORE One L nozzle. Keep these values separate from the generic
+# nozzle-scaled TinMan modes so catalog regeneration cannot change bed contact.
+PRUSA_CORE_ONE_L_FIRST_LAYER = {
+    "0.4": {
+        "initial_layer_print_height": "0.20",
+        "line_width": "0.45",
+        "initial_layer_line_width": "0.50",
+        "outer_wall_line_width": "0.45",
+        "inner_wall_line_width": "0.45",
+        "top_surface_line_width": "0.42",
+        "sparse_infill_line_width": "0.45",
+        "internal_solid_infill_line_width": "0.45",
+        "support_line_width": "0.40",
+        "initial_layer_speed": "45",
+        "initial_layer_infill_speed": "100",
+    },
+    "0.6": {
+        "initial_layer_print_height": "0.20",
+        "line_width": "0.68",
+        "initial_layer_line_width": "0.68",
+        "outer_wall_line_width": "0.68",
+        "inner_wall_line_width": "0.68",
+        "top_surface_line_width": "0.55",
+        "sparse_infill_line_width": "0.68",
+        "internal_solid_infill_line_width": "0.68",
+        "support_line_width": "0.50",
+        "initial_layer_speed": "45",
+        "initial_layer_infill_speed": "70",
+    },
+    "0.8": {
+        "initial_layer_print_height": "0.20",
+        "line_width": "0.90",
+        "initial_layer_line_width": "1.00",
+        "outer_wall_line_width": "0.90",
+        "inner_wall_line_width": "0.90",
+        "top_surface_line_width": "0.75",
+        "sparse_infill_line_width": "0.90",
+        "internal_solid_infill_line_width": "0.90",
+        "support_line_width": "0.65",
+        "initial_layer_speed": "45",
+        "initial_layer_infill_speed": "55",
+    },
+    # Prusa does not publish a standard 1.0 mm CORE One L profile. These
+    # dimensions conservatively extend its 0.8 mm ratios while retaining the
+    # exact 0.20 mm / 500 mm/s^2 first-layer motion contract.
+    "1.0": {
+        "initial_layer_print_height": "0.20",
+        "line_width": "1.10",
+        "initial_layer_line_width": "1.20",
+        "outer_wall_line_width": "1.10",
+        "inner_wall_line_width": "1.10",
+        "top_surface_line_width": "0.95",
+        "sparse_infill_line_width": "1.10",
+        "internal_solid_infill_line_width": "1.10",
+        "support_line_width": "0.80",
+        "initial_layer_speed": "45",
+        "initial_layer_infill_speed": "45",
+    },
+}
+
+PRUSA_CORE_ONE_L_PROCESS_BASES = {
+    "0.4": {
+        "Tank": "0.20mm STRUCTURAL @CORE One L 0.4",
+        "Quality": "0.20mm STRUCTURAL @CORE One L 0.4",
+        "Fast": "0.20mm SPEED @CORE One L 0.4",
+        "Draft": "0.20mm SPEED @CORE One L 0.4",
+    },
+    "0.6": {
+        "Tank": "0.25mm STRUCTURAL @CORE One L 0.6",
+        "Quality": "0.25mm STRUCTURAL @CORE One L 0.6",
+        "Fast": "0.32mm SPEED @CORE One L 0.6",
+        "Draft": "0.32mm SPEED @CORE One L 0.6",
+    },
+    "0.8": {
+        "Tank": "0.40mm QUALITY @CORE One L 0.8",
+        "Quality": "0.40mm QUALITY @CORE One L 0.8",
+        "Fast": "0.55mm DRAFT @CORE One L 0.8",
+        "Draft": "0.55mm DRAFT @CORE One L 0.8",
+    },
+    "1.0": {
+        "Tank": "0.40mm QUALITY @CORE One L 0.8",
+        "Quality": "0.40mm QUALITY @CORE One L 0.8",
+        "Fast": "0.55mm DRAFT @CORE One L 0.8",
+        "Draft": "0.55mm DRAFT @CORE One L 0.8",
+    },
+}
+
+
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
 
@@ -332,7 +420,15 @@ def default_process_name(family: MachineFamily, nozzle: str) -> str:
     return process_name(family, nozzle, mode)
 
 
-def mode_settings(mode: ProcessMode, nozzle: str) -> dict[str, str]:
+def prusa_core_one_l_source_process_name(nozzle: str, mode: ProcessMode) -> str:
+    return PRUSA_CORE_ONE_L_PROCESS_BASES[nozzle][mode.name]
+
+
+def mode_settings(
+    mode: ProcessMode,
+    nozzle: str,
+    family: MachineFamily | None = None,
+) -> dict[str, str]:
     diameter = float(nozzle)
     nozzle_speed_scale = {"0.4": 1.00, "0.6": 0.80, "0.8": 0.65, "1.0": 0.55}[nozzle]
     speed = mode.speed_scale * nozzle_speed_scale
@@ -344,7 +440,7 @@ def mode_settings(mode: ProcessMode, nozzle: str) -> dict[str, str]:
     def dimension(factor: float) -> str:
         return f"{diameter * factor:.2f}"
 
-    return {
+    settings = {
         "layer_height": f"{diameter * mode.layer_factor:.2f}",
         "initial_layer_print_height": f"{diameter * 0.50:.2f}",
         "line_width": dimension(1.05),
@@ -381,6 +477,34 @@ def mode_settings(mode: ProcessMode, nozzle: str) -> dict[str, str]:
         "travel_acceleration": scaled(8000, acceleration),
     }
 
+    if family is None or family.model != "Prusa CORE One L":
+        return settings
+
+    settings.update(PRUSA_CORE_ONE_L_FIRST_LAYER[nozzle])
+    is_speed_mode = mode.name in {"Fast", "Draft"}
+    large_nozzle = nozzle in {"0.8", "1.0"}
+    settings.update(
+        {
+            "default_acceleration": "3000",
+            "outer_wall_acceleration": "1500" if not is_speed_mode or large_nozzle else "3000",
+            "inner_wall_acceleration": "2500" if not is_speed_mode or large_nozzle else "5000",
+            "top_surface_acceleration": "2000",
+            "internal_solid_infill_acceleration": (
+                "4000" if not is_speed_mode or large_nozzle else "5000"
+            ),
+            "sparse_infill_acceleration": (
+                "7000" if large_nozzle else ("6000" if is_speed_mode else "5000")
+            ),
+            "bridge_acceleration": "1000" if large_nozzle else "1500",
+            "initial_layer_acceleration": "500",
+            "travel_acceleration": "6000",
+        }
+    )
+    if is_speed_mode and large_nozzle:
+        settings["outer_wall_line_width"] = "1.00" if nozzle == "0.8" else "1.20"
+        settings["inner_wall_line_width"] = settings["outer_wall_line_width"]
+    return settings
+
 
 def canonical_process(
     family: MachineFamily,
@@ -401,7 +525,7 @@ def canonical_process(
         "setting_id": setting_id(family.vendor, "process", name),
     }
     if mode is not None:
-        data.update(mode_settings(mode, nozzle))
+        data.update(mode_settings(mode, nozzle, family))
     elif nozzle == "1.0":
         data.update(
             {
@@ -584,8 +708,18 @@ def generate_repo_catalog() -> tuple[int, int]:
                 kept_machines.append({"name": machine["name"], "sub_path": machine_rel.as_posix()})
                 machine_count += 1
                 for mode in process_modes(family):
+                    selected_process_name = source_process_name
+                    selected_process = source_process
+                    if family.model == "Prusa CORE One L" and mode is not None:
+                        selected_process_name = prusa_core_one_l_source_process_name(nozzle, mode)
+                        preferred_entry = process_profiles.get(selected_process_name)
+                        if preferred_entry is None:
+                            raise RuntimeError(
+                                f"missing Prusa CORE One L process source: {selected_process_name}"
+                            )
+                        _, selected_process = preferred_entry
                     process = canonical_process(
-                        family, nozzle, source_process_name, source_process, mode
+                        family, nozzle, selected_process_name, selected_process, mode
                     )
                     process_rel = Path("process") / "TinMan Codex" / f"{process['name']}.json"
                     write_json(PROFILES_ROOT / vendor / process_rel, process)
@@ -620,7 +754,7 @@ def nozzle_from_name(name: str) -> str | None:
 
 
 def backup_live_state(app_support: Path, backup_root: Path) -> Path:
-    backup = backup_root / datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup = backup_root / datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
     backup.mkdir(parents=True, exist_ok=False)
     for rel in (Path("OrcaSlicer.conf"), Path("printers")):
         source = app_support / rel

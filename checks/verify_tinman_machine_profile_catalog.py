@@ -11,7 +11,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 PROFILES_ROOT = ROOT / "resources" / "profiles"
 HELPER = ROOT / "scripts" / "source-helpers" / "normalize_tinman_machine_catalog.py"
@@ -31,6 +30,7 @@ QUALITY_MODE = CONTRACT["QUALITY_MODE"]
 process_modes = CONTRACT["process_modes"]
 process_name = CONTRACT["process_name"]
 mode_settings = CONTRACT["mode_settings"]
+prusa_core_one_l_source_process_name = CONTRACT["prusa_core_one_l_source_process_name"]
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -239,7 +239,7 @@ def validate_repo() -> list[str]:
                     if candidate.get("compatible_printers") != [name]:
                         errors.append(f"{candidate_name}: compatibility mismatch")
                     if mode is not None:
-                        expected_settings = mode_settings(mode, nozzle)
+                        expected_settings = mode_settings(mode, nozzle, family)
                         mismatches = {
                             key: (candidate.get(key), value)
                             for key, value in expected_settings.items()
@@ -249,6 +249,13 @@ def validate_repo() -> list[str]:
                             errors.append(
                                 f"{candidate_name}: process contract mismatch {mismatches}"
                             )
+                        if family.model == "Prusa CORE One L":
+                            expected_parent = prusa_core_one_l_source_process_name(nozzle, mode)
+                            if candidate.get("inherits") != expected_parent:
+                                errors.append(
+                                    f"{candidate_name}: expected standard Prusa inheritance "
+                                    f"{expected_parent!r}, found {candidate.get('inherits')!r}"
+                                )
 
     if len(names) != len(FAMILIES) * len(NOZZLES):
         errors.append(

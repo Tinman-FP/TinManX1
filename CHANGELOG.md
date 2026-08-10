@@ -6,6 +6,11 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- restored every CORE One L TinMan process to Prusa's standard-nozzle lineage instead of mixing standard machine presets with high-flow process inheritance
+- restored Prusa's common `0.20 mm`, `500 mm/s^2` first-layer contract, stock line widths, and stock first-layer speeds for the 0.4, 0.6, and 0.8 mm CORE One L nozzles; the 1.0 mm profile conservatively extends those ratios because Prusa does not publish a stock 1.0 mm profile
+- capped CORE One L process accelerations to Prusa's validated standard-profile envelope while preserving distinct Tank, Quality, Fast, and Draft behavior above the first layer
+- added generated-profile regression checks for CORE One L first-layer values and standard Prusa inheritance
+- updated the visible TinManX1 revision to `v2026.08.10-core-one-l-adhesion.1`
 - fixed Snapmaker U1 print uploads being sent to Moonraker's writable but non-printable `config` root; TinManX1 now exposes and uses only the U1's `gcodes` root, including when an older saved storage preference points elsewhere
 - fixed Snapmaker connection presets so saving a LAN address keeps the Prepare selector and printer thumbnail on Snapmaker instead of visually falling back to Bambu H2D
 - declared the Snapmaker U1 as a Moonraker host, mirrors a missing web UI address from its printer address, and refreshes the selected device immediately after connection settings are saved
