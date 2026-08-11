@@ -137,6 +137,32 @@ TEST_CASE("TinMan connection overlay migrates legacy canonical IP entries", "[Pr
     CHECK(target.opt_string("print_host_webui") == "192.0.2.3");
 }
 
+TEST_CASE("TinMan startup migration preserves a newer family connection", "[Preset][TinMan]")
+{
+    AppConfig app_config;
+    const std::string section = "tinman_machine_connections";
+    const std::string model = "Prusa CORE One L";
+    const std::string current_host = "prusa-core-one-l.local";
+    app_config.set_str(section, model + "::print_host", current_host);
+    app_config.set_str(section, model + "::print_host_webui", current_host);
+
+    DynamicPrintConfig stale_profile;
+    stale_profile.set_key_value("printer_model", new ConfigOptionString(model));
+    stale_profile.set_key_value("print_host", new ConfigOptionString("192.0.2.169"));
+    stale_profile.set_key_value("print_host_webui", new ConfigOptionString("192.0.2.169"));
+    stale_profile.set_key_value("printhost_apikey", new ConfigOptionString("legacy-api-key"));
+
+    CHECK(tinmanx_remember_machine_connection(
+        app_config, "Prusa CORE One L 0.6 nozzle - TinMan Codex", stale_profile, false));
+    CHECK(app_config.get(section, model + "::print_host") == current_host);
+    CHECK(app_config.get(section, model + "::print_host_webui") == current_host);
+    CHECK(app_config.get(section, model + "::printhost_apikey") == "legacy-api-key");
+    for (const char *nozzle : {"0.4", "0.6", "0.8", "1.0"}) {
+        const std::string preset = model + " " + nozzle + " nozzle - TinMan Codex";
+        CHECK(app_config.get("ip_address", preset) == current_host);
+    }
+}
+
 TEST_CASE("Moonraker print uploads use only the virtual SD gcode root", "[Preset][TinMan][Moonraker]")
 {
     using namespace Slic3r::MoonrakerStorage;

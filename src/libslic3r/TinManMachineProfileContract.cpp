@@ -304,7 +304,8 @@ void tinmanx_apply_machine_catalog(AppConfig &config)
 
 bool tinmanx_remember_machine_connection(AppConfig &app_config,
                                          const std::string &preset_name,
-                                         const DynamicPrintConfig &printer_config)
+                                         const DynamicPrintConfig &printer_config,
+                                         bool overwrite_existing)
 {
     const std::string machine_hint = printer_config.has("printer_model") ?
         printer_config.opt_string("printer_model") : std::string();
@@ -319,22 +320,36 @@ bool tinmanx_remember_machine_connection(AppConfig &app_config,
     if (print_host.empty() && webui.empty())
         return false;
 
+    const std::string saved_print_host = app_config.get(
+        std::string(connection_section), connection_key(model, "print_host"));
+    const std::string saved_webui = app_config.get(
+        std::string(connection_section), connection_key(model, "print_host_webui"));
+    const std::string saved_address = !saved_print_host.empty() ? saved_print_host : saved_webui;
+
     bool changed = false;
     for (const std::string_view option : connection_options) {
         const ConfigOption *config_option = printer_config.option(std::string(option));
         if (config_option == nullptr)
             continue;
-        const std::string value = config_option->serialize();
+        const std::string key = connection_key(model, option);
+        const std::string existing = app_config.get(std::string(connection_section), key);
+        if (!overwrite_existing && !existing.empty())
+            continue;
+
+        std::string value = config_option->serialize();
+        if (!overwrite_existing && !saved_address.empty() &&
+            (option == "print_host" || option == "print_host_webui"))
+            value = saved_address;
         if (value.empty())
             continue;
-        const std::string key = connection_key(model, option);
-        if (app_config.get(std::string(connection_section), key) != value) {
+        if (existing != value) {
             app_config.set_str(std::string(connection_section), key, value);
             changed = true;
         }
     }
 
-    const std::string address = !print_host.empty() ? print_host : webui;
+    const std::string address = !overwrite_existing && !saved_address.empty() ?
+        saved_address : (!print_host.empty() ? print_host : webui);
     constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
     for (const std::string_view nozzle : nozzles) {
         const std::string canonical = std::string(model) + " " + std::string(nozzle) +

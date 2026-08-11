@@ -6,6 +6,9 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- preserved a newer per-machine connection during startup migration so stale cached system profiles cannot replace a working PrusaLink hostname or IP address
+- repaired the local CORE One L connection to use its stable `prusa-core-one-l.local` hostname across every TinMan nozzle profile
+- added native regression coverage for stale-profile connection precedence and updated the visible revision to `v2026.08.11-prusalink-persistence.1`
 - marked every curated TinMan machine except the Snapmaker U1 as High Flow at the machine-profile level, including correctly sized dual-nozzle vectors for the H2D, RatRig IDEX, and FibreSeek families
 - migrated persisted nozzle-flow selections at startup and during live catalog deployment so stale Standard entries cannot override the machine profile and trigger Bambu nozzle-mismatch warnings; the U1 remains explicitly Standard
 - updated the visible TinManX1 revision to `v2026.08.10-high-flow-nozzles.1`

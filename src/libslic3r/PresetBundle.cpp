@@ -2754,8 +2754,11 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     // will be selected by the following call of this->update_compatible(PresetSelectCompatibleType::Always).
 
     const Preset *initial_printer = printers.find_preset(initial_printer_profile_name);
-    if (initial_printer != nullptr)
-        tinmanx_remember_machine_connection(config, initial_printer->name, initial_printer->config);
+    if (initial_printer != nullptr) {
+        // Import missing legacy settings without allowing an inherited cached
+        // system preset to replace a newer family-level connection.
+        tinmanx_remember_machine_connection(config, initial_printer->name, initial_printer->config, false);
+    }
     if (initial_printer == nullptr) {
         const std::string canonical_name = tinmanx_canonical_machine_preset_name(initial_printer_profile_name);
         if (const Preset *canonical = printers.find_preset(canonical_name); canonical != nullptr) {

@@ -33,7 +33,8 @@ void tinmanx_apply_machine_catalog(AppConfig &config);
 // the same connection without creating a visible "Copy" preset.
 bool tinmanx_remember_machine_connection(AppConfig &app_config,
                                          const std::string &preset_name,
-                                         const DynamicPrintConfig &printer_config);
+                                         const DynamicPrintConfig &printer_config,
+                                         bool overwrite_existing = true);
 bool tinmanx_restore_machine_connection(const AppConfig &app_config,
                                         const std::string &preset_name,
                                         DynamicPrintConfig &printer_config);
