@@ -2,6 +2,9 @@
 #define slic3r_DeviceManager_hpp_
 
 #include <map>
+#include <atomic>
+#include <chrono>
+#include <cstdint>
 #include <mutex>
 #include <vector>
 #include <string>
@@ -234,10 +237,26 @@ public:
 
     time_t last_alive;
     bool m_is_online;
-    bool m_lan_mode_connection_state{false};
+    std::atomic_bool m_lan_mode_connection_state{false};
+    std::atomic<std::int64_t> m_lan_reconnect_guard_until_ms{0};
     bool m_set_ctt_dlg{ false };
-    void set_lan_mode_connection_state(bool state) {m_lan_mode_connection_state = state;};
-    bool get_lan_mode_connection_state() {return m_lan_mode_connection_state;};
+    void set_lan_mode_connection_state(bool state)
+    {
+        m_lan_mode_connection_state.store(state, std::memory_order_release);
+        if (state) {
+            const auto guard_until = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() + 5000;
+            m_lan_reconnect_guard_until_ms.store(guard_until, std::memory_order_release);
+        }
+    }
+    bool get_lan_mode_connection_state() const
+    {
+        if (m_lan_mode_connection_state.load(std::memory_order_acquire))
+            return true;
+        const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+        return now < m_lan_reconnect_guard_until_ms.load(std::memory_order_acquire);
+    }
     void set_ctt_dlg( wxString text);
     int  parse_msg_count = 0;
     int  keep_alive_count = 0;

@@ -525,6 +525,10 @@ namespace Slic3r
                     // lan mode printer reconnect printer
                     if (m_agent)
                     {
+                        // Arm the guard before disconnecting. The networking
+                        // plug-in reports that intentional disconnect as Lost
+                        // asynchronously and may do so after the new session is up.
+                        it->second->set_lan_mode_connection_state(true);
                         m_agent->disconnect_printer();
                         it->second->reset();
 
@@ -533,7 +537,6 @@ namespace Slic3r
 #else
                         it->second->connect(it->second->local_use_ssl);
 #endif
-                        it->second->set_lan_mode_connection_state(true);
                     }
                 }
             }
@@ -551,13 +554,13 @@ namespace Slic3r
                     else
                     {
                         BOOST_LOG_TRIVIAL(info) << "set_selected_machine: select new lan machine, dev_id =" << dev_id;
+                        it->second->set_lan_mode_connection_state(true);
                         it->second->reset();
 #if !BBL_RELEASE_TO_PUBLIC
                         it->second->connect(Slic3r::GUI::wxGetApp().app_config->get("enable_ssl_for_mqtt") == "true" ? true : false);
 #else
                         it->second->connect(it->second->local_use_ssl);
 #endif
-                        it->second->set_lan_mode_connection_state(true);
                     }
                 }
             }

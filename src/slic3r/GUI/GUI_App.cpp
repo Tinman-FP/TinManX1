@@ -2082,7 +2082,9 @@ void GUI_App::init_networking_callbacks()
                                 obj->command_get_version();
                                 event.SetInt(0);
                                 event.SetString(obj->get_dev_id());
+                                obj->set_lan_mode_connection_state(false);
                             } else if (state == ConnectStatus::ConnectStatusFailed) {
+                                obj->set_lan_mode_connection_state(false);
                                 // Orca: only update status if same device id
                                 if (m_device_manager->selected_machine != dev_id) return;
 
@@ -2099,15 +2101,27 @@ void GUI_App::init_networking_callbacks()
                                 }
                                 event.SetInt(-1);
                             } else if (state == ConnectStatus::ConnectStatusLost) {
+                                if (m_device_manager->selected_machine != dev_id) {
+                                    BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: ignoring lost event from non-selected device " << dev_id;
+                                    return;
+                                }
+                                // disconnect_printer() reports Lost asynchronously. When a
+                                // replacement connection is already in flight, clearing the
+                                // selection here disconnects that new session as well. Keep a
+                                // brief guard after ConnectStatusOk because the old session's
+                                // queued Lost callback can arrive after the new Ok callback.
+                                if (obj->get_lan_mode_connection_state()) {
+                                    BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: ignoring stale lost event during LAN reconnect";
+                                    return;
+                                }
                                 m_device_manager->set_selected_machine("");
                                 event.SetInt(-1);
                                 BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: state = lost";
                             } else {
+                                obj->set_lan_mode_connection_state(false);
                                 event.SetInt(-1);
                                 BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: state = " << state;
                             }
-
-                            obj->set_lan_mode_connection_state(false);
                         }
                         else {
                             if (state == ConnectStatus::ConnectStatusOk) {

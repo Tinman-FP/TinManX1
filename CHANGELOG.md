@@ -6,6 +6,9 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- fixed Bambu LAN print sends that stalled at 70% or failed with `-4030` by eliminating the asynchronous reconnect race, verifying MQTT before upload, and performing one bounded reconnect/retry only when the start command was never published
+- aligned TinManX1's `PrintParams` binary layout with Bambu Studio 2.7.1 so the current official networking plug-in receives deterministic H2D print options
+- updated the visible revision to `v2026.08.12-bambu-lan-send.1`
 - fixed Bambu LAN startup ordering so a saved H2D is reconnected after TinManX1 switches from the previous printer agent to the Bambu agent
 - treated TinMan's private per-machine connection overlay as runtime state, preventing IP, credential, and host-agent restoration from producing false unsaved-profile warnings
 - added a guarded macOS launch helper that adopts a newer official Bambu networking plug-in from an installed Bambu Studio, with rollback backups and no redistribution of proprietary binaries
