@@ -3581,11 +3581,43 @@ static constexpr const std::initializer_list<const char*> optional_keys { "compa
 //BBS: skip these keys for dirty check
 static std::set<std::string> skipped_in_dirty = {"printer_settings_id", "print_settings_id", "filament_settings_id"};
 
+static bool tinmanx_uses_runtime_connection_overlay(const Preset *edited, const Preset *reference)
+{
+    if (edited == nullptr || reference == nullptr ||
+        edited->type != Preset::TYPE_PRINTER || reference->type != Preset::TYPE_PRINTER)
+        return false;
+
+    const std::string edited_model = edited->config.has("printer_model") ?
+        edited->config.opt_string("printer_model") : std::string();
+    const std::string reference_model = reference->config.has("printer_model") ?
+        reference->config.opt_string("printer_model") : std::string();
+    return tinmanx_managed_machine_preset(edited->name, edited_model) &&
+           tinmanx_managed_machine_preset(reference->name, reference_model);
+}
+
+static void tinmanx_filter_runtime_connection_options(std::vector<std::string> &options,
+                                                       const Preset *edited,
+                                                       const Preset *reference)
+{
+    if (!tinmanx_uses_runtime_connection_overlay(edited, reference))
+        return;
+    options.erase(std::remove_if(options.begin(), options.end(), [](const std::string &option) {
+        const size_t separator = option.find('#');
+        return tinmanx_runtime_connection_option(option.substr(0, separator));
+    }), options.end());
+}
+
 bool PresetCollection::is_dirty(const Preset *edited, const Preset *reference)
 {
     if (edited != nullptr && reference != nullptr) {
+        std::set<std::string> ignored = skipped_in_dirty;
+        if (tinmanx_uses_runtime_connection_overlay(edited, reference)) {
+            for (const std::string &key : edited->config.keys())
+                if (tinmanx_runtime_connection_option(key))
+                    ignored.insert(key);
+        }
         // Only compares options existing in both configs.
-        if (! reference->config.equals(edited->config, &skipped_in_dirty))
+        if (! reference->config.equals(edited->config, &ignored))
             return true;
         // The "compatible_printers" option key is handled differently from the others:
         // It is not mandatory. If the key is missing, it means it is compatible with any printer.
@@ -3611,6 +3643,7 @@ std::vector<std::string> PresetCollection::dirty_options(const Preset *edited, c
         for (auto &opt_key : optional_keys)
             if (reference->config.has(opt_key) != edited->config.has(opt_key))
                 changed.emplace_back(opt_key);
+        tinmanx_filter_runtime_connection_options(changed, edited, reference);
     }
     return changed;
 }

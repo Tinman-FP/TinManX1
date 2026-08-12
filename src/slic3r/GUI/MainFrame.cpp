@@ -4349,7 +4349,7 @@ void MainFrame::FileHistory::AddFileToHistory(const wxString &file)
     if (this->m_fileMaxFiles == 0)
         return;
     wxFileHistory::AddFileToHistory(file);
-    if (m_load_called)
+    if (m_load_called && wxFileExists(file))
         m_thumbnails.push_front(bbs_3mf_get_thumbnail(into_u8(file).c_str()));
     else
         m_thumbnails.push_front("");
@@ -4370,14 +4370,18 @@ size_t MainFrame::FileHistory::FindFileInHistory(const wxString & file)
 
 void MainFrame::FileHistory::LoadThumbnails()
 {
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, GetCount()), [this](tbb::blocked_range<size_t> range) {
-        for (size_t i = range.begin(); i < range.end(); ++i) {
-            auto thumbnail = bbs_3mf_get_thumbnail(into_u8(GetHistoryFile(i)).c_str());
-            if (!thumbnail.empty()) {
-                m_thumbnails[i] = thumbnail;
-            }
-        }
-    });
+    // Recent projects may point at short-lived CAD-export files. Avoid entering
+    // the ZIP reader for vanished paths, and keep importer calls serialized.
+    // Some 3MF import backends are not safe to run concurrently during startup.
+    for (size_t i = 0; i < GetCount(); ++i) {
+        const wxString path = GetHistoryFile(i);
+        if (!wxFileExists(path))
+            continue;
+
+        auto thumbnail = bbs_3mf_get_thumbnail(into_u8(path).c_str());
+        if (!thumbnail.empty())
+            m_thumbnails[i] = std::move(thumbnail);
+    }
     m_load_called = true;
 }
 

@@ -12,6 +12,12 @@ class DynamicPrintConfig;
 // generated "TinMan Codex" nozzle profiles, regardless of local/cloud copies.
 bool tinmanx_machine_preset_allowed(const std::string &preset_name, const std::string &machine_hint = {});
 
+// True only for one of the canonical TinMan machine/nozzle presets. Runtime
+// connection values on these presets are maintained separately from the
+// printable profile and must not make the profile appear modified.
+bool tinmanx_managed_machine_preset(const std::string &preset_name, const std::string &machine_hint = {});
+bool tinmanx_runtime_connection_option(const std::string &option_name);
+
 // Return the selector-facing TinMan profile for a curated machine/nozzle.
 // An empty result means the machine is outside the curated catalog or the
 // nozzle is not one of the four supported variants.

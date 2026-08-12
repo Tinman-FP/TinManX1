@@ -3625,9 +3625,18 @@ void GUI_App::switch_printer_agent(bool refresh_machine)
 
 void GUI_App::select_machine(const std::string& agent_id)
 {
-    // Skip for BBL agent for now - uses its own device discovery/selection
-    // Orca todo: revisit in future if we want to support auto-switching for BBL printers
+    // Saved Bambu LAN machines are selected before the profile-specific agent
+    // swap during startup. Reconnect the selected machine after that swap so
+    // the first connection is made by the Bambu agent rather than the previous
+    // printer agent.
     if (agent_id == BBL_PRINTER_AGENT_ID) {
+        if (m_device_manager) {
+            MachineObject *selected = m_device_manager->get_selected_machine();
+            if (selected != nullptr && selected->is_lan_mode_printer()) {
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": reconnecting selected Bambu LAN machine after agent switch";
+                m_device_manager->set_selected_machine(selected->get_dev_id());
+            }
+        }
         return;
     }
 

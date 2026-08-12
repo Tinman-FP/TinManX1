@@ -6,6 +6,11 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- fixed Bambu LAN startup ordering so a saved H2D is reconnected after TinManX1 switches from the previous printer agent to the Bambu agent
+- treated TinMan's private per-machine connection overlay as runtime state, preventing IP, credential, and host-agent restoration from producing false unsaved-profile warnings
+- added a guarded macOS launch helper that adopts a newer official Bambu networking plug-in from an installed Bambu Studio, with rollback backups and no redistribution of proprietary binaries
+- prevented stale temporary CAD projects and concurrent 3MF thumbnail extraction from blocking the main window during startup
+- updated the visible revision to `v2026.08.12-bambu-lan-runtime.1`
 - preserved a newer per-machine connection during startup migration so stale cached system profiles cannot replace a working PrusaLink hostname or IP address
 - repaired the local CORE One L connection to use its stable `prusa-core-one-l.local` hostname across every TinMan nozzle profile
 - added native regression coverage for stale-profile connection precedence and updated the visible revision to `v2026.08.11-prusalink-persistence.1`

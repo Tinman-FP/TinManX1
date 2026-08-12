@@ -2,6 +2,7 @@
 
 #include "libslic3r/TinManMachineProfileContract.hpp"
 #include "libslic3r/AppConfig.hpp"
+#include "libslic3r/Preset.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "slic3r/Utils/MoonrakerStorage.hpp"
 
@@ -161,6 +162,42 @@ TEST_CASE("TinMan startup migration preserves a newer family connection", "[Pres
         const std::string preset = model + " " + nozzle + " nozzle - TinMan Codex";
         CHECK(app_config.get("ip_address", preset) == current_host);
     }
+}
+
+TEST_CASE("TinMan runtime connection overlay has explicit dirty-state boundaries", "[Preset][TinMan]")
+{
+    CHECK(tinmanx_managed_machine_preset(
+        "Bambu Lab H2D 0.6 nozzle - TinMan Codex", "Bambu Lab H2D"));
+    CHECK_FALSE(tinmanx_managed_machine_preset("Bambu Lab H2D 0.6 nozzle", "Bambu Lab H2D"));
+    CHECK_FALSE(tinmanx_managed_machine_preset("Unrelated Printer 0.6 nozzle", "Unrelated Printer"));
+
+    CHECK(tinmanx_runtime_connection_option("print_host"));
+    CHECK(tinmanx_runtime_connection_option("printhost_apikey"));
+    CHECK(tinmanx_runtime_connection_option("printer_agent"));
+    CHECK_FALSE(tinmanx_runtime_connection_option("nozzle_diameter"));
+    CHECK_FALSE(tinmanx_runtime_connection_option("bed_shape"));
+}
+
+TEST_CASE("TinMan runtime connection overlay does not dirty managed printer presets", "[Preset][TinMan]")
+{
+    const std::string name = "Bambu Lab H2D 0.6 nozzle - TinMan Codex";
+    Preset saved(Preset::TYPE_PRINTER, name);
+    saved.config.set_key_value("printer_model", new ConfigOptionString("Bambu Lab H2D"));
+    saved.config.set_key_value("printer_agent", new ConfigOptionString("bbl"));
+    saved.config.set_key_value("print_host", new ConfigOptionString());
+    saved.config.set_key_value("printhost_apikey", new ConfigOptionString());
+    saved.config.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.6, 0.6}));
+
+    Preset edited = saved;
+    edited.config.set_key_value("print_host", new ConfigOptionString("192.0.2.120"));
+    edited.config.set_key_value("printhost_apikey", new ConfigOptionString("lan-access-code"));
+
+    CHECK_FALSE(PresetCollection::is_dirty(&edited, &saved));
+    CHECK(PresetCollection::dirty_options(&edited, &saved).empty());
+
+    edited.config.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.4, 0.4}));
+    CHECK(PresetCollection::is_dirty(&edited, &saved));
+    CHECK(PresetCollection::dirty_options(&edited, &saved) == std::vector<std::string>{"nozzle_diameter"});
 }
 
 TEST_CASE("Moonraker print uploads use only the virtual SD gcode root", "[Preset][TinMan][Moonraker]")

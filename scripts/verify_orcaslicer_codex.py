@@ -43,6 +43,7 @@ FEATURE_RESOURCES = (
     "sidecars/orcaslicer_codex_fiber_metadata_sidecar.py",
     "sidecars/orcaslicer_codex_strength_lens_sidecar.py",
     "tools/repair_bambu_lan_bindings.py",
+    "tools/sync_bambu_network_plugin.py",
     "third_party/gpl/arc-overhang/LICENSE",
     "third_party/gpl/arc-overhang/NOTICE.md",
     "third_party/gpl/arc-overhang/requirements.txt",
@@ -172,6 +173,11 @@ def check_launcher(state: CheckState, app: Path, app_support: Path) -> None:
         state.ok("launcher runs Bambu LAN binding repair helper")
     else:
         state.fail("launcher does not run Bambu LAN binding repair helper")
+
+    if "sync_bambu_network_plugin.py" in text:
+        state.ok("launcher can adopt a newer locally installed official Bambu network plug-in")
+    else:
+        state.fail("launcher does not run the local Bambu plug-in sync helper")
 
     if "orca_codex_launch_preflight.py" in text:
         state.fail("launcher still executes the mutable legacy launch preflight")

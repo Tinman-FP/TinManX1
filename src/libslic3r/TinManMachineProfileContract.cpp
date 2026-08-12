@@ -212,12 +212,26 @@ bool tinmanx_machine_preset_allowed(const std::string &preset_name, const std::s
     if (model.empty())
         return true;
 
+    return tinmanx_managed_machine_preset(preset_name, machine_hint);
+}
+
+bool tinmanx_managed_machine_preset(const std::string &preset_name, const std::string &machine_hint)
+{
+    const std::string_view model = matched_model(preset_name, machine_hint);
+    if (model.empty())
+        return false;
+
     const std::string_view bare_name = bare_preset_name(preset_name);
     constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
     for (const std::string_view nozzle : nozzles)
         if (is_canonical_machine_name(bare_name, model, nozzle))
             return true;
     return false;
+}
+
+bool tinmanx_runtime_connection_option(const std::string &option_name)
+{
+    return std::find(connection_options.begin(), connection_options.end(), option_name) != connection_options.end();
 }
 
 std::string tinmanx_canonical_machine_preset_name(const std::string &preset_name,

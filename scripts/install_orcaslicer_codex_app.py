@@ -130,6 +130,15 @@ def install_feature_resources(source_root: Path, app: Path) -> None:
         resources / "tools" / "repair_bambu_lan_bindings.py",
         executable=True,
     )
+    copy_first_available(
+        [
+            source_root / "scripts" / "sync_tinmanx1_bambu_network_plugin.py",
+            source_root / "scripts" / "source-helpers" / "sync_tinmanx1_bambu_network_plugin.py",
+            release_root / "scripts" / "source-helpers" / "sync_tinmanx1_bambu_network_plugin.py",
+        ],
+        resources / "tools" / "sync_bambu_network_plugin.py",
+        executable=True,
+    )
 
 
 def install_auto_pa_profile_hook(source_root: Path, target_app: Path, app_support: Path) -> None:
@@ -218,6 +227,7 @@ def write_native_launcher(launcher: Path, real: Path, default_datadir: str) -> N
             static const char *DEFAULT_DATADIR = {c_string(default_datadir)};
             static const char *BAMBU_POLICY_ENV = "ORCASLICER_CODEX_BAMBU_PLUGIN_POLICY=allow";
             static const char *BAMBU_REPAIR_MARKER = "repair_bambu_lan_bindings.py";
+            static const char *BAMBU_PLUGIN_SYNC_MARKER = "sync_bambu_network_plugin.py";
 
             static void copy_string(char *dst, size_t dst_size, const char *src) {{
                 if (dst_size == 0) return;
@@ -330,6 +340,16 @@ def write_native_launcher(launcher: Path, real: Path, default_datadir: str) -> N
                 }}
                 unsetenv("PYTHONHOME");
                 unsetenv("PYTHONPATH");
+
+                if (!getenv("TINMANX1_SKIP_BAMBU_PLUGIN_SYNC")) {{
+                    char helper[PATH_MAX], out[PATH_MAX], err[PATH_MAX];
+                    join_path(helper, sizeof(helper), macos_dir, "../Resources/orcaslicer_codex/tools/sync_bambu_network_plugin.py");
+                    join_path(out, sizeof(out), datadir, "_tinmanx1_bambu_plugin_sync_last.out");
+                    join_path(err, sizeof(err), datadir, "_tinmanx1_bambu_plugin_sync_last.err");
+                    char *sync_argv[] = {{"/usr/bin/python3", helper, "--datadir", datadir, NULL}};
+                    (void)BAMBU_PLUGIN_SYNC_MARKER;
+                    run_python_helper(helper, sync_argv, out, err);
+                }}
 
                 if (!getenv("TINMANX1_SKIP_BAMBU_LAN_REPAIR")) {{
                     char helper[PATH_MAX], out[PATH_MAX], err[PATH_MAX];
