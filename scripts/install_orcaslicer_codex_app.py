@@ -29,6 +29,7 @@ DEFAULT_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "OrcaSli
 AUTO_PA_WRAPPER_REL = Path("Contents/Resources/orcaslicer_codex/auto_pa/tinman_auto_pa_postprocess.py")
 LEGACY_PREFLIGHT_REL = Path("tools/orca_codex_launch_preflight.py")
 GENERATED_RESOURCE_PATTERNS = ("__pycache__", "*.pyc", "*-venv", ".venv", "venv")
+BUILD_CONFIGURATIONS = ("Debug", "RelWithDebInfo", "Release")
 
 
 def repo_defaults() -> tuple[Path, Path]:
@@ -46,6 +47,12 @@ def repo_defaults() -> tuple[Path, Path]:
         built_apps[-1],
     )
     return source_root, built_app
+
+
+def source_build_configuration(source_app: Path) -> str | None:
+    """Return a conventional CMake configuration embedded in the app path."""
+    path_parts = source_app.resolve(strict=False).parts
+    return next((config for config in BUILD_CONFIGURATIONS if config in path_parts), None)
 
 
 def run(args: list[str]) -> None:
@@ -430,12 +437,19 @@ def main() -> int:
     parser.add_argument("--app-support", type=Path, default=DEFAULT_APP_SUPPORT)
     parser.add_argument("--stage-dir", type=Path, default=Path("/tmp/TinManX1-install-stage"))
     parser.add_argument("--portable-launcher", action="store_true")
+    parser.add_argument("--allow-debug-source", action="store_true")
     parser.add_argument("--skip-auto-pa-profile-hook", action="store_true")
     parser.add_argument("--skip-codesign", action="store_true")
     args = parser.parse_args()
 
     if not args.source_app.exists():
         raise SystemExit(f"source app not found: {args.source_app}")
+    source_config = source_build_configuration(args.source_app)
+    if source_config == "Debug" and not args.allow_debug_source:
+        raise SystemExit(
+            "refusing to install a Debug app bundle; use a Release or RelWithDebInfo build "
+            "(pass --allow-debug-source only for an intentional local diagnostic install)"
+        )
     if args.target_app.name != f"{EXPECTED_TARGET_NAME}.app":
         raise SystemExit(f"refusing unexpected target app path: {args.target_app}")
 

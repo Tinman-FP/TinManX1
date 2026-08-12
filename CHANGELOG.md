@@ -6,6 +6,8 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- fixed the immediate macOS startup shutdown by restoring Release packaging and preventing accidental Debug-bundle installation, where Orca's diagnostic OpenGL assertion aborts during the first rendered frame
+- updated the visible revision to `v2026.08.12-bambu-lan-send.2`
 - fixed Bambu LAN print sends that stalled at 70% or failed with `-4030` by eliminating the asynchronous reconnect race, verifying MQTT before upload, and performing one bounded reconnect/retry only when the start command was never published
 - aligned TinManX1's `PrintParams` binary layout with Bambu Studio 2.7.1 so the current official networking plug-in receives deterministic H2D print options
 - updated the visible revision to `v2026.08.12-bambu-lan-send.1`
