@@ -43,6 +43,7 @@ FEATURE_RESOURCES = (
     "sidecars/orcaslicer_codex_fiber_metadata_sidecar.py",
     "sidecars/orcaslicer_codex_strength_lens_sidecar.py",
     "tools/repair_bambu_lan_bindings.py",
+    "tools/repair_prusalink_bindings.py",
     "tools/sync_bambu_network_plugin.py",
     "third_party/gpl/arc-overhang/LICENSE",
     "third_party/gpl/arc-overhang/NOTICE.md",
@@ -173,6 +174,11 @@ def check_launcher(state: CheckState, app: Path, app_support: Path) -> None:
         state.ok("launcher runs Bambu LAN binding repair helper")
     else:
         state.fail("launcher does not run Bambu LAN binding repair helper")
+
+    if "repair_prusalink_bindings.py" in text:
+        state.ok("launcher runs authenticated PrusaLink rediscovery and binding repair")
+    else:
+        state.fail("launcher does not run PrusaLink binding repair helper")
 
     if "sync_bambu_network_plugin.py" in text:
         state.ok("launcher can adopt a newer locally installed official Bambu network plug-in")

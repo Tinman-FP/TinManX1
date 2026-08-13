@@ -139,6 +139,15 @@ def install_feature_resources(source_root: Path, app: Path) -> None:
     )
     copy_first_available(
         [
+            source_root / "scripts" / "repair_tinmanx1_prusalink_bindings.py",
+            source_root / "scripts" / "source-helpers" / "repair_tinmanx1_prusalink_bindings.py",
+            release_root / "scripts" / "source-helpers" / "repair_tinmanx1_prusalink_bindings.py",
+        ],
+        resources / "tools" / "repair_prusalink_bindings.py",
+        executable=True,
+    )
+    copy_first_available(
+        [
             source_root / "scripts" / "sync_tinmanx1_bambu_network_plugin.py",
             source_root / "scripts" / "source-helpers" / "sync_tinmanx1_bambu_network_plugin.py",
             release_root / "scripts" / "source-helpers" / "sync_tinmanx1_bambu_network_plugin.py",
@@ -235,6 +244,7 @@ def write_native_launcher(launcher: Path, real: Path, default_datadir: str) -> N
             static const char *BAMBU_POLICY_ENV = "ORCASLICER_CODEX_BAMBU_PLUGIN_POLICY=allow";
             static const char *BAMBU_REPAIR_MARKER = "repair_bambu_lan_bindings.py";
             static const char *BAMBU_PLUGIN_SYNC_MARKER = "sync_bambu_network_plugin.py";
+            static const char *PRUSALINK_REPAIR_MARKER = "repair_prusalink_bindings.py";
 
             static void copy_string(char *dst, size_t dst_size, const char *src) {{
                 if (dst_size == 0) return;
@@ -365,6 +375,16 @@ def write_native_launcher(launcher: Path, real: Path, default_datadir: str) -> N
                     join_path(err, sizeof(err), datadir, "_tinmanx1_bambu_lan_repair_last.err");
                     char *repair_argv[] = {{"/usr/bin/python3", helper, "--datadir", datadir, NULL}};
                     (void)BAMBU_REPAIR_MARKER;
+                    run_python_helper(helper, repair_argv, out, err);
+                }}
+
+                if (!getenv("TINMANX1_SKIP_PRUSALINK_REPAIR")) {{
+                    char helper[PATH_MAX], out[PATH_MAX], err[PATH_MAX];
+                    join_path(helper, sizeof(helper), macos_dir, "../Resources/orcaslicer_codex/tools/repair_prusalink_bindings.py");
+                    join_path(out, sizeof(out), datadir, "_tinmanx1_prusalink_repair_last.out");
+                    join_path(err, sizeof(err), datadir, "_tinmanx1_prusalink_repair_last.err");
+                    char *repair_argv[] = {{"/usr/bin/python3", helper, "--datadir", datadir, NULL}};
+                    (void)PRUSALINK_REPAIR_MARKER;
                     run_python_helper(helper, repair_argv, out, err);
                 }}
 

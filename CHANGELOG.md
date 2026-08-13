@@ -6,6 +6,9 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- added authenticated CORE One L PrusaLink rediscovery at launch so DHCP address changes are repaired across every nozzle profile, the persistent connection overlay, and the local-device cache as one backed-up transaction
+- made PrusaLink recovery preserve the last known host when the printer is offline and require the same `/api/version` identity contract as TinManX1 before rebinding, preventing another LAN service from being selected
+- updated the visible revision to `v2026.08.13-prusalink-recovery.1`
 - fixed the immediate macOS startup shutdown by restoring Release packaging and preventing accidental Debug-bundle installation, where Orca's diagnostic OpenGL assertion aborts during the first rendered frame
 - updated the visible revision to `v2026.08.12-bambu-lan-send.2`
 - fixed Bambu LAN print sends that stalled at 70% or failed with `-4030` by eliminating the asynchronous reconnect race, verifying MQTT before upload, and performing one bounded reconnect/retry only when the start command was never published
