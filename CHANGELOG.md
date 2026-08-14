@@ -6,6 +6,9 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- canonicalized official Bambu discovery names to firmware model identifiers before compatibility checks, preventing an H2D from intermittently appearing as an unknown printer during startup
+- preserved owner-assigned Bambu LAN printer names when discovery temporarily reports only the generic model name, and migrated stale saved model labels during launch repair
+- updated the visible revision to `v2026.08.13-bambu-identity.1`
 - added authenticated CORE One L PrusaLink rediscovery at launch so DHCP address changes are repaired across every nozzle profile, the persistent connection overlay, and the local-device cache as one backed-up transaction
 - made PrusaLink recovery preserve the last known host when the printer is offline and require the same `/api/version` identity contract as TinManX1 before rebinding, preventing another LAN service from being selected
 - updated the visible revision to `v2026.08.13-prusalink-recovery.1`

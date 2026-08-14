@@ -132,6 +132,7 @@ def install_feature_resources(source_root: Path, app: Path) -> None:
     copy_first_available(
         [
             source_root / "scripts" / "repair_tinmanx1_bambu_lan_bindings.py",
+            source_root / "scripts" / "source-helpers" / "repair_tinmanx1_bambu_lan_bindings.py",
             release_root / "scripts" / "source-helpers" / "repair_tinmanx1_bambu_lan_bindings.py",
         ],
         resources / "tools" / "repair_bambu_lan_bindings.py",

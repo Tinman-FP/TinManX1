@@ -202,6 +202,8 @@ namespace Slic3r
                 connection_name = j["connection_name"].get<std::string>();
             }
 
+            const std::string printer_type = _parse_printer_type(printer_type_str);
+
             MachineObject* obj;
 
             /* update userMachineList info */
@@ -260,13 +262,13 @@ namespace Slic3r
                     obj->bind_state != bind_state ||
                     obj->bind_sec_link != sec_link ||
                     obj->bind_ssdp_version != ssdp_version ||
-                    obj->printer_type != _parse_printer_type(printer_type_str))
+                    obj->printer_type != printer_type)
                 {
                     if (obj->dev_connection_type != connect_type ||
                         obj->bind_state != bind_state ||
                         obj->bind_sec_link != sec_link ||
                         obj->bind_ssdp_version != ssdp_version ||
-                        obj->printer_type != _parse_printer_type(printer_type_str))
+                        obj->printer_type != printer_type)
                     {
                         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " UpdateLocalMachineInfo"
                             << ", dev_id= " << dev_id
@@ -290,7 +292,7 @@ namespace Slic3r
                     obj->bind_state          = bind_state;
                     obj->bind_sec_link       = sec_link;
                     obj->bind_ssdp_version   = ssdp_version;
-                    obj->printer_type        = _parse_printer_type(printer_type_str);
+                    obj->printer_type        = printer_type;
                 }
 
                 // U0 firmware
@@ -299,7 +301,14 @@ namespace Slic3r
 
                 obj->last_alive = Slic3r::Utils::get_current_time_utc();
                 obj->m_is_online = true;
-                obj->set_dev_name(dev_name);
+                const std::string generic_name = DevPrinterConfigUtil::get_printer_display_name(printer_type);
+                if (!dev_name.empty() &&
+                    (obj->get_dev_name().empty() || dev_name != generic_name || obj->get_dev_name() == generic_name)) {
+                    obj->set_dev_name(dev_name);
+                } else {
+                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": preserving custom device name "
+                                            << obj->get_dev_name() << " over generic discovery name " << dev_name;
+                }
                 /* if (!obj->dev_ip.empty()) {
                 Slic3r::GUI::wxGetApp().app_config->set_str("ip_address", obj->dev_id, obj->dev_ip);
                 Slic3r::GUI::wxGetApp().app_config->save();
@@ -308,7 +317,7 @@ namespace Slic3r
             else {
                 /* insert a new machine */
                 obj = new MachineObject(this, m_agent, dev_name, dev_id, dev_ip);
-                obj->printer_type = _parse_printer_type(printer_type_str);
+                obj->printer_type = printer_type;
                 obj->wifi_signal = printer_signal;
                 obj->dev_connection_type = connect_type;
                 obj->bind_state     = bind_state;
