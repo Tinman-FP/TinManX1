@@ -6,6 +6,9 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- selected the Bambu printer agent in the central machine-selection path before opening a LAN connection, preventing a previous Qidi or Moonraker agent from queuing a failure that disconnects the H2D replacement session
+- preserved access-code MQTT mode in the packaged Bambu LAN repair helper so H2D connectivity survives preference regeneration and application upgrades
+- updated the visible revision to `v2026.08.13-bambu-routing.1`
 - canonicalized official Bambu discovery names to firmware model identifiers before compatibility checks, preventing an H2D from intermittently appearing as an unknown printer during startup
 - preserved owner-assigned Bambu LAN printer names when discovery temporarily reports only the generic model name, and migrated stale saved model labels during launch repair
 - updated the visible revision to `v2026.08.13-bambu-identity.1`

@@ -2,9 +2,9 @@
 """Repair TinManX1 Bambu LAN bindings and canonical device identities.
 
 This helper intentionally avoids access codes. It reads local_machines,
-canonicalizes known Bambu model names, tests Bambu MQTT TLS endpoints, and
-updates dev_ip when a configured serial number is found at a different LAN
-address.
+canonicalizes known Bambu model names, tests Bambu MQTT TLS endpoints, updates
+dev_ip when a configured serial number is found at a different LAN address,
+and preserves access-code LAN mode across upgrades.
 """
 
 from __future__ import annotations
@@ -164,6 +164,14 @@ def repair(datadir: pathlib.Path, dry_run: bool = False) -> int:
     if not bambu:
         return 0
 
+    app = data.get("app")
+    mqtt_mode_changed = isinstance(app, dict) and app.get("enable_ssl_for_mqtt") is not False
+    if mqtt_mode_changed:
+        # TinManX1's local Bambu bindings authenticate with the printer access
+        # code. Certificate-managed MQTT can reject an otherwise valid H2D LAN
+        # session after an upgrade regenerates this preference.
+        app["enable_ssl_for_mqtt"] = False
+
     serial_hosts: dict[str, str] = {}
     for serial, machine in bambu.items():
         current_ip = str(machine.get("dev_ip", ""))
@@ -193,8 +201,11 @@ def repair(datadir: pathlib.Path, dry_run: bool = False) -> int:
         if old_type != new_type or old_ip != new_ip:
             changes.append((serial, old_ip, new_ip, f"{old_type} -> {new_type}"))
 
-    if not changes:
+    if not changes and not mqtt_mode_changed:
         return 0
+
+    if mqtt_mode_changed:
+        print("TinManX1 Bambu LAN repair: restored access-code MQTT mode", file=sys.stderr)
 
     for serial, old_ip, new_ip, type_change in changes:
         print(

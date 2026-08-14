@@ -10,6 +10,7 @@
 #include "slic3r/GUI/I18N.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/Plater.hpp"
+#include "slic3r/Utils/NetworkAgentFactory.hpp"
 
 #include "libslic3r/Time.hpp"
 
@@ -17,6 +18,39 @@ using namespace nlohmann;
 
 namespace Slic3r
 {
+    namespace
+    {
+        bool ensure_bambu_agent_for_machine(NetworkAgent* agent, const MachineObject* machine)
+        {
+            if (agent == nullptr || machine == nullptr)
+                return false;
+
+            const bool is_bambu = machine->is_series_x() || machine->is_series_p() ||
+                                  machine->is_series_n() || machine->is_series_o() ||
+                                  machine->printer_type == "O1D" ||
+                                  boost::algorithm::istarts_with(machine->printer_type, "BL-");
+            if (!is_bambu)
+                return false;
+
+            if (const auto current = agent->get_printer_agent();
+                current && current->get_agent_info().id == BBL_PRINTER_AGENT_ID)
+                return true;
+
+            const auto cloud = agent->get_cloud_agent(BBL_CLOUD_PROVIDER);
+            const auto printer_agent = NetworkAgentFactory::create_printer_agent_by_id(
+                BBL_PRINTER_AGENT_ID, cloud, data_dir());
+            if (!printer_agent) {
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": failed to create Bambu printer agent";
+                return false;
+            }
+
+            agent->set_printer_agent(printer_agent);
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": selected Bambu agent before connecting "
+                                    << machine->get_dev_id();
+            return true;
+        }
+    }
+
     DeviceManager::DeviceManager(NetworkAgent* agent)
     {
         m_agent = agent;
@@ -492,6 +526,12 @@ namespace Slic3r
             << " cur_selected=" << selected_machine;
         auto my_machine_list = get_my_machine_list();
         auto it = my_machine_list.find(dev_id);
+
+        // Route Bambu devices before the first connect call. If the previously
+        // selected printer used another agent, connecting first can queue a
+        // stale failure that tears down the replacement Bambu LAN session.
+        if (it != my_machine_list.end())
+            ensure_bambu_agent_for_machine(m_agent, it->second);
 
         // disconnect last if dev_id difference from previous one
         auto last_selected = my_machine_list.find(selected_machine);
