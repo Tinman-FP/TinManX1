@@ -81,6 +81,13 @@ void BBLNetworkPlugin::shutdown()
     }
 }
 
+void BBLNetworkPlugin::prepare_for_process_exit()
+{
+#if defined(__APPLE__)
+    s_process_exiting_after_bambu_load.store(true, std::memory_order_release);
+#endif
+}
+
 BBLNetworkPlugin::BBLNetworkPlugin() = default;
 
 BBLNetworkPlugin::~BBLNetworkPlugin()

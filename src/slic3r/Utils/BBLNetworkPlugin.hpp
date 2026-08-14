@@ -181,6 +181,13 @@ public:
     static void shutdown();
 
     /**
+     * Mark that the GUI has completed its close decision and process teardown
+     * is beginning. On macOS this lets the exit guard contain exceptions from
+     * proprietary plug-in static destructors without masking runtime failures.
+     */
+    static void prepare_for_process_exit();
+
+    /**
      * Check if DLL is currently loaded.
      */
     bool is_loaded() const;

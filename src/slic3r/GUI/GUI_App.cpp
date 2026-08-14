@@ -1088,6 +1088,7 @@ void GUI_App::shutdown()
     if (m_is_recreating_gui) return;
     stop_http_server();
     set_closing(true);
+    BBLNetworkPlugin::prepare_for_process_exit();
     BOOST_LOG_TRIVIAL(info) << "GUI_App::shutdown exit";
 }
 

@@ -6,6 +6,8 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- marked the start of intentional GUI process teardown before macOS finalizes the proprietary Bambu networking library, preventing its exit-only C++ exception from becoming a user-visible crash report while preserving normal runtime failure reporting
+- updated the visible revision to `v2026.08.14-bambu-clean-exit.1`
 - selected the Bambu printer agent in the central machine-selection path before opening a LAN connection, preventing a previous Qidi or Moonraker agent from queuing a failure that disconnects the H2D replacement session
 - preserved access-code MQTT mode in the packaged Bambu LAN repair helper so H2D connectivity survives preference regeneration and application upgrades
 - updated the visible revision to `v2026.08.13-bambu-routing.1`
