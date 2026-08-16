@@ -6,6 +6,8 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- restored the K2 Plus camera in the Device dashboard with a Creality-specific Fluidd camera card backed by the printer's native WebRTC feed, including refresh and full-screen controls
+- updated the visible revision to `v2026.08.16-creality-camera.1`
 - routed Creality K-series Device views and Moonraker status traffic through the printer's port-4408 reverse proxy while retaining port 80 for Creality upload/control requests
 - normalized persisted Creality web-interface addresses so a printer IP migration cannot restore the API-only root and show a false 404
 - updated the visible revision to `v2026.08.16-creality-device.1`

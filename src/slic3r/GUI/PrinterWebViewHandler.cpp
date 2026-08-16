@@ -432,6 +432,194 @@ private:
     std::thread       upload_thread;
 };
 
+class CrealityPrinterWebViewHandler final : public PrinterWebViewHandler {
+public:
+    explicit CrealityPrinterWebViewHandler(PrinterWebView& owner)
+        : PrinterWebViewHandler(owner)
+    {
+    }
+
+    void on_loaded(wxWebViewEvent& evt) override
+    {
+        if (browser() == nullptr || evt.GetURL().IsEmpty())
+            return;
+
+        WebView::RunScript(browser(), wxString::FromUTF8(camera_injection_script()));
+    }
+
+private:
+    static const char* camera_injection_script()
+    {
+        return R"JS(
+(function () {
+  'use strict';
+
+  const panelId = 'tinman-creality-camera-panel';
+
+  function normalText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+
+  function fluiddThemeClass() {
+    const app = document.querySelector('.v-application.theme--light, .v-application.theme--dark') ||
+      document.querySelector('.theme--light, .theme--dark');
+    return app && app.classList.contains('theme--light') ? 'theme--light' : 'theme--dark';
+  }
+
+  function findFluiddCardByTitle(matches) {
+    const cards = Array.from(document.querySelectorAll('.v-card.collapsable-card, .v-card'));
+    return cards.find((card) => {
+      if (card.id === panelId || card.closest('#' + panelId)) return false;
+      const heading = card.querySelector('.v-card__title, .card-heading');
+      const title = normalText(heading ? heading.textContent : '');
+      return matches.some((match) => title === match || title.startsWith(match + ' '));
+    }) || null;
+  }
+
+  function nativeCameraIsVisible() {
+    return findFluiddCardByTitle(['camera', 'cameras']) !== null;
+  }
+
+  function placePanel(panel) {
+    if (!panel) return false;
+
+    if (nativeCameraIsVisible()) {
+      panel.remove();
+      return true;
+    }
+
+    panel.className = 'v-card v-sheet collapsable-card mb-2 mb-sm-4 ' + fluiddThemeClass();
+    const toolheadCard = findFluiddCardByTitle(['tool', 'toolhead']);
+    if (toolheadCard && toolheadCard.parentNode) {
+      panel.classList.remove('tk2-floating-fallback');
+      if (toolheadCard.previousElementSibling !== panel)
+        toolheadCard.parentNode.insertBefore(panel, toolheadCard);
+      return true;
+    }
+
+    const statusCard = findFluiddCardByTitle(['status', 'printer']);
+    if (statusCard && statusCard.parentNode) {
+      panel.classList.remove('tk2-floating-fallback');
+      if (statusCard.nextElementSibling !== panel)
+        statusCard.parentNode.insertBefore(panel, statusCard.nextSibling);
+      return true;
+    }
+
+    panel.classList.add('tk2-floating-fallback');
+    if (!document.body.contains(panel)) document.body.appendChild(panel);
+    return false;
+  }
+
+  function ensureStyle() {
+    if (document.getElementById('tinman-creality-camera-style')) return;
+    const style = document.createElement('style');
+    style.id = 'tinman-creality-camera-style';
+    style.textContent = `
+      #${panelId} { width: 100%; overflow: hidden; }
+      #${panelId}.tk2-floating-fallback {
+        position: fixed; right: 18px; top: 74px; width: min(520px, calc(100vw - 36px));
+        z-index: 2147483000; margin: 0;
+      }
+      #${panelId} .tk2-head { min-height: 42px; padding-top: 0; padding-bottom: 0; }
+      #${panelId} .tk2-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
+      #${panelId} .tk2-camera-icon {
+        width: 18px; height: 13px; border: 2px solid currentColor; border-radius: 2px;
+        position: relative; display: inline-block; opacity: .8;
+      }
+      #${panelId} .tk2-camera-icon::after {
+        content: ''; position: absolute; right: -7px; top: 2px; width: 6px; height: 7px;
+        background: currentColor; clip-path: polygon(0 20%, 100% 0, 100% 100%, 0 80%);
+      }
+      #${panelId} .tk2-actions { display: flex; gap: 6px; align-items: center; }
+      #${panelId} .tk2-btn {
+        min-height: 30px; padding: 0 10px; border: 1px solid rgba(255,255,255,.15);
+        border-radius: 5px; color: currentColor; background: rgba(127,127,127,.10);
+        cursor: pointer; font: inherit; font-size: 12px;
+      }
+      #${panelId} .tk2-btn:hover { background: rgba(127,127,127,.22); }
+      #${panelId} .tk2-body { padding: 0; background: #1e1e20; aspect-ratio: 16 / 9; }
+      #${panelId} iframe { display: block; width: 100%; height: 100%; border: 0; background: #1e1e20; }
+      @media (max-width: 700px) {
+        #${panelId}.tk2-floating-fallback { left: 10px; right: 10px; top: 58px; width: auto; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function reloadCamera() {
+    const frame = document.querySelector('#' + panelId + ' iframe');
+    if (!frame) return;
+    frame.src = '/camera.html?tinman=' + Date.now();
+  }
+
+  function ensurePanel() {
+    if (nativeCameraIsVisible()) {
+      const oldPanel = document.getElementById(panelId);
+      if (oldPanel) oldPanel.remove();
+      return;
+    }
+
+    ensureStyle();
+    let panel = document.getElementById(panelId);
+    if (!panel) {
+      panel = document.createElement('section');
+      panel.id = panelId;
+      panel.innerHTML = `
+        <div class="tk2-head v-card__title collapsable-card-title card-heading">
+          <div class="row flex-nowrap no-gutters">
+            <div class="col align-self-center tk2-title">
+              <span class="tk2-camera-icon" aria-hidden="true"></span>
+              <span class="font-weight-light">Camera</span>
+            </div>
+            <div class="col col-auto align-self-center tk2-actions">
+              <button class="tk2-btn" type="button" data-tk2-action="refresh">Refresh</button>
+              <button class="tk2-btn" type="button" data-tk2-action="fullscreen">Full screen</button>
+            </div>
+          </div>
+        </div>
+        <div class="tk2-body v-card__text overflow-hidden">
+          <iframe src="/camera.html" title="K2 Plus camera" allow="autoplay; fullscreen"></iframe>
+        </div>
+      `;
+      panel.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-tk2-action]');
+        if (!button) return;
+        const action = button.getAttribute('data-tk2-action');
+        if (action === 'refresh') {
+          reloadCamera();
+        } else if (action === 'fullscreen') {
+          const frame = panel.querySelector('iframe');
+          if (frame && frame.requestFullscreen) frame.requestFullscreen();
+        }
+      });
+    }
+    placePanel(panel);
+  }
+
+  if (window.__tinmanCrealityCameraObserver) {
+    ensurePanel();
+    return;
+  }
+
+  fetch('/camera.html', { cache: 'no-store' }).then((response) => {
+    if (!response.ok) return;
+    ensurePanel();
+    let scheduled = false;
+    window.__tinmanCrealityCameraObserver = new MutationObserver(() => {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        ensurePanel();
+      });
+    });
+    window.__tinmanCrealityCameraObserver.observe(document.body, { childList: true, subtree: true });
+  }).catch(() => {});
+})();
+)JS";
+    }
+};
+
 class QidiBoxPrinterWebViewHandler final : public PrinterWebViewHandler {
 public:
     explicit QidiBoxPrinterWebViewHandler(PrinterWebView& owner)
@@ -966,6 +1154,8 @@ std::unique_ptr<PrinterWebViewHandler> create_printer_webview_handler(PrinterWeb
     if (!selected_agent_id.empty()) {
         if (selected_agent_id == "qidi")
             return std::make_unique<QidiBoxPrinterWebViewHandler>(owner);
+        if (selected_agent_id == "crealityprint")
+            return std::make_unique<CrealityPrinterWebViewHandler>(owner);
 
         return std::make_unique<PrinterWebViewHandler>(owner);
     }
@@ -978,6 +1168,8 @@ std::unique_ptr<PrinterWebViewHandler> create_printer_webview_handler(PrinterWeb
 
         if (config_agent_id(*cfg) == "qidi")
             return std::make_unique<QidiBoxPrinterWebViewHandler>(owner);
+        if (config_agent_id(*cfg) == "crealityprint")
+            return std::make_unique<CrealityPrinterWebViewHandler>(owner);
     }
 
     return std::make_unique<PrinterWebViewHandler>(owner);
