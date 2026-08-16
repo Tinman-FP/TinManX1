@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
@@ -786,6 +787,30 @@ def serialized_connection_value(value: Any) -> str:
     return str(value)
 
 
+def default_webui_for_family(family: MachineFamily, address: str) -> str:
+    """Return the printer UI origin while keeping the control API address separate."""
+    if family.vendor != "Creality" or not address:
+        return address
+
+    candidate = address if "://" in address else f"http://{address}"
+    parsed = urlsplit(candidate)
+    if parsed.port is not None or (parsed.path and parsed.path != "/"):
+        return candidate
+
+    hostname = parsed.hostname or ""
+    if not hostname:
+        return candidate
+    if ":" in hostname and not hostname.startswith("["):
+        hostname = f"[{hostname}]"
+    netloc = f"{hostname}:4408"
+    if parsed.username:
+        credentials = parsed.username
+        if parsed.password:
+            credentials += f":{parsed.password}"
+        netloc = f"{credentials}@{netloc}"
+    return urlunsplit((parsed.scheme or "http", netloc, "/", parsed.query, parsed.fragment))
+
+
 def collect_live_connections(app_support: Path, conf: dict[str, Any]) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
     """Resolve one current address and any explicit host options per family."""
     addresses: dict[str, str] = {}
@@ -1053,7 +1078,10 @@ def rewrite_live_config(app_support: Path) -> tuple[int, int]:
             continue
         family_details = connection_details.get(family.model, {})
         family_details.setdefault("print_host", address)
-        family_details.setdefault("print_host_webui", address)
+        current_webui = family_details.get("print_host_webui", "")
+        family_details["print_host_webui"] = default_webui_for_family(
+            family, current_webui or address
+        )
         for option, value in family_details.items():
             if option in CONNECTION_OPTIONS:
                 overlay[f"{family.model}::{option}"] = value

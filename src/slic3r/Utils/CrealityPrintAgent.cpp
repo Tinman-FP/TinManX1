@@ -132,6 +132,22 @@ AgentInfo CrealityPrintAgent::get_agent_info_static()
     };
 }
 
+bool CrealityPrintAgent::init_device_info(std::string dev_id,
+                                          std::string dev_ip,
+                                          std::string username,
+                                          std::string password,
+                                          bool        use_ssl)
+{
+    if (!MoonrakerPrinterAgent::init_device_info(
+            std::move(dev_id), dev_ip, std::move(username), std::move(password), use_ssl))
+        return false;
+
+    // Port 80 is Creality's upload/control API and intentionally has no
+    // Moonraker root. Port 4408 is the K-series web/Moonraker reverse proxy.
+    device_info.base_url = CrealityPrint::get_device_webui_url(std::move(dev_ip));
+    return !device_info.base_url.empty();
+}
+
 std::string CrealityPrintAgent::normalize_filament_type(const std::string& filament_type)
 {
     static const std::vector<std::string> bases = {

@@ -60,6 +60,13 @@ public:
                                              const std::string&      vendor,
                                              const std::string&      brand_name,
                                              const std::string&      base_type);
+
+protected:
+    bool init_device_info(std::string dev_id,
+                          std::string dev_ip,
+                          std::string username,
+                          std::string password,
+                          bool        use_ssl) override;
 };
 
 } // namespace Slic3r

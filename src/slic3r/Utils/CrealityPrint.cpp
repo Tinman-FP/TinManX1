@@ -12,6 +12,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/nowide/convert.hpp>
 
 #include <curl/curl.h>
@@ -60,6 +61,44 @@ CrealityPrint::CrealityPrint(DynamicPrintConfig* config) :
 {}
 
 const char* CrealityPrint::get_name() const { return "Creality Print"; }
+
+std::string CrealityPrint::get_device_webui_url(std::string url)
+{
+    boost::trim(url);
+    if (url.empty())
+        return url;
+
+    if (!boost::algorithm::istarts_with(url, "http://") &&
+        !boost::algorithm::istarts_with(url, "https://"))
+        url = "http://" + url;
+
+    const size_t scheme_end      = url.find("://");
+    const size_t authority_begin = scheme_end == std::string::npos ? 0 : scheme_end + 3;
+    const size_t authority_end   = url.find_first_of("/?#", authority_begin);
+    const size_t end             = authority_end == std::string::npos ? url.size() : authority_end;
+    const std::string authority  = url.substr(authority_begin, end - authority_begin);
+
+    // A path indicates an intentional proxy URL. Only supply the K-series
+    // reverse-proxy port for a bare printer host that has no explicit port.
+    const bool has_path_separator = authority_end != std::string::npos && url[authority_end] == '/';
+    const bool has_custom_path = has_path_separator && authority_end + 1 < url.size()
+        && url[authority_end + 1] != '?' && url[authority_end + 1] != '#';
+    bool has_port = false;
+    if (!authority.empty() && authority.front() == '[') {
+        const size_t bracket = authority.find(']');
+        has_port = bracket != std::string::npos && bracket + 1 < authority.size() && authority[bracket + 1] == ':';
+    } else {
+        has_port = authority.rfind(':') != std::string::npos;
+    }
+
+    if (!has_custom_path && !has_port)
+        url.insert(end, ":4408");
+    if (!has_path_separator) {
+        const size_t query_or_fragment = url.find_first_of("?#", authority_begin);
+        url.insert(query_or_fragment == std::string::npos ? url.size() : query_or_fragment, "/");
+    }
+    return url;
+}
 
 std::string CrealityPrint::get_host() const {
     return m_host;

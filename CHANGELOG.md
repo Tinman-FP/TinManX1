@@ -6,6 +6,9 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- routed Creality K-series Device views and Moonraker status traffic through the printer's port-4408 reverse proxy while retaining port 80 for Creality upload/control requests
+- normalized persisted Creality web-interface addresses so a printer IP migration cannot restore the API-only root and show a false 404
+- updated the visible revision to `v2026.08.16-creality-device.1`
 - marked the start of intentional GUI process teardown before macOS finalizes the proprietary Bambu networking library, preventing its exit-only C++ exception from becoming a user-visible crash report while preserving normal runtime failure reporting
 - updated the visible revision to `v2026.08.14-bambu-clean-exit.1`
 - selected the Bambu printer agent in the central machine-selection path before opening a LAN connection, preventing a previous Qidi or Moonraker agent from queuing a failure that disconnects the H2D replacement session
