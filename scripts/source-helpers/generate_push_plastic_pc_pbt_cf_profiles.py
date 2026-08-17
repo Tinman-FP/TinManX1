@@ -23,7 +23,6 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 PROFILES = ROOT / "resources/profiles"
 CODEX_DIR = PROFILES / "Codex/filament"
-TINMAN_DIR = PROFILES / "TinManX1/filament"
 DEFAULT_APP_SUPPORT = Path.home() / "Library/Application Support/OrcaSlicer-Codex"
 DEFAULT_BACKUP_ROOT = Path.home() / ".tinmanx1/pc-pbt-cf-profile-backups"
 
@@ -44,16 +43,6 @@ GROUPS = (
     ("Snapmaker U1", "Snapmaker U1"),
     ("Sovol SV08 MAX", "Sovol SV08 MAX"),
 )
-
-FIBERSEEK_SOURCE_STEMS = (
-    "TinManX1 Push Plastic PC-PBT base",
-    "TinManX1 Push Plastic PC-PBT @FibreSeek Seeker 3",
-    "CFC Push Plastic PC-PBT + X-CCF @FibreSeek Seeker 3",
-    "CFC Push Plastic PC-PBT + CGF @FibreSeek Seeker 3",
-    "CFC Push Plastic PC-PBT + CKF @FibreSeek Seeker 3",
-    "CFC Push Plastic PC-PBT + CBF @FibreSeek Seeker 3",
-)
-
 
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
@@ -151,54 +140,6 @@ def generate_codex_profiles() -> list[tuple[str, dict[str, Any]]]:
     return generated
 
 
-def replace_pc_pbt(value: Any) -> Any:
-    if isinstance(value, str):
-        return value.replace("PC-PBT", "PC-PBT-CF").replace("pc-pbt", "pc-pbt-cf")
-    if isinstance(value, list):
-        return [replace_pc_pbt(item) for item in value]
-    if isinstance(value, dict):
-        return {key: replace_pc_pbt(item) for key, item in value.items()}
-    return value
-
-
-def generate_fiberseek_profiles() -> list[tuple[str, dict[str, Any]]]:
-    generated: list[tuple[str, dict[str, Any]]] = []
-    for stem in FIBERSEEK_SOURCE_STEMS:
-        source = replace_pc_pbt(load_json(TINMAN_DIR / f"{stem}.json"))
-        name = str(source["name"])
-        source.update(
-            {
-                "filament_cost": [PRICE_PER_KG],
-                "filament_density": ["1.2"],
-                "filament_flow_ratio": ["0.98"],
-                "filament_max_volumetric_speed": ["6"],
-                "nozzle_temperature": ["255"],
-                "nozzle_temperature_initial_layer": ["260"],
-                "nozzle_temperature_range_low": ["250"],
-                "nozzle_temperature_range_high": ["260"],
-                "hot_plate_temp": ["100"],
-                "hot_plate_temp_initial_layer": ["100"],
-                "cool_plate_temp": ["100"],
-                "cool_plate_temp_initial_layer": ["100"],
-                "eng_plate_temp": ["100"],
-                "eng_plate_temp_initial_layer": ["100"],
-                "textured_plate_temp": ["100"],
-                "textured_plate_temp_initial_layer": ["100"],
-                "chamber_temperature": ["55"],
-                "activate_chamber_temp_control": ["1"],
-                "required_nozzle_HRC": ["40"],
-                "filament_price_source": [PRICE_SOURCE],
-                "filament_price_source_url": [PRODUCT_URL],
-            }
-        )
-        if name.startswith("CFC "):
-            source["fiber_plastic_cost"] = [PRICE_PER_KG]
-            source["fiber_plastic_density"] = ["1.2"]
-            source["fiber_nozzle_temperature_preheat"] = ["260"]
-        generated.append((name, source))
-    return generated
-
-
 def merge_manifest(path: Path, names: list[str]) -> None:
     data = load_json(path)
     targets = set(names)
@@ -216,16 +157,12 @@ def merge_manifest(path: Path, names: list[str]) -> None:
     path.write_text(json.dumps(data, indent=indent, ensure_ascii=True) + "\n")
 
 
-def write_repo() -> tuple[list[str], list[str]]:
+def write_repo() -> list[str]:
     codex = generate_codex_profiles()
-    fiberseek = generate_fiberseek_profiles()
     for name, profile in codex:
         write_json(CODEX_DIR / f"{name}.json", profile)
-    for name, profile in fiberseek:
-        write_json(TINMAN_DIR / f"{name}.json", profile)
     merge_manifest(PROFILES / "Codex.json", [name for name, _ in codex])
-    merge_manifest(PROFILES / "TinManX1.json", [name for name, _ in fiberseek])
-    return [name for name, _ in codex], [name for name, _ in fiberseek]
+    return [name for name, _ in codex]
 
 
 def user_dirs(app_support: Path) -> list[Path]:
@@ -305,8 +242,8 @@ def main() -> int:
     if not args.write_repo and not args.install_live:
         parser.error("select --write-repo and/or --install-live")
     if args.write_repo:
-        codex, fiberseek = write_repo()
-        print(f"generated {len(codex)} Codex and {len(fiberseek)} FibreSeek source profiles")
+        codex = write_repo()
+        print(f"generated {len(codex)} Codex source profiles")
     if args.install_live:
         count = install_live(args.app_support, args.backup_root)
         print(f"installed {count} active user profile copies")

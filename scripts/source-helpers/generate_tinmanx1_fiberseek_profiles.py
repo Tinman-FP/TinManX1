@@ -363,6 +363,33 @@ MATERIALS = {
         "fiber_flow": 0.82,
         "fiber_mvs": 6,
     },
+    "Push Plastic PC-PBT-CF": {
+        "color": "#161616",
+        "fiber_color": "#0D0D0D",
+        "manufacturer": "Push Plastic",
+        "fiber_plastic_name": "Push Plastic PC-PBT-CF",
+        "density": 1.20,
+        "cost": 99.98,
+        "price_source": "Push Plastic Carbon Fiber PC+PBT 500 g spool, normalized to 1 kg",
+        "price_source_url": "https://www.pushplastic.com/products/carbon-fiber-pc-pbt-filament-1-75mm-500g",
+        "temp": 255,
+        "temp_first": 260,
+        "temp_range_low": 250,
+        "temp_range_high": 260,
+        "bed": 100,
+        "bed_first": 100,
+        "chamber": 55,
+        "fan": 10,
+        "fan_max": 25,
+        "flow": 0.98,
+        "mvs": 6,
+        "fiber_temp": 260,
+        "fiber_temp_first": 260,
+        "fiber_fan": 15,
+        "fiber_flow": 0.82,
+        "fiber_mvs": 6,
+        "required_nozzle_hrc": 40,
+    },
     "PA-CF": {
         "color": "#2D2D2D",
         "fiber_color": "#111111",
@@ -845,6 +872,11 @@ def filament_base(material: str, values: dict) -> dict:
         "filament_density": arr(values["density"]),
         "filament_cost": arr(values["cost"]),
         **({"filament_price_source": arr(values["price_source"])} if "price_source" in values else {}),
+        **(
+            {"filament_price_source_url": arr(values["price_source_url"])}
+            if "price_source_url" in values
+            else {}
+        ),
         "filament_flow_ratio": arr(f"{values['flow']:.2f}"),
         "filament_max_volumetric_speed": arr(values["mvs"]),
         "filament_is_support": arr("0"),
@@ -868,7 +900,9 @@ def filament_base(material: str, values: dict) -> dict:
         "slow_down_for_layer_cooling": arr("1" if values["fan"] else "0"),
         "enable_pressure_advance": arr("1"),
         "pressure_advance": arr("0.020"),
-        "required_nozzle_HRC": arr("3" if ("CF" in material or "GF" in material) else "0"),
+        "required_nozzle_HRC": arr(
+            values.get("required_nozzle_hrc", 3 if ("CF" in material or "GF" in material) else 0)
+        ),
         "plastic_spool_weight": arr("1000"),
         "composite_enabled": arr("0"),
         "fiber_name": arr(""),
@@ -917,6 +951,11 @@ def plastic_filament(material: str) -> dict:
         "filament_density": arr(values["density"]),
         "filament_cost": arr(values["cost"]),
         **({"filament_price_source": arr(values["price_source"])} if "price_source" in values else {}),
+        **(
+            {"filament_price_source_url": arr(values["price_source_url"])}
+            if "price_source_url" in values
+            else {}
+        ),
         "filament_flow_ratio": arr(f"{values['flow']:.2f}"),
         "filament_max_volumetric_speed": arr(values["mvs"]),
         "nozzle_temperature": arr(values["temp"]),
@@ -970,6 +1009,11 @@ def composite_filament(material: str, values: dict, fiber: dict) -> dict:
         "filament_density": arr(values.get("fiber_plastic_density", values["density"])),
         "filament_cost": arr(values.get("fiber_plastic_cost", values["cost"])),
         **({"filament_price_source": arr(values["price_source"])} if "price_source" in values else {}),
+        **(
+            {"filament_price_source_url": arr(values["price_source_url"])}
+            if "price_source_url" in values
+            else {}
+        ),
         "filament_flow_ratio": arr(f"{fiber_value(values, fiber, 'fiber_flow'):.2f}"),
         "filament_max_volumetric_speed": arr(fiber_value(values, fiber, "fiber_mvs")),
         "nozzle_temperature": arr(fiber_value(values, fiber, "fiber_temp")),
