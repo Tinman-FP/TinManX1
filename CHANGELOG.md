@@ -6,6 +6,8 @@ TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- fixed Creality CFS synchronization so `PCTG` remains PCTG instead of being captured by the shorter `PC` prefix, with boundary-aware material normalization and regression coverage
+- validated the fix against the live K2 Plus CFS payload for slots 1 and 2 and updated the visible revision to `v2026.08.17-creality-cfs-pctg.1`
 - restored the K2 Plus camera in the Device dashboard with a Creality-specific Fluidd camera card backed by the printer's native WebRTC feed, including refresh and full-screen controls
 - updated the visible revision to `v2026.08.16-creality-camera.1`
 - routed Creality K-series Device views and Moonraker status traffic through the printer's port-4408 reverse proxy while retaining port 80 for Creality upload/control requests

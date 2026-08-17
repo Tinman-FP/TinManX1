@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <map>
 
 namespace Slic3r {
@@ -150,13 +151,34 @@ bool CrealityPrintAgent::init_device_info(std::string dev_id,
 
 std::string CrealityPrintAgent::normalize_filament_type(const std::string& filament_type)
 {
+    auto first = std::find_if_not(filament_type.begin(), filament_type.end(),
+                                  [](unsigned char c) { return std::isspace(c) != 0; });
+    auto last = std::find_if_not(filament_type.rbegin(), filament_type.rend(),
+                                 [](unsigned char c) { return std::isspace(c) != 0; }).base();
+    if (first >= last)
+        return {};
+
+    const std::string trimmed(first, last);
+    std::string       upper = trimmed;
+    std::transform(upper.begin(), upper.end(), upper.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+
+    // Keep longer names before their prefixes and require a real token boundary.
+    // In particular, PCTG must never be reduced to PC merely because it starts
+    // with the same two letters.
     static const std::vector<std::string> bases = {
-        "PETG", "PET", "PLA", "ABS", "ASA", "TPU", "PC", "PA", "PVA", "HIPS"
+        "PCTG", "PETG", "HIPS", "PEBA", "PVA", "PPS", "PPA",
+        "PET", "PLA", "ABS", "ASA", "TPU", "PC", "PA", "PP"
     };
     for (const auto& base : bases) {
-        if (filament_type.rfind(base, 0) == 0) return base;
+        if (upper.rfind(base, 0) != 0)
+            continue;
+
+        if (upper.size() == base.size()
+            || !std::isalnum(static_cast<unsigned char>(upper[base.size()])))
+            return base;
     }
-    return filament_type;
+    return trimmed;
 }
 
 // Parse the boxsInfo JSON returned by CrealityPrint::query_boxes_info().

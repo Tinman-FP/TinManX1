@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 
+#include "slic3r/Utils/CrealityPrintAgent.hpp"
 #include "slic3r/Utils/Http.hpp"
 #include "slic3r/Utils/OrcaCloudServiceAgent.hpp"
 #include "slic3r/Utils/SnapmakerPrinterAgent.hpp"
@@ -126,6 +127,19 @@ TEST_CASE("Snapmaker saved filament metadata remains a missing-live-data fallbac
     CHECK(SnapmakerPrinterAgent::resolve_filament_type("", "", "PCTG-CF") == "PCTG-CF");
     CHECK(SnapmakerPrinterAgent::resolve_filament_type("", "", "PEBA") == "PEBA");
     CHECK(SnapmakerPrinterAgent::resolve_filament_type("", "", "") == "PLA");
+}
+
+TEST_CASE("Creality CFS material normalization respects complete material tokens", "[CrealityPrintAgent]")
+{
+    using Slic3r::CrealityPrintAgent;
+
+    CHECK(CrealityPrintAgent::normalize_filament_type("PCTG") == "PCTG");
+    CHECK(CrealityPrintAgent::normalize_filament_type("PCTG-CF") == "PCTG");
+    CHECK(CrealityPrintAgent::normalize_filament_type(" PC ") == "PC");
+    CHECK(CrealityPrintAgent::normalize_filament_type("PC-ABS") == "PC");
+    CHECK(CrealityPrintAgent::normalize_filament_type("PETG-CF") == "PETG");
+    CHECK(CrealityPrintAgent::normalize_filament_type("PPA-CF") == "PPA");
+    CHECK(CrealityPrintAgent::normalize_filament_type("PCGF") == "PCGF");
 }
 
 TEST_CASE("Http digest authentication", "[Http][NotWorking]") {
