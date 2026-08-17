@@ -54,6 +54,10 @@ public:
     // boundaries so short names such as PC cannot consume PCTG or similar types.
     static std::string normalize_filament_type(const std::string& filament_type);
 
+    // Return the bare printer host used by Creality's direct /info and CFS
+    // endpoints, stripping the Moonraker status port when one is configured.
+    static std::string direct_api_host(const std::string& device_address);
+
     // Score visible compatible filament presets against the CFS spool metadata and
     // return the best-matching filament_id. See implementation for scoring details.
     static std::string match_filament_preset(const PresetCollection& filaments,

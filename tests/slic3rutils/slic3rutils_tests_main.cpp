@@ -142,6 +142,15 @@ TEST_CASE("Creality CFS material normalization respects complete material tokens
     CHECK(CrealityPrintAgent::normalize_filament_type("PCGF") == "PCGF");
 }
 
+TEST_CASE("Creality CFS uses the direct printer host beside Moonraker", "[CrealityPrintAgent]")
+{
+    using Slic3r::CrealityPrintAgent;
+
+    CHECK(CrealityPrintAgent::direct_api_host("192.0.2.174:7125") == "192.0.2.174");
+    CHECK(CrealityPrintAgent::direct_api_host("http://192.0.2.174:4408/") == "192.0.2.174");
+    CHECK(CrealityPrintAgent::direct_api_host("k2-plus.local") == "k2-plus.local");
+}
+
 TEST_CASE("Http digest authentication", "[Http][NotWorking]") {
     Slic3r::Http g = Slic3r::Http::get("https://httpbingo.org/digest-auth/auth/guest/guest");
 

@@ -23,6 +23,7 @@
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/TinManMachineProfileContract.hpp"
 
 #include "Tab.hpp"
 #include "ProgressStatusBar.hpp"
@@ -236,6 +237,12 @@ static std::string agent_id_for_machine(MachineObject* obj)
 {
     if (is_bambu_monitor_device(obj))
         return BBL_PRINTER_AGENT_ID;
+
+    if (obj != nullptr) {
+        const std::string key = obj->get_dev_name() + " " + obj->get_dev_id() + " " + obj->get_dev_ip();
+        if (std::string expected = tinmanx_expected_printer_agent(key, obj->printer_type); !expected.empty())
+            return expected;
+    }
 
     if (std::string agent_id = configured_agent_for_machine(obj); !agent_id.empty())
         return agent_id;

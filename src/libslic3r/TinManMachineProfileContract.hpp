@@ -18,6 +18,16 @@ bool tinmanx_machine_preset_allowed(const std::string &preset_name, const std::s
 bool tinmanx_managed_machine_preset(const std::string &preset_name, const std::string &machine_hint = {});
 bool tinmanx_runtime_connection_option(const std::string &option_name);
 
+// Return the printer-agent implementation required by a curated machine.
+// An empty value means the profile's configured agent should be used.
+std::string tinmanx_expected_printer_agent(const std::string &preset_name,
+                                           const std::string &machine_hint = {});
+
+// Repair routing values that are intrinsic to the physical machine rather
+// than user-editable connection credentials (for example K2 CFS support).
+bool tinmanx_enforce_machine_connection_contract(const std::string &preset_name,
+                                                  DynamicPrintConfig &printer_config);
+
 // Return the selector-facing TinMan profile for a curated machine/nozzle.
 // An empty result means the machine is outside the curated catalog or the
 // nozzle is not one of the four supported variants.

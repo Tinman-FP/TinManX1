@@ -1,5 +1,6 @@
 #include "CrealityPrintAgent.hpp"
 #include "CrealityPrint.hpp"
+#include "Http.hpp"
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
@@ -181,6 +182,11 @@ std::string CrealityPrintAgent::normalize_filament_type(const std::string& filam
     return trimmed;
 }
 
+std::string CrealityPrintAgent::direct_api_host(const std::string& device_address)
+{
+    return Http::get_host_from_url(device_address);
+}
+
 // Parse the boxsInfo JSON returned by CrealityPrint::query_boxes_info().
 // Schema (verified 2026-05-06 against K2 Combo F021 firmware v1.1.260206):
 //   { "boxsInfo": { "materialBoxs": [
@@ -281,8 +287,16 @@ bool CrealityPrintAgent::fetch_filament_info(std::string dev_id)
 
     // Build a CrealityPrint helper so we can use its model detection + WS helpers
     // (added in upstream PR #13291).
+    const std::string api_host = direct_api_host(device_info.dev_ip);
+    if (api_host.empty()) {
+        BOOST_LOG_TRIVIAL(warning)
+            << "CrealityPrintAgent::fetch_filament_info: invalid device address '"
+            << device_info.dev_ip << "', falling back to base agent";
+        return MoonrakerPrinterAgent::fetch_filament_info(std::move(dev_id));
+    }
+
     DynamicPrintConfig cfg;
-    cfg.set_key_value("print_host",                  new ConfigOptionString("http://" + device_info.dev_ip));
+    cfg.set_key_value("print_host",                  new ConfigOptionString("http://" + api_host));
     cfg.set_key_value("print_host_webui",            new ConfigOptionString(""));
     cfg.set_key_value("printhost_cafile",            new ConfigOptionString(""));
     cfg.set_key_value("printhost_port",              new ConfigOptionString(""));

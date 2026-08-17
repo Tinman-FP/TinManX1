@@ -2146,12 +2146,19 @@ void Tab::on_presets_changed()
     if (wxGetApp().plater() == nullptr)
         return;
 
-    // Instead of PostEvent (EVT_TAB_PRESETS_CHANGED) just call update_presets
+    // Restore and connect a third-party printer before the sidebar decides
+    // whether the current profile can print. Connection testing used to be the
+    // only path that forced this refresh, leaving Prepare in export-only mode.
+    if (m_type == Preset::TYPE_PRINTER) {
+        wxGetApp().switch_printer_agent(!m_preset_bundle->is_bbl_vendor());
+    }
+
+    // Instead of PostEvent (EVT_TAB_PRESETS_CHANGED) just call update_presets.
+    // For printer presets this must run after the runtime connection overlay is
+    // restored so the Print action and Device URL use the selected machine.
     wxGetApp().plater()->sidebar().update_presets(m_type);
 
-    // Check if printer agent needs switching
     if (m_type == Preset::TYPE_PRINTER) {
-        wxGetApp().switch_printer_agent();
 
         // Trigger per-vendor preset update check
         const Preset& printer_preset = m_preset_bundle->printers.get_edited_preset();

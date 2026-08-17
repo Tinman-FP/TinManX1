@@ -893,6 +893,8 @@ void PhysicalPrinterDialog::check_host_key_valid()
 
 void PhysicalPrinterDialog::OnOK(wxEvent& event)
 {
+    tinmanx_enforce_machine_connection_contract(m_preset_name, *m_config);
+
     const std::string printer_agent = m_config->opt_string("printer_agent");
     if (printer_agent == "snapmaker" || printer_agent == "moonraker") {
         m_config->set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htMoonraker));

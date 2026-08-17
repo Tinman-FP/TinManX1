@@ -3578,13 +3578,16 @@ void GUI_App::switch_printer_agent(bool refresh_machine)
         cloud_agent_id = BBL_CLOUD_PROVIDER;
     } else {
         const DynamicPrintConfig& config = edited_printer.config;
-        if (config.has("printer_agent")) {
+        const std::string model = config.has("printer_model") ? config.opt_string("printer_model") : std::string();
+        const std::string expected_agent = tinmanx_expected_printer_agent(edited_printer.name, model);
+        if (!expected_agent.empty()) {
+            effective_agent_id = expected_agent;
+        } else if (config.has("printer_agent")) {
             const std::string& value = config.option<ConfigOptionString>("printer_agent")->value;
             if (!value.empty())
                 effective_agent_id = value;
         }
         if (effective_agent_id == ORCA_PRINTER_AGENT_ID) {
-            const std::string model = config.has("printer_model") ? config.opt_string("printer_model") : std::string();
             const std::string name  = config.has("printer_settings_id") ? config.opt_string("printer_settings_id") : std::string();
             const std::string key   = model + " " + name;
             if (boost::algorithm::icontains(key, "qidi"))

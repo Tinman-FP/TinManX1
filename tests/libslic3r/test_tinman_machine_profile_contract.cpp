@@ -123,6 +123,33 @@ TEST_CASE("TinMan connection overlay follows a machine across nozzle presets", "
     CHECK(target.opt_string("printer_agent") == "qidi");
 }
 
+TEST_CASE("TinMan connection routing cannot downgrade specialized printer agents", "[Preset][TinMan]")
+{
+    CHECK(tinmanx_expected_printer_agent("Creality K2 Plus 0.6 nozzle - TinMan Codex") == "crealityprint");
+    CHECK(tinmanx_expected_printer_agent("Qidi X-Plus 4", "Qidi X-Plus 4") == "qidi");
+    CHECK(tinmanx_expected_printer_agent("Snapmaker U1", "Snapmaker U1") == "snapmaker");
+    CHECK(tinmanx_expected_printer_agent("My Experimental Printer").empty());
+
+    AppConfig app_config;
+    DynamicPrintConfig source;
+    source.set_key_value("printer_model", new ConfigOptionString("Creality K2 Plus"));
+    source.set_key_value("printer_agent", new ConfigOptionString("moonraker"));
+    source.set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htMoonraker));
+    source.set_key_value("print_host", new ConfigOptionString("192.0.2.174:7125"));
+    source.set_key_value("print_host_webui", new ConfigOptionString("http://192.0.2.174:4408/"));
+
+    const std::string preset = "Creality K2 Plus 0.6 nozzle - TinMan Codex - Copy";
+    CHECK(tinmanx_remember_machine_connection(app_config, preset, source));
+    CHECK(app_config.get("tinman_machine_connections", "Creality K2 Plus::printer_agent") == "crealityprint");
+    CHECK(app_config.get("tinman_machine_connections", "Creality K2 Plus::host_type") == "crealityprint");
+
+    DynamicPrintConfig restored = source;
+    CHECK(tinmanx_restore_machine_connection(app_config, preset, restored));
+    CHECK(restored.opt_string("printer_agent") == "crealityprint");
+    CHECK(restored.opt_enum<PrintHostType>("host_type") == htCrealityPrint);
+    CHECK(restored.opt_string("print_host") == "192.0.2.174:7125");
+}
+
 TEST_CASE("TinMan connection overlay migrates legacy canonical IP entries", "[Preset][TinMan]")
 {
     AppConfig app_config;

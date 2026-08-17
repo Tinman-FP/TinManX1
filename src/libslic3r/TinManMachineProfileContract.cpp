@@ -234,6 +234,53 @@ bool tinmanx_runtime_connection_option(const std::string &option_name)
     return std::find(connection_options.begin(), connection_options.end(), option_name) != connection_options.end();
 }
 
+std::string tinmanx_expected_printer_agent(const std::string &preset_name,
+                                           const std::string &machine_hint)
+{
+    const std::string_view model = matched_model(preset_name, machine_hint);
+    if (model == "Bambu Lab H2D" || model == "Bambu Lab X1 Carbon")
+        return "bbl";
+    if (model == "Creality K2 Plus")
+        return "crealityprint";
+    if (model == "Qidi X-Plus 4" || model == "QidiMaxEz")
+        return "qidi";
+    if (model == "Snapmaker U1")
+        return "snapmaker";
+    if (model == "Prusa CORE One L" ||
+        model == "RatRig V-Core 4 IDEX 500" ||
+        model == "RatRig V-Core 4 IDEX 500 COPY MODE" ||
+        model == "RatRig V-Core 4 IDEX 500 MIRROR MODE" ||
+        model == "Sovol SV08 MAX")
+        return "moonraker";
+    return {};
+}
+
+bool tinmanx_enforce_machine_connection_contract(const std::string &preset_name,
+                                                  DynamicPrintConfig &printer_config)
+{
+    const std::string machine_hint = printer_config.has("printer_model") ?
+        printer_config.opt_string("printer_model") : std::string();
+    const std::string_view model = matched_model(preset_name, machine_hint);
+    const std::string expected_agent = tinmanx_expected_printer_agent(preset_name, machine_hint);
+
+    bool changed = false;
+    if (!expected_agent.empty() && printer_config.has("printer_agent") &&
+        printer_config.opt_string("printer_agent") != expected_agent) {
+        printer_config.set_key_value("printer_agent", new ConfigOptionString(expected_agent));
+        changed = true;
+    }
+
+    // K2 status is read from Moonraker on :7125, but uploads, model
+    // detection, and CFS control must continue through CrealityPrint.
+    if (model == "Creality K2 Plus" && printer_config.has("host_type") &&
+        printer_config.opt_enum<PrintHostType>("host_type") != htCrealityPrint) {
+        printer_config.set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htCrealityPrint));
+        changed = true;
+    }
+
+    return changed;
+}
+
 std::string tinmanx_canonical_machine_preset_name(const std::string &preset_name,
                                                   const std::string &machine_hint,
                                                   const std::string &nozzle_variant)
@@ -351,6 +398,13 @@ bool tinmanx_remember_machine_connection(AppConfig &app_config,
             continue;
 
         std::string value = config_option->serialize();
+        if (option == "printer_agent") {
+            const std::string expected_agent = tinmanx_expected_printer_agent(preset_name, machine_hint);
+            if (!expected_agent.empty())
+                value = expected_agent;
+        } else if (option == "host_type" && model == "Creality K2 Plus") {
+            value = "crealityprint";
+        }
         if (!overwrite_existing && !saved_address.empty() &&
             (option == "print_host" || option == "print_host_webui"))
             value = saved_address;
@@ -419,7 +473,7 @@ bool tinmanx_restore_machine_connection(const AppConfig &app_config,
             restored = true;
         }
     }
-    return restored;
+    return tinmanx_enforce_machine_connection_contract(preset_name, printer_config) || restored;
 }
 
 } // namespace Slic3r

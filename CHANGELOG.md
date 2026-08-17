@@ -1,5 +1,12 @@
 # Changelog
 
+## v2026.08.17-connection-routing.1
+
+- restored each non-Bambu printer's saved connection before the Prepare sidebar decides whether Print is available, removing the connection-test and reslice workaround
+- protected curated printer profiles from being silently downgraded to the generic Moonraker agent when connection settings are saved or restored
+- split K2 Plus communication correctly between Moonraker status on port 7125 and Creality model, upload, and CFS services on the printer's direct host
+- added regression coverage for specialized printer-agent routing and K2 direct-host normalization
+
 ## v2026.08.17-prusa-pcpbtcf.1
 
 - fixed CORE One L handoff for Push Plastic PC-PBT-CF by emitting the printer's native seven-character `PCPBTCF` custom-material token instead of the stock `PC` token
