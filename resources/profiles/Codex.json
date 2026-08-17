@@ -131,6 +131,10 @@
             "sub_path": "filament/PC-PBT Codex-Push Plastic - Bambu H2D @Codex.json"
         },
         {
+            "name": "PC-PBT-CF Codex-Push Plastic - Bambu H2D @Codex",
+            "sub_path": "filament/PC-PBT-CF Codex-Push Plastic - Bambu H2D @Codex.json"
+        },
+        {
             "name": "PCTG Codex-Generic - Bambu H2D @Codex",
             "sub_path": "filament/PCTG Codex-Generic - Bambu H2D @Codex.json"
         },
@@ -347,6 +351,10 @@
             "sub_path": "filament/PC-PBT Codex-Push Plastic - Bambu X1C HF @Codex.json"
         },
         {
+            "name": "PC-PBT-CF Codex-Push Plastic - Bambu X1C HF @Codex",
+            "sub_path": "filament/PC-PBT-CF Codex-Push Plastic - Bambu X1C HF @Codex.json"
+        },
+        {
             "name": "PCTG Codex-Generic - Bambu X1C HF @Codex",
             "sub_path": "filament/PCTG Codex-Generic - Bambu X1C HF @Codex.json"
         },
@@ -553,6 +561,10 @@
         {
             "name": "PC-PBT Codex-Push Plastic - Creality K2 Plus @Codex",
             "sub_path": "filament/PC-PBT Codex-Push Plastic - Creality K2 Plus @Codex.json"
+        },
+        {
+            "name": "PC-PBT-CF Codex-Push Plastic - Creality K2 Plus @Codex",
+            "sub_path": "filament/PC-PBT-CF Codex-Push Plastic - Creality K2 Plus @Codex.json"
         },
         {
             "name": "PCTG Codex-Generic - Creality K2 Plus @Codex",
@@ -781,6 +793,10 @@
         {
             "name": "PC-PBT Codex-Push Plastic - Elegoo Centauri @Codex",
             "sub_path": "filament/PC-PBT Codex-Push Plastic - Elegoo Centauri @Codex.json"
+        },
+        {
+            "name": "PC-PBT-CF Codex-Push Plastic - Elegoo Centauri @Codex",
+            "sub_path": "filament/PC-PBT-CF Codex-Push Plastic - Elegoo Centauri @Codex.json"
         },
         {
             "name": "PCTG Codex-Generic - Elegoo Centauri @Codex",
@@ -1019,6 +1035,10 @@
             "sub_path": "filament/PC-PBT Codex-Push Plastic - Prusa Core One @Codex.json"
         },
         {
+            "name": "PC-PBT-CF Codex-Push Plastic - Prusa CORE One L @Codex",
+            "sub_path": "filament/PC-PBT-CF Codex-Push Plastic - Prusa CORE One L @Codex.json"
+        },
+        {
             "name": "PCTG Codex-Generic - Prusa Core One @Codex",
             "sub_path": "filament/PCTG Codex-Generic - Prusa Core One @Codex.json"
         },
@@ -1251,6 +1271,10 @@
             "sub_path": "filament/PC-PBT Codex-Push Plastic - Qidi X-Plus 4 @Codex.json"
         },
         {
+            "name": "PC-PBT-CF Codex-Push Plastic - Qidi X-Plus 4 @Codex",
+            "sub_path": "filament/PC-PBT-CF Codex-Push Plastic - Qidi X-Plus 4 @Codex.json"
+        },
+        {
             "name": "PCTG Codex-Generic - Qidi X-Plus 4 @Codex",
             "sub_path": "filament/PCTG Codex-Generic - Qidi X-Plus 4 @Codex.json"
         },
@@ -1473,6 +1497,10 @@
         {
             "name": "PC-PBT Codex-Push Plastic - RatRig V-Core 4 @Codex",
             "sub_path": "filament/PC-PBT Codex-Push Plastic - RatRig V-Core 4 @Codex.json"
+        },
+        {
+            "name": "PC-PBT-CF Codex-Push Plastic - RatRig V-Core 4 @Codex",
+            "sub_path": "filament/PC-PBT-CF Codex-Push Plastic - RatRig V-Core 4 @Codex.json"
         },
         {
             "name": "PCTG Codex-Generic - RatRig V-Core 4 @Codex",
@@ -1699,6 +1727,10 @@
             "sub_path": "filament/PC-PBT Codex-Push Plastic - Snapmaker U1 @Codex.json"
         },
         {
+            "name": "PC-PBT-CF Codex-Push Plastic - Snapmaker U1 @Codex",
+            "sub_path": "filament/PC-PBT-CF Codex-Push Plastic - Snapmaker U1 @Codex.json"
+        },
+        {
             "name": "PCTG Codex-Generic - Snapmaker U1 @Codex",
             "sub_path": "filament/PCTG Codex-Generic - Snapmaker U1 @Codex.json"
         },
@@ -1921,6 +1953,10 @@
         {
             "name": "PC-PBT Codex-Push Plastic - Sovol SV08 MAX @Codex",
             "sub_path": "filament/PC-PBT Codex-Push Plastic - Sovol SV08 MAX @Codex.json"
+        },
+        {
+            "name": "PC-PBT-CF Codex-Push Plastic - Sovol SV08 MAX @Codex",
+            "sub_path": "filament/PC-PBT-CF Codex-Push Plastic - Sovol SV08 MAX @Codex.json"
         },
         {
             "name": "PCTG Codex-Generic - Sovol SV08 MAX @Codex",

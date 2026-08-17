@@ -70,6 +70,7 @@ REFERENCE_SPECS = {
     "PC+PBT|Push Plastic": ref("analog", "Bambu PC", "Generic PC"),
     "PC-CF|Generic": ref("analog", "Bambu PC", "Generic PC"),
     "PC-PBT|Push Plastic": ref("analog", "Bambu PC", "Generic PC"),
+    "PC-PBT-CF|Push Plastic": ref("analog", "Bambu PC", "Generic PC"),
     "PCTG|Generic": ref("exact", "Generic PCTG"),
     "PCTG-CF|3D-Fuel Pro": ref("analog", "Generic PETG-CF"),
     "PEBA|SainSmart": ref("analog", "Bambu TPU 85A"),
@@ -139,7 +140,7 @@ def resolve_profile(
 
 def codex_identity(data: dict[str, Any]) -> tuple[str, str, str]:
     name = scalar(data.get("name"))
-    material = scalar(data.get("filament_type"))
+    material = name.split(" Codex-", 1)[0] if " Codex-" in name else scalar(data.get("filament_type"))
     manufacturer = name.split(" Codex-", 1)[1].split(" - ", 1)[0]
     bucket = name.rsplit(" - ", 1)[1].removesuffix(" @Codex")
     return material, manufacturer, bucket

@@ -105,6 +105,7 @@ FALLBACK_CHAMBER_TARGETS = {
     "PC+PBT": 55,
     "PC-CF": 55,
     "PC-PBT": 55,
+    "PC-PBT-CF": 55,
     "PCTG": 45,
     "PCTG-CF": 45,
     "PET-CF": 50,

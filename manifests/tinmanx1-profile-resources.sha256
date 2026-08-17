@@ -57,7 +57,7 @@ a629ef9e47a18e6ba5ba12e34f05234829fb837ff898a50cd40b97edc5483f95  BBL/process/Ti
 679e53625a6bcee526d722c8e312092bdfcf803b7e26cb2dca1f019bb6c120d3  BBL/process/TinMan Codex/0.60mm Fast @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json
 1fb5314a4d49a08df7a04b51a9d1e3dcaac6b82bd4e251f8c5fb89db53d64c41  BBL/process/TinMan Codex/0.70mm Draft @Bambu Lab H2D 1.0 nozzle - TinMan Codex.json
 7009d7c56ec879cf909449f1ff40d98bc35d71d35a1f9b58a970a193d811c71b  BBL/process/TinMan Codex/0.70mm Draft @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json
-ddf4a4f7d6166176052d22eb7978ff9ef17c1b744c125dcc732e2eff9671b325  Codex.json
+0dfcde978c43c4e7d0c7ce58e74db550ff7c39c21841b2fd78145ce4e5f6c341  Codex.json
 e2f64696c04b092f79119109e3e580e1b1001c807d21ca1028dec51e9e27323e  Codex/filament/ABS Codex-Bambu - Bambu H2D @Codex.json
 f7e4ac91ef2dd211acd5be764c9f2c6dc2b47a258930e61ebdf534572bf4cfca  Codex/filament/ABS Codex-Bambu - Bambu X1C HF @Codex.json
 e6ab0cf28cd74dd1536554d6ee37aafe686c2a53d901fd11548a68c1b11b681b  Codex/filament/ABS Codex-Bambu - Creality K2 Plus @Codex.json
@@ -353,6 +353,15 @@ f13b9c5ae867bdd7cd0d169bdc68604cc685b04f077f5cd75249b291321899ef  Codex/filament
 94b7a09dba05c94bdf435ebd5b07e0793dbe0d2493bd3e5130f97a90ff3cdc6c  Codex/filament/PC-PBT Codex-Push Plastic - RatRig V-Core 4 @Codex.json
 729b6935f8ba03bc36ddc82b8b908da5a3614ac25cc11c330bdee9ddbb13ea6e  Codex/filament/PC-PBT Codex-Push Plastic - Snapmaker U1 @Codex.json
 6b2cb2de3d1177d4b5efe4035212dccfdd389ad3804af04e47cfc42df32ecc37  Codex/filament/PC-PBT Codex-Push Plastic - Sovol SV08 MAX @Codex.json
+6cebbb91d4bcbc51454d2e281b6e7091c81f0a4314e5e1b88e6e564975c74a22  Codex/filament/PC-PBT-CF Codex-Push Plastic - Bambu H2D @Codex.json
+950f4b16bae0cba9333adfa9a8e94a7cba38a8e9096de4624d17d931d4d8834d  Codex/filament/PC-PBT-CF Codex-Push Plastic - Bambu X1C HF @Codex.json
+50401ad136e79511513a5ce9f8ff34fee757a721f5a9f1989a2b93a546207489  Codex/filament/PC-PBT-CF Codex-Push Plastic - Creality K2 Plus @Codex.json
+86b1420b676f95d61cdc4edc702dda86f3699a888c0b5e34b1de8033121110a4  Codex/filament/PC-PBT-CF Codex-Push Plastic - Elegoo Centauri @Codex.json
+9ec1e16a2a62eb156f6b5c15657914579be1c6dac0b0b0fc99d4aa861072caed  Codex/filament/PC-PBT-CF Codex-Push Plastic - Prusa CORE One L @Codex.json
+8bbda8080b6924ae6317801632a14e5a408205ddfd5dbb0b717ef49647ff777c  Codex/filament/PC-PBT-CF Codex-Push Plastic - Qidi X-Plus 4 @Codex.json
+a3d2609551e46e7b73bbfd2177cbdef4277aca5805a73e15a509821baf8e307d  Codex/filament/PC-PBT-CF Codex-Push Plastic - RatRig V-Core 4 @Codex.json
+e4860849d6ad4b1234c8eb42720cdfecd96dda255d4e6d0f69f8c8228cc1ad5a  Codex/filament/PC-PBT-CF Codex-Push Plastic - Snapmaker U1 @Codex.json
+bb63b66947116092d5b92ceb09c030d292bed204738893cf1befb5a74318fee4  Codex/filament/PC-PBT-CF Codex-Push Plastic - Sovol SV08 MAX @Codex.json
 ea3a53786f4df3461afa6175172175dadccfe3953b3b714136ccca12ad0fc9db  Codex/filament/PCTG Codex-Generic - Bambu H2D @Codex.json
 83dd07ee0c5ab1f7bde6cd8f6a1945f7baa588121ff47b622a2bc774d062ddb6  Codex/filament/PCTG Codex-Generic - Bambu X1C HF @Codex.json
 6a731fad1cf9c16116529512884a5f8930a760cc541cec4551a22672be89be0d  Codex/filament/PCTG Codex-Generic - Creality K2 Plus @Codex.json
@@ -785,7 +794,7 @@ df7f90742e9e826971d4d89903e3b9b0d185d39706d4f32b2a1a9016b535e47a  Sovol/process/
 8388bd6b8711e04e36d3c13e77115b5a986956a4f1f786d9e27b9f69fac17eaf  Sovol/process/TinMan Codex/0.56mm Draft @Sovol SV08 MAX 0.8 nozzle - TinMan Codex.json
 873ae08623589ef9310dd36360c243d6962ff6cb80adbe83318c1468db71bde4  Sovol/process/TinMan Codex/0.60mm Fast @Sovol SV08 MAX 1.0 nozzle - TinMan Codex.json
 165a69bf10b74c5367833ec981153493fee6b77964fab7032a92cba52a8040dd  Sovol/process/TinMan Codex/0.70mm Draft @Sovol SV08 MAX 1.0 nozzle - TinMan Codex.json
-331cddc7ecad409911b276dd87bab87ee92f327e4e891612a3daeb5373800345  TinManX1.json
+e16427b4cf588722c0f7ca301ed9f85f5ab008eb1be082586283e2d6d421716b  TinManX1.json
 9d23f1767356f0803fa14fbe6bfe1a03adedcef5f27e9ce79c87965e6f1045ab  TinManX1/filament/CFC ABS + CBF @FibreSeek Seeker 3.json
 45d6f3358ada7283c5cdf7f3441eacc857957296040d89210c9daac261b0a7db  TinManX1/filament/CFC ABS + CGF @FibreSeek Seeker 3.json
 850897209bd8656bf086b4175bcae27d3d248f79d3f43b1d47c8154f96ef2e29  TinManX1/filament/CFC ABS + CKF @FibreSeek Seeker 3.json
@@ -846,6 +855,10 @@ b6ad718ced61b1c5cd256f965858d8df70d1c33948ea1c45e5a0d3124ebacd20  TinManX1/filam
 2cdd534cdcb10c460ea0e8b9d3f65f2cecb79475aabe790e2d58452f1c792a31  TinManX1/filament/CFC Push Plastic PC-PBT + CGF @FibreSeek Seeker 3.json
 965cb891009cd5c29be151ae6de8bf00a42bc05e8380e15819a79b6b0db2518a  TinManX1/filament/CFC Push Plastic PC-PBT + CKF @FibreSeek Seeker 3.json
 226ec87d66fec9ece5c99d12bb117d6cccdd7c29ed3cdc86887b66c0f5445102  TinManX1/filament/CFC Push Plastic PC-PBT + X-CCF @FibreSeek Seeker 3.json
+14845a29a4d2cf684733b7e9676b85583c293f2c46186b158365128c7e1d7681  TinManX1/filament/CFC Push Plastic PC-PBT-CF + CBF @FibreSeek Seeker 3.json
+e4c765f99de129c3674ff650047a964709381c0f9030d1a4170cdde0c4dbd1b4  TinManX1/filament/CFC Push Plastic PC-PBT-CF + CGF @FibreSeek Seeker 3.json
+6ccaee1e1386e940720c656eaa382c8e2097c0cd843a1ce93bdb0811053634ed  TinManX1/filament/CFC Push Plastic PC-PBT-CF + CKF @FibreSeek Seeker 3.json
+28b50f324a5d50b1e95a733c64c5ec7fe38f624eccb0776dec5594b4f7a59a7c  TinManX1/filament/CFC Push Plastic PC-PBT-CF + X-CCF @FibreSeek Seeker 3.json
 b3fe77b2d17b8dfc1193358150653671380b548a35c338443ce13a67c32dc80f  TinManX1/filament/TinManX1 ABS @FibreSeek Seeker 3.json
 90b2b9c33c45ec78d58696982e42af0cb30d1dad4fbf2f40eae36db123f9fbca  TinManX1/filament/TinManX1 ABS base.json
 71188f31ac331d610d72cf95dd5d0956cb6447f4a78224e25df760f4be6179f5  TinManX1/filament/TinManX1 ABS-CF @FibreSeek Seeker 3.json
@@ -876,6 +889,8 @@ b8c2003af0be75ec673bc70d9fcb90b871855852807bb17e86790ec4492ed2ca  TinManX1/filam
 10a6fbe7ddd0cf8f8119450d2d70e82a608bb6baaac5e31125cbe81a22aff176  TinManX1/filament/TinManX1 PPS-CF base.json
 52f6cb9807449d0b675ab88eda25b7a259a1cfaa7a4c6d5b5ac32ae87b3f82ba  TinManX1/filament/TinManX1 Push Plastic PC-PBT @FibreSeek Seeker 3.json
 0b40a5fb2f923d9ceef2a3050163aca78e1138e5cae320a22c559d3fbc8410e3  TinManX1/filament/TinManX1 Push Plastic PC-PBT base.json
+2d6aeb11305345701a889ac3af2ac4126311c0e91007be6cc67435462750b25e  TinManX1/filament/TinManX1 Push Plastic PC-PBT-CF @FibreSeek Seeker 3.json
+d5f9aa92b42af93dcc5a1504bffdb3a527280a36b66a4ade459ac54923c8e34a  TinManX1/filament/TinManX1 Push Plastic PC-PBT-CF base.json
 deba089e22ef98fc0a4a04992529b966a3915d5da5d491a04a160f09626f8816  TinManX1/machine/FibreSeek Seeker 3 0.4 nozzle.json
 842070186a5523ecbd852f7a326b17ec729a49cbab6c5930291584af84457d8b  TinManX1/machine/FibreSeek Seeker 3 0.4+0.7 composite nozzle.json
 1b6b6f4f4f7b5725aefc105b73c220c8b30eea3ed60ff344fcea9989965f0d4d  TinManX1/machine/FibreSeek Seeker 3 0.6 nozzle.json

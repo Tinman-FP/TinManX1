@@ -220,6 +220,7 @@ MATERIAL_NAME_MAP = {
     "PC": "PC",
     "PC CF": "PC-CF",
     "PC PBT": "PC-PBT",
+    "PC PBT CF": "PC-PBT-CF",
     "PCTG": "PCTG",
     "PCTG CF": "PCTG-CF",
     "PE": "PE",

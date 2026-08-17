@@ -48,6 +48,7 @@ EXACT_PRICE_OVERRIDES: dict[tuple[str, str], PriceSource] = {
         "https://shop.polymaker.com/products/polylite-pla-cf",
     ),
     ("Push Plastic", "PC-PBT"): PriceSource(39.99, "Push Plastic PC+PBT 1 kg spool", "https://www.pushplastic.com/products/pc-pbt-filament-1-75mm-1kg"),
+    ("Push Plastic", "PC-PBT-CF"): PriceSource(99.98, "Push Plastic Carbon Fiber PC+PBT 500 g spool, normalized to 1 kg", "https://www.pushplastic.com/products/carbon-fiber-pc-pbt-filament-1-75mm-500g"),
     ("QIDI", "ABS-GF"): PriceSource(59.99, "QIDI ABS-GF25 1 kg Amazon listing", "https://www.amazon.com/QIDI-TECHNOLOGY-Filament-ABS-GF25-Interlayer/dp/B0BXSMBGCJ"),
     ("QIDI", "PPS-GF"): PriceSource(79.99, "QIDI PPS-GF20 converted from 750 g spool", "https://us.qidi3d.com/products/pps-gf20", "$59.99 / 0.75 kg"),
     ("RatRig Punk", "ABS"): PriceSource(24.99, "RatRig Punk ABS current installed baseline"),
@@ -76,6 +77,7 @@ GENERIC_PRICE_AVERAGES: dict[str, PriceSource] = {
     "PC": PriceSource(40.00, "Generic 1 kg retail average"),
     "PC-CF": PriceSource(75.00, "Generic 1 kg retail average"),
     "PC-PBT": PriceSource(39.99, "Generic 1 kg retail average"),
+    "PC-PBT-CF": PriceSource(99.98, "Push Plastic Carbon Fiber PC+PBT 500 g spool, normalized to 1 kg", "https://www.pushplastic.com/products/carbon-fiber-pc-pbt-filament-1-75mm-500g"),
     "PCTG": PriceSource(30.00, "Generic 1 kg retail average"),
     "PCTG-CF": PriceSource(54.95, "Generic 1 kg retail average"),
     "PE": PriceSource(69.00, "Generic 1 kg retail average"),
@@ -177,6 +179,9 @@ def profile_brand(name: str) -> str:
 
 
 def profile_type(profile: dict[str, Any]) -> str:
+    name = scalar(profile.get("name")).upper()
+    if name.startswith("PC-PBT-CF CODEX-"):
+        return "PC-PBT-CF"
     return scalar(profile.get("filament_type")).upper()
 
 

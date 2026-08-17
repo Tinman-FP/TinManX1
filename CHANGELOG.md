@@ -1,5 +1,12 @@
 # Changelog
 
+## v2026.08.17-pc-pbt-cf-profiles.1
+
+- added printer-specific Push Plastic Carbon Fiber PC+PBT profiles for every TinManX1 printer family and FibreSeek 3
+- aligned the material contract to Push Plastic's published 250-260 C nozzle, 90-100 C bed, hardened-nozzle, and 0.6 mm preferred-nozzle guidance
+- added exact Prusa CORE One L compatibility naming while using Prusa's recognized `PC` material token for print handoff
+- normalized the current 500 g retail price to a 1 kg filament-cost value and added profile source metadata
+
 ## Unreleased
 
 TinManX1 FibreSeek nice-to-have controls and release hardening.
