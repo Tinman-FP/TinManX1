@@ -1,10 +1,16 @@
 # Changelog
 
+## v2026.08.17-prusa-pcpbtcf.1
+
+- fixed CORE One L handoff for Push Plastic PC-PBT-CF by emitting the printer's native seven-character `PCPBTCF` custom-material token instead of the stock `PC` token
+- preserved PC-class high-temperature mesh-leveling behavior for `PCPBTCF` in the inherited CORE One L startup sequence
+- added a release contract that rejects future drift between the filament metadata and Prusa startup logic
+
 ## v2026.08.17-pc-pbt-cf-profiles.1
 
 - added printer-specific Push Plastic Carbon Fiber PC+PBT profiles for every TinManX1 printer family and FibreSeek 3
 - aligned the material contract to Push Plastic's published 250-260 C nozzle, 90-100 C bed, hardened-nozzle, and 0.6 mm preferred-nozzle guidance
-- added exact Prusa CORE One L compatibility naming while using Prusa's recognized `PC` material token for print handoff
+- added exact Prusa CORE One L compatibility naming; the follow-up `v2026.08.17-prusa-pcpbtcf.1` release corrects the handoff token to the printer's custom `PCPBTCF` name
 - normalized the current 500 g retail price to a 1 kg filament-cost value and added profile source metadata
 
 ## Unreleased

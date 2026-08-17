@@ -28,6 +28,7 @@ DEFAULT_BACKUP_ROOT = Path.home() / ".tinmanx1/pc-pbt-cf-profile-backups"
 
 MATERIAL = "PC-PBT-CF"
 MANUFACTURER = "Push Plastic"
+PRUSA_CORE_ONE_FILAMENT_TOKEN = "PCPBTCF"
 PRICE_PER_KG = "99.98"
 PRODUCT_URL = "https://www.pushplastic.com/products/carbon-fiber-pc-pbt-filament-1-75mm-500g"
 PRICE_SOURCE = "Push Plastic Carbon Fiber PC+PBT 500 g spool, normalized to 1 kg"
@@ -75,7 +76,10 @@ def material_settings(active_chamber: bool, flow_ratio: str, *, prusa: bool) -> 
         "filament_density": ["1.2"],
         "filament_flow_ratio": [flow_ratio],
         "filament_max_volumetric_speed": ["6"],
-        "filament_type": ["PC" if prusa else MATERIAL],
+        # Prusa firmware compares this metadata byte-for-byte with the loaded
+        # filament name. Its custom-material field is limited to seven ASCII
+        # characters, and the CORE One L uses PCPBTCF for this material.
+        "filament_type": [PRUSA_CORE_ONE_FILAMENT_TOKEN if prusa else MATERIAL],
         "filament_vendor": ["Codex"],
         "nozzle_temperature": ["255"],
         "nozzle_temperature_initial_layer": ["260"],

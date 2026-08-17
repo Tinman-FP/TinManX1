@@ -42,6 +42,7 @@ DEFAULT_MIRROR_ROOTS = [
 
 SYSTEM_SUFFIX = " @Codex"
 BLACK = "#000000"
+PRUSA_PC_PBT_CF_TOKEN = "PCPBTCF"
 PROFILE_RE = re.compile(
     r"^(?P<material>.+?) Codex-(?P<manufacturer>.+?) - "
     r"(?P<printer>.+?)(?: \((?P<copy>\d+)\))? @Codex$"
@@ -358,7 +359,7 @@ def canonical_profile(
     data["filament_settings_id"] = [profile.canonical_name]
     data["filament_vendor"] = ["Codex"]
     if profile.key == ("PC-PBT-CF", "Push Plastic", "Prusa Core One"):
-        data["filament_type"] = ["PC"]
+        data["filament_type"] = [PRUSA_PC_PBT_CF_TOKEN]
     else:
         data["filament_type"] = [profile.material_type]
     data["default_filament_colour"] = [BLACK]

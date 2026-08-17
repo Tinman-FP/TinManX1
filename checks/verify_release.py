@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -175,6 +176,31 @@ def iter_files() -> list[Path]:
 
 def main() -> int:
     errors: list[str] = []
+
+    prusa_filament = ROOT / (
+        "resources/profiles/Codex/filament/"
+        "PC-PBT-CF Codex-Push Plastic - Prusa CORE One L @Codex.json"
+    )
+    prusa_machine = ROOT / (
+        "resources/profiles/Prusa/machine/Prusa CORE One L HF 0.4 nozzle.json"
+    )
+    if prusa_filament.is_file():
+        filament_data = json.loads(prusa_filament.read_text())
+        if filament_data.get("filament_type") != ["PCPBTCF"]:
+            errors.append("CORE One L PC-PBT-CF must emit the native PCPBTCF token")
+    if prusa_machine.is_file():
+        machine_data = json.loads(prusa_machine.read_text())
+        start_gcode = machine_data.get("machine_start_gcode", "")
+        if isinstance(start_gcode, list):
+            start_gcode = start_gcode[0] if start_gcode else ""
+        pc_class_check = (
+            'filament_type[0] == "PC" or filament_type[0] == "PCPBTCF" '
+            'or filament_type[0] == "PA"'
+        )
+        if start_gcode.count(pc_class_check) != 3:
+            errors.append(
+                "CORE One L startup must classify PCPBTCF as PC for all three MBL temperature checks"
+            )
 
     for rel in REQUIRED_FILES:
         path = ROOT / rel
