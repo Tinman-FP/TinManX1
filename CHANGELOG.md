@@ -1,5 +1,12 @@
 # Changelog
 
+## v2026.08.18-k2-camera-recovery.1
+
+- replaced the retired K2 Plus port-8000 camera page with the current token-protected WebRTC protocol, including Creality-compatible H.264 SDP negotiation and numeric ICE candidates
+- made camera discovery, stream monitoring, and one-click refresh recover independently without interrupting a healthy feed or the rest of the Fluidd Device dashboard
+- suppress the obsolete Fluidd camera card so it cannot tear down the authenticated stream during dashboard rerenders
+- credit GecKoTDF's GPL-3.0 `Creality-K2-Camera-Fix` research for documenting the current firmware handshake
+
 ## v2026.08.17-k2-print-routing.1
 
 - separated the K2 Plus direct print API from its Moonraker status service so connection tests, model detection, upload, and print start use port 80 while Device/status uses the port-4408 Moonraker proxy
