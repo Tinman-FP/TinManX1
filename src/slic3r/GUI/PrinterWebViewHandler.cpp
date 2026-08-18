@@ -450,7 +450,7 @@ public:
 private:
     static const char* camera_injection_script()
     {
-        return R"JS(
+        static const std::string script = std::string(R"JS(
 (function () {
   'use strict';
 
@@ -740,6 +740,7 @@ private:
       return sdp;
     }
   }
+)JS") + R"JS(
 
   function makeCandidatesNumeric(sdp) {
     return sdp.split('\r\n').map((line) => {
@@ -977,6 +978,7 @@ private:
   state.probeCamera();
 })();
 )JS";
+        return script.c_str();
     }
 };
 
