@@ -217,6 +217,11 @@ const MachineFamily *family_for_model(std::string_view model)
     return found == machine_families.end() ? nullptr : &*found;
 }
 
+bool is_qidi_moonraker_model(std::string_view model)
+{
+    return model == "Qidi X-Plus 4" || model == "QidiMaxEz";
+}
+
 std::string legacy_machine_address(const AppConfig &app_config,
                                    std::string_view model,
                                    std::string_view preset_name)
@@ -297,6 +302,14 @@ bool tinmanx_enforce_machine_connection_contract(const std::string &preset_name,
     if (!expected_agent.empty() && printer_config.has("printer_agent") &&
         printer_config.opt_string("printer_agent") != expected_agent) {
         printer_config.set_key_value("printer_agent", new ConfigOptionString(expected_agent));
+        changed = true;
+    }
+
+    // Qidi's Klipper printers expose Moonraker. Repair the inherited Orca
+    // OctoPrint default in old profile copies and persisted connection data.
+    if (is_qidi_moonraker_model(model) && printer_config.has("host_type") &&
+        printer_config.opt_enum<PrintHostType>("host_type") != htMoonraker) {
+        printer_config.set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htMoonraker));
         changed = true;
     }
 
@@ -463,8 +476,11 @@ bool tinmanx_remember_machine_connection(AppConfig &app_config,
             const std::string expected_agent = tinmanx_expected_printer_agent(preset_name, machine_hint);
             if (!expected_agent.empty())
                 value = expected_agent;
-        } else if (option == "host_type" && model == "Creality K2 Plus") {
-            value = "crealityprint";
+        } else if (option == "host_type") {
+            if (model == "Creality K2 Plus")
+                value = "crealityprint";
+            else if (is_qidi_moonraker_model(model))
+                value = "moonraker";
         } else if (option == "print_host" && !k2_host.empty()) {
             value = print_host;
         } else if (option == "print_host_webui" && !k2_host.empty()) {

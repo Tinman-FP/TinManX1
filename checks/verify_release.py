@@ -239,6 +239,31 @@ def main() -> int:
                 "CORE One L startup must classify PCPBTCF as PC for all three MBL temperature checks"
             )
 
+    qidi_common = ROOT / "resources/profiles/Qidi/machine/fdm_qidi_x3_common.json"
+    if qidi_common.is_file():
+        qidi_data = json.loads(qidi_common.read_text())
+        if qidi_data.get("host_type") != "moonraker":
+            errors.append("Qidi Klipper profiles must use Moonraker instead of OctoPrint")
+
+    connection_contract = (ROOT / "src/libslic3r/TinManMachineProfileContract.cpp").read_text(
+        errors="replace"
+    )
+    for marker in (
+        'model == "Qidi X-Plus 4" || model == "QidiMaxEz"',
+        'value = "moonraker";',
+    ):
+        if marker not in connection_contract:
+            errors.append(f"Qidi connection contract is missing marker: {marker}")
+
+    gui_app = (ROOT / "src/slic3r/GUI/GUI_App.cpp").read_text(errors="replace")
+    shutdown_body = gui_app[gui_app.find("void GUI_App::shutdown()") : gui_app.find("GUI_App::~GUI_App()")]
+    for marker in (
+        "NetworkAgentFactory::clear_printer_agent_cache();",
+        "BBLNetworkPlugin::shutdown();",
+    ):
+        if marker not in shutdown_body:
+            errors.append(f"early network shutdown is missing marker: {marker}")
+
     for rel in REQUIRED_FILES:
         path = ROOT / rel
         if not path.is_file():

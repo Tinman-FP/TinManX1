@@ -1089,6 +1089,34 @@ void GUI_App::shutdown()
     stop_http_server();
     set_closing(true);
     BBLNetworkPlugin::prepare_for_process_exit();
+
+    // MainFrame owns preset bundles that may still be referenced by queued network
+    // callbacks. Stop every network producer before wxWidgets destroys the frame.
+    // Waiting until OnExit is too late on macOS: the Bambu plug-in can otherwise
+    // fault on a worker thread while MainFrame members are being released.
+    if (m_agent) {
+        m_agent->set_on_ssdp_msg_fn(nullptr);
+        m_agent->set_on_printer_connected_fn(nullptr);
+        m_agent->set_on_server_connected_fn(nullptr);
+        m_agent->set_on_http_error_fn(nullptr);
+        m_agent->set_on_subscribe_failure_fn(nullptr);
+        m_agent->set_on_message_fn(nullptr);
+        m_agent->set_on_user_message_fn(nullptr);
+        m_agent->set_on_local_connect_fn(nullptr);
+        m_agent->set_on_local_message_fn(nullptr);
+        m_agent->set_queue_on_main_fn(nullptr);
+        m_agent->start_discovery(false, false);
+        m_agent->disconnect_printer();
+    }
+
+    NetworkAgentFactory::clear_printer_agent_cache();
+
+    if (m_agent) {
+        delete m_agent;
+        m_agent = nullptr;
+    }
+
+    BBLNetworkPlugin::shutdown();
     BOOST_LOG_TRIVIAL(info) << "GUI_App::shutdown exit";
 }
 

@@ -155,6 +155,28 @@ TEST_CASE("TinMan connection routing cannot downgrade specialized printer agents
     CHECK(restored.opt_string("print_host_webui") == "http://192.0.2.174:4408/");
 }
 
+TEST_CASE("TinMan Qidi connections cannot fall back to OctoPrint", "[Preset][TinMan]")
+{
+    AppConfig app_config;
+    DynamicPrintConfig source;
+    source.set_key_value("printer_model", new ConfigOptionString("Qidi X-Plus 4"));
+    source.set_key_value("printer_agent", new ConfigOptionString("qidi"));
+    source.set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htOctoPrint));
+    source.set_key_value("print_host", new ConfigOptionString("192.0.2.145"));
+    source.set_key_value("print_host_webui", new ConfigOptionString("192.0.2.145"));
+
+    const std::string preset = "Qidi X-Plus 4 0.6 nozzle - TinMan Codex - Copy";
+    CHECK(tinmanx_enforce_machine_connection_contract(preset, source));
+    CHECK(source.opt_enum<PrintHostType>("host_type") == htMoonraker);
+
+    CHECK(tinmanx_remember_machine_connection(app_config, preset, source));
+    CHECK(app_config.get("tinman_machine_connections", "Qidi X-Plus 4::host_type") == "moonraker");
+
+    source.set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htOctoPrint));
+    CHECK(tinmanx_restore_machine_connection(app_config, preset, source));
+    CHECK(source.opt_enum<PrintHostType>("host_type") == htMoonraker);
+}
+
 TEST_CASE("TinMan connection overlay migrates legacy canonical IP entries", "[Preset][TinMan]")
 {
     AppConfig app_config;
