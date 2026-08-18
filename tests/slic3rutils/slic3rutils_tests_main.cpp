@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 
+#include "slic3r/Utils/CrealityPrint.hpp"
 #include "slic3r/Utils/CrealityPrintAgent.hpp"
 #include "slic3r/Utils/Http.hpp"
 #include "slic3r/Utils/OrcaCloudServiceAgent.hpp"
@@ -149,6 +150,15 @@ TEST_CASE("Creality CFS uses the direct printer host beside Moonraker", "[Creali
     CHECK(CrealityPrintAgent::direct_api_host("192.0.2.174:7125") == "192.0.2.174");
     CHECK(CrealityPrintAgent::direct_api_host("http://192.0.2.174:4408/") == "192.0.2.174");
     CHECK(CrealityPrintAgent::direct_api_host("k2-plus.local") == "k2-plus.local");
+}
+
+TEST_CASE("Creality test and upload API reject stale Moonraker ports", "[CrealityPrint]")
+{
+    using Slic3r::CrealityPrint;
+
+    CHECK(CrealityPrint::get_device_api_url("192.0.2.174:7125") == "http://192.0.2.174");
+    CHECK(CrealityPrint::get_device_api_url("http://192.0.2.174:4408/") == "http://192.0.2.174");
+    CHECK(CrealityPrint::get_device_api_url(" k2-plus.local ") == "http://k2-plus.local");
 }
 
 TEST_CASE("Http digest authentication", "[Http][NotWorking]") {

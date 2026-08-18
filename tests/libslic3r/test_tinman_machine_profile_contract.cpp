@@ -142,12 +142,17 @@ TEST_CASE("TinMan connection routing cannot downgrade specialized printer agents
     CHECK(tinmanx_remember_machine_connection(app_config, preset, source));
     CHECK(app_config.get("tinman_machine_connections", "Creality K2 Plus::printer_agent") == "crealityprint");
     CHECK(app_config.get("tinman_machine_connections", "Creality K2 Plus::host_type") == "crealityprint");
+    CHECK(app_config.get("tinman_machine_connections", "Creality K2 Plus::print_host") == "192.0.2.174");
+    CHECK(app_config.get("tinman_machine_connections", "Creality K2 Plus::print_host_webui") ==
+          "http://192.0.2.174:4408/");
+    CHECK(app_config.get("ip_address", "Creality K2 Plus 0.4 nozzle - TinMan Codex") == "192.0.2.174");
 
     DynamicPrintConfig restored = source;
     CHECK(tinmanx_restore_machine_connection(app_config, preset, restored));
     CHECK(restored.opt_string("printer_agent") == "crealityprint");
     CHECK(restored.opt_enum<PrintHostType>("host_type") == htCrealityPrint);
-    CHECK(restored.opt_string("print_host") == "192.0.2.174:7125");
+    CHECK(restored.opt_string("print_host") == "192.0.2.174");
+    CHECK(restored.opt_string("print_host_webui") == "http://192.0.2.174:4408/");
 }
 
 TEST_CASE("TinMan connection overlay migrates legacy canonical IP entries", "[Preset][TinMan]")

@@ -52,7 +52,7 @@ namespace pt = boost::property_tree;
 namespace Slic3r {
 
 CrealityPrint::CrealityPrint(DynamicPrintConfig* config) : 
-    m_host(config->opt_string("print_host")), 
+    m_host(get_device_api_url(config->opt_string("print_host"))),
     m_web_ui(config->opt_string("print_host_webui")),
     m_cafile(config->opt_string("printhost_cafile")),
     m_port(config->opt_string("printhost_port")),
@@ -61,6 +61,13 @@ CrealityPrint::CrealityPrint(DynamicPrintConfig* config) :
 {}
 
 const char* CrealityPrint::get_name() const { return "Creality Print"; }
+
+std::string CrealityPrint::get_device_api_url(std::string url)
+{
+    boost::trim(url);
+    const std::string host = Http::get_host_from_url(url);
+    return host.empty() ? std::string() : "http://" + host;
+}
 
 std::string CrealityPrint::get_device_webui_url(std::string url)
 {

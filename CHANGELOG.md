@@ -1,5 +1,12 @@
 # Changelog
 
+## v2026.08.17-k2-print-routing.1
+
+- separated the K2 Plus direct print API from its Moonraker status service so connection tests, model detection, upload, and print start use port 80 while Device/status uses the port-4408 Moonraker proxy
+- migrated stale K2 profiles and connection overlays that stored port 7125 as the CrealityPrint host, including user-created profile copies and all canonical nozzle selections
+- added a runtime direct-host guard so an old saved K2 address cannot send Creality `/info` or `/upload` requests to Moonraker again
+- validated the direct upload route against the live K2 Plus with a non-starting G-code probe and removed the probe after Moonraker confirmed receipt
+
 ## v2026.08.17-connection-routing.1
 
 - restored each non-Bambu printer's saved connection before the Prepare sidebar decides whether Print is available, removing the connection-test and reslice workaround

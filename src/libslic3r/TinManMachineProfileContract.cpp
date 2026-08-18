@@ -168,6 +168,36 @@ std::string connection_key(std::string_view model, std::string_view option)
     return std::string(model) + "::" + std::string(option);
 }
 
+std::string direct_printer_host(std::string address)
+{
+    const auto first = address.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos)
+        return {};
+    address.erase(0, first);
+    const auto last = address.find_last_not_of(" \t\r\n");
+    address.erase(last + 1);
+
+    if (const auto scheme = address.find("://"); scheme != std::string::npos)
+        address.erase(0, scheme + 3);
+    if (const auto separator = address.find_first_of("/?#"); separator != std::string::npos)
+        address.erase(separator);
+    if (const auto userinfo = address.rfind('@'); userinfo != std::string::npos)
+        address.erase(0, userinfo + 1);
+
+    if (!address.empty() && address.front() == '[') {
+        const auto bracket = address.find(']');
+        return bracket == std::string::npos ? address : address.substr(0, bracket + 1);
+    }
+    if (const auto port = address.find(':'); port != std::string::npos)
+        address.erase(port);
+    return address;
+}
+
+std::string k2_webui_url(std::string_view host)
+{
+    return host.empty() ? std::string() : "http://" + std::string(host) + ":4408/";
+}
+
 std::string nozzle_flow_value(const MachineFamily &family, size_t nozzle_count)
 {
     const std::string_view flow_type = family.high_flow_nozzles ? "High Flow" : "Standard";
@@ -270,12 +300,34 @@ bool tinmanx_enforce_machine_connection_contract(const std::string &preset_name,
         changed = true;
     }
 
-    // K2 status is read from Moonraker on :7125, but uploads, model
-    // detection, and CFS control must continue through CrealityPrint.
-    if (model == "Creality K2 Plus" && printer_config.has("host_type") &&
-        printer_config.opt_enum<PrintHostType>("host_type") != htCrealityPrint) {
-        printer_config.set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htCrealityPrint));
-        changed = true;
+    // K2 direct API and Moonraker are separate services. Keep the printable
+    // profile on CrealityPrint's port 80 while Device/status uses the 4408
+    // Moonraker proxy. This also repairs copies saved with :7125 as print_host.
+    if (model == "Creality K2 Plus") {
+        if (printer_config.has("host_type") &&
+            printer_config.opt_enum<PrintHostType>("host_type") != htCrealityPrint) {
+            printer_config.set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htCrealityPrint));
+            changed = true;
+        }
+
+        std::string direct_host;
+        if (printer_config.has("print_host")) {
+            const std::string current = printer_config.opt_string("print_host");
+            direct_host = direct_printer_host(current);
+            if (!direct_host.empty() && current != direct_host) {
+                printer_config.set_key_value("print_host", new ConfigOptionString(direct_host));
+                changed = true;
+            }
+        }
+        if (direct_host.empty() && printer_config.has("print_host_webui"))
+            direct_host = direct_printer_host(printer_config.opt_string("print_host_webui"));
+        if (!direct_host.empty() && printer_config.has("print_host_webui")) {
+            const std::string expected_webui = k2_webui_url(direct_host);
+            if (printer_config.opt_string("print_host_webui") != expected_webui) {
+                printer_config.set_key_value("print_host_webui", new ConfigOptionString(expected_webui));
+                changed = true;
+            }
+        }
     }
 
     return changed;
@@ -374,17 +426,26 @@ bool tinmanx_remember_machine_connection(AppConfig &app_config,
     if (model.empty())
         return false;
 
-    const std::string print_host = printer_config.has("print_host") ?
+    const std::string raw_print_host = printer_config.has("print_host") ?
         printer_config.opt_string("print_host") : std::string();
-    const std::string webui = printer_config.has("print_host_webui") ?
+    const std::string raw_webui = printer_config.has("print_host_webui") ?
         printer_config.opt_string("print_host_webui") : std::string();
-    if (print_host.empty() && webui.empty())
+    if (raw_print_host.empty() && raw_webui.empty())
         return false;
 
-    const std::string saved_print_host = app_config.get(
+    const std::string k2_host = model == "Creality K2 Plus" ?
+        direct_printer_host(!raw_print_host.empty() ? raw_print_host : raw_webui) : std::string();
+    const std::string print_host = !k2_host.empty() ? k2_host : raw_print_host;
+    const std::string webui = !k2_host.empty() ? k2_webui_url(k2_host) : raw_webui;
+
+    const std::string raw_saved_print_host = app_config.get(
         std::string(connection_section), connection_key(model, "print_host"));
-    const std::string saved_webui = app_config.get(
+    const std::string raw_saved_webui = app_config.get(
         std::string(connection_section), connection_key(model, "print_host_webui"));
+    const std::string saved_k2_host = model == "Creality K2 Plus" ?
+        direct_printer_host(!raw_saved_print_host.empty() ? raw_saved_print_host : raw_saved_webui) : std::string();
+    const std::string saved_print_host = !saved_k2_host.empty() ? saved_k2_host : raw_saved_print_host;
+    const std::string saved_webui = !saved_k2_host.empty() ? k2_webui_url(saved_k2_host) : raw_saved_webui;
     const std::string saved_address = !saved_print_host.empty() ? saved_print_host : saved_webui;
 
     bool changed = false;
@@ -404,10 +465,17 @@ bool tinmanx_remember_machine_connection(AppConfig &app_config,
                 value = expected_agent;
         } else if (option == "host_type" && model == "Creality K2 Plus") {
             value = "crealityprint";
+        } else if (option == "print_host" && !k2_host.empty()) {
+            value = print_host;
+        } else if (option == "print_host_webui" && !k2_host.empty()) {
+            value = webui;
         }
         if (!overwrite_existing && !saved_address.empty() &&
-            (option == "print_host" || option == "print_host_webui"))
-            value = saved_address;
+            option == "print_host")
+            value = saved_print_host;
+        if (!overwrite_existing && !saved_address.empty() &&
+            option == "print_host_webui")
+            value = saved_webui;
         if (value.empty())
             continue;
         if (existing != value) {
