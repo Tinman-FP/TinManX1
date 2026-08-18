@@ -161,6 +161,24 @@ TEST_CASE("Creality test and upload API reject stale Moonraker ports", "[Crealit
     CHECK(CrealityPrint::get_device_api_url(" k2-plus.local ") == "http://k2-plus.local");
 }
 
+TEST_CASE("Creality CFS handoff requires indexed filament metadata and a confirmed mapping", "[CrealityPrint]")
+{
+    using Slic3r::CrealityPrint;
+
+    const std::string valid = R"({"retGcodeFileInfo2":[{"name":"part.gcode","validation_completed":true,"material":"PCTG","materialColors":"#1B04AE","materialIds":"PCTG01","printer_model":"Creality K2 Plus","match":"T1A=T1B "}]})";
+    std::string error;
+    CHECK(CrealityPrint::validate_cfs_file_info_response(valid, "part.gcode", error));
+    CHECK(error.empty());
+
+    const std::string missing_metadata = R"({"retGcodeFileInfo2":[{"name":"part.gcode","validation_completed":true,"material":"","materialColors":"","materialIds":"","printer_model":"","match":""}]})";
+    CHECK_FALSE(CrealityPrint::validate_cfs_file_info_response(missing_metadata, "part.gcode", error));
+    CHECK(error.find("filament metadata") != std::string::npos);
+
+    const std::string missing_mapping = R"({"retGcodeFileInfo2":[{"name":"part.gcode","validation_completed":true,"material":"PCTG","materialColors":"#1B04AE","materialIds":"PCTG01","printer_model":"Creality K2 Plus","match":"T1A=  "}]})";
+    CHECK_FALSE(CrealityPrint::validate_cfs_file_info_response(missing_mapping, "part.gcode", error));
+    CHECK(error.find("filament mapping") != std::string::npos);
+}
+
 TEST_CASE("Http digest authentication", "[Http][NotWorking]") {
     Slic3r::Http g = Slic3r::Http::get("https://httpbingo.org/digest-auth/auth/guest/guest");
 

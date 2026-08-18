@@ -216,6 +216,7 @@ private:
         int         material_id;
     };
     std::vector<SlotInfo>   m_printer_slots;
+    std::vector<std::string> m_gcode_filament_types;
     std::vector<BitmapComboBox*> m_slot_combos; // one per gcode filament
 };
 

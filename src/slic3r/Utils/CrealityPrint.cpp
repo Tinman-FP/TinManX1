@@ -1,9 +1,12 @@
 #include "CrealityPrint.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <map>
+#include <regex>
 #include <sstream>
 #include <exception>
+#include <thread>
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
 #include <boost/log/trivial.hpp>
@@ -344,6 +347,54 @@ std::string CrealityPrint::query_boxes_info() const
     }
 }
 
+bool CrealityPrint::validate_cfs_file_info_response(const std::string& response,
+                                                    const std::string& filename,
+                                                    std::string& error)
+{
+    error.clear();
+    try {
+        const json payload = json::parse(response);
+        if (!payload.contains("retGcodeFileInfo2") || !payload["retGcodeFileInfo2"].is_array()) {
+            error = "The K2 did not return its G-code metadata index.";
+            return false;
+        }
+
+        const json* file_info = nullptr;
+        for (const auto& item : payload["retGcodeFileInfo2"]) {
+            if (item.value("name", std::string()) == filename) {
+                file_info = &item;
+                break;
+            }
+        }
+        if (file_info == nullptr) {
+            error = "The K2 did not index the uploaded G-code file.";
+            return false;
+        }
+        if (!file_info->value("validation_completed", false)) {
+            error = "The K2 has not finished validating the uploaded G-code file.";
+            return false;
+        }
+        if (file_info->value("material", std::string()).empty() ||
+            file_info->value("materialColors", std::string()).empty() ||
+            file_info->value("materialIds", std::string()).empty() ||
+            file_info->value("printer_model", std::string()).empty()) {
+            error = "The K2 could not read the filament metadata required for CFS printing.";
+            return false;
+        }
+
+        const std::string match = file_info->value("match", std::string());
+        static const std::regex confirmed_mapping(R"(T[0-9]+[A-Z]=T[0-9]+[A-Z])");
+        if (!std::regex_search(match, confirmed_mapping)) {
+            error = "The K2 did not confirm a usable CFS filament mapping.";
+            return false;
+        }
+        return true;
+    } catch (const json::exception& e) {
+        error = std::string("The K2 returned invalid G-code metadata: ") + e.what();
+        return false;
+    }
+}
+
 bool CrealityPrint::start_print(wxString &msg, const std::string &filename, const std::map<std::string, std::string>& extended_info) const
 {
     try {
@@ -399,6 +450,11 @@ bool CrealityPrint::start_print(wxString &msg, const std::string &filename, cons
                 };
                 ws.write(net::buffer(to_string(cmd)));
             } else {
+                if (color_list.empty()) {
+                    msg = _L("No CFS filament mapping was provided. The printer was not started.");
+                    return false;
+                }
+
                 json color_match = {
                     {"method", "set"},
                     {"params", {
@@ -409,6 +465,36 @@ bool CrealityPrint::start_print(wxString &msg, const std::string &filename, cons
                     }}
                 };
                 ws.write(net::buffer(to_string(color_match)));
+
+                json metadata_query = {
+                    {"method", "get"},
+                    {"params", {
+                        {"reqGcodeFile", 1},
+                        {"reqGcodeList", 1}
+                    }}
+                };
+                std::string validation_error;
+                bool metadata_valid = false;
+                for (int attempt = 0; attempt < 5 && !metadata_valid; ++attempt) {
+                    const std::string metadata_response =
+                        ws_send_and_read(ws, metadata_query, "retGcodeFileInfo2", 40);
+                    metadata_valid = !metadata_response.empty() &&
+                        validate_cfs_file_info_response(metadata_response, filename, validation_error);
+                    if (!metadata_valid && attempt < 4)
+                        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                }
+                if (!metadata_valid) {
+                    if (validation_error.empty())
+                        validation_error = "The K2 did not confirm the uploaded G-code metadata.";
+                    BOOST_LOG_TRIVIAL(error) << "CrealityPrint: Refusing CFS start for " << filename
+                                             << ": " << validation_error;
+                    msg = wxString::FromUTF8(validation_error) +
+                          _L(" Reslice with the current TinManX1 build and verify the filament mapping; the printer was not started.");
+                    return false;
+                }
+
+                BOOST_LOG_TRIVIAL(info) << "CrealityPrint: K2 validated CFS metadata and mapping for "
+                                        << filename << " (" << color_list.size() << " mapping entries)";
 
                 json multi_color_print = {
                     {"method", "set"},

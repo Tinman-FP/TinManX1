@@ -97,6 +97,41 @@ static const float g_purge_volume_one_time = 135.f;
 static const int g_max_flush_count = 4;
 static const size_t g_max_label_object = 64;
 
+static std::string sanitize_legacy_k2_cfs_start_gcode(const std::string& gcode)
+{
+    const bool has_legacy_cfs_startup =
+        gcode.find("BOX_ENABLE_CFS_PRINT") != std::string::npos ||
+        gcode.find("CODEX_REQUIRE_FILAMENT") != std::string::npos ||
+        gcode.find("CFS_SLOT=") != std::string::npos;
+    if (!has_legacy_cfs_startup)
+        return gcode;
+
+    static const std::regex conditional_cfs_slot(
+        R"(\s*\{if\s+initial_no_support_extruder\s*==\s*[0-9]+\}CFS_SLOT=T[0-9]+[A-Z]\{endif\})");
+    static const std::regex direct_cfs_slot(R"(\s+CFS_SLOT=T[0-9]+[A-Z])");
+
+    std::istringstream input(gcode);
+    std::ostringstream output;
+    std::string line;
+    while (std::getline(input, line)) {
+        const std::string trimmed = boost::algorithm::trim_copy(line);
+        if (boost::algorithm::istarts_with(trimmed, "BOX_ENABLE_CFS_PRINT") ||
+            boost::algorithm::istarts_with(trimmed, "CODEX_REQUIRE_FILAMENT") ||
+            trimmed == "G4 P5000")
+            continue;
+
+        if (boost::algorithm::istarts_with(trimmed, "START_PRINT")) {
+            line = std::regex_replace(line, conditional_cfs_slot, "");
+            line = std::regex_replace(line, direct_cfs_slot, "");
+        }
+        output << line << '\n';
+    }
+
+    BOOST_LOG_TRIVIAL(warning)
+        << "TinManX1: migrated obsolete embedded K2 CFS startup to the native firmware handoff";
+    return output.str();
+}
+
 static bool tinman_dynamic_bool_option_for_gcode(const DynamicPrintConfig &config, const char *key)
 {
     if (const ConfigOptionBool *option = config.opt<ConfigOptionBool>(key))
@@ -2738,6 +2773,7 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     // modifies m_silent_time_estimator_enabled
     DoExport::init_gcode_processor(print.config(), m_processor, m_silent_time_estimator_enabled);
     const bool is_bbl_printers = print.is_BBL_printer();
+    const bool is_creality_k2_printer = boost::algorithm::istarts_with(print.config().printer_model.value, "Creality K2");
     const WipeTowerType wipe_tower_type = print.wipe_tower_type();
     m_calib_config.clear();
     // resets analyzer's tracking data
@@ -2961,7 +2997,7 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
       // as configuration key / value pairs to be parsable by older versions of
       // PrusaSlicer G-code viewer.
     {
-        if (is_bbl_printers) {
+        if (is_bbl_printers || is_creality_k2_printer) {
             file.write("; CONFIG_BLOCK_START\n");
             std::string full_config;
             append_full_config(print, full_config);
@@ -2979,7 +3015,8 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
                 "; first_layer_temperature = %d\n",
                 print.config().nozzle_temperature_initial_layer.get_at(0));
             file.write("; CONFIG_BLOCK_END\n\n");
-        } else if (thumbnail_cb != nullptr) {
+        }
+        if (!is_bbl_printers && thumbnail_cb != nullptr) {
             // generate the thumbnails
             auto [thumbnails, errors] = GCodeThumbnails::make_and_check_thumbnail_list(print.full_print_config());
 
@@ -3453,7 +3490,10 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     this->placeholder_parser().set("print_time_sec", new ConfigOptionString(GCodeProcessor::reserved_tag(GCodeProcessor::ETags::Print_Time_Sec_Placeholder)));
     this->placeholder_parser().set("used_filament_length", new ConfigOptionString(GCodeProcessor::reserved_tag(GCodeProcessor::ETags::Used_Filament_Length_Placeholder)));
 
-    std::string machine_start_gcode = this->placeholder_parser_process("machine_start_gcode", print.config().machine_start_gcode.value, initial_extruder_id);
+    std::string machine_start_template = print.config().machine_start_gcode.value;
+    if (is_creality_k2_printer)
+        machine_start_template = sanitize_legacy_k2_cfs_start_gcode(machine_start_template);
+    std::string machine_start_gcode = this->placeholder_parser_process("machine_start_gcode", machine_start_template, initial_extruder_id);
     if (!tinman_native_composite_export && print.config().gcode_flavor != gcfKlipper) {
         // Set bed temperature if the start G-code does not contain any bed temp control G-codes.
         this->_print_first_layer_bed_temperature(file, print, machine_start_gcode, initial_extruder_id, true);
@@ -6018,6 +6058,11 @@ void GCode::apply_print_config(const PrintConfig &print_config)
 void GCode::append_full_config(const Print &print, std::string &str)
 {
     DynamicPrintConfig cfg = print.full_print_config();
+    if (const auto *printer_model = cfg.option<ConfigOptionString>("printer_model");
+        printer_model != nullptr && boost::algorithm::istarts_with(printer_model->value, "Creality K2")) {
+        if (auto *machine_start_gcode = cfg.option<ConfigOptionString>("machine_start_gcode"); machine_start_gcode != nullptr)
+            machine_start_gcode->value = sanitize_legacy_k2_cfs_start_gcode(machine_start_gcode->value);
+    }
     { // correct the flush_volumes_matrix with flush_multiplier values
         std::vector<double> temp_cfg_flush_multiplier = cfg.option<ConfigOptionFloats>("flush_multiplier")->values;
         std::vector<double> temp_flush_volumes_matrix = cfg.option<ConfigOptionFloats>("flush_volumes_matrix")->values;

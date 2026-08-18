@@ -1,5 +1,14 @@
 # Changelog
 
+## v2026.08.18-k2-native-cfs-handoff.1
+
+- moved the complete Orca configuration block into the K2's early G-code scan window so large files retain filament, color, printer, and CFS matching metadata
+- replaced the duplicate TinMan CFS startup commands with the K2 firmware's native `colorMatch` and `multiColorPrint` transaction
+- automatically migrate obsolete CFS startup commands embedded in previously saved K2 3MF projects during G-code export
+- block a CFS print before preflight unless the K2 has indexed the uploaded file and confirmed usable filament metadata and tool mapping
+- send source G-code filament types in the CFS mapping, matching Creality Print, and retry briefly while the printer finishes indexing
+- bumped the Creality profile catalog so installed and cached K2 profiles actually receive the corrected inherited startup sequence
+
 ## v2026.08.18-k2-camera-recovery.1
 
 - replaced the retired K2 Plus port-8000 camera page with the current token-protected WebRTC protocol, including Creality-compatible H.264 SDP negotiation and numeric ICE candidates

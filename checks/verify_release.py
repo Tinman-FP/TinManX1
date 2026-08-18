@@ -177,6 +177,43 @@ def iter_files() -> list[Path]:
 def main() -> int:
     errors: list[str] = []
 
+    k2_profile_dir = ROOT / "resources/profiles/Creality/machine/TinMan Codex"
+    forbidden_k2_startup = (
+        "BOX_ENABLE_CFS_PRINT",
+        "CFS_SLOT",
+        "CODEX_CFS_SELECT",
+        "CODEX_REQUIRE_FILAMENT",
+    )
+    for nozzle in ("0.4", "0.6", "0.8", "1.0"):
+        k2_profile = k2_profile_dir / f"Creality K2 Plus {nozzle} nozzle - TinMan Codex.json"
+        if not k2_profile.is_file():
+            errors.append(f"missing TinMan K2 profile: {k2_profile.relative_to(ROOT)}")
+            continue
+        k2_data = json.loads(k2_profile.read_text())
+        if "machine_start_gcode" in k2_data:
+            errors.append(f"{k2_profile.name} must inherit Creality's native startup sequence")
+        profile_text = k2_profile.read_text()
+        for token in forbidden_k2_startup:
+            if token in profile_text:
+                errors.append(f"{k2_profile.name} contains obsolete K2 startup token {token}")
+
+    k2_gcode_source = (ROOT / "src/libslic3r/GCode.cpp").read_text()
+    for marker in (
+        "is_creality_k2_printer",
+        "sanitize_legacy_k2_cfs_start_gcode",
+        "is_bbl_printers || is_creality_k2_printer",
+    ):
+        if marker not in k2_gcode_source:
+            errors.append(f"K2 G-code export contract is missing {marker}")
+
+    k2_transport_source = (ROOT / "src/slic3r/Utils/CrealityPrint.cpp").read_text()
+    start_print_pos = k2_transport_source.find("bool CrealityPrint::start_print")
+    k2_handoff_source = k2_transport_source[start_print_pos:] if start_print_pos >= 0 else ""
+    transport_markers = ("colorMatch", "retGcodeFileInfo2", "multiColorPrint")
+    positions = [k2_handoff_source.find(marker) for marker in transport_markers]
+    if any(position < 0 for position in positions) or positions != sorted(positions):
+        errors.append("K2 native CFS handoff must validate colorMatch metadata before multiColorPrint")
+
     prusa_filament = ROOT / (
         "resources/profiles/Codex/filament/"
         "PC-PBT-CF Codex-Push Plastic - Prusa CORE One L @Codex.json"
