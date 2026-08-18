@@ -1,12 +1,12 @@
 # Changelog
 
-## v2026.08.18-qidi-moonraker-routing.3
+## v2026.08.18-qidi-moonraker-routing.4
 
 - corrected Qidi Plus 4 and Max EZ host routing from Orca's inherited OctoPrint default to their native Moonraker service
 - automatically repair stale OctoPrint host types in copied profiles and saved machine connection overlays
 - added release and unit-test coverage so the misleading OctoPrint version warning cannot return for managed Qidi printers
 - stop network callbacks, printer agents, and the Bambu plug-in before frame destruction to prevent the observed macOS close-time crash
-- restore portable Linux test compilation and split the K2 camera injection payload below MSVC's string-literal limit
+- propagate wxWidgets' public GUI headers to test consumers on every Linux architecture and split the K2 camera injection payload below MSVC's string-literal limit
 
 ## v2026.08.18-k2-native-cfs-handoff.1
 
