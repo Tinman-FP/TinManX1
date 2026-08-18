@@ -330,9 +330,9 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
         };
 #ifndef __WIN32__
         webView->CallAfter([webView, addScriptMessageHandler] {
-#endif
             if (!webview_ref(webView) || Slic3r::GUI::wxGetApp().is_closing())
                 return;
+#endif
             if (Slic3r::GUI::wxGetApp().is_adding_script_handler()) {
                 if (std::find(g_delay_webviews.begin(), g_delay_webviews.end(), webView) == g_delay_webviews.end())
                     g_delay_webviews.push_back(webView);
