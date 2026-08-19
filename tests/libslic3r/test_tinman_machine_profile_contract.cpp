@@ -97,6 +97,51 @@ TEST_CASE("TinMan machine catalog replaces cloud-restored variants", "[Preset][T
     CHECK(config.get("nozzle_volume_types", "Snapmaker U1 0.6 nozzle - TinMan Codex") == "Standard,Standard,Standard,Standard");
 }
 
+TEST_CASE("TinMan machine hardware overrides stale project nozzle flow", "[Preset][TinMan]")
+{
+    DynamicPrintConfig project;
+    project.set_key_value("nozzle_volume_type",
+        new ConfigOptionEnumsGeneric({NozzleVolumeType::nvtStandard}));
+
+    DynamicPrintConfig x1c;
+    x1c.set_key_value("printer_model", new ConfigOptionString("Bambu Lab X1 Carbon"));
+    x1c.set_key_value("printer_settings_id", new ConfigOptionString(
+        "Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex"));
+    x1c.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.6}));
+    REQUIRE(tinmanx_apply_nozzle_volume_contract(
+        "Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex", x1c, project));
+    CHECK(project.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values ==
+          std::vector<int>{NozzleVolumeType::nvtHighFlow});
+
+    DynamicPrintConfig export_config;
+    REQUIRE(tinmanx_apply_nozzle_volume_contract(
+        "Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex", x1c, export_config));
+    CHECK(export_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values ==
+          std::vector<int>{NozzleVolumeType::nvtHighFlow});
+
+    project.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values.assign(
+        4, NozzleVolumeType::nvtHighFlow);
+    DynamicPrintConfig u1;
+    u1.set_key_value("printer_model", new ConfigOptionString("Snapmaker U1"));
+    u1.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.6, 0.6, 0.6, 0.6}));
+    REQUIRE(tinmanx_apply_nozzle_volume_contract(
+        "Snapmaker U1 0.6 nozzle - TinMan Codex", u1, project));
+    CHECK(project.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values ==
+          std::vector<int>(4, NozzleVolumeType::nvtStandard));
+
+    project.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values = {
+        NozzleVolumeType::nvtStandard};
+    REQUIRE(tinmanx_apply_nozzle_volume_contract(
+        "imported-project.3mf", x1c, project));
+    CHECK(project.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values ==
+          std::vector<int>{NozzleVolumeType::nvtHighFlow});
+
+    x1c.set_key_value("printer_settings_id", new ConfigOptionString(
+        "Bambu Lab X1 Carbon 0.6 nozzle"));
+    CHECK_FALSE(tinmanx_apply_nozzle_volume_contract(
+        "Bambu Lab X1 Carbon 0.6 nozzle", x1c, project));
+}
+
 TEST_CASE("TinMan connection overlay follows a machine across nozzle presets", "[Preset][TinMan]")
 {
     AppConfig app_config;

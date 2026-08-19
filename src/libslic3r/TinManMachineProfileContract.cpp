@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <boost/log/trivial.hpp>
 #include <map>
 #include <string_view>
 
@@ -344,6 +345,45 @@ bool tinmanx_enforce_machine_connection_contract(const std::string &preset_name,
     }
 
     return changed;
+}
+
+bool tinmanx_apply_nozzle_volume_contract(const std::string &preset_name,
+                                          const DynamicPrintConfig &printer_config,
+                                          DynamicPrintConfig &project_config)
+{
+    const std::string machine_hint = printer_config.has("printer_model") ?
+        printer_config.opt_string("printer_model") : std::string();
+    std::string contract_name = preset_name;
+    if (!tinmanx_managed_machine_preset(contract_name, machine_hint) &&
+        printer_config.has("printer_settings_id")) {
+        contract_name = printer_config.opt_string("printer_settings_id");
+    }
+    if (!tinmanx_managed_machine_preset(contract_name, machine_hint)) {
+        BOOST_LOG_TRIVIAL(debug) << "TinMan nozzle contract skipped for preset '"
+                                 << contract_name << "' model '" << machine_hint << "'";
+        return false;
+    }
+
+    const MachineFamily *family = family_for_model(matched_model(contract_name, machine_hint));
+    auto *project_flow = project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type", true);
+    if (family == nullptr || project_flow == nullptr) {
+        BOOST_LOG_TRIVIAL(debug) << "TinMan nozzle contract unavailable for preset '"
+                                 << contract_name << "'";
+        return false;
+    }
+
+    size_t nozzle_count = family->nozzle_count;
+    if (const auto *diameters = printer_config.option<ConfigOptionFloats>("nozzle_diameter");
+        diameters != nullptr && !diameters->values.empty()) {
+        nozzle_count = diameters->values.size();
+    }
+
+    const int expected = family->high_flow_nozzles ?
+        NozzleVolumeType::nvtHighFlow : NozzleVolumeType::nvtStandard;
+    project_flow->values.assign(nozzle_count, expected);
+    BOOST_LOG_TRIVIAL(debug) << "TinMan nozzle contract applied to '" << contract_name
+                             << "': " << nozzle_count << " nozzle(s), flow=" << expected;
+    return true;
 }
 
 std::string tinmanx_canonical_machine_preset_name(const std::string &preset_name,

@@ -28,6 +28,13 @@ std::string tinmanx_expected_printer_agent(const std::string &preset_name,
 bool tinmanx_enforce_machine_connection_contract(const std::string &preset_name,
                                                   DynamicPrintConfig &printer_config);
 
+// Apply the fixed nozzle-flow hardware declared by a canonical TinMan machine
+// to the project configuration. Returns true when the preset is managed and
+// the contract was applied, even if the project was already correct.
+bool tinmanx_apply_nozzle_volume_contract(const std::string &preset_name,
+                                          const DynamicPrintConfig &printer_config,
+                                          DynamicPrintConfig &project_config);
+
 // Return the selector-facing TinMan profile for a curated machine/nozzle.
 // An empty result means the machine is outside the curated catalog or the
 // nozzle is not one of the four supported variants.

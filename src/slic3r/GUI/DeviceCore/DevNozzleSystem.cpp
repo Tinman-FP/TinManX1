@@ -29,7 +29,13 @@ static unordered_map<string, NozzleFlowType> _str2_nozzle_flow_type = {
     {"S", NozzleFlowType::S_FLOW},
     {"H", NozzleFlowType::H_FLOW},
     {"A", NozzleFlowType::S_FLOW},
-    {"X", NozzleFlowType::S_FLOW}
+    {"X", NozzleFlowType::S_FLOW},
+    // Current Bambu firmware reports generic, TPU, and E3D high-flow
+    // assemblies with E/U/B respectively. This branch has a two-class flow
+    // model, so all three must remain high-flow for job compatibility checks.
+    {"E", NozzleFlowType::H_FLOW},
+    {"U", NozzleFlowType::H_FLOW},
+    {"B", NozzleFlowType::H_FLOW}
 };
 
 static unordered_map<string, NozzleType> _str2_nozzle_type = {

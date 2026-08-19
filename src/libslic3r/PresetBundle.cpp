@@ -240,6 +240,7 @@ DynamicPrintConfig PresetBundle::construct_full_config(
     add_if_some_non_empty(std::move(print_compatible_printers), "print_compatible_printers");
 
     out.option<ConfigOptionEnumGeneric>("printer_technology", true)->value = ptFFF;
+    tinmanx_apply_nozzle_volume_contract(in_printer_preset.name, printer_config, out);
     return out;
 }
 
@@ -2947,8 +2948,10 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
 
     const Preset& current_printer = printers.get_selected_preset();
     const Preset* base_printer = printers.get_preset_base(current_printer);
-    bool use_default_nozzle_volume_type = true;
-    if (base_printer) {
+    const bool fixed_nozzle_volume_type = tinmanx_apply_nozzle_volume_contract(
+        current_printer.name, current_printer.config, project_config);
+    bool use_default_nozzle_volume_type = !fixed_nozzle_volume_type;
+    if (!fixed_nozzle_volume_type && base_printer) {
         std::string prev_nozzle_volume_type = config.get_nozzle_volume_types_from_config(base_printer->name);
         if (!prev_nozzle_volume_type.empty()) {
             ConfigOptionEnumsGeneric* nozzle_volume_type_option = project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type");
@@ -2958,9 +2961,9 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
         }
     }
 
-    if (use_default_nozzle_volume_type) {
+    if (!fixed_nozzle_volume_type && use_default_nozzle_volume_type) {
         project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values = current_printer.config.option<ConfigOptionEnumsGeneric>("default_nozzle_volume_type")->values;
-    } else {
+    } else if (!fixed_nozzle_volume_type) {
         // Orca: make sure `nozzle_volume_type` not shorter than `default_nozzle_volume_type`, otherwise we got array out of bound access
         // later in `Tab::switch_excluder`
         auto& opt = project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values;
@@ -4019,9 +4022,10 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
     out.apply(static_print_config_ref(FullPrintConfig::defaults()));
     out.apply(this->prints.get_edited_preset().config);
     // Add the default filament preset to have the "filament_preset_id" defined.
-	out.apply(this->filaments.default_preset().config);
+    out.apply(this->filaments.default_preset().config);
 	out.apply(this->printers.get_edited_preset().config);
     out.apply(this->project_config);
+    const Preset &active_printer = this->printers.get_edited_preset();
 
     // BBS
     size_t  num_filaments = this->filament_presets.size();
@@ -4294,6 +4298,9 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
     out.option<ConfigOptionStrings>("extruder_ams_count", true)->values   = save_extruder_ams_count_to_string(this->extruder_ams_counts);
 
 	out.option<ConfigOptionEnumGeneric>("printer_technology", true)->value = ptFFF;
+    // Filament aggregation copies every filament default into the full config, including
+    // nozzle_volume_type. Apply the fixed hardware contract after that final merge.
+    tinmanx_apply_nozzle_volume_contract(active_printer.name, active_printer.config, out);
     return out;
 }
 
@@ -4695,6 +4702,9 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
 
         // 4) Load the project config values (the per extruder wipe matrix etc).
         this->project_config.apply_only(config, s_project_options);
+        const Preset &active_printer = this->printers.get_edited_preset();
+        tinmanx_apply_nozzle_volume_contract(
+            active_printer.name, active_printer.config, this->project_config);
 
         break;
     }

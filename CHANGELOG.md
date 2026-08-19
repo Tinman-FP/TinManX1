@@ -1,5 +1,12 @@
 # Changelog
 
+## v2026.08.19-x1c-high-flow-nozzle.1
+
+- fixed Bambu X1C jobs being packaged as standard-flow hardened (`HX01`) when the installed nozzle is high-flow hardened (`HE01`)
+- prevent stale app or imported 3MF project state from overriding the physical nozzle-flow contract of curated TinMan machine profiles
+- enforce the machine nozzle-flow contract again when constructing the final sliced/exported configuration
+- added regression coverage for X1C high-flow and Snapmaker U1 standard-flow hardware
+
 ## v2026.08.18-macos-webview-lifecycle.1
 
 - ported OrcaSlicer upstream fix `857adad293` for the macOS startup crash when a saved printer host initializes its authenticated WebView
