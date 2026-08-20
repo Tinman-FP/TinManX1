@@ -2117,7 +2117,13 @@ void GUI_App::init_networking_callbacks()
                                 // Orca: only update status if same device id
                                 if (m_device_manager->selected_machine != dev_id) return;
 
-                                m_device_manager->set_selected_machine("");
+                                // The networking plug-in has already failed and is
+                                // tearing this session down. Calling disconnect here
+                                // races its MQTT keepalive worker with client removal.
+                                // Keep the selection so the UI shows the disconnected
+                                // printer and a later explicit retry can reconnect it.
+                                BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: connection failed for selected device "
+                                                        << dev_id << ", preserving selection";
                                 wxString text;
                                 if (msg == "5") {
                                     obj->set_access_code("");
@@ -2143,9 +2149,12 @@ void GUI_App::init_networking_callbacks()
                                     BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: ignoring stale lost event during LAN reconnect";
                                     return;
                                 }
-                                m_device_manager->set_selected_machine("");
                                 event.SetInt(-1);
-                                BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: state = lost";
+                                // Lost is emitted after the plug-in has begun its own
+                                // teardown. Preserve the selection and never issue a
+                                // second disconnect from inside that callback.
+                                BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: state = lost for selected device "
+                                                        << dev_id << ", preserving selection";
                             } else {
                                 obj->set_lan_mode_connection_state(false);
                                 event.SetInt(-1);

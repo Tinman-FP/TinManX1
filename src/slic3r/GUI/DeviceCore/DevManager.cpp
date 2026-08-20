@@ -565,20 +565,25 @@ namespace Slic3r
 
                     return true;
                 }
-                // same dev_id, lan => disconnect and reconnect
+                // Same LAN device: keep a live session or start a clean retry.
                 else
                 {
-                    BOOST_LOG_TRIVIAL(info) << "set_selected_machine: same lan machine, dev_id =" << dev_id
-                        << ", disconnect and reconnect";
+                    // Selecting the current LAN printer is a common UI refresh path.
+                    // Restarting a live (or still-starting) MQTT session here can race
+                    // the networking plug-in's keepalive thread with client teardown.
+                    if (it->second->is_connected() || it->second->is_connecting()) {
+                        BOOST_LOG_TRIVIAL(info) << "set_selected_machine: same lan machine already active, dev_id ="
+                                                << dev_id << ", keeping existing connection";
+                        return true;
+                    }
 
-                    // lan mode printer reconnect printer
+                    BOOST_LOG_TRIVIAL(info) << "set_selected_machine: retry disconnected lan machine, dev_id =" << dev_id;
+
+                    // A failed/lost callback has already torn down the previous
+                    // session. Do not call disconnect_printer() a second time.
                     if (m_agent)
                     {
-                        // Arm the guard before disconnecting. The networking
-                        // plug-in reports that intentional disconnect as Lost
-                        // asynchronously and may do so after the new session is up.
                         it->second->set_lan_mode_connection_state(true);
-                        m_agent->disconnect_printer();
                         it->second->reset();
 
 #if !BBL_RELEASE_TO_PUBLIC
