@@ -5,6 +5,7 @@
 - fixed an intermittent macOS crash in the Bambu networking plug-in when a failed or lost LAN connection was disconnected a second time from its own callback
 - preserve the selected Bambu printer after a connection failure so the Device UI remains stable and an explicit retry can reconnect it
 - make repeated selection of an active Bambu LAN printer idempotent instead of tearing down and recreating its MQTT session
+- allow the Intel macOS RTSP bridge package to build on GitHub runners where `nasm` is unavailable
 
 ## v2026.08.19-x1c-high-flow-nozzle.1
 

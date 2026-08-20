@@ -13,6 +13,12 @@ case "$ARCH" in
     *) echo "Unsupported macOS architecture: $ARCH" >&2; exit 2 ;;
 esac
 
+FFMPEG_ARCH_ARGS=()
+if [ "$ARCH" = "x86_64" ] && ! command -v nasm >/dev/null 2>&1; then
+    echo "nasm is unavailable; building the Intel RTSP bridge without x86 assembly" >&2
+    FFMPEG_ARCH_ARGS+=(--disable-x86asm)
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_ROOT="${TMPDIR:-/tmp}/tinmanx1-rtsp-bridge-${FFMPEG_VERSION}-${ARCH}"
 ARCHIVE="$BUILD_ROOT/ffmpeg-${FFMPEG_VERSION}.tar.xz"
@@ -41,6 +47,7 @@ if [ ! -f "$CONFIG_STAMP" ]; then
             --cc=clang \
             --arch="$FFMPEG_ARCH" \
             --target-os=darwin \
+            "${FFMPEG_ARCH_ARGS[@]}" \
             --disable-autodetect \
             --disable-doc \
             --disable-debug \
