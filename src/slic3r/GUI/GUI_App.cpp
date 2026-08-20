@@ -112,6 +112,7 @@
 #include "SavePresetDialog.hpp"
 #include "PrintHostDialogs.hpp"
 #include "NetworkPluginDialog.hpp"
+#include "Printer/BambuSourceLibrary.hpp"
 #include "DesktopIntegrationDialog.hpp"
 #include "SendSystemInfoDialog.hpp"
 #include "ParamsDialog.hpp"
@@ -185,12 +186,6 @@ typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS2)(
 
 using namespace std::literals;
 namespace pt = boost::property_tree;
-
-struct StaticBambuLib
-{
-    static void reset();
-    static void release();
-};
 
 namespace Slic3r {
 namespace GUI {
@@ -1074,6 +1069,16 @@ void GUI_App::shutdown()
 {
     BOOST_LOG_TRIVIAL(info) << "GUI_App::shutdown enter";
 
+    if (m_is_recreating_gui)
+        return;
+
+    bool expected = false;
+    if (!m_shutdown_started.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+        BOOST_LOG_TRIVIAL(info) << "GUI_App::shutdown already complete";
+        return;
+    }
+    m_is_closing.store(true, std::memory_order_release);
+
 	if (m_removable_drive_manager) {
 		removable_drive_manager()->shutdown();
 	}
@@ -1085,10 +1090,17 @@ void GUI_App::shutdown()
         login_dlg = nullptr;
     }
 
-    if (m_is_recreating_gui) return;
     stop_http_server();
-    set_closing(true);
-    BBLNetworkPlugin::prepare_for_process_exit();
+    stop_bambu_file_systems();
+
+    // TaskManager owns both a scheduler and per-print worker threads that call
+    // through NetworkAgent. They must be joined before the wrapper or the
+    // proprietary agent is destroyed.
+    if (m_task_manager) {
+        m_task_manager->stop();
+        delete m_task_manager;
+        m_task_manager = nullptr;
+    }
 
     // MainFrame owns preset bundles that may still be referenced by queued network
     // callbacks. Stop every network producer before wxWidgets destroys the frame.
@@ -1116,7 +1128,12 @@ void GUI_App::shutdown()
         m_agent = nullptr;
     }
 
+    // NetworkAgent wrappers do not own the proprietary agent. Stop it here so
+    // no plug-in callback can outlive MainFrame, while keeping module handles
+    // valid for the remaining UI/source-library destructors.
+    BBLNetworkPlugin::instance().destroy_agent();
     BBLNetworkPlugin::shutdown();
+    BBLNetworkPlugin::prepare_for_process_exit();
     BOOST_LOG_TRIVIAL(info) << "GUI_App::shutdown exit";
 }
 
@@ -1624,7 +1641,7 @@ void GUI_App::restart_networking()
 {
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(" enter, mainframe %1%")%mainframe;
     on_init_network(true);
-    StaticBambuLib::reset();
+    refresh_bambu_source_library();
     if(m_agent) {
         init_networking_callbacks();
         m_agent->set_on_ssdp_msg_fn(
@@ -2268,6 +2285,19 @@ void GUI_App::init_networking_callbacks()
 GUI_App::~GUI_App()
 {
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": enter");
+
+    // OnExit normally performs this work. Keep the destructor independently
+    // safe for partial initialization and framework-driven teardown paths.
+    shutdown();
+
+    stop_bambu_file_systems();
+    if (!wait_for_bambu_file_systems(std::chrono::seconds(5)))
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": timed out waiting for Bambu file-system workers";
+
+    release_bambu_source_library();
+    BBLNetworkPlugin::shutdown();
+    BBLNetworkPlugin::prepare_for_process_exit();
+
     if (app_config != nullptr) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy app_config");
         delete app_config;
@@ -2282,10 +2312,6 @@ GUI_App::~GUI_App()
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy preset updater");
         delete preset_updater;
     }
-
-    StaticBambuLib::release();
-    BBLNetworkPlugin::shutdown();
-
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": exit");
 }
@@ -2628,6 +2654,9 @@ bool GUI_App::OnInit()
 
 int GUI_App::OnExit()
 {
+    // MainFrame normally calls shutdown first. Keep alternate/partial startup
+    // exits in the same ordered lifecycle before deleting manager wrappers.
+    shutdown();
     stop_http_server();
     stop_sync_user_preset();
 

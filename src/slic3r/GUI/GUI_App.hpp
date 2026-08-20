@@ -291,6 +291,7 @@ private:
 
     //BBS
     std::atomic<bool> m_is_closing {false};
+    std::atomic<bool> m_shutdown_started {false};
     Slic3r::DeviceManager* m_device_manager { nullptr };
     Slic3r::UserManager* m_user_manager { nullptr };
     Slic3r::TaskManager* m_task_manager { nullptr };

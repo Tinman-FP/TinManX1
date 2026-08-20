@@ -285,7 +285,11 @@ PartSkipDialog::PartSkipDialog(wxWindow *parent) : DPIDialog(parent, wxID_ANY, _
     CentreOnParent();
 }
 
-PartSkipDialog::~PartSkipDialog() {}
+PartSkipDialog::~PartSkipDialog()
+{
+    if (m_file_sys)
+        m_file_sys->Stop(true);
+}
 
 void PartSkipDialog::on_dpi_changed(const wxRect &suggested_rect)
 {

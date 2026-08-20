@@ -1,5 +1,15 @@
 # Changelog
 
+## v2026.08.20-bambu-lifecycle.1
+
+- replaced the destructible Bambu plug-in singleton with a process-lifetime manager so late wxWidgets destructors cannot dereference a deleted instance
+- introduced one synchronized owner for the Bambu source ABI and immutable per-session function tables, removing the duplicate cross-translation-unit definitions and reload races
+- stop and join Bambu file-system, print scheduler, and print-send workers before destroying the network wrapper or proprietary agent
+- keep proprietary networking and media modules mapped until process exit after their public agents and sessions are stopped, avoiding unsafe `dlclose` finalization
+- made GUI shutdown ordered and idempotent across MainFrame close, `OnExit`, partial initialization, and destructor fallback paths
+- register the macOS process-exit guard after plug-in and agent initialization so an early quit cannot reach Bambu's faulty global finalizer unguarded
+- added regression coverage for repeatable plug-in finalization and print scheduler shutdown, plus an ownership and teardown audit document
+
 ## v2026.08.20-bambu-network-stability.1
 
 - fixed an intermittent macOS crash in the Bambu networking plug-in when a failed or lost LAN connection was disconnected a second time from its own callback

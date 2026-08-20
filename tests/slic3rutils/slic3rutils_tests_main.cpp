@@ -1,5 +1,7 @@
 #include <catch2/catch_all.hpp>
 
+#include "slic3r/GUI/TaskManager.hpp"
+#include "slic3r/Utils/BBLNetworkPlugin.hpp"
 #include "slic3r/Utils/CrealityPrint.hpp"
 #include "slic3r/Utils/CrealityPrintAgent.hpp"
 #include "slic3r/Utils/Http.hpp"
@@ -37,6 +39,46 @@ std::string resolved_display_name(const nlohmann::json& session)
 }
 
 } // namespace
+
+TEST_CASE("Bambu network manager survives repeated finalization", "[BBLNetworkPlugin][Lifecycle]")
+{
+    auto *manager = &Slic3r::BBLNetworkPlugin::instance();
+
+    Slic3r::BBLNetworkPlugin::shutdown();
+    CHECK(&Slic3r::BBLNetworkPlugin::instance() == manager);
+    CHECK_FALSE(manager->has_agent());
+    CHECK_FALSE(manager->is_loaded());
+
+    Slic3r::BBLNetworkPlugin::shutdown();
+    CHECK(&Slic3r::BBLNetworkPlugin::instance() == manager);
+    CHECK_FALSE(manager->has_agent());
+    CHECK_FALSE(manager->is_loaded());
+
+    CHECK(manager->unload() == 0);
+    CHECK(&Slic3r::BBLNetworkPlugin::instance() == manager);
+    CHECK_FALSE(manager->has_agent());
+    CHECK_FALSE(manager->is_loaded());
+}
+
+TEST_CASE("Print task scheduler shutdown is repeatable", "[TaskManager][Lifecycle]")
+{
+    Slic3r::TaskStateInfo task(Slic3r::PrintParams{});
+    int callback_count = 0;
+    task.set_state_changed_fn([&callback_count](Slic3r::TaskState, int) { ++callback_count; });
+
+    task.cancel();
+    task.cancel();
+    CHECK(task.is_canceled());
+    CHECK(task.state() == Slic3r::TaskState::TS_REMOVED);
+    CHECK(callback_count == 3);
+
+    Slic3r::TaskManager manager(nullptr);
+    manager.start();
+    manager.stop();
+    manager.stop();
+    manager.start();
+    manager.stop();
+}
 
 TEST_CASE("Check SSL certificates paths", "[Http][NotWorking]") {
     

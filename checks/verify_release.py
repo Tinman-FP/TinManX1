@@ -264,6 +264,14 @@ def main() -> int:
         if marker not in shutdown_body:
             errors.append(f"early network shutdown is missing marker: {marker}")
 
+    gui_app_header = (ROOT / "src/slic3r/GUI/GUI_App.hpp").read_text(errors="replace")
+    if "m_shutdown_started" not in gui_app_header:
+        errors.append("GUI shutdown must use state separate from the close-request flag")
+    if "m_shutdown_started.compare_exchange_strong" not in shutdown_body:
+        errors.append("GUI shutdown is missing its one-time execution guard")
+    if "m_is_closing.compare_exchange_strong" in shutdown_body:
+        errors.append("GUI shutdown must not use the pre-set close-request flag as its execution guard")
+
     for rel in REQUIRED_FILES:
         path = ROOT / rel
         if not path.is_file():

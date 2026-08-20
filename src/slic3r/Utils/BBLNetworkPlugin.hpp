@@ -174,9 +174,9 @@ public:
     int unload();
 
     /**
-     * Destroy the singleton instance.
-     * Safe to call multiple times - does nothing if already destroyed.
-     * Must be called during application shutdown before main() returns.
+     * Idempotently stop the proprietary agent and release its callable API.
+     * The manager object and loaded images remain valid until process exit so
+     * late framework destructors cannot dereference a deleted singleton.
      */
     static void shutdown();
 
@@ -387,9 +387,6 @@ public:
     static PrintParams_Legacy as_legacy(PrintParams& param);
 
 private:
-    // Singleton instance pointer (heap-allocated for explicit lifetime control)
-    static BBLNetworkPlugin* s_instance;
-
     BBLNetworkPlugin();
     ~BBLNetworkPlugin();
 
