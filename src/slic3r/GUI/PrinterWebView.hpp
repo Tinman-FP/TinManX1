@@ -25,13 +25,18 @@
 #include <wx/tbarbase.h>
 #include "wx/textctrl.h"
 #include <wx/timer.h>
+#include <cstdint>
 #include <memory>
+#include <string>
 
+class Button;
+class wxMediaCtrl2;
 
 namespace Slic3r {
 namespace GUI {
 
 class PrinterWebViewHandler;
+class MediaPlayCtrl;
 
 
 class PrinterWebView : public wxPanel {
@@ -55,13 +60,26 @@ private:
     friend class PrinterWebViewHandler;
 
     void SendAPIKey();
+    void update_prusa_camera(const wxString& printer_url);
+    void start_prusa_camera_discovery();
+    void set_prusa_camera_url(const std::string& camera_url, bool persist);
+    void prompt_for_prusa_camera_url();
 
     wxWebView* m_browser;
+    wxPanel* m_prusa_camera_panel;
+    wxMediaCtrl2* m_prusa_camera_media;
+    MediaPlayCtrl* m_prusa_camera_player;
+    ::Button* m_prusa_camera_refresh;
+    ::Button* m_prusa_camera_settings;
     long m_zoomFactor;
     wxString m_apikey;
     bool m_apikey_sent;
     wxString m_url_deferred;
     std::unique_ptr<PrinterWebViewHandler> m_handler;
+    std::shared_ptr<int> m_prusa_camera_token;
+    std::string m_prusa_printer_host;
+    std::string m_prusa_camera_url;
+    std::uint64_t m_prusa_camera_generation;
 
     // DECLARE_EVENT_TABLE()
 };

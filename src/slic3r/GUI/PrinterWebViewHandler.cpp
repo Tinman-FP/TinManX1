@@ -150,8 +150,10 @@ std::string infer_agent_from_text(const std::string& key)
         return "snapmaker";
     if (boost::algorithm::icontains(key, "creality") || boost::algorithm::icontains(key, "k2"))
         return "crealityprint";
+    if (boost::algorithm::icontains(key, "prusa"))
+        return "prusalink";
     if (boost::algorithm::icontains(key, "v-core") || boost::algorithm::icontains(key, "ratrig") ||
-        boost::algorithm::icontains(key, "prusa") || boost::algorithm::icontains(key, "sovol"))
+        boost::algorithm::icontains(key, "sovol"))
         return "moonraker";
 
     return {};

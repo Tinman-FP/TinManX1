@@ -70,6 +70,24 @@ std::string build_bambu_local_liveview_url(
     return {};
 }
 
+std::string build_direct_rtsp_liveview_url(const std::string& stream_url)
+{
+    std::string protocol;
+    std::string address;
+    if (boost::algorithm::istarts_with(stream_url, "rtsp://")) {
+        protocol = "rtsp";
+        address  = stream_url.substr(7);
+    } else if (boost::algorithm::istarts_with(stream_url, "rtsps://")) {
+        protocol = "rtsps";
+        address  = stream_url.substr(8);
+    } else {
+        return {};
+    }
+
+    const char separator = address.find('?') == std::string::npos ? '?' : '&';
+    return "bambu:///" + protocol + "___" + address + separator + "proto=" + protocol;
+}
+
 } // namespace
 
 MediaPlayCtrl::MediaPlayCtrl(wxWindow *parent, wxMediaCtrl2 *media_ctrl, const wxPoint &pos, const wxSize &size)
@@ -182,6 +200,7 @@ MediaPlayCtrl::~MediaPlayCtrl()
 
 void MediaPlayCtrl::SetMachineObject(MachineObject* obj)
 {
+    m_direct_stream_url.clear();
     std::string machine = obj ? obj->get_dev_id() : "";
     if (obj) {
         m_camera_exists  = obj->has_ipcam;
@@ -242,6 +261,40 @@ void MediaPlayCtrl::SetMachineObject(MachineObject* obj)
         SetStatus("", false);
 }
 
+void MediaPlayCtrl::SetDirectStreamURL(const std::string& stream_url, const std::string& identity, const wxString& idle_message)
+{
+    if (stream_url == m_direct_stream_url && identity == m_machine) {
+        if (!stream_url.empty() && m_last_state == MEDIASTATE_IDLE) {
+            m_next_retry   = wxDateTime::Now();
+            m_user_triggered = true;
+            Play();
+        } else if (stream_url.empty()) {
+            SetStatus(idle_message, false);
+        }
+        return;
+    }
+
+    if (m_last_state != MEDIASTATE_IDLE)
+        Stop(" ");
+
+    m_direct_stream_url = stream_url;
+    m_machine           = identity;
+    m_failed_retry      = 0;
+    m_failed_code       = 0;
+    m_last_failed_codes.clear();
+    Enable(true);
+
+    if (stream_url.empty()) {
+        m_next_retry = wxDateTime();
+        SetStatus(idle_message, false);
+        return;
+    }
+
+    m_next_retry     = wxDateTime::Now();
+    m_user_triggered = true;
+    Play();
+}
+
 wxString hide_id_middle_string(wxString const &str, size_t offset = 0, size_t length = -1)
 {
 #if BBL_RELEASE_TO_PUBLIC
@@ -298,6 +351,20 @@ void MediaPlayCtrl::Play()
         return;
     }
     m_failed_code = 0;
+    if (!m_direct_stream_url.empty()) {
+        std::string url = build_direct_rtsp_liveview_url(m_direct_stream_url);
+        if (url.empty()) {
+            Stop(_L("The camera stream address is invalid."));
+            return;
+        }
+        url += "&device=" + m_machine;
+        url += "&cli_ver=" + std::string(SLIC3R_VERSION);
+        BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl direct RTSP: " << url;
+        m_url = url;
+        load();
+        m_button_play->SetIcon("media_stop");
+        return;
+    }
     if (m_machine.empty()) {
         Stop(_L("Please confirm if the printer is connected."));
         return;
@@ -466,7 +533,8 @@ void MediaPlayCtrl::Stop(wxString const &msg, wxString const &msg2)
     ++m_failed_retry;
     bool local = tunnel == "local" || tunnel == "rtsp" ||
                  tunnel == "rtsps";
-    if (m_failed_code < 0 && last_state != wxMEDIASTATE_PLAYING && local && (m_failed_retry > 1 || m_user_triggered)) {
+    if (m_direct_stream_url.empty() && m_failed_code < 0 && last_state != wxMEDIASTATE_PLAYING && local &&
+        (m_failed_retry > 1 || m_user_triggered)) {
         m_next_retry = wxDateTime(); // stop retry
         if (wxGetApp().show_modal_ip_address_enter_dialog(false, _L("LAN Connection Failed (Failed to start liveview)"))) {
             m_failed_retry = 0;
