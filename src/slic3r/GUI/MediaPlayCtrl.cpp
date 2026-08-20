@@ -33,7 +33,8 @@ static std::map<int, std::string> error_messages = {
     {101, L("The player is not loaded, please click \"play\" button to retry.")},
     {102, L("The player is not loaded, please click \"play\" button to retry.")},
     {103, L("The player is not loaded, please click \"play\" button to retry.")},
-    {104, L("The player is not loaded because the GStreamer GTK video sink is missing or failed to initialize.")}
+    {104, L("The player is not loaded because the GStreamer GTK video sink is missing or failed to initialize.")},
+    {105, L("The direct camera decoder is missing from this TinManX1 installation.")}
 };
 
 namespace Slic3r {
@@ -68,24 +69,6 @@ std::string build_bambu_local_liveview_url(
         return "bambu:///rtsp___" + user + ":" + passwd + "@" + ip + "/streaming/live/1?proto=rtsp";
 
     return {};
-}
-
-std::string build_direct_rtsp_liveview_url(const std::string& stream_url)
-{
-    std::string protocol;
-    std::string address;
-    if (boost::algorithm::istarts_with(stream_url, "rtsp://")) {
-        protocol = "rtsp";
-        address  = stream_url.substr(7);
-    } else if (boost::algorithm::istarts_with(stream_url, "rtsps://")) {
-        protocol = "rtsps";
-        address  = stream_url.substr(8);
-    } else {
-        return {};
-    }
-
-    const char separator = address.find('?') == std::string::npos ? '?' : '&';
-    return "bambu:///" + protocol + "___" + address + separator + "proto=" + protocol;
 }
 
 } // namespace
@@ -352,15 +335,13 @@ void MediaPlayCtrl::Play()
     }
     m_failed_code = 0;
     if (!m_direct_stream_url.empty()) {
-        std::string url = build_direct_rtsp_liveview_url(m_direct_stream_url);
-        if (url.empty()) {
+        if (!boost::algorithm::istarts_with(m_direct_stream_url, "rtsp://") &&
+            !boost::algorithm::istarts_with(m_direct_stream_url, "rtsps://")) {
             Stop(_L("The camera stream address is invalid."));
             return;
         }
-        url += "&device=" + m_machine;
-        url += "&cli_ver=" + std::string(SLIC3R_VERSION);
-        BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl direct RTSP: " << url;
-        m_url = url;
+        BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl direct RTSP requested for " << m_machine;
+        m_url = "<direct>" + m_direct_stream_url;
         load();
         m_button_play->SetIcon("media_stop");
         return;
@@ -808,6 +789,11 @@ void MediaPlayCtrl::media_proc()
         }
         else if (url == "<play>") {
             m_media_ctrl->Play();
+        }
+        else if (url.StartsWith("<direct>")) {
+            BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl: start direct stream load";
+            m_media_ctrl->LoadDirectStream(url.Mid(8));
+            BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl: end direct stream load";
         }
         else {
             BOOST_LOG_TRIVIAL(info) <<  "MediaPlayCtrl: start load";

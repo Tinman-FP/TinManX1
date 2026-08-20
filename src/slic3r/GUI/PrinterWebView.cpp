@@ -2,6 +2,7 @@
 
 #include "I18N.hpp"
 #include "DeviceManager.hpp"
+#include "DeviceCore/DevManager.h"
 #include "MediaPlayCtrl.h"
 #include "PrinterWebViewHandler.hpp"
 #include "slic3r/GUI/PrinterWebView.hpp"
@@ -42,6 +43,14 @@ namespace {
 
 bool active_printer_is_prusa()
 {
+    if (DeviceManager* device_manager = wxGetApp().getDeviceManager()) {
+        if (MachineObject* machine = device_manager->get_selected_machine()) {
+            const std::string identity = machine->get_dev_name() + " " + machine->printer_type + " " +
+                                         machine->get_dev_id() + " " + machine->get_dev_ip();
+            return boost::algorithm::icontains(identity, "prusa");
+        }
+    }
+
     if (wxGetApp().preset_bundle == nullptr)
         return false;
 
@@ -343,7 +352,9 @@ void PrinterWebView::load_url(wxString& url, wxString apikey)
 
 void PrinterWebView::update_prusa_camera(const wxString& printer_url)
 {
-    const bool is_prusa = active_printer_is_prusa();
+    m_prusa_printer_host = host_from_printer_url(into_u8(printer_url));
+    const std::string saved_url = wxGetApp().app_config->get("prusa_camera", m_prusa_printer_host);
+    const bool is_prusa = active_printer_is_prusa() || !saved_url.empty();
     m_prusa_camera_panel->Show(is_prusa);
     if (!is_prusa) {
         ++m_prusa_camera_generation;
@@ -352,8 +363,6 @@ void PrinterWebView::update_prusa_camera(const wxString& printer_url)
         return;
     }
 
-    m_prusa_printer_host = host_from_printer_url(into_u8(printer_url));
-    const std::string saved_url = wxGetApp().app_config->get("prusa_camera", m_prusa_printer_host);
     if (!saved_url.empty())
         set_prusa_camera_url(saved_url, false);
     else

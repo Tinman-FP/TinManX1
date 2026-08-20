@@ -278,6 +278,11 @@ def atomic_write_json(path: pathlib.Path, payload: dict) -> None:
 
 def patch_conf(conf: dict, host: str, api_key: str) -> bool:
     changed = False
+    access_codes = conf.setdefault("access_code", {})
+    if isinstance(access_codes, dict) and access_codes.get(host) != api_key:
+        access_codes[host] = api_key
+        changed = True
+
     connections = conf.setdefault("tinman_machine_connections", {})
     if isinstance(connections, dict):
         desired = {
@@ -301,23 +306,22 @@ def patch_conf(conf: dict, host: str, api_key: str) -> bool:
             if isinstance(machine, dict)
             and any(is_core_one_l(machine.get(field)) for field in ("dev_name", "printer_type"))
         ]
-        # local_machines is an application-owned discovery cache. Repair a
-        # stale Core entry when present, but do not fight the app if it prunes
-        # non-Bambu entries after launch.
-        if core_aliases:
-            machine = dict(machines.get(host, machines[core_aliases[0]]))
-            desired = {"dev_ip": host, "dev_name": CORE_FAMILY, "printer_type": CORE_FAMILY}
-            for key, value in desired.items():
-                if machine.get(key) != value:
-                    machine[key] = value
-                    changed = True
-            for alias in core_aliases:
-                if alias != host:
-                    del machines[alias]
-                    changed = True
-            if machines.get(host) != machine:
-                machines[host] = machine
+        # TinManX1 owns the non-Bambu PrusaLink bridge entry. Recreate it after
+        # an accidental Device-tab logout, but only after the printer has been
+        # authenticated by discover(). Offline printers never reach this path.
+        machine = dict(machines.get(host, machines[core_aliases[0]] if core_aliases else {}))
+        desired = {"dev_ip": host, "dev_name": CORE_FAMILY, "printer_type": CORE_FAMILY}
+        for key, value in desired.items():
+            if machine.get(key) != value:
+                machine[key] = value
                 changed = True
+        for alias in core_aliases:
+            if alias != host:
+                del machines[alias]
+                changed = True
+        if machines.get(host) != machine:
+            machines[host] = machine
+            changed = True
     return changed
 
 
@@ -480,10 +484,18 @@ def self_test() -> int:
         conf = load_json(datadir / "OrcaSlicer.conf")
         profile = load_json(profile_path)
         assert conf["tinman_machine_connections"][f"{CORE_FAMILY}::print_host"] == host
+        assert conf["access_code"][host] == "self-test-key"
         assert list(conf["local_machines"]) == [host]
         assert profile["print_host"] == host
         assert profile["host_type"] == "prusalink"
         assert load_json(datadir / CACHE_RELATIVE_PATH)["host"] == host
+
+        # A verified printer must also be recreated after the Device tab drops
+        # its cached entry.
+        conf["local_machines"].clear()
+        assert patch_conf(conf, host, "self-test-key")
+        assert conf["access_code"][host] == "self-test-key"
+        assert conf["local_machines"][host]["dev_name"] == CORE_FAMILY
     print("TinManX1 PrusaLink recovery self-test passed")
     return 0
 

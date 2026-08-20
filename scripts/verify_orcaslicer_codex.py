@@ -45,6 +45,8 @@ FEATURE_RESOURCES = (
     "tools/repair_bambu_lan_bindings.py",
     "tools/repair_prusalink_bindings.py",
     "tools/sync_bambu_network_plugin.py",
+    "tools/tinman-rtsp-bridge",
+    "tools/FFmpeg-LGPL-2.1.txt",
     "third_party/gpl/arc-overhang/LICENSE",
     "third_party/gpl/arc-overhang/NOTICE.md",
     "third_party/gpl/arc-overhang/requirements.txt",
@@ -272,6 +274,8 @@ def check_feature_resources(state: CheckState, app: Path) -> None:
         path = resources / rel
         if path.exists() and path.stat().st_size > 0:
             state.ok(f"feature resource present: {rel}")
+            if rel == "tools/tinman-rtsp-bridge" and path.stat().st_mode & 0o111 == 0:
+                state.fail("Prusa RTSP decoder is not executable")
         else:
             state.fail(f"missing feature resource: {rel}")
 
