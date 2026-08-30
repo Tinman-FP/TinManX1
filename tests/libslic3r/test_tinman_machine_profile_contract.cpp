@@ -164,6 +164,54 @@ TEST_CASE("TinMan machine hardware overrides stale project nozzle flow", "[Prese
         "Bambu Lab X1 Carbon 0.6 nozzle", x1c, project));
 }
 
+TEST_CASE("TinMan multi-tool contract separates material slots from physical tools", "[Preset][TinMan][MultiTool]")
+{
+    DynamicPrintConfig config;
+    config.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.6, 0.4, 0.4, 0.6}));
+    config.set_key_value("filament_map", new ConfigOptionInts({0, 2, 9}));
+    config.set_key_value("nozzle_volume_type", new ConfigOptionEnumsGeneric({NozzleVolumeType::nvtHighFlow}));
+    config.set_key_value("flush_multiplier", new ConfigOptionFloats({0.8, 1.2}));
+    config.set_key_value("extruder_ams_count", new ConfigOptionStrings({"0:1"}));
+
+    REQUIRE(tinmanx_normalize_multitool_config(config, 3));
+    CHECK((config.option<ConfigOptionInts>("filament_map")->values == std::vector<int>{1, 2, 1}));
+    CHECK((config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values ==
+          std::vector<int>{NozzleVolumeType::nvtHighFlow,
+                           NozzleVolumeType::nvtStandard,
+                           NozzleVolumeType::nvtStandard,
+                           NozzleVolumeType::nvtStandard}));
+    CHECK((config.option<ConfigOptionFloats>("flush_multiplier")->values ==
+          std::vector<double>{0.8, 1.2, 1.0, 1.0}));
+    CHECK((config.option<ConfigOptionStrings>("extruder_ams_count")->values ==
+          std::vector<std::string>{"0:1", "", "", ""}));
+    CHECK_FALSE(tinmanx_normalize_multitool_config(config, 3));
+}
+
+TEST_CASE("TinMan multi-tool contract rejects a profile without a physical nozzle", "[Preset][TinMan][MultiTool]")
+{
+    DynamicPrintConfig config;
+    config.set_key_value("filament_map", new ConfigOptionInts({2}));
+
+    CHECK_FALSE(tinmanx_normalize_multitool_config(config, 1));
+    CHECK(config.option<ConfigOptionInts>("filament_map")->values == std::vector<int>{2});
+}
+
+TEST_CASE("Mixed nozzle bridge percentages validate against the emitting tool", "[Config][TinMan][MultiTool]")
+{
+    FullPrintConfig config;
+    config.nozzle_diameter.values = {0.6, 0.4, 0.4, 0.6};
+    config.bridge_line_width.value = 100.;
+    config.bridge_line_width.percent = true;
+
+    const auto percentage_errors = validate(config);
+    CHECK(percentage_errors.find("bridge_line_width") == percentage_errors.end());
+
+    config.bridge_line_width.value = 0.5;
+    config.bridge_line_width.percent = false;
+    const auto absolute_errors = validate(config);
+    CHECK(absolute_errors.find("bridge_line_width") != absolute_errors.end());
+}
+
 TEST_CASE("TinMan connection overlay follows a machine across nozzle presets", "[Preset][TinMan]")
 {
     AppConfig app_config;

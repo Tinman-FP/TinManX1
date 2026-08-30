@@ -1,6 +1,7 @@
 #include "ClipperUtils.hpp"
 #include "Model.hpp"
 #include "Print.hpp"
+#include "TinManMachineProfileContract.hpp"
 
 #include <boost/log/trivial.hpp>
 #include <algorithm>
@@ -1146,6 +1147,21 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
 
     //new_full_config.normalize_fdm(used_filaments);
     new_full_config.normalize_fdm_1();
+
+    // PresetBundle normally enforces this contract, but imported 3MF projects
+    // and direct API callers may reach Print::apply without passing through it.
+    // Keep this final boundary safe because ToolOrdering intentionally assumes
+    // every logical filament has a valid one-based physical-tool route.
+    size_t filament_count = 1;
+    if (const auto *ids = new_full_config.option<ConfigOptionStrings>("filament_settings_id");
+        ids != nullptr && !ids->values.empty()) {
+        filament_count = ids->values.size();
+    } else if (const auto *diameters = new_full_config.option<ConfigOptionFloats>("filament_diameter");
+               diameters != nullptr && !diameters->values.empty()) {
+        filament_count = diameters->values.size();
+    }
+    tinmanx_normalize_multitool_config(new_full_config, filament_count);
+
     t_config_option_keys changed_keys = new_full_config.normalize_fdm_2(objects().size(), used_filaments.size());
     if (changed_keys.size() > 0) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", got changed_keys, size=%1%")%changed_keys.size();

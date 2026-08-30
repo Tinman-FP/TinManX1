@@ -2,6 +2,7 @@
 #define slic3r_TinManMachineProfileContract_hpp_
 
 #include <string>
+#include <cstddef>
 
 namespace Slic3r {
 
@@ -35,6 +36,12 @@ bool tinmanx_enforce_machine_connection_contract(const std::string &preset_name,
 bool tinmanx_apply_nozzle_volume_contract(const std::string &preset_name,
                                           const DynamicPrintConfig &printer_config,
                                           DynamicPrintConfig &project_config);
+
+// Keep logical material slots, physical tools, and per-tool project settings
+// dimensionally consistent. Filament maps are one-based and invalid routes are
+// repaired to tool 1. Returns true when any value was repaired.
+bool tinmanx_normalize_multitool_config(DynamicPrintConfig &config,
+                                        size_t filament_count);
 
 // Return the selector-facing TinMan profile for a curated machine/nozzle.
 // An empty result means the machine is outside the curated catalog or the

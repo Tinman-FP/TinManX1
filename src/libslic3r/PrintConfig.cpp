@@ -11987,10 +11987,16 @@ std::map<std::string, std::string> validate(const FullPrintConfig &cfg, bool und
             "skeleton_infill_line_width"};
         for (size_t i = 0; i < sizeof(widths) / sizeof(widths[i]); ++ i) {
             std::string key(widths[i]);
-            double abs_width = cfg.get_abs_value(key, max_nozzle_diameter);
-            double allowed_max = (key == "bridge_line_width") ? min_nozzle_diameter : MAX_LINE_WIDTH_MULTIPLIER * max_nozzle_diameter;
+            const bool is_bridge_width = key == "bridge_line_width";
+            // Percentage widths are resolved against the nozzle that will emit them. A bridge may
+            // legally use any configured tool, so validate its percentage against the smallest
+            // nozzle instead of resolving it against the largest and then rejecting it against the
+            // smallest. Runtime validation still checks each region's actual tool.
+            const double reference_nozzle_diameter = is_bridge_width ? min_nozzle_diameter : max_nozzle_diameter;
+            double abs_width = cfg.get_abs_value(key, reference_nozzle_diameter);
+            double allowed_max = is_bridge_width ? min_nozzle_diameter : MAX_LINE_WIDTH_MULTIPLIER * max_nozzle_diameter;
             if (abs_width > allowed_max) {
-                if (key == "bridge_line_width")
+                if (is_bridge_width)
                     error_message.emplace(key, L("Bridge line width must not exceed nozzle diameter: ") + std::to_string(abs_width));
                 else
                     error_message.emplace(key, L("too large line width ") + std::to_string(abs_width));

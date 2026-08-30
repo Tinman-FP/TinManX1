@@ -1,5 +1,14 @@
 # Changelog
 
+## v2026.08.29-prusa-multitool-hardening.1
+
+- separated physical toolhead vectors from logical material-slot vectors when normalizing mixed-nozzle and multi-material configurations
+- validated every filament-to-tool route against the selected printer's physical nozzle count and repaired stale routes deterministically
+- made full preset projection tolerate renamed or unavailable filament presets without dereferencing missing catalog entries
+- hardened physical-printer loading, selection, fallback, deletion, and case-insensitive reload behavior against empty or stale saved bindings
+- added native regression coverage for Snapmaker U1-style mixed tooling and physical-printer lifecycle edge cases
+- fixed mixed-nozzle bridge-width validation so percentage widths are checked against the smallest eligible nozzle
+
 ## v2026.08.29-wave-overhangs.1
 
 - updated TinManX1's native Wave Overhangs engine to the current upstream `v0.4.0` wavefront contract and retired the removed Kaiser/LaSO selector

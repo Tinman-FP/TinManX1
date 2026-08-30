@@ -399,6 +399,57 @@ bool tinmanx_apply_nozzle_volume_contract(const std::string &preset_name,
     return true;
 }
 
+bool tinmanx_normalize_multitool_config(DynamicPrintConfig &config,
+                                        size_t filament_count)
+{
+    const auto *diameters = config.option<ConfigOptionFloats>("nozzle_diameter");
+    if (diameters == nullptr || diameters->values.empty()) {
+        BOOST_LOG_TRIVIAL(error) << "Cannot normalize multi-tool configuration without a physical nozzle";
+        return false;
+    }
+
+    const size_t tool_count = diameters->values.size();
+    filament_count = std::max<size_t>(filament_count, 1);
+    bool changed = false;
+
+    auto *filament_map = config.option<ConfigOptionInts>("filament_map", true);
+    if (filament_map->values.size() != filament_count) {
+        filament_map->values.resize(filament_count, 1);
+        changed = true;
+    }
+    for (int &tool : filament_map->values) {
+        if (tool < 1 || static_cast<size_t>(tool) > tool_count) {
+            tool = 1;
+            changed = true;
+        }
+    }
+
+    auto *flow_types = config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type", true);
+    if (flow_types->values.size() != tool_count) {
+        flow_types->values.resize(tool_count, NozzleVolumeType::nvtStandard);
+        changed = true;
+    }
+
+    if (auto *flush_multipliers = config.option<ConfigOptionFloats>("flush_multiplier", false);
+        flush_multipliers != nullptr && flush_multipliers->values.size() != tool_count) {
+        flush_multipliers->values.resize(tool_count, 1.0);
+        changed = true;
+    }
+
+    if (auto *ams_counts = config.option<ConfigOptionStrings>("extruder_ams_count", false);
+        ams_counts != nullptr && ams_counts->values.size() != tool_count) {
+        ams_counts->values.resize(tool_count, std::string());
+        changed = true;
+    }
+
+    if (changed) {
+        BOOST_LOG_TRIVIAL(warning) << "Repaired multi-tool configuration: "
+                                   << filament_count << " filament slot(s), "
+                                   << tool_count << " physical tool(s)";
+    }
+    return changed;
+}
+
 std::string tinmanx_canonical_machine_preset_name(const std::string &preset_name,
                                                   const std::string &machine_hint,
                                                   const std::string &nozzle_variant)

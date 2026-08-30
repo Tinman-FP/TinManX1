@@ -57,6 +57,14 @@ Preset &add_inmemory_preset(PresetCollection &coll, const std::string &name, con
     return coll.load_preset(std::string(), name, config, /*select=*/false);
 }
 
+DynamicPrintConfig physical_printer_config(const PresetBundle &bundle,
+                                           std::vector<std::string> preset_names)
+{
+    DynamicPrintConfig config(bundle.physical_printers.default_config());
+    config.option<ConfigOptionStrings>("preset_names")->values = std::move(preset_names);
+    return config;
+}
+
 // Mark an already-loaded preset as renamed from one or more former names.
 void set_renamed_from(PresetCollection &coll, const std::string &preset_name, std::vector<std::string> old_names)
 {
@@ -170,6 +178,86 @@ TEST_CASE("Printer extruder count tolerates missing nozzle diameter", "[Preset][
 
     config.set_key_value("nozzle_diameter", new ConfigOptionFloats({ 0.4, 0.6 }));
     CHECK(bundle.get_printer_extruder_count() == 2);
+}
+
+TEST_CASE("Full FFF projection repairs missing materials and invalid tool routes", "[Preset][MultiTool]")
+{
+    PresetBundle bundle;
+    DynamicPrintConfig &printer = bundle.printers.get_edited_preset().config;
+    printer.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.6, 0.4, 0.4, 0.6}));
+    printer.set_key_value("single_extruder_multi_material", new ConfigOptionBool(false));
+    printer.set_num_extruders(4);
+
+    const std::string fallback_name = bundle.filaments.get_edited_preset().name;
+    bundle.filament_presets = {fallback_name, "Removed Filament"};
+    bundle.project_config.option<ConfigOptionInts>("filament_map")->values = {4, 9};
+
+    const DynamicPrintConfig full = bundle.full_config(false);
+    CHECK((full.option<ConfigOptionStrings>("filament_settings_id")->values ==
+           std::vector<std::string>{fallback_name, fallback_name}));
+    CHECK((full.option<ConfigOptionInts>("filament_map")->values == std::vector<int>{4, 1}));
+    CHECK(full.option<ConfigOptionFloats>("nozzle_diameter")->values.size() == 4);
+    CHECK(full.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values.size() == 4);
+}
+
+TEST_CASE("Physical printer selection tolerates empty and stale preset lists", "[Preset][PhysicalPrinter]")
+{
+    PresetBundle bundle;
+    add_inmemory_preset(bundle.printers, "Machine A");
+    add_inmemory_preset(bundle.printers, "Machine B");
+
+    bundle.physical_printers.load_printer(
+        std::string(), "Empty", physical_printer_config(bundle, {}), false);
+    bundle.physical_printers.select_printer("Empty");
+    CHECK_FALSE(bundle.physical_printers.has_selection());
+
+    bundle.physical_printers.load_printer(
+        std::string(), "Stale", physical_printer_config(bundle, {"Removed Machine"}), false);
+    bundle.physical_printers.select_printer("Stale");
+    CHECK_FALSE(bundle.physical_printers.has_selection());
+
+    bundle.physical_printers.load_printer(
+        std::string(), "Workshop", physical_printer_config(bundle, {"Machine A", "Machine B"}), false);
+    bundle.physical_printers.select_printer("Workshop * Missing Machine");
+    REQUIRE(bundle.physical_printers.has_selection());
+    CHECK(bundle.physical_printers.get_selected_printer_name() == "Workshop");
+    CHECK(bundle.physical_printers.get_selected_printer_preset_name() == "Machine A");
+
+    bundle.physical_printers.select_printer("Unknown Printer");
+    CHECK_FALSE(bundle.physical_printers.has_selection());
+}
+
+TEST_CASE("Physical printer reload and deletion preserve collection identity", "[Preset][PhysicalPrinter]")
+{
+    PresetBundle bundle;
+    add_inmemory_preset(bundle.printers, "Machine A");
+    add_inmemory_preset(bundle.printers, "Machine B");
+
+    bundle.physical_printers.load_printer(
+        std::string(), "Alpha", physical_printer_config(bundle, {"Machine A"}), false);
+    bundle.physical_printers.load_printer(
+        std::string(), "Charlie", physical_printer_config(bundle, {"Machine A"}), false);
+    bundle.physical_printers.load_printer(
+        std::string(), "alpha", physical_printer_config(bundle, {"Machine B"}), false);
+
+    bundle.physical_printers.select_printer("Charlie * Machine A");
+    bundle.physical_printers.load_printer(
+        std::string(), "Bravo", physical_printer_config(bundle, {"Machine A"}), false);
+
+    CHECK(std::distance(bundle.physical_printers.begin(), bundle.physical_printers.end()) == 3);
+    CHECK(std::next(bundle.physical_printers.begin())->name == "Bravo");
+    const PhysicalPrinter *alpha = bundle.physical_printers.find_printer("Alpha", false);
+    REQUIRE(alpha != nullptr);
+    CHECK(alpha->get_preset_names() == std::set<std::string>{"Machine B"});
+
+    REQUIRE(bundle.physical_printers.has_selection());
+    CHECK(bundle.physical_printers.get_selected_printer_name() == "Charlie");
+    CHECK_FALSE(bundle.physical_printers.delete_printer("Beta"));
+    CHECK(bundle.physical_printers.find_printer("Charlie") != nullptr);
+
+    REQUIRE(bundle.physical_printers.delete_printer("Alpha"));
+    REQUIRE(bundle.physical_printers.has_selection());
+    CHECK(bundle.physical_printers.get_selected_printer_name() == "Charlie");
 }
 
 TEST_CASE("find_preset resolves a system preset's renamed_from", "[Preset][Rename]")

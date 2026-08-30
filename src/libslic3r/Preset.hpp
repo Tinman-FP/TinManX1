@@ -1045,7 +1045,7 @@ protected:
 class PhysicalPrinterCollection
 {
 public:
-    PhysicalPrinterCollection(const std::vector<std::string>& keys);
+    PhysicalPrinterCollection(const std::vector<std::string>& keys, PresetBundle *preset_bundle);
 
     typedef std::deque<PhysicalPrinter>::iterator Iterator;
     typedef std::deque<PhysicalPrinter>::const_iterator ConstIterator;
@@ -1083,6 +1083,7 @@ public:
     // If there is last preset for the printer and first_check== false, then delete this printer
     // returns true if all presets were deleted successfully.
     bool            delete_preset_from_printers(const std::string& preset_name);
+    void            rename_preset_in_printers(const std::string& old_name, const std::string& new_name);
 
     // Get list of printers which have more than one preset and "preset_names" preset is one of them
     std::vector<std::string> get_printers_with_preset( const std::string &preset_name);
@@ -1095,18 +1096,18 @@ public:
 
     size_t                  get_selected_idx()    const { return m_idx_selected; }
     // Returns the name of the selected preset, or an empty string if no preset is selected.
-    std::string             get_selected_printer_name() const { return (m_idx_selected == size_t(-1)) ? std::string() : this->get_selected_printer().name; }
+    std::string             get_selected_printer_name() const { return has_selection() ? this->get_selected_printer().name : std::string(); }
     // Returns the config of the selected printer, or nullptr if no printer is selected.
-    DynamicPrintConfig*     get_selected_printer_config() { return (m_idx_selected == size_t(-1)) ? nullptr : &(this->get_selected_printer().config); }
+    DynamicPrintConfig*     get_selected_printer_config() { return has_selection() ? &(this->get_selected_printer().config) : nullptr; }
     // Returns the config of the selected printer, or nullptr if no printer is selected.
-    PrinterTechnology       get_selected_printer_technology() { return (m_idx_selected == size_t(-1)) ? PrinterTechnology::ptAny : this->get_selected_printer().printer_technology(); }
+    PrinterTechnology       get_selected_printer_technology() { return has_selection() ? this->get_selected_printer().printer_technology() : PrinterTechnology::ptAny; }
 
     // Each physical printer can have a several related preset,
     // so, use the next functions to get an exact names of selections in the list:
     // Returns the full name of the selected printer, or an empty string if no preset is selected.
     std::string     get_selected_full_printer_name() const;
     // Returns the printer model of the selected preset, or an empty string if no preset is selected.
-    std::string     get_selected_printer_preset_name() const { return (m_idx_selected == size_t(-1)) ? std::string() : m_selected_preset; }
+    std::string     get_selected_printer_preset_name() const { return has_selection() ? m_selected_preset : std::string(); }
 
     // Select printer by the full printer name, which contains name of printer, separator and name of selected preset
     // If full_name doesn't contain name of selected preset, then select first preset in the list for this printer
@@ -1146,7 +1147,7 @@ private:
     std::deque<PhysicalPrinter>::iterator find_printer_internal(const std::string& name, bool case_sensitive_search = true);
     std::deque<PhysicalPrinter>::const_iterator find_printer_internal(const std::string& name, bool case_sensitive_search = true) const
     {
-        return const_cast<PhysicalPrinterCollection*>(this)->find_printer_internal(name);
+        return const_cast<PhysicalPrinterCollection*>(this)->find_printer_internal(name, case_sensitive_search);
     }
 
     // List of printers
@@ -1164,6 +1165,9 @@ private:
 
     // Path to the directory to store the config files into.
     std::string                 m_dir_path;
+
+    // Used to resolve printer presets renamed by vendor/profile updates.
+    const PresetBundle         *m_preset_bundle_owner {nullptr};
 };
 
 

@@ -4094,21 +4094,18 @@ static void update_preset_name_option(const std::set<std::string>& preset_names,
     std::string name;
     for (auto el : preset_names)
         name += el + ";";
-    name.pop_back();
+    if (!name.empty())
+        name.pop_back();
     config.set_key_value("preset_name", new ConfigOptionString(name));
 }
 
 void PhysicalPrinter::update_preset_names_in_config()
 {
-    if (!preset_names.empty()) {
-        std::vector<std::string>& values = config.option<ConfigOptionStrings>("preset_names")->values;
-        values.clear();
-        for (auto preset : preset_names)
-            values.push_back(preset);
+    std::vector<std::string>& values = config.option<ConfigOptionStrings>("preset_names")->values;
+    values.assign(preset_names.begin(), preset_names.end());
 
-        // temporary workaround for compatibility with older Slicer
-        update_preset_name_option(preset_names, config);
-    }
+    // temporary workaround for compatibility with older Slicer
+    update_preset_name_option(preset_names, config);
 }
 
 void PhysicalPrinter::save(const std::string& file_name_from, const std::string& file_name_to)
@@ -4135,12 +4132,11 @@ void PhysicalPrinter::update_from_config(const DynamicPrintConfig& new_config)
     config.apply_only(new_config, printer_options(), false);
 
     const std::vector<std::string>& values = config.option<ConfigOptionStrings>("preset_names")->values;
-
-    if (values.empty())
-        preset_names.clear();
-    else {
+    preset_names.clear();
+    if (!values.empty()) {
         for (const std::string& val : values)
-            preset_names.emplace(val);
+            if (!val.empty())
+                preset_names.emplace(val);
         // temporary workaround for compatibility with older Slicer
         update_preset_name_option(preset_names, config);
     }
@@ -4203,7 +4199,9 @@ std::string PhysicalPrinter::get_preset_name(std::string name)
 // ***  PhysicalPrinterCollection  ***
 // -----------------------------------
 
-PhysicalPrinterCollection::PhysicalPrinterCollection( const std::vector<std::string>& keys)
+PhysicalPrinterCollection::PhysicalPrinterCollection(const std::vector<std::string>& keys,
+                                                     PresetBundle *preset_bundle)
+    : m_preset_bundle_owner(preset_bundle)
 {
     // Default config for a physical printer containing all key/value pairs of PhysicalPrinter::printer_options().
     for (const std::string &key : keys) {
@@ -4214,12 +4212,34 @@ PhysicalPrinterCollection::PhysicalPrinterCollection( const std::vector<std::str
     }
 }
 
+static bool update_physical_printer_preset_names(std::set<std::string> &preset_names,
+                                                 const PrinterPresetCollection &printer_presets)
+{
+    std::set<std::string> resolved_names;
+    bool changed = false;
+    for (const std::string &name : preset_names) {
+        const Preset *resolved = printer_presets.find_preset(name, false);
+        if (resolved != nullptr) {
+            resolved_names.emplace(resolved->name);
+            changed |= resolved->name != name;
+        } else {
+            // Preserve unknown user presets. They may be restored by cloud sync
+            // later in startup; silently dropping them would sever the printer.
+            resolved_names.emplace(name);
+        }
+    }
+    if (changed)
+        preset_names = std::move(resolved_names);
+    return changed;
+}
+
 // Load all printers found in dir_path.
 // Throws an exception on error.
 void PhysicalPrinterCollection::load_printers(
     const std::string& dir_path, const std::string& subdir,
     PresetsConfigSubstitutions& substitutions, ForwardCompatibilitySubstitutionRule substitution_rule)
 {
+    const std::string selected_full_name = get_selected_full_printer_name();
     // Don't use boost::filesystem::canonical() on Windows, it is broken in regard to reparse points,
     // see https://github.com/prusa3d/PrusaSlicer/issues/732
     boost::filesystem::path dir = boost::filesystem::absolute(boost::filesystem::path(dir_path) / subdir).make_preferred();
@@ -4237,10 +4257,14 @@ void PhysicalPrinterCollection::load_printers(
         if (Slic3r::is_json_file(file_name)) {
             // Remove the .json suffix.
             std::string name = file_name.erase(file_name.size() - 5);
-            if (this->find_printer(name, false)) {
+            if (PhysicalPrinter *existing = this->find_printer(name, false)) {
                 // This happens when there's is a preset (most likely legacy one) with the same name as a system preset
                 // that's already been loaded from a bundle.
                 BOOST_LOG_TRIVIAL(warning) << "Printer already present, not loading: " << name;
+                if (m_preset_bundle_owner != nullptr &&
+                    update_physical_printer_preset_names(existing->preset_names,
+                                                         m_preset_bundle_owner->printers))
+                    existing->update_preset_names_in_config();
                 continue;
             }
             try {
@@ -4257,6 +4281,10 @@ void PhysicalPrinterCollection::load_printers(
                         substitutions.push_back({ name, Preset::TYPE_PHYSICAL_PRINTER, PresetConfigSubstitutions::Source::UserFile, printer.file, std::move(config_substitutions) });
                     printer.update_from_config(config);
                     printer.loaded = true;
+                    if (m_preset_bundle_owner != nullptr &&
+                        update_physical_printer_preset_names(printer.preset_names,
+                                                             m_preset_bundle_owner->printers))
+                        printer.update_preset_names_in_config();
                 }
                 catch (const std::ifstream::failure& err) {
                     throw Slic3r::RuntimeError(std::string("The selected preset cannot be loaded: ") + printer.file + "\n\tReason: " + err.what());
@@ -4274,23 +4302,34 @@ void PhysicalPrinterCollection::load_printers(
     }
     m_printers.insert(m_printers.end(), std::make_move_iterator(printers_loaded.begin()), std::make_move_iterator(printers_loaded.end()));
     std::sort(m_printers.begin(), m_printers.end());
+    if (!selected_full_name.empty())
+        select_printer(selected_full_name);
     if (!errors_cummulative.empty())
         throw Slic3r::RuntimeError(errors_cummulative);
 }
 
 void PhysicalPrinterCollection::load_printer(const std::string& path, const std::string& name, DynamicPrintConfig&& config, bool select, bool save/* = false*/)
 {
-    auto it = this->find_printer_internal(name);
-    if (it == m_printers.end() || it->name != name) {
+    const std::string selected_full_name = get_selected_full_printer_name();
+    auto it = this->find_printer_internal(name, false);
+    if (it == m_printers.end()) {
         // The preset was not found. Create a new preset.
+        it = this->find_printer_internal(name);
         it = m_printers.emplace(it, PhysicalPrinter(name, config));
     }
 
     it->file = path;
-    it->config = std::move(config);
+    it->config = m_default_config;
+    it->update_from_config(config);
     it->loaded = true;
+    if (m_preset_bundle_owner != nullptr &&
+        update_physical_printer_preset_names(it->preset_names,
+                                             m_preset_bundle_owner->printers))
+        it->update_preset_names_in_config();
     if (select)
         this->select_printer(*it);
+    else if (!selected_full_name.empty())
+        this->select_printer(selected_full_name);
 
     if (save)
         it->save(nullptr);
@@ -4400,9 +4439,11 @@ void PhysicalPrinterCollection::save_printer(PhysicalPrinter& edited_printer, co
     if (it != m_printers.end() && it->name == name) {
         // Printer with the same name found.
         // Overwriting an existing preset.
-        it->config = std::move(edited_printer.config);
+        if (&*it != &edited_printer) {
+            it->config = std::move(edited_printer.config);
+            it->preset_names = edited_printer.preset_names;
+        }
         it->name = edited_printer.name;
-        it->preset_names = edited_printer.preset_names;
         // sort printers and get new it
         std::sort(m_printers.begin(), m_printers.end());
         it = this->find_printer_internal(edited_printer.name);
@@ -4426,18 +4467,26 @@ void PhysicalPrinterCollection::save_printer(PhysicalPrinter& edited_printer, co
 
     // update idx_selected
     m_idx_selected = it - m_printers.begin();
+    if (printer.preset_names.find(m_selected_preset) == printer.preset_names.end())
+        m_selected_preset = printer.preset_names.empty() ? std::string() : *printer.preset_names.begin();
 }
 
 bool PhysicalPrinterCollection::delete_printer(const std::string& name)
 {
     auto it = this->find_printer_internal(name);
-    if (it == m_printers.end())
+    if (it == m_printers.end() || it->name != name)
         return false;
 
+    const size_t deleted_idx = size_t(it - m_printers.begin());
     const PhysicalPrinter& printer = *it;
     // Erase the preset file.
-    boost::nowide::remove(printer.file.c_str());
+    if (!printer.file.empty())
+        boost::nowide::remove(printer.file.c_str());
     m_printers.erase(it);
+    if (m_idx_selected == deleted_idx)
+        unselect_printer();
+    else if (m_idx_selected != size_t(-1) && m_idx_selected > deleted_idx)
+        --m_idx_selected;
     return true;
 }
 
@@ -4463,8 +4512,12 @@ bool PhysicalPrinterCollection::delete_preset_from_printers( const std::string& 
     for (PhysicalPrinter& printer : m_printers) {
         if (printer.preset_names.size() == 1 && *printer.preset_names.begin() == preset_name)
             printers_for_delete.emplace_back(printer.name);
-        else if (printer.delete_preset(preset_name))
-            save_printer(printer);
+        else if (printer.delete_preset(preset_name)) {
+            printer.update_preset_names_in_config();
+            if (printer.file.empty())
+                printer.file = path_from_name(printer.name);
+            printer.save(nullptr);
+        }
     }
 
     if (!printers_for_delete.empty())
@@ -4473,6 +4526,24 @@ bool PhysicalPrinterCollection::delete_preset_from_printers( const std::string& 
 
     unselect_printer();
     return true;
+}
+
+void PhysicalPrinterCollection::rename_preset_in_printers(const std::string &old_preset_name,
+                                                          const std::string &new_preset_name)
+{
+    if (old_preset_name.empty() || new_preset_name.empty() || old_preset_name == new_preset_name)
+        return;
+
+    for (PhysicalPrinter &printer : m_printers) {
+        if (!printer.delete_preset(old_preset_name))
+            continue;
+        printer.add_preset(new_preset_name);
+        printer.update_preset_names_in_config();
+        if (!printer.file.empty())
+            printer.save(nullptr);
+    }
+    if (m_selected_preset == old_preset_name)
+        m_selected_preset = new_preset_name;
 }
 
 // Get list of printers which have more than one preset and "preset_names" preset is one of them
@@ -4504,27 +4575,57 @@ std::vector<std::string> PhysicalPrinterCollection::get_printers_with_only_prese
 
 std::string PhysicalPrinterCollection::get_selected_full_printer_name() const
 {
-    return (m_idx_selected == size_t(-1)) ? std::string() : this->get_selected_printer().get_full_name(m_selected_preset);
+    return has_selection() ? this->get_selected_printer().get_full_name(m_selected_preset) : std::string();
 }
 
 void PhysicalPrinterCollection::select_printer(const std::string& full_name)
 {
     std::string printer_name = PhysicalPrinter::get_short_name(full_name);
-    auto it = this->find_printer_internal(printer_name);
+    auto it = this->find_printer_internal(printer_name, false);
     if (it == m_printers.end()) {
         unselect_printer();
         return;
     }
 
-    // update idx_selected
-    m_idx_selected = it - m_printers.begin();
+    if (m_preset_bundle_owner != nullptr &&
+        update_physical_printer_preset_names(it->preset_names,
+                                             m_preset_bundle_owner->printers))
+        it->update_preset_names_in_config();
+    auto first_valid_preset = it->preset_names.begin();
+    if (m_preset_bundle_owner != nullptr) {
+        first_valid_preset = std::find_if(it->preset_names.begin(), it->preset_names.end(),
+            [this](const std::string &name) {
+                return m_preset_bundle_owner->printers.find_preset(name, false) != nullptr;
+            });
+    }
+    if (it->preset_names.empty() || first_valid_preset == it->preset_names.end()) {
+        BOOST_LOG_TRIVIAL(warning) << "Physical printer '" << printer_name
+                                   << "' has no available machine presets";
+        unselect_printer();
+        return;
+    }
 
-    // update name of the currently selected preset
-    if (printer_name == full_name)
-        // use first preset in the list
-        m_selected_preset = *it->preset_names.begin();
-    else
-        m_selected_preset = it->get_preset_name(full_name);
+    std::string selected = boost::iequals(printer_name, full_name) ?
+        *first_valid_preset : it->get_preset_name(full_name);
+    if (m_preset_bundle_owner != nullptr) {
+        if (const Preset *resolved = m_preset_bundle_owner->printers.find_preset(selected, false))
+            selected = resolved->name;
+    }
+    if (it->preset_names.find(selected) == it->preset_names.end()) {
+        BOOST_LOG_TRIVIAL(warning) << "Machine preset '" << selected
+                                   << "' is not associated with physical printer '"
+                                   << printer_name << "'; using its first valid preset";
+        selected = *first_valid_preset;
+    } else if (m_preset_bundle_owner != nullptr &&
+               m_preset_bundle_owner->printers.find_preset(selected, false) == nullptr) {
+        BOOST_LOG_TRIVIAL(warning) << "Machine preset '" << selected
+                                   << "' is unavailable; using the first valid preset for '"
+                                   << printer_name << "'";
+        selected = *first_valid_preset;
+    }
+
+    m_idx_selected = it - m_printers.begin();
+    m_selected_preset = std::move(selected);
 }
 
 void PhysicalPrinterCollection::select_printer(const std::string& printer_name, const std::string& preset_name)
@@ -4541,7 +4642,12 @@ void PhysicalPrinterCollection::select_printer(const PhysicalPrinter& printer)
 
 bool PhysicalPrinterCollection::has_selection() const
 {
-    return m_idx_selected != size_t(-1);
+    if (m_idx_selected >= m_printers.size() || m_selected_preset.empty() ||
+        m_printers[m_idx_selected].preset_names.find(m_selected_preset) ==
+            m_printers[m_idx_selected].preset_names.end())
+        return false;
+    return m_preset_bundle_owner == nullptr ||
+           m_preset_bundle_owner->printers.find_preset(m_selected_preset, false) != nullptr;
 }
 
 void PhysicalPrinterCollection::unselect_printer()
