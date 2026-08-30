@@ -45,14 +45,22 @@ REFERENCE_FIELDS = (
     "filament_shrinkage_compensation_z",
 )
 
-MICRO_SWISS_BUCKETS = {
+MICRO_SWISS_CM2_BUCKETS = {
     "Bambu X1C HF",
     "Creality K2 Plus",
     "Elegoo Centauri",
+    "FibreSeek 3",
     "Prusa Core One",
     "Qidi X-Plus 4",
     "RatRig V-Core 4",
     "Sovol SV08 MAX",
+}
+
+# Only these machines have the user's FlowTech CHT high-flow hardware. CM2 is
+# the wear/thermal construction; it does not make a standard V6 geometry CHT.
+MICRO_SWISS_CHT_BUCKETS = {
+    "Bambu X1C HF",
+    "Creality K2 Plus",
 }
 
 ACTIVE_CHAMBER_BUCKETS = {
@@ -164,12 +172,11 @@ X1C_FIBERON_PET_CF_HF_TUNE = {
     ],
 }
 
-# Conservative, material-specific flow ceilings for the user's high-flow Qidi
-# Plus 4 and Max EZ nozzle fleet. These are deliberately not a blanket
-# multiplier: already-fast manufacturer presets retain their reviewed values,
-# while flexible, PPS-family, PAHT, and field-tuned PET-CF profiles stay at
-# their proven ceilings.
-QIDI_HF_MVS_OVERRIDES = {
+# Conservative, material-specific starting ceilings retained from the user's
+# prior Plus 4 and Max EZ profile work. The installed standard CM2 nozzles have
+# excellent heat transfer, but are not CHT; these values therefore remain an
+# explicit material table rather than receiving any high-flow multiplier.
+QIDI_CM2_MVS_OVERRIDES = {
     ("ABS", "Polymaker"): "18",
     ("ABS", "RatRig Punk"): "18",
     ("ABS-CF", "Generic"): "12",
@@ -291,7 +298,7 @@ def apply_contract(
                 if key in values:
                     data[key] = copy.deepcopy(values[key])
         else:
-            high_flow = bucket in MICRO_SWISS_BUCKETS
+            high_flow = bucket in MICRO_SWISS_CHT_BUCKETS
             for key in REFERENCE_FIELDS:
                 if key in values:
                     data[key] = vector(values[key], high_flow=high_flow)
@@ -312,7 +319,7 @@ def apply_contract(
         data.update(copy.deepcopy(X1C_PCTG_FIELD_TUNE))
 
     if bucket == "Qidi X-Plus 4":
-        qidi_mvs = QIDI_HF_MVS_OVERRIDES.get((material, manufacturer))
+        qidi_mvs = QIDI_CM2_MVS_OVERRIDES.get((material, manufacturer))
         if qidi_mvs is not None:
             data["filament_max_volumetric_speed"] = [qidi_mvs]
 

@@ -322,7 +322,7 @@
     "is_custom_defined": "0",
     "version": "2.3.1.10",
     "default_filament_colour": [
-        "#161616"
+        "#000000"
     ],
     "filament_price_source_url": [
         "https://www.pushplastic.com/products/carbon-fiber-pc-pbt-filament-1-75mm-500g"

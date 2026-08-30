@@ -1,5 +1,13 @@
 # Changelog
 
+## v2026.08.30-cm2-capability.1
+
+- separated Micro Swiss CM2 construction from CHT high-flow melt-zone capability throughout the machine, process, and filament generators
+- classified only the Bambu X1C and Creality K2 Plus as installed FlowTech CHT machines; standard CM2 printers no longer inherit high-flow metadata or Bambu high-flow material vectors
+- applied guarded CHT process headroom mainly to hidden paths while preserving material MVS, machine acceleration, motion-envelope, pressure-advance, and field-tuned profile authority
+- added capability regressions, corrected the Prusa standard-CM2 audit, and made the passive Prusa PC-PBT-CF chamber target safe from generic audit rewrites
+- documented the Micro Swiss flow evidence, Orca calibration sequence, installed hardware map, and production safety margin
+
 ## v2026.08.29-motion-envelope.1
 
 - added fail-closed, nozzle-specific machine capability envelopes for validated Klipper CoreXY printers

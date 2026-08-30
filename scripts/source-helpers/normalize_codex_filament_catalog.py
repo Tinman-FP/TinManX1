@@ -489,7 +489,7 @@ def rewrite_catalog(
         canonical.append((selected.canonical_name, data, selected.user_name))
 
     index = load_json(index_path)
-    index["version"] = "00.00.02.00"
+    index["version"] = "00.00.02.01"
     index["filament_list"] = [
         {"name": name, "sub_path": f"filament/{name}.json"}
         for name, _, _ in canonical

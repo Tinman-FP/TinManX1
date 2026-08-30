@@ -316,7 +316,7 @@
     "compatible_prints": [],
     "compatible_prints_condition": "",
     "default_filament_colour": [
-        "#161616"
+        "#000000"
     ],
     "is_custom_defined": "0",
     "version": "2.3.1.10",

@@ -13,8 +13,8 @@ sys.path.insert(0, str(SOURCE_HELPERS))
 from codex_filament_contracts import (  # noqa: E402
     ACTIVE_CHAMBER_BUCKETS,
     FIBERON_PET_CF_FIELD_TUNE,
-    MICRO_SWISS_BUCKETS,
-    QIDI_HF_MVS_OVERRIDES,
+    MICRO_SWISS_CHT_BUCKETS,
+    QIDI_CM2_MVS_OVERRIDES,
     REFERENCE_FIELDS,
     X1C_FIBERON_PET_CF_HF_TUNE,
     X1C_PCTG_FIELD_TUNE,
@@ -623,7 +623,7 @@ def check_codex_reference_values(rel, data, material, manufacturer, bucket, cont
             )
             if key in FIBERON_PET_CF_FIELD_TUNE or x1c_override:
                 continue
-        qidi_mvs = QIDI_HF_MVS_OVERRIDES.get((material, manufacturer))
+        qidi_mvs = QIDI_CM2_MVS_OVERRIDES.get((material, manufacturer))
         if bucket == "Qidi X-Plus 4" and key == "filament_max_volumetric_speed" and qidi_mvs:
             expected = [qidi_mvs]
         elif (
@@ -635,7 +635,7 @@ def check_codex_reference_values(rel, data, material, manufacturer, bucket, cont
             expected = X1C_PCTG_FIELD_TUNE[key]
         else:
             expected = values[key] if bucket == "Bambu H2D" else vector(
-                values[key], high_flow=bucket in MICRO_SWISS_BUCKETS
+                values[key], high_flow=bucket in MICRO_SWISS_CHT_BUCKETS
             )
         actual = data.get(key)
         if actual != expected:

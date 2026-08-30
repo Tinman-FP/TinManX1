@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Audit the curated Prusa CORE One L all-HF profile contract."""
+"""Audit the curated Prusa CORE One L standard-CM2 profile contract.
+
+The available upstream Prusa source profiles contain ``HF`` in their names,
+but that inheritance label is not evidence about the installed nozzle. The
+direct TinMan profile must declare the user's standard CM2 hardware.
+"""
 
 from __future__ import annotations
 
@@ -69,14 +74,10 @@ def main() -> int:
             continue
         direct = machines[name]
         effective = resolved(name, machines)
-        if "HF" not in str(direct.get("inherits", "")):
-            failures.append(f"{name}: non-HF machine base {direct.get('inherits')!r}")
-        if "HF_NOZZLE" not in scalar(effective.get("printer_notes")):
-            failures.append(f"{name}: effective printer_notes lacks HF_NOZZLE")
         if scalar(direct.get("nozzle_diameter")) != nozzle:
             failures.append(f"{name}: wrong nozzle diameter {direct.get('nozzle_diameter')!r}")
-        if set(direct.get("default_nozzle_volume_type") or []) != {"High Flow"}:
-            failures.append(f"{name}: nozzle volume type is not High Flow")
+        if set(direct.get("default_nozzle_volume_type") or []) != {"Standard"}:
+            failures.append(f"{name}: nozzle volume type is not Standard CM2")
 
         for mode in MODES:
             matches = [
@@ -89,10 +90,6 @@ def main() -> int:
                 continue
             process = matches[0]
             curated_processes[nozzle][mode] = process
-            if "HF" not in str(process.get("inherits", "")):
-                failures.append(
-                    f"{process['name']}: non-HF process base {process.get('inherits')!r}"
-                )
             expected_support = {
                 "support_type": "tree(auto)",
                 "support_style": "tree_hybrid",
@@ -179,13 +176,13 @@ def main() -> int:
         failures.append("PC-PBT-CF: chamber target is not 40 C")
 
     if failures:
-        print(f"FAIL: {len(failures)} Prusa CORE One L HF contract issue(s)")
+        print(f"FAIL: {len(failures)} Prusa CORE One L CM2 contract issue(s)")
         for failure in failures:
             print(f"- {failure}")
         return 1
 
     print(
-        "PASS: 4 HF machines, 16 HF processes, "
+        "PASS: 4 standard-CM2 machines, 16 nozzle-aware processes, "
         f"{len(filament_paths)} compatible Codex filaments; "
         f"Fast/Draft hidden paths expose the {max_mvs:g} mm3/s catalog ceiling"
     )

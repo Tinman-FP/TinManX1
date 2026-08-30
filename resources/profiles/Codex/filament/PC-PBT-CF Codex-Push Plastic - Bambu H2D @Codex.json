@@ -33,7 +33,7 @@
         "0"
     ],
     "default_filament_colour": [
-        "#161616"
+        "#000000"
     ],
     "during_print_exhaust_fan_speed": [
         "70"

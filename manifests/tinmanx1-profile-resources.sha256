@@ -1,4 +1,4 @@
-72113a1a1897dd257b3d7d94185130fb382c5fb851478eed2b4e6bea66ca9bd8  BBL.json
+a1adf065404e622f3d9050427afda225f659197cea0b81c8f43ebce221da9027  BBL.json
 232ad88ca146aab4ccf65d1cba60bbada1b7e3bfc512b94a79172ffb8c95b6e6  BBL/filament/Bambu PET-CF @BBL A1.json
 a75f851f58d5573a078c4ad4af78568f55703ac333920a1e9693d554a955594d  BBL/filament/Bambu PET-CF @BBL H2D.json
 bc893cca196bcf142b56261d7b6da32ba9bae6a77d9168c5c60148f6e331bbbd  BBL/filament/Bambu PET-CF @BBL H2DP.json
@@ -26,47 +26,47 @@ af3097d729938d88457cb2f185ba6df30db2e6ba8c8bc868d94d4a1b5c13032b  BBL/machine/Ti
 33d3f5563bf76ddcfd88a2bcb59fbc72eea3cc7b0fd115a712eb5b174164fd1b  BBL/machine/TinMan Codex/Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json
 c994fe688679b1472e1ae5f1cf03eb675b44e4342a4a81ffcfb3f15719e424d3  BBL/machine/TinMan Codex/Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json
 6b5df6fe0005b83ec7c3949262f2df639f2e29be25d97d0de68436d6ca0fe09f  BBL/process/TinMan Codex/0.16mm Tank @Bambu Lab H2D 0.4 nozzle - TinMan Codex.json
-f0d1599685412d39bc1a9a431ac623769f6dce71bf843e47052f27f067e2dfb5  BBL/process/TinMan Codex/0.16mm Tank @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json
+d0aae6bdf9db7acdf9250bf6c3ecc4090eac9e9bcad43a62efc23c618cb2f093  BBL/process/TinMan Codex/0.16mm Tank @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json
 47ce5b3cb1bb43fc8955f820f36a1bf593d3166ee3d84b6f76b1a37096678b41  BBL/process/TinMan Codex/0.20mm Quality @Bambu Lab H2D 0.4 nozzle - TinMan Codex.json
-0dbd5f7e6262ec537a3bbf80b824fb83bebd8845a3421fe505d189bb94669f0f  BBL/process/TinMan Codex/0.20mm Quality @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json
+7217a941612b08769f5164cac42290403ab495a8dd1e31a2155f7c07cfd4f135  BBL/process/TinMan Codex/0.20mm Quality @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json
 45f5882a4f12fb24ac68dc421aba87c43f5c1cbc4a0790805567ade4fa2944dd  BBL/process/TinMan Codex/0.24mm Fast @Bambu Lab H2D 0.4 nozzle - TinMan Codex.json
-bb7ed4e83f661aeee45eea832701c6d139abd7ec520f9ef76381f7942983e096  BBL/process/TinMan Codex/0.24mm Fast @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json
+a6a6dd9309c74febae51bc7c144508fb2f60781b657fe44751cbb4b33b4c15e5  BBL/process/TinMan Codex/0.24mm Fast @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json
 ca66573d89e1de502ed494cd42b4e4c9be4fefcd54576b5b9e581d4ad78fae43  BBL/process/TinMan Codex/0.24mm Tank @Bambu Lab H2D 0.6 nozzle - TinMan Codex.json
-3574f17c81098eaa632f28439b2e25d8335c456c6c5a82b0ccf76a3df0fd691a  BBL/process/TinMan Codex/0.24mm Tank @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json
+75015c19549565d38a8e95c02e1268e5436e86efe6c26a3166408ae9fa9e5efc  BBL/process/TinMan Codex/0.24mm Tank @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json
 282767b1e897f3d80c2a71270ea35b8104c9259c7a1782cbf3227491796d42f3  BBL/process/TinMan Codex/0.28mm Draft @Bambu Lab H2D 0.4 nozzle - TinMan Codex.json
-6c9ae98e72a2342abb3b2f8f6c249a95912c85f9e811c4654e4c87746eb2c941  BBL/process/TinMan Codex/0.28mm Draft @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json
+1293cf5717f689de8207aa80b5276ef045bf2a2ce7155a8ffb3c0594d73910f8  BBL/process/TinMan Codex/0.28mm Draft @Bambu Lab X1 Carbon 0.4 nozzle - TinMan Codex.json
 09796d17c2e2e8e70b6fa3acfa497ed43ecdbc43d311f1e4edfff2b66cec94f5  BBL/process/TinMan Codex/0.30mm Quality @Bambu Lab H2D 0.6 nozzle - TinMan Codex.json
-da2655652d738d1e20c33ccec893a62fe24c98ebb34c030a8295d3cc97d10ebf  BBL/process/TinMan Codex/0.30mm Quality @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json
+6b46f2a0399342ae94b3cb85a101be5405b973002bce1f49f3ec7e40d82bb206  BBL/process/TinMan Codex/0.30mm Quality @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json
 f2880b9f9527ca5441dd5ddd532b434177f48531dd795fdd7f0f71c2ce01db08  BBL/process/TinMan Codex/0.32mm Tank @Bambu Lab H2D 0.8 nozzle - TinMan Codex.json
-b707bb66d869e81ed7dc1bc298b04e4e4f08fc0b416764349f39a5b2a2f007db  BBL/process/TinMan Codex/0.32mm Tank @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json
+82b86d2f422df9ffbb04bd024d2612b987f3383648b156b8d135fc7403fcee9a  BBL/process/TinMan Codex/0.32mm Tank @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json
 07e34141c42c0f06abdb89e15ed1ce69a849393b9966ac5f0683f18bae79c7d9  BBL/process/TinMan Codex/0.36mm Fast @Bambu Lab H2D 0.6 nozzle - TinMan Codex.json
-41d6503eed14b4d305f5c52c361cf532962edba3f944cba5d18b6e9b2c66eb5c  BBL/process/TinMan Codex/0.36mm Fast @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json
+5771fd22dbfe805ec225d5d61aedf90cd2027072a596d59cd1989dee71c1bb39  BBL/process/TinMan Codex/0.36mm Fast @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json
 d073e75b0431c09fab4ecc04d7204eba08999f814100497b2c69867e2217b911  BBL/process/TinMan Codex/0.40mm Quality @Bambu Lab H2D 0.8 nozzle - TinMan Codex.json
-c41e28fea17e39e4be47cd1d15abf754f5fc7233f0be67b74b3fd72b367e6576  BBL/process/TinMan Codex/0.40mm Quality @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json
+4bc739bd7a9c00fcd477b3972e6011e9d73e797b5fb518d1ba0d30ed1e9f6f3a  BBL/process/TinMan Codex/0.40mm Quality @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json
 1925281ebc2770294b0bbba2814517b64356da99fa700068c61c602ff465e53f  BBL/process/TinMan Codex/0.40mm Tank @Bambu Lab H2D 1.0 nozzle - TinMan Codex.json
-b9ddca3b518f00482f6d4c58ea1825320058c6ff3b127f362be8d408ed3ccb9e  BBL/process/TinMan Codex/0.40mm Tank @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json
+69ac294994c14de014232e27d1194e5a18028a046f58a5e996d0eaa81fb9107c  BBL/process/TinMan Codex/0.40mm Tank @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json
 d0be4936054d4cf4ebeec9c4d5e34366bdca9c35a20158ea36feb8b1a1146ced  BBL/process/TinMan Codex/0.42mm Draft @Bambu Lab H2D 0.6 nozzle - TinMan Codex.json
-c9f21eef4a6645059e1ea66f0f8513b70ab6ec7bad3fbcbd4f28197390771553  BBL/process/TinMan Codex/0.42mm Draft @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json
+8fdbbb6bb48be209b27d61012198b29fc4ee8f4f9bdbe836f8f762bbc908d1b9  BBL/process/TinMan Codex/0.42mm Draft @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex.json
 9887c3a4b1eb90fd4571532b31f51801bc322a20f78a3a5d5e925c0030c06d2f  BBL/process/TinMan Codex/0.48mm Fast @Bambu Lab H2D 0.8 nozzle - TinMan Codex.json
-0707114da2e511df07450984af5e3573df4c1ca08b5c8eca358df7d90b272aa0  BBL/process/TinMan Codex/0.48mm Fast @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json
+5a02e55f0c8bb8b49200a8f1847bde1ca63af97e5d89196424dc5d0d6914a839  BBL/process/TinMan Codex/0.48mm Fast @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json
 69853db746b49c443db519bfd212104ba70b50c8b2a907fb93eb1d34ecf13538  BBL/process/TinMan Codex/0.50mm Quality @Bambu Lab H2D 1.0 nozzle - TinMan Codex.json
-57f7b1ba71726dc25da74657e06042ef49865f1e441ff264c5890fd6f8d4cd96  BBL/process/TinMan Codex/0.50mm Quality @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json
+15f5edc7db7ec06348ebb14595b3f33847fcbf5aee16a15a3fd1cfeb00657f6f  BBL/process/TinMan Codex/0.50mm Quality @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json
 89969101dfd547e93ff9411e6ee2473e82be97abcc41670af7808b41b0e69c03  BBL/process/TinMan Codex/0.56mm Draft @Bambu Lab H2D 0.8 nozzle - TinMan Codex.json
-0625f0a67a008b3fe5e76ee394e447b2aceee9ae464984481ceed5b9b807ecea  BBL/process/TinMan Codex/0.56mm Draft @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json
+4808f132df3f66cc32e6bf1904f0aeb2c9bea3da82951e102298e543d77d02c8  BBL/process/TinMan Codex/0.56mm Draft @Bambu Lab X1 Carbon 0.8 nozzle - TinMan Codex.json
 a629ef9e47a18e6ba5ba12e34f05234829fb837ff898a50cd40b97edc5483f95  BBL/process/TinMan Codex/0.60mm Fast @Bambu Lab H2D 1.0 nozzle - TinMan Codex.json
-679e53625a6bcee526d722c8e312092bdfcf803b7e26cb2dca1f019bb6c120d3  BBL/process/TinMan Codex/0.60mm Fast @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json
+6d2a40ae1782d10d6380c39f63e529fcc76532411642edb8be43b61f1fa2dc95  BBL/process/TinMan Codex/0.60mm Fast @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json
 1fb5314a4d49a08df7a04b51a9d1e3dcaac6b82bd4e251f8c5fb89db53d64c41  BBL/process/TinMan Codex/0.70mm Draft @Bambu Lab H2D 1.0 nozzle - TinMan Codex.json
-7009d7c56ec879cf909449f1ff40d98bc35d71d35a1f9b58a970a193d811c71b  BBL/process/TinMan Codex/0.70mm Draft @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json
-0dfcde978c43c4e7d0c7ce58e74db550ff7c39c21841b2fd78145ce4e5f6c341  Codex.json
+4964ffed0e880ddd75064007f3b71f7b972a5d541b1fef1e0fd45e1113a0b55c  BBL/process/TinMan Codex/0.70mm Draft @Bambu Lab X1 Carbon 1.0 nozzle - TinMan Codex.json
+adfdcdcba7ad4e094fd3538438641f9fbfbd778c3636c694252dcf3b51b30871  Codex.json
 e2f64696c04b092f79119109e3e580e1b1001c807d21ca1028dec51e9e27323e  Codex/filament/ABS Codex-Bambu - Bambu H2D @Codex.json
 cfa314dfb7eb9b73e09179b072b2bc615d1e60efc20f27db6fa046ccc0f0244a  Codex/filament/ABS Codex-Bambu - Bambu X1C HF @Codex.json
 e6ab0cf28cd74dd1536554d6ee37aafe686c2a53d901fd11548a68c1b11b681b  Codex/filament/ABS Codex-Bambu - Creality K2 Plus @Codex.json
-a464d49105fd6c2ac23eb8a39833764614b36c0d9db144b16f0179b130b18f18  Codex/filament/ABS Codex-Bambu - Elegoo Centauri @Codex.json
-e47ad5b8d2e26dd2f2188a27e683a69dc2bde1f8ea0781de756957c015222734  Codex/filament/ABS Codex-Bambu - Prusa Core One @Codex.json
-10f7afc47854c6a2d03b69f9e4a22c04b950da2c219d655105add08f0e30a1dc  Codex/filament/ABS Codex-Bambu - Qidi X-Plus 4 @Codex.json
-a3b63c9fce98435b33013ced941d4f01fa0ea1f60d750194cbb9eba192d17cf9  Codex/filament/ABS Codex-Bambu - RatRig V-Core 4 @Codex.json
+7fe379e47650f7b6442b29c3ed80f1bdb4e2866c4bbb3a64921fbaca74826d74  Codex/filament/ABS Codex-Bambu - Elegoo Centauri @Codex.json
+8c7ce8fc5df04a415e1df84f1f9066a741b5ddb5324da867e9d7b41e217abd3d  Codex/filament/ABS Codex-Bambu - Prusa Core One @Codex.json
+137226bf5486dbe280504aebb87be774ffd73f1181fe54a2bce65ee9ce98fe09  Codex/filament/ABS Codex-Bambu - Qidi X-Plus 4 @Codex.json
+6327a85a3aed0b7db1e7f5731e8820755e328a93af08d09aff8437e0d013e5b9  Codex/filament/ABS Codex-Bambu - RatRig V-Core 4 @Codex.json
 560ecee65b0b40fbe4f74039ecdfe2abc872251bf143abccee583fe13d6951e5  Codex/filament/ABS Codex-Bambu - Snapmaker U1 @Codex.json
-610e7a483547b274c447eaf7faa9b5c6394c22cf3ce9bb5dd5b10b3feb3d1000  Codex/filament/ABS Codex-Bambu - Sovol SV08 MAX @Codex.json
+bf33366c5b1a6089c90a90c064fbc0f91fa3421a206f3d43d3d98c08b22ee1c4  Codex/filament/ABS Codex-Bambu - Sovol SV08 MAX @Codex.json
 e2c2023f8084f3c71304df061735cfaa152cdb142ca810c2d823ce29cbd34dac  Codex/filament/ABS Codex-Inland - Elegoo Centauri @Codex.json
 5478462b40682b71067dd3e9643f71e180ecf181b4037f570e60ee6443ff44fe  Codex/filament/ABS Codex-Inland - Prusa Core One @Codex.json
 1c9479d7917f5d610519cf00b89c75ba5b219c49d9f03c619e8533e2520c5e3a  Codex/filament/ABS Codex-Polymaker - Bambu H2D @Codex.json
@@ -106,12 +106,12 @@ d8d3b105e1e38686f08c850b5b18b060a160304510de92121ff5d039d4fe1148  Codex/filament
 c7189ebc1ea5c416c3af5bb2c5beabaf2497b7cd7bd698b777ef9f93a77fc6e6  Codex/filament/ASA Codex-Generic - Bambu H2D @Codex.json
 8321f868cb29a4055fcafbed24988118e3b2d653ac0cfc5f79a63841a4fc8936  Codex/filament/ASA Codex-Generic - Bambu X1C HF @Codex.json
 d8dbeb3124f67b9b9e8437698393470cdc2d1dbb88d82580d8d98456de9ce6c7  Codex/filament/ASA Codex-Generic - Creality K2 Plus @Codex.json
-3f47b8130b6714bcca2390782d97f9cf2dba5863643208a4bd134b3fe99603bd  Codex/filament/ASA Codex-Generic - Elegoo Centauri @Codex.json
-710ad08ff597240f4d3d95d04586f44f221c593331410105e25eacdd0238901d  Codex/filament/ASA Codex-Generic - Prusa Core One @Codex.json
-013d3dcaad2688483c7eb6f3228de0f2b2aacedbd0ca1b92471d742e1edd5fc4  Codex/filament/ASA Codex-Generic - Qidi X-Plus 4 @Codex.json
-0c787f122fd7959bed45fbc810d4d2f67eb823576a2a02bac635a45390403312  Codex/filament/ASA Codex-Generic - RatRig V-Core 4 @Codex.json
+2b83ec245fd96cf64a2886665e4d54c9a44bf9a9ffd466ad456a65ec12342ead  Codex/filament/ASA Codex-Generic - Elegoo Centauri @Codex.json
+ad1b22c93a34791986e97b351d236a07d4a386425d2061c1a0529486cf553c38  Codex/filament/ASA Codex-Generic - Prusa Core One @Codex.json
+f570cb352b9349b4fe4deeac0afbab202651fb819abc5abfa1342d6af936760e  Codex/filament/ASA Codex-Generic - Qidi X-Plus 4 @Codex.json
+2185d07b5fe84fa1cfe31fd3d5a57c28e031f68e0e1e851811f1cdb101759751  Codex/filament/ASA Codex-Generic - RatRig V-Core 4 @Codex.json
 45d83c205808445393db04b86bd4649b2897c38b54d1b2597d7fa2e345a1aeed  Codex/filament/ASA Codex-Generic - Snapmaker U1 @Codex.json
-af4984c1fc73ff7991e9a86bad5983cf99624abe217426cc467ffe353795406e  Codex/filament/ASA Codex-Generic - Sovol SV08 MAX @Codex.json
+7f4e8b29d58dac9e46743d8f70bba3bf2ffeb9597805d0b2b1f9a02490327ad4  Codex/filament/ASA Codex-Generic - Sovol SV08 MAX @Codex.json
 f69edfb103855d541fb49ea174474db9d4a4cb6614e9f11a0b60ae3a8ee1629c  Codex/filament/ASA Codex-Polymaker - Bambu H2D @Codex.json
 0f6b93d51eb046e9818f3e2f3559e88099dc29f03ca45b6e703a857164fd2fec  Codex/filament/ASA Codex-Polymaker - Bambu X1C HF @Codex.json
 3e5f158f71efc8ed3818ce45f81fce819393cde65f460c22f99e0afb6ed63cad  Codex/filament/ASA Codex-Polymaker - Creality K2 Plus @Codex.json
@@ -293,12 +293,12 @@ b8109bae0e6312100c64a2323e3f9aea6338c806a851c1ccbf2616abb072cff9  Codex/filament
 2187c5bc13b5bcd34da6f3f9858e1d504ab8548f3cf73ed7f386a0d0a4553303  Codex/filament/PAHT-CF Codex-Bambu - Bambu H2D @Codex.json
 4f1e82dbbb454a781a9aec42d2274adc3a035721f807638daf3348fc733ebdbf  Codex/filament/PAHT-CF Codex-Bambu - Bambu X1C HF @Codex.json
 195e355c27d5eb52e7c5a23d337064ae937dfc17da7e42017d4faec385a76352  Codex/filament/PAHT-CF Codex-Bambu - Creality K2 Plus @Codex.json
-7ccad6d458af0d76f9134aeccce591fee44f082566b32baceb8d982558be05c8  Codex/filament/PAHT-CF Codex-Bambu - Elegoo Centauri @Codex.json
-69d0387bfc8976e12198511fd22b3f8c3435ca455e4ff25bd4b5e41b953deb41  Codex/filament/PAHT-CF Codex-Bambu - Prusa Core One @Codex.json
-a2287b8daaa2cc5311acd4f0038edba052c29f6c7029a70f136a331c2024b9b2  Codex/filament/PAHT-CF Codex-Bambu - Qidi X-Plus 4 @Codex.json
-9355e5d13e2ca7e0e5605f492587c92ef15b6ea8acf9e08ac50ebd01bde9473d  Codex/filament/PAHT-CF Codex-Bambu - RatRig V-Core 4 @Codex.json
+4062ee8777cb99916f7ad5034d80bd190ccbf4d5a7dd70d2395b0d24d5c7425d  Codex/filament/PAHT-CF Codex-Bambu - Elegoo Centauri @Codex.json
+519038d6bfd605300a5786b50ecbfec7aa44fe180f293fd1d446b6a29eba6219  Codex/filament/PAHT-CF Codex-Bambu - Prusa Core One @Codex.json
+d35933e65ab9c34e3db3589ee4f9ce9430e5313e42587e1a4c23725f844fdd69  Codex/filament/PAHT-CF Codex-Bambu - Qidi X-Plus 4 @Codex.json
+a054eed757574a8bbe06745fa5492accb1290c2d0f9045849934f0c5abf37620  Codex/filament/PAHT-CF Codex-Bambu - RatRig V-Core 4 @Codex.json
 d96074ed7e8831e8f5cc04e478d6330613b4e21b04da3d30c8e46a738ae44cc7  Codex/filament/PAHT-CF Codex-Bambu - Snapmaker U1 @Codex.json
-6801fdc8502964f6ac9d680243ed07bcd87f26040e3d44bd425ae6e34d7a9dfd  Codex/filament/PAHT-CF Codex-Bambu - Sovol SV08 MAX @Codex.json
+18b6d9e5e9bf0efad634009362a1e8a09595aec89a880f36569c5809294b7acd  Codex/filament/PAHT-CF Codex-Bambu - Sovol SV08 MAX @Codex.json
 e87c4ee21ddb34ffd839d9b4d8294407df4d794d9b0d3d27b3f334a71efe9c96  Codex/filament/PAKV Codex-Filamatrix - Bambu H2D @Codex.json
 5a2d62e9b93b0f802ec140349a6ed3c1d4c1a6bf13f64b739c3ca94b451c84ee  Codex/filament/PAKV Codex-Filamatrix - Bambu X1C HF @Codex.json
 c049118412b4a74f33ef07594029f7451853d95242c5917bf5c889c19900d32a  Codex/filament/PAKV Codex-Filamatrix - Creality K2 Plus @Codex.json
@@ -311,12 +311,12 @@ f181933fdb3e3eaa0ddd5570ca653101c2aebcb145dd57179573590b7630daed  Codex/filament
 9e62afc3b7b4f647e6ca59ad79563b7eb424d19ab5792392fb35c86ca6e762e8  Codex/filament/PC Codex-Generic - Bambu H2D @Codex.json
 4849ab3383eb4bb1f2ea1d144d7c56308f90c32e1fc5d34c1df756c1cb58f6b4  Codex/filament/PC Codex-Generic - Bambu X1C HF @Codex.json
 1ffc80d7e7230e10b601d70c08bea42e1f0247f6c0b276bae09cc16d9113ad69  Codex/filament/PC Codex-Generic - Creality K2 Plus @Codex.json
-cdaefc8b1510515d2ee35ef9a5fa50a6de9366f4545edb7e0a9919f67d55a88d  Codex/filament/PC Codex-Generic - Elegoo Centauri @Codex.json
-b08335133c4d7b58f1bc7e950de3f40edb246e0972b77c4c331a06a4f0d9fe84  Codex/filament/PC Codex-Generic - Prusa Core One @Codex.json
-7365e0aea418ed9e693e846817070164a9c54ce982210a7a1b1564e5ace9f664  Codex/filament/PC Codex-Generic - Qidi X-Plus 4 @Codex.json
-1a75d2d2b5835a359bf822ced62c1623f81a86daa1afb40ba4ac5513b54e54d4  Codex/filament/PC Codex-Generic - RatRig V-Core 4 @Codex.json
+fc33a28f99d2b2ff541c888d62dabe05f0e5ce10313dc025dc3659f7485e753a  Codex/filament/PC Codex-Generic - Elegoo Centauri @Codex.json
+2969cb321d00b40182feb30bc4a3f31fdd4a0e63cfd5e5cc6202b2a8654c7ff6  Codex/filament/PC Codex-Generic - Prusa Core One @Codex.json
+4a0cd6515d9699b38639e0dcec612ba5e5c6c4f72d534ced7cf7f7f4e55862b8  Codex/filament/PC Codex-Generic - Qidi X-Plus 4 @Codex.json
+4347e578e7bccff580a549c3deb09517bf2dc1348df0250541fd2a42d5c73ef4  Codex/filament/PC Codex-Generic - RatRig V-Core 4 @Codex.json
 e32fff446053fcd31711d3c515305e3ebc65c00eab00ee9c6bc201c54f535e88  Codex/filament/PC Codex-Generic - Snapmaker U1 @Codex.json
-622deac567347ee2ab5321451892bc5ec06f65420a3d0c5bb543637ba5d87b7d  Codex/filament/PC Codex-Generic - Sovol SV08 MAX @Codex.json
+32896038091971c78a061e89f18b1a9f5948538daa3f68f04ac4dd4218c63a61  Codex/filament/PC Codex-Generic - Sovol SV08 MAX @Codex.json
 3fb74b302f8ea1064f134edb414044a10a6c658e776367f6d0d423b6562e6f47  Codex/filament/PC Codex-Polymaker - Bambu H2D @Codex.json
 dbbe45630cd8d865c69a06644c3773ae9849ae4ffb1246e3b92c5ec42f4a9b5e  Codex/filament/PC Codex-Polymaker - Bambu X1C HF @Codex.json
 340d04cf516bac117839263d06405e160a520e718f92d4542c859fcefd7d4cdb  Codex/filament/PC Codex-Polymaker - Creality K2 Plus @Codex.json
@@ -353,15 +353,15 @@ fd75bdf2fa722bddc6de43c573d095b71da64e597973378456a9f11b500fafe4  Codex/filament
 94b7a09dba05c94bdf435ebd5b07e0793dbe0d2493bd3e5130f97a90ff3cdc6c  Codex/filament/PC-PBT Codex-Push Plastic - RatRig V-Core 4 @Codex.json
 729b6935f8ba03bc36ddc82b8b908da5a3614ac25cc11c330bdee9ddbb13ea6e  Codex/filament/PC-PBT Codex-Push Plastic - Snapmaker U1 @Codex.json
 6b2cb2de3d1177d4b5efe4035212dccfdd389ad3804af04e47cfc42df32ecc37  Codex/filament/PC-PBT Codex-Push Plastic - Sovol SV08 MAX @Codex.json
-f3f0f07594b5be8d193f40e7c5764ca16cfb1671ae2cc6e8262fd5ace24aef99  Codex/filament/PC-PBT-CF Codex-Push Plastic - Bambu H2D @Codex.json
-fe0241ce4a4cdb7aaa5a9263745c5e264834e9919e26aa2e33ba786303873e96  Codex/filament/PC-PBT-CF Codex-Push Plastic - Bambu X1C HF @Codex.json
-c3142e0f2f0a3b95875104dfbcbad8604c2f9d39a0e19cdfc5e387de6111c696  Codex/filament/PC-PBT-CF Codex-Push Plastic - Creality K2 Plus @Codex.json
-882d1a70df886e1c344c2bdbfa0a36a2d0fea251237d0095d42661c7c20c1cb5  Codex/filament/PC-PBT-CF Codex-Push Plastic - Elegoo Centauri @Codex.json
-2cc02377051083f4ccd776ca095e2964692c144e91a2764aa29c471dccdea4e1  Codex/filament/PC-PBT-CF Codex-Push Plastic - Prusa CORE One L @Codex.json
-df79bc61b8086667092b9452ff54722b0c422614e551db04db3471931a04ea2b  Codex/filament/PC-PBT-CF Codex-Push Plastic - Qidi X-Plus 4 @Codex.json
-5cc6411d042a330dac2e1abcf99b92408cdd82ea3c5cd4d7297f451fd0fe6cf0  Codex/filament/PC-PBT-CF Codex-Push Plastic - RatRig V-Core 4 @Codex.json
-f8fd0e5bb036af0a58b5e7c0b961fface722657d6e35ac5c75b799bf8db11efc  Codex/filament/PC-PBT-CF Codex-Push Plastic - Snapmaker U1 @Codex.json
-deb74424216c2df51000cd3349f858a7126875ee0d37250211e4f552d136df8a  Codex/filament/PC-PBT-CF Codex-Push Plastic - Sovol SV08 MAX @Codex.json
+fbcbcc47842915bf3735625c9bf16d78ab0afe57c8b2a57fb8c2e32011c1d4aa  Codex/filament/PC-PBT-CF Codex-Push Plastic - Bambu H2D @Codex.json
+b9cea472d8877b03e8b0f78cccd4bac7837147bb1b3eab25f0bb404de698b9ce  Codex/filament/PC-PBT-CF Codex-Push Plastic - Bambu X1C HF @Codex.json
+34b545bfff7cbf39517679429ea153c22cfd9669949aafaa52c5a9b2d1653271  Codex/filament/PC-PBT-CF Codex-Push Plastic - Creality K2 Plus @Codex.json
+11616767ac084bb10329828a353169e9be5af785f8f1ad26c2f5e5cdec22717c  Codex/filament/PC-PBT-CF Codex-Push Plastic - Elegoo Centauri @Codex.json
+b5b9d2caac036cca062769dedbe20b081ccd2e31b102495ebe6d1655897aeb87  Codex/filament/PC-PBT-CF Codex-Push Plastic - Prusa CORE One L @Codex.json
+933088ebd97d7d696adf4317ebe464dec3d418491de1012ce62f2ff706702911  Codex/filament/PC-PBT-CF Codex-Push Plastic - Qidi X-Plus 4 @Codex.json
+e5d656a1f8d9663cd413a3dca6c6cdfbe5793887ebb758b8ab144c1f20f08c08  Codex/filament/PC-PBT-CF Codex-Push Plastic - RatRig V-Core 4 @Codex.json
+688b6861ed1403d5f0e3f05711c4ccba7eeda653571a19b1c779ddecb5af2271  Codex/filament/PC-PBT-CF Codex-Push Plastic - Snapmaker U1 @Codex.json
+87bbf28d547c9b6e2ae60e440df6a15383a8404e29a87a1f4b77bb3d5e21d751  Codex/filament/PC-PBT-CF Codex-Push Plastic - Sovol SV08 MAX @Codex.json
 ea3a53786f4df3461afa6175172175dadccfe3953b3b714136ccca12ad0fc9db  Codex/filament/PCTG Codex-Generic - Bambu H2D @Codex.json
 4a36591549c23f124d24612d44658831890e6ba978a185bb51ed278571d966e0  Codex/filament/PCTG Codex-Generic - Bambu X1C HF @Codex.json
 6a731fad1cf9c16116529512884a5f8930a760cc541cec4551a22672be89be0d  Codex/filament/PCTG Codex-Generic - Creality K2 Plus @Codex.json
@@ -446,12 +446,12 @@ c967200171eb98b6482c4e6190be28f10b354d6b69c166d05aa632f4e54fca3c  Codex/filament
 bfa058296eb8c5b5da5153ca34ea21c0c0f40811739b53d67f3deb37d794cb53  Codex/filament/PETG-CF Codex-Bambu - Bambu H2D @Codex.json
 dc16119a5e56472ec7e5a94eba1bfda25e3bc7dc7c609d1dc90566475cc59929  Codex/filament/PETG-CF Codex-Bambu - Bambu X1C HF @Codex.json
 c0211e999b7fa7145fc7389a9a6153dd033080deb477b0208ad5fc93f44b7ff4  Codex/filament/PETG-CF Codex-Bambu - Creality K2 Plus @Codex.json
-8f24d57ebe12ceee6434f6d6889d0c5b12aa2c1b869e1fd881148346285ae37d  Codex/filament/PETG-CF Codex-Bambu - Elegoo Centauri @Codex.json
-9864506e522909a24877f8e39458996f2b5b494f2677247073a503dd8caef62b  Codex/filament/PETG-CF Codex-Bambu - Prusa Core One @Codex.json
-e76925860fae487368e3c7bf390214f7cb35230564f7286be4e699c7a6097ac0  Codex/filament/PETG-CF Codex-Bambu - Qidi X-Plus 4 @Codex.json
-7f8155cb96ba7e9bb2eb0776521d7727f26e1279c3449eb2f79f7130c2f81924  Codex/filament/PETG-CF Codex-Bambu - RatRig V-Core 4 @Codex.json
+49679c9feae61b778df7316d18e3e346861216a3a1c6acd5fa20baea62e63653  Codex/filament/PETG-CF Codex-Bambu - Elegoo Centauri @Codex.json
+0a62020a47c82ab9c1509444566fd1d3e1851afd4797248f9884d0cf3816a0ac  Codex/filament/PETG-CF Codex-Bambu - Prusa Core One @Codex.json
+7d0239d1abbb64c12abc1915c71af92244c07c3e00998c0c4eeeedf17c33bb4e  Codex/filament/PETG-CF Codex-Bambu - Qidi X-Plus 4 @Codex.json
+be87556d348761d8e0910d180b893217269f62941670e6264ff49501d126c000  Codex/filament/PETG-CF Codex-Bambu - RatRig V-Core 4 @Codex.json
 4e1b0ba8a4d7987a36aacf3e2140a6b8db4f3e5099581e2a7979a0039b67b804  Codex/filament/PETG-CF Codex-Bambu - Snapmaker U1 @Codex.json
-b8728a7cedabf117ce30d5e870528d216d9fbd2307635bbc838aade9f55aff0f  Codex/filament/PETG-CF Codex-Bambu - Sovol SV08 MAX @Codex.json
+165eb92a9448049832c9caa40573adce408f708ba81897903fd85619478b6dcc  Codex/filament/PETG-CF Codex-Bambu - Sovol SV08 MAX @Codex.json
 1a2aec05503d9c1fec64f0cfeece50d5fa0458b76548266739100d106277c559  Codex/filament/PETG-CF Codex-Fiberon - Bambu H2D @Codex.json
 ed505214a01de9bfed5ccdf0cdb4c07de6669c69155fe0f37cd5d2550a6ae9a0  Codex/filament/PETG-CF Codex-Fiberon - Bambu X1C HF @Codex.json
 0b92b6cf1552f71cf20f9a0fd8333f05ec7b4e78c582b53d395f93af5066a28e  Codex/filament/PETG-CF Codex-Fiberon - Creality K2 Plus @Codex.json
@@ -509,12 +509,12 @@ e1d1f1e56b9541ddc4354334d6489cd4477755e9cb551dc2649ab97f05f3a4a7  Codex/filament
 0a2f8fbb7ada9e4c0f8c8092581397e29bdaa7e7dfdc81b0aa082edf35b00f4f  Codex/filament/PPA-CF Codex-Bambu - Bambu H2D @Codex.json
 982b10a8bfbaacebf7eaae0fe2daaafc72f80d063154ce591cac77bfaab2d36f  Codex/filament/PPA-CF Codex-Bambu - Bambu X1C HF @Codex.json
 73d09af4b98cc6394851e3db97b8ef821a8533f34808287937b9118480a25d07  Codex/filament/PPA-CF Codex-Bambu - Creality K2 Plus @Codex.json
-c68f24cefc36b0bd2f3abdae7c86a7de541ba980b40e05e32c244ba735bdc703  Codex/filament/PPA-CF Codex-Bambu - Elegoo Centauri @Codex.json
-a993f3922f397e420eb5c983da77c6d16f5308e43572a5e5ee934c8c97003e28  Codex/filament/PPA-CF Codex-Bambu - Prusa Core One @Codex.json
-ab7bbbc6afc93d5dd5ea53ae9302068f62851afcbe8886046e19a2743566179f  Codex/filament/PPA-CF Codex-Bambu - Qidi X-Plus 4 @Codex.json
-5c4e07748dc27f9be9ea88ed70b69393c0aa63852531505bb32e2f2455437cd5  Codex/filament/PPA-CF Codex-Bambu - RatRig V-Core 4 @Codex.json
+cf8509e5734621d284063a8597af45b7b7bb2c7b1796cde79e7ef07420c1410b  Codex/filament/PPA-CF Codex-Bambu - Elegoo Centauri @Codex.json
+9ecea78e563c89f85396c957fda3fa49b8e4741129afdbe12d89bdda5d395b7e  Codex/filament/PPA-CF Codex-Bambu - Prusa Core One @Codex.json
+202eea0f8384c3e3f7bbdf1eec6a8ec53bc795da39d22cc0884b7360cdaafdd2  Codex/filament/PPA-CF Codex-Bambu - Qidi X-Plus 4 @Codex.json
+cb5c50f60863e42fc8b1827708796bd3b9dd811e963965874411e1e919ab8d2b  Codex/filament/PPA-CF Codex-Bambu - RatRig V-Core 4 @Codex.json
 779ca44d87f73377b957a69568330dc790d1114f86e65e4ea948fb865ede79b9  Codex/filament/PPA-CF Codex-Bambu - Snapmaker U1 @Codex.json
-cb5256472e9f834a15c0f9767a919f99125c919c85f5fc18a8cc2052d56b7286  Codex/filament/PPA-CF Codex-Bambu - Sovol SV08 MAX @Codex.json
+bada5cccb873faa24ed6373763721dcc6043c6d5920fb89acdcec8bd3d2e138f  Codex/filament/PPA-CF Codex-Bambu - Sovol SV08 MAX @Codex.json
 a97e28b22791d66faf72593caf4352129947a35a77e13ad7f9db866e6005b832  Codex/filament/PPS Codex-Generic - Bambu H2D @Codex.json
 f47ab352a3d6d1255abb93a866f85f12e737c74d9ec0b4726cc021f7ce3cb548  Codex/filament/PPS Codex-Generic - Creality K2 Plus @Codex.json
 1b57d511de61b5e641a64c885af2504d623a8e2586a233d48c031588e64366e1  Codex/filament/PPS Codex-Generic - Elegoo Centauri @Codex.json
@@ -569,34 +569,34 @@ f2c6732dbb04a08604af5ac44333616cecbf04a248363926483f3212bfebe271  Codex/filament
 06774816bec22dd0e3e8e6079afa8515900a22cc478d473418a2aafb2ca8a148  Codex/filament/TPU Codex-Polymaker - RatRig V-Core 4 @Codex.json
 f398888f5fa67fdc111641bc9a19085f9fe0b5ead5fe181efb660558cba753cd  Codex/filament/TPU Codex-Polymaker - Snapmaker U1 @Codex.json
 796aa4c5d64509dfae9564c2ae004c347bc1a705f4c39bed636d67fd719398e0  Codex/filament/TPU Codex-Polymaker - Sovol SV08 MAX @Codex.json
-83bd7d4fa89c019c10f975ecab655eba8b830fab1de9ac9ee563cbbf194c3288  Creality.json
+89110d4d02ab5827beca777cb801d4596532dd01377e0eb3fc576ac009033773  Creality.json
 3e9cf7c7da951239f4d9e336110fd10d24948898068b1d9b121fbec81e668c2c  Creality/machine/Creality K2 Plus.json
 9e5e2e752586ca7e1e0b0e80c420653ccde3dc192717f41389d4244193af04c1  Creality/machine/TinMan Codex/Creality K2 Plus 0.4 nozzle - TinMan Codex.json
 38ebdbba998ebf86624227f0c06d46f82703d3803407437fcee3523c03649ef2  Creality/machine/TinMan Codex/Creality K2 Plus 0.6 nozzle - TinMan Codex.json
 52ef448cf260626410c9e9201252637764c4d8633cb7b08b3ea28459d6352f78  Creality/machine/TinMan Codex/Creality K2 Plus 0.8 nozzle - TinMan Codex.json
 7856fbc9a2917f8d389e1350aee84c3241c9713c19d41896d42b12a0d6c1a9e9  Creality/machine/TinMan Codex/Creality K2 Plus 1.0 nozzle - TinMan Codex.json
-247c09f9c5ee539f681f53a7eb38f98644a8f69d8d34f842014716cc1ba56d26  Creality/process/TinMan Codex/0.16mm Tank @Creality K2 Plus 0.4 nozzle - TinMan Codex.json
-c16df707ef90b5ad3d9bfe7fa2382499be8b5b7044de55113cd929962f37d270  Creality/process/TinMan Codex/0.20mm Quality @Creality K2 Plus 0.4 nozzle - TinMan Codex.json
-28085633f0d301c95643faa94b8d681f208c25da75e8e754b7baf724fc5b8182  Creality/process/TinMan Codex/0.24mm Fast @Creality K2 Plus 0.4 nozzle - TinMan Codex.json
-29db38936a1e3d6862e000bd27144c7261ffcd93bbe2c639c15cc12a57e04f48  Creality/process/TinMan Codex/0.24mm Tank @Creality K2 Plus 0.6 nozzle - TinMan Codex.json
-8747a27fab2b577d0969f9334a622fbac9c101c5d4423da5252a32243a0c9913  Creality/process/TinMan Codex/0.28mm Draft @Creality K2 Plus 0.4 nozzle - TinMan Codex.json
-8f2380bda7c5a110829bede2118d9bf71d4031a6385a4775aa0022ec01eb4c77  Creality/process/TinMan Codex/0.30mm Quality @Creality K2 Plus 0.6 nozzle - TinMan Codex.json
-43967e3c2149f6bdce9e8c6c8c7600ae3cbc463c8e23d8743f05b61d9662a9f2  Creality/process/TinMan Codex/0.32mm Tank @Creality K2 Plus 0.8 nozzle - TinMan Codex.json
-348cdaf32ed4adc3797dc287b608b2c25d00e647ca6c21536f626b9a203abb7d  Creality/process/TinMan Codex/0.36mm Fast @Creality K2 Plus 0.6 nozzle - TinMan Codex.json
-e4a80a0fc1459b528bee3e2a6193250336756e28167a9e3b7d5570d24be2ea71  Creality/process/TinMan Codex/0.40mm Quality @Creality K2 Plus 0.8 nozzle - TinMan Codex.json
-9fa9650838e72952f145c77f36643bc4cbc62653b1d3c3546c4941cc8509525a  Creality/process/TinMan Codex/0.40mm Tank @Creality K2 Plus 1.0 nozzle - TinMan Codex.json
-a39545d417904cee6c94f002e5ce99e80189acc748c1cd051922f63b24b86a91  Creality/process/TinMan Codex/0.42mm Draft @Creality K2 Plus 0.6 nozzle - TinMan Codex.json
-f151418211da81113438b6ba466b889e40ef763af60359f14fb0986c9ac91b2e  Creality/process/TinMan Codex/0.48mm Fast @Creality K2 Plus 0.8 nozzle - TinMan Codex.json
-a68feb3db4fd85408a306de4d0cedea02bdc10bd46928e53a76af0cc49fbcd7d  Creality/process/TinMan Codex/0.50mm Quality @Creality K2 Plus 1.0 nozzle - TinMan Codex.json
-24c8aee5409ef15e705967fc894708efac28649d3550edcd8400e1a44a77e40e  Creality/process/TinMan Codex/0.56mm Draft @Creality K2 Plus 0.8 nozzle - TinMan Codex.json
-e142f2b32d36dfc8b57c9cbf599a5c1be1bec487e57d6f69a61f55f35f7aa11a  Creality/process/TinMan Codex/0.60mm Fast @Creality K2 Plus 1.0 nozzle - TinMan Codex.json
-a5f4821512a64603c665be8ca715fa0755dcc484cd5ee739e1d71ac17757ea4c  Creality/process/TinMan Codex/0.70mm Draft @Creality K2 Plus 1.0 nozzle - TinMan Codex.json
-fee8174d30fd8445cec2a97f5bc7555f6f9066dcc7afeb9136d2d9b90e9c0f75  Elegoo.json
+a5dfc28b75f033f77f9876dcf6b9c0e387105795e10ad185a9a76d54c540dc39  Creality/process/TinMan Codex/0.16mm Tank @Creality K2 Plus 0.4 nozzle - TinMan Codex.json
+df5f56f54f197002a14b8e91ba17103d0307259438935d2d1981fdf9ad276fd5  Creality/process/TinMan Codex/0.20mm Quality @Creality K2 Plus 0.4 nozzle - TinMan Codex.json
+eba8084ba14e688acca1d01680a1b2f5a9221ed3915dbe4395995650e16b1d6f  Creality/process/TinMan Codex/0.24mm Fast @Creality K2 Plus 0.4 nozzle - TinMan Codex.json
+5189cdbfd2bbbdcd4a0a60231c2030de0ffaecf6271c824eeab76a6ebfe1e5d6  Creality/process/TinMan Codex/0.24mm Tank @Creality K2 Plus 0.6 nozzle - TinMan Codex.json
+d8b63221b5be1e2d2e918be0cfc7a11e5c6b0648761e585d040edadd36828742  Creality/process/TinMan Codex/0.28mm Draft @Creality K2 Plus 0.4 nozzle - TinMan Codex.json
+cd0fc6c315ee8828ea6fc1509d5bae80ae0f5f3e496f5dcba9845293d286e302  Creality/process/TinMan Codex/0.30mm Quality @Creality K2 Plus 0.6 nozzle - TinMan Codex.json
+7764c4367e0c8c7977a41f7619aaeb1eae9601416075d4d031f1e85531abaeb7  Creality/process/TinMan Codex/0.32mm Tank @Creality K2 Plus 0.8 nozzle - TinMan Codex.json
+3fc172aebe2fd3794e67654c046d2d6ccd427fabfc04be11b18e5b3b0139d4c0  Creality/process/TinMan Codex/0.36mm Fast @Creality K2 Plus 0.6 nozzle - TinMan Codex.json
+f8180cac9b3162a387c675527b186f0c5fe68a691175239f2d9543f9bdd760c5  Creality/process/TinMan Codex/0.40mm Quality @Creality K2 Plus 0.8 nozzle - TinMan Codex.json
+9cbf911768b8d0bfb54ec7f6386da34dc87d67bdddfa8c99bf7e7e1edb2aca10  Creality/process/TinMan Codex/0.40mm Tank @Creality K2 Plus 1.0 nozzle - TinMan Codex.json
+f76318ffe7a0eb65de1dd65f392fac0b3bb0e1e32d1b418031c5ac88d5797aed  Creality/process/TinMan Codex/0.42mm Draft @Creality K2 Plus 0.6 nozzle - TinMan Codex.json
+ee9cc5bb5e426ce5f46952dee2ef31322f7789cc2df3a7b033542d778269a131  Creality/process/TinMan Codex/0.48mm Fast @Creality K2 Plus 0.8 nozzle - TinMan Codex.json
+736395b1934bafc6cb9af21b4633c73b94a23f627b6439fbf05a6327e91795ed  Creality/process/TinMan Codex/0.50mm Quality @Creality K2 Plus 1.0 nozzle - TinMan Codex.json
+20a39938cf000b9e130f99fe5f08dfac7558e3c6b5da2195c4718a94c1009b20  Creality/process/TinMan Codex/0.56mm Draft @Creality K2 Plus 0.8 nozzle - TinMan Codex.json
+0a1235b88309dc8d64908b3bc75d89c6063e46ea907da6ebd5e09e0e259d93bd  Creality/process/TinMan Codex/0.60mm Fast @Creality K2 Plus 1.0 nozzle - TinMan Codex.json
+39525d471b30b2f95539a29df6034a0ea8c7ffaef8e3f847102385e3c35aeb92  Creality/process/TinMan Codex/0.70mm Draft @Creality K2 Plus 1.0 nozzle - TinMan Codex.json
+f13c32b9b490c3a016cabe428abd92be754efcd16275ead0f3c5bbf7d4768f54  Elegoo.json
 80a1d74c2a841d6a6007731db28b42a3b3e4427617e36fa0ebfd7942a626a6e3  Elegoo/machine/ECC/Elegoo Centauri Carbon.json
-daadd595d17c94f4d066965b216b33d5d6e8a234bd9547411529e3c232aa1abf  Elegoo/machine/TinMan Codex/Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex.json
-70f32a83177cf9b46e86feedf9ef0fd894417957ab037d953732352b44cc9ff3  Elegoo/machine/TinMan Codex/Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex.json
-a58e30cfd56f228c854ab150b173d0e8cffada8c9229334ab71ad23863ca312c  Elegoo/machine/TinMan Codex/Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex.json
-e14b58f4c35c1bca2fdc96bd59d2eea9452efb605bf7b738d397fa70a9674406  Elegoo/machine/TinMan Codex/Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex.json
+218bc883d814d361377365bbb48f6fd8428c5e6fc3b60b985111456740db3c74  Elegoo/machine/TinMan Codex/Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex.json
+5bae979534245d6c2f649e3ca3cafdc2e575ce83fdb261aaa82adc83dc53a73d  Elegoo/machine/TinMan Codex/Elegoo Centauri Carbon 0.6 nozzle - TinMan Codex.json
+c5f2bec12fb18dda7bdec292ee69be441acfe5ffea64cf297a5343e55785efb3  Elegoo/machine/TinMan Codex/Elegoo Centauri Carbon 0.8 nozzle - TinMan Codex.json
+ee45e0e4b1a76672eef0d10e905b86e824fbf0b19aee8ba36407c1c0a3925514  Elegoo/machine/TinMan Codex/Elegoo Centauri Carbon 1.0 nozzle - TinMan Codex.json
 e84feae0f1209da91b06ee07cfff23fd5191b224a94144c233d96cd1ca46206f  Elegoo/process/TinMan Codex/0.16mm Tank @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex.json
 9aaaefef9c5c35cfb1f1a52a6efdf479d8d9ab52d0b0340db2e0c1aad33db933  Elegoo/process/TinMan Codex/0.20mm Quality @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex.json
 f3cc3efaa0bae71fb92df07753d9529c96fac59881970b81cba56baba25fd0da  Elegoo/process/TinMan Codex/0.24mm Fast @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex.json
@@ -617,12 +617,12 @@ ff7956a7f88d8d35d767993c1b24d8c75239858bd6c4d0aeaf715f652b57b0f4  Elegoo/process
 f4b4615577c709396ebbf014abb94efe8d376fbbc0d1fb2808f95dc202fe2328  OrcaFilamentLibrary/filament/Bambu/Bambu PET-CF @base.json
 45cf32d2a7af5ff56a20454bda6c46cd535294c79c46bcb93a929f98232e5af2  OrcaFilamentLibrary/filament/Polymaker/Fiberon PET-CF @System.json
 01ab278bf495c1216ae24ba17f8745accc51f723c619d38588895caa55a7b6c4  OrcaFilamentLibrary/filament/Polymaker/Fiberon PET-CF @base.json
-23abf1a64f4df1b8be9aba0be1bf03a35cce82cd7991a06b76ec65826f577f23  Prusa.json
+d910cbb8ced8b45b4329e9b2959daca339efc8f4c46e0f1e5b4a3967b0f37efa  Prusa.json
 1184f3881f411102c09b369760fba5c763292f8a7d29f022f591c02d56048641  Prusa/machine/Prusa CORE One L.json
-00de18ce55993555e5e9eeecac163ce34c015366791b30c10468bc96f46b0d94  Prusa/machine/TinMan Codex/Prusa CORE One L 0.4 nozzle - TinMan Codex.json
-165720e2505e2ba4d4d9e073e13e68dd641ff70f673707122e0c4be681e88f24  Prusa/machine/TinMan Codex/Prusa CORE One L 0.6 nozzle - TinMan Codex.json
-db112ef809a75e4cafff6811c2a8530fa49984b483d27fdcb55287105ddefd08  Prusa/machine/TinMan Codex/Prusa CORE One L 0.8 nozzle - TinMan Codex.json
-3205fb9f4b323d0e556319ff264405791de2007389c7479cd331125105c5def6  Prusa/machine/TinMan Codex/Prusa CORE One L 1.0 nozzle - TinMan Codex.json
+86c614cfdfdaf6c60ffce586a10ba1681a80dd1478de2c515dae54d6ad1745eb  Prusa/machine/TinMan Codex/Prusa CORE One L 0.4 nozzle - TinMan Codex.json
+1eb4c8b927943a4efb301c616e4c75c8da74ef9305a2592ac49259ba4e15d89e  Prusa/machine/TinMan Codex/Prusa CORE One L 0.6 nozzle - TinMan Codex.json
+419097aa599bc210a8b3421ff97f1e1465ebe572184d28f7dd5bc70a31bd433a  Prusa/machine/TinMan Codex/Prusa CORE One L 0.8 nozzle - TinMan Codex.json
+eb075f0a8c72906722e1f30ed9093d07ea13c422f30153adc17cfb042bb39248  Prusa/machine/TinMan Codex/Prusa CORE One L 1.0 nozzle - TinMan Codex.json
 375c44b3266e56220e86dc72ea97ff67288dabfead079cc3fc1cb065ddfd2cae  Prusa/process/TinMan Codex/0.16mm Tank @Prusa CORE One L 0.4 nozzle - TinMan Codex.json
 4db0d6a2b3097cb2ce44d7b275a98ccd75b6cfcf54e95155b9e2bf3163e6c956  Prusa/process/TinMan Codex/0.20mm Quality @Prusa CORE One L 0.4 nozzle - TinMan Codex.json
 15653dd553b6e773c76a3d3b57ef67b4fdabfd877cfcf20c46fbbbb344211b41  Prusa/process/TinMan Codex/0.24mm Fast @Prusa CORE One L 0.4 nozzle - TinMan Codex.json
@@ -639,69 +639,69 @@ cd602bd888500c1e88ee6a4ad6807f0c8e98c31a5e28dd07fa8b509c3095e0e3  Prusa/process/
 51f7a20d3ad7e44077d9c66964d22f89aafa1fca5e99fdf208a92c307e8d956b  Prusa/process/TinMan Codex/0.56mm Draft @Prusa CORE One L 0.8 nozzle - TinMan Codex.json
 6e6343e4c60cf9234c5cb15a8c28e238f8e6c48c0cb892d7f78a285cba671c19  Prusa/process/TinMan Codex/0.60mm Fast @Prusa CORE One L 1.0 nozzle - TinMan Codex.json
 8eb278b18bcc8109f99e4bef77c22bd9989d196e960a8f738c3c336f37952f1c  Prusa/process/TinMan Codex/0.70mm Draft @Prusa CORE One L 1.0 nozzle - TinMan Codex.json
-85139f1265fc4c4d2c253d4168bb0aebed423b877e32a84f1b2c86c4be9020cc  Qidi.json
+50d3d19d876b19033b337b90b7c5c970e786d2669714a45723a5665d241faad6  Qidi.json
 1e8b420d9df3f0d7a845f80126977c25f33d2b8684818977b979534933561bad  Qidi/filament/QIDI PET-CF @Qidi X-Plus 4 0.4 nozzle.json
 0433721955265d36fd7ed5d92c962b2c57631963a86552f115fcf13d59c74218  Qidi/filament/QIDI PET-CF @Qidi X-Plus 4 0.6 nozzle.json
 6041566349484a6ecebad87827a7b8078b2a63fc1c711ee77a4023a3fae8bdff  Qidi/filament/QIDI PET-CF @Qidi X-Plus 4 0.8 nozzle.json
 d45b53b04eb9effb06336a8e1db483924d39b9ac96bcd04345a74e7a9e0d99bb  Qidi/filament/QIDI PET-CF.json
 3ac19857fe637f91b7fcea495d04334c976cd02a66e038d15accf0e5e02cb2d0  Qidi/machine/Qidi X-Plus 4.json
 e94fcd8a5e64b799ad72fc77654e1ed6eca224ff275cde18dd0957e31e2884fb  Qidi/machine/QidiMaxEz.json
-3d9eb4cffa4c9bb079ff9501d4836edc0e77a5c6f2955460c2b70cf708650c69  Qidi/machine/TinMan Codex/Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json
-a3734a45fde11c6fd0d276ee8d2ba049df4dc1bd0ab35e363a3cfb62b31fe922  Qidi/machine/TinMan Codex/Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json
-97994972d31bddbdc4fe7251445023e0da79a604e41464a4dc23967aad787d51  Qidi/machine/TinMan Codex/Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json
-53f239942c80d25dc21e6a29d5447d32d6031905132e3d04ea07c9cbb77ef15b  Qidi/machine/TinMan Codex/Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json
-dd580a023b236d85bccd2b142cad1845342e6eccc5b626aa8cca5697824122b0  Qidi/machine/TinMan Codex/QidiMaxEz 0.4 nozzle - TinMan Codex.json
-a6f79c005fe0b99630260d26402dc0e1f96df02c08581e5172f5cea8e0095f05  Qidi/machine/TinMan Codex/QidiMaxEz 0.6 nozzle - TinMan Codex.json
-a9b19f4765291decbb8b40b501106df61ada5fe3772f8d5d572b757ec255ddf5  Qidi/machine/TinMan Codex/QidiMaxEz 0.8 nozzle - TinMan Codex.json
-0204d5a23dbf1c7ae4065c19fe35a608e8aa87664971ef8987bb5509fba84546  Qidi/machine/TinMan Codex/QidiMaxEz 1.0 nozzle - TinMan Codex.json
-d07b2d84faa2b38c420fe75c254d7dbaeedf9d946c70cf21bcb1e15353ff776b  Qidi/process/TinMan Codex/0.16mm Tank @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json
-463c8ce7a29097ca24d2a66817c6c588d8a99bd583b4ec42e98cb700b90a65a5  Qidi/process/TinMan Codex/0.16mm Tank @QidiMaxEz 0.4 nozzle - TinMan Codex.json
-472f19b9566ad26df13d8da874b3a35fbe4bf872f6fcd9757ba51fd7d33ef544  Qidi/process/TinMan Codex/0.20mm Quality @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json
-4668e4298a4dffdafee199e5955a35c0ebcdebaca19ecc6bf03e28b1c162bdcb  Qidi/process/TinMan Codex/0.20mm Quality @QidiMaxEz 0.4 nozzle - TinMan Codex.json
-d75c63e1ac6f3e7b19848cd854644c5e7f5cfee9956b3e8da3dd1f863635259a  Qidi/process/TinMan Codex/0.24mm Fast @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json
-713a67f81d4821ecb265273e30b260b81db6216b930641913a3c849fa88ae3f3  Qidi/process/TinMan Codex/0.24mm Fast @QidiMaxEz 0.4 nozzle - TinMan Codex.json
-9af213deaa5e583f912df75627eff91efbe5313481c6866cdfa9bbbbedc2d53f  Qidi/process/TinMan Codex/0.24mm Tank @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json
-c9a3b20c8b3593cf3246f339d66ed4ddcbbbc500f59c458290e8fabfeba3ce51  Qidi/process/TinMan Codex/0.24mm Tank @QidiMaxEz 0.6 nozzle - TinMan Codex.json
-6037845326ce7704946da531ebb2ee69f41f815bc17058732be648fed9b71fb2  Qidi/process/TinMan Codex/0.28mm Draft @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json
-6448b75f72516c30c7deccd4df4dd24e4ac118d9afecce4a1b73e63abd901776  Qidi/process/TinMan Codex/0.28mm Draft @QidiMaxEz 0.4 nozzle - TinMan Codex.json
-d0cb272f3f26acdcf48da828d476cae6842f998aecc0b020bf6af68faed99b06  Qidi/process/TinMan Codex/0.30mm Quality @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json
-84bb18680ef59a5ffc65dc9db7b83339fd85570e9ef960311f289ec5b6467b1d  Qidi/process/TinMan Codex/0.30mm Quality @QidiMaxEz 0.6 nozzle - TinMan Codex.json
-fa9be21ac01506d176c750f1110556c5e417571436ff0e66bb5ecec89e294ca5  Qidi/process/TinMan Codex/0.32mm Tank @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json
-8d60475265c03752cda83c167b0c276befdd5ae3e97b90c67817e0e1b8157968  Qidi/process/TinMan Codex/0.32mm Tank @QidiMaxEz 0.8 nozzle - TinMan Codex.json
-31549fff773cf114142bda72b09a2fc3aa6e5da5559a50ba690931a0e769650c  Qidi/process/TinMan Codex/0.36mm Fast @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json
-aa199caf44b2107e05d72fd438b9e4394f76d78b1a26d2ac511660dd8289144e  Qidi/process/TinMan Codex/0.36mm Fast @QidiMaxEz 0.6 nozzle - TinMan Codex.json
-339272d82d3fc6044ebb83fc317d7575f0549a961a3d9d889e6016fcad34a3c1  Qidi/process/TinMan Codex/0.40mm Quality @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json
-be20347b1389b5a7b1a81143344781d813e24bce49c3535992cfa2a5caa424ca  Qidi/process/TinMan Codex/0.40mm Quality @QidiMaxEz 0.8 nozzle - TinMan Codex.json
-e1487a71ad7ac94698f9eac360e5079bf0b3f0d23338ad369dd5b6f9ec744eed  Qidi/process/TinMan Codex/0.40mm Tank @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json
-1884d06b58bd0c094f032da07594e9cd8287c96f28c737aebaac1708e1c45145  Qidi/process/TinMan Codex/0.40mm Tank @QidiMaxEz 1.0 nozzle - TinMan Codex.json
-58721db5059979789caebc4248ca20d6ec9f3dd2020a48eade5bfddcf828e750  Qidi/process/TinMan Codex/0.42mm Draft @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json
-b29722ae5ffccefa98cdd8a521d53332c47255df49c2deb22edc307ab1fe1de6  Qidi/process/TinMan Codex/0.42mm Draft @QidiMaxEz 0.6 nozzle - TinMan Codex.json
-dc154146c1f54231cf398e612baebb5d3b2daba965f51076cc20f5cd0dd11e5b  Qidi/process/TinMan Codex/0.48mm Fast @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json
-ae4a1bd9297916b11ada7ece5d0aa33242d96fb7bbadd44c6f3f286b07d3d821  Qidi/process/TinMan Codex/0.48mm Fast @QidiMaxEz 0.8 nozzle - TinMan Codex.json
-0b0e66b29818390b92c56eb21a049d15b10ead954ca9ba87766660092e3e3282  Qidi/process/TinMan Codex/0.50mm Quality @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json
-9288e53e5ec67a54c011ac1609af0e08d66300578eeb1018ab5f43e86a097ee9  Qidi/process/TinMan Codex/0.50mm Quality @QidiMaxEz 1.0 nozzle - TinMan Codex.json
-bfc08c375cb59e4ec7e8359a36cf96e8e721b020c5a06425cb6a5fac6f31a064  Qidi/process/TinMan Codex/0.56mm Draft @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json
-04fea90b63c2b2e7da4144d2f4f90cca4d11560c16f10cc94921fc3435562cdb  Qidi/process/TinMan Codex/0.56mm Draft @QidiMaxEz 0.8 nozzle - TinMan Codex.json
-67fde18d43f4eba9982fe15a64699a9897f1a323f2b35ee44e6439783934e830  Qidi/process/TinMan Codex/0.60mm Fast @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json
-8cbf46aed8bc045168590504423534db14d07d254742ae10b7ded16ce6c3af13  Qidi/process/TinMan Codex/0.60mm Fast @QidiMaxEz 1.0 nozzle - TinMan Codex.json
-d204ce02e19536d118fbe6d46c92b8b754144761684c32d1de0f8c045ad41529  Qidi/process/TinMan Codex/0.70mm Draft @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json
-9b22292fc456a24b18c710f1a0a8ff230c930397abdd88efd235eaa41be29bf3  Qidi/process/TinMan Codex/0.70mm Draft @QidiMaxEz 1.0 nozzle - TinMan Codex.json
-ba0034dd72fd53d23b76b48eb3e53951b694ea4425fbfb95517553f18053e073  Ratrig.json
+8c78a51e4938574b75738edd0a4ae3ebf95b7c5d7ec6da184548c4cc7b1d72bb  Qidi/machine/TinMan Codex/Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json
+903117bc437c74d50fb854c269c8088b4584e2d6f84ff563652765de0b9de8c1  Qidi/machine/TinMan Codex/Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json
+553819f7ec117a3f251c3ef5dc9e0f8fee9702708720fed7dcd13b6c8b898959  Qidi/machine/TinMan Codex/Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json
+fc9e1c7e5d49beada4a2c29014fa13a0c3b9c02101e4678af96a15228e8cbb99  Qidi/machine/TinMan Codex/Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json
+75ed9857b5b19596a4eb69fedce84804eff1b63ab85cffc2154916863c29e591  Qidi/machine/TinMan Codex/QidiMaxEz 0.4 nozzle - TinMan Codex.json
+da52d783dba5b2d38772ba3f52ddd93b0ca9070c10a9ace98834c9d48206ddc7  Qidi/machine/TinMan Codex/QidiMaxEz 0.6 nozzle - TinMan Codex.json
+16125a3bc7b7a7b6522ed437ff11f5a6466f53d6a851f4ae5256c1d730789c1d  Qidi/machine/TinMan Codex/QidiMaxEz 0.8 nozzle - TinMan Codex.json
+57028e3053fbc1638b17453071624a1eb6b2f3a745a43176ef44d4a310ee0746  Qidi/machine/TinMan Codex/QidiMaxEz 1.0 nozzle - TinMan Codex.json
+606017b214beeae73423497bcfdf7e23ea73a2a39e016c5327b237c108c35d5a  Qidi/process/TinMan Codex/0.16mm Tank @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json
+962865950f8820698c2ab3d48b83018a620618fc44b04d0e5e740e0f5d4f999a  Qidi/process/TinMan Codex/0.16mm Tank @QidiMaxEz 0.4 nozzle - TinMan Codex.json
+86d3d08549a3bdf445e1668c280db3d3ddaaff019e3099d9840d188fce67178e  Qidi/process/TinMan Codex/0.20mm Quality @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json
+b7a81df73b4ee51eec9201983a2a892c8d0217218135ee575511f572a573fe17  Qidi/process/TinMan Codex/0.20mm Quality @QidiMaxEz 0.4 nozzle - TinMan Codex.json
+bd11eba14c1da80ba8e905985b2db811b83b6c25aaada0594b6305c80892e3f1  Qidi/process/TinMan Codex/0.24mm Fast @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json
+0115e95cbfb40b15ac2ed3ee1d21d03edf7d13559cd5285d651881cf22fbf519  Qidi/process/TinMan Codex/0.24mm Fast @QidiMaxEz 0.4 nozzle - TinMan Codex.json
+8b3ccc4fdaa7975db8af74fac836272b230b4c4ceb83a542236cb9192f8d7148  Qidi/process/TinMan Codex/0.24mm Tank @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json
+344464e902c1518437beb6baace7df8b9b7373acf676655c11a803931a700d1f  Qidi/process/TinMan Codex/0.24mm Tank @QidiMaxEz 0.6 nozzle - TinMan Codex.json
+9b37193d2899175135fdebc68d8a87238146120b7312aae10072ecb9b8a9f88e  Qidi/process/TinMan Codex/0.28mm Draft @Qidi X-Plus 4 0.4 nozzle - TinMan Codex.json
+cf5115c02a9ec87202417cd9517853f5d157a789734ffd139b7da0c69e4da3dc  Qidi/process/TinMan Codex/0.28mm Draft @QidiMaxEz 0.4 nozzle - TinMan Codex.json
+e009a12c729d6aeb316ab9ddd8a6ff91bcc7ccbabb2b6286cedd33eb89d5ca33  Qidi/process/TinMan Codex/0.30mm Quality @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json
+6196a22b270923cb42978b95a3d3395e2913380c037695e2f48c65986f890387  Qidi/process/TinMan Codex/0.30mm Quality @QidiMaxEz 0.6 nozzle - TinMan Codex.json
+f2c06f39a1e7fd9ac6e3b85a770fd1315e25f2f323b7337f956c0f97fed8574c  Qidi/process/TinMan Codex/0.32mm Tank @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json
+119c8cc02e365445f8da2e4ebe00f25b773f38bb2c71d0178a243a5a782f9f31  Qidi/process/TinMan Codex/0.32mm Tank @QidiMaxEz 0.8 nozzle - TinMan Codex.json
+3910a46735f41f184195691600a4eae350a59684baf9f20992ea609778355f29  Qidi/process/TinMan Codex/0.36mm Fast @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json
+90b82a22ddff8cecc2ea98cddb6538132b7083982114ec91540590398f803ea0  Qidi/process/TinMan Codex/0.36mm Fast @QidiMaxEz 0.6 nozzle - TinMan Codex.json
+eff74ff078132a7715ec0d250070ade1448cf85be6f3362a5a62c862a8496544  Qidi/process/TinMan Codex/0.40mm Quality @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json
+bbf21f5741a3e62f59545ee8f19c519cd1ff4424812a65501d6dab443bc4aacc  Qidi/process/TinMan Codex/0.40mm Quality @QidiMaxEz 0.8 nozzle - TinMan Codex.json
+43634818d447e6acd3bdfadb583534601c2a291ef683ebef206b371c517cb7f5  Qidi/process/TinMan Codex/0.40mm Tank @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json
+b3191e7e1775c1feaae7c254e51537ba3a6314deee3c66fc82293f7469f53ede  Qidi/process/TinMan Codex/0.40mm Tank @QidiMaxEz 1.0 nozzle - TinMan Codex.json
+5faa0dcbd7e425f23384a8e2d5c6d982b17637d3a44e983e036ffe800eb07445  Qidi/process/TinMan Codex/0.42mm Draft @Qidi X-Plus 4 0.6 nozzle - TinMan Codex.json
+252f6fa0a0b9207c0fc9c2234ef14aabc9bfd612db869c785527e34f2cc49251  Qidi/process/TinMan Codex/0.42mm Draft @QidiMaxEz 0.6 nozzle - TinMan Codex.json
+7654ad1e230a55f1dd619b92db8304749e9293ed0c1b9ea5ba82329b038ba21a  Qidi/process/TinMan Codex/0.48mm Fast @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json
+2c8aec4dd75062adc7e60840b3756df1c851b5c59722df759aa6a259b3aab9be  Qidi/process/TinMan Codex/0.48mm Fast @QidiMaxEz 0.8 nozzle - TinMan Codex.json
+f2582f8c8b58a019e0b231468605fcfd4c9375dd902c076049a530153464d028  Qidi/process/TinMan Codex/0.50mm Quality @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json
+136f2d4149508ea73a83a9b84594e835e869992bad3fd2b7d715c9bd2c9f65e0  Qidi/process/TinMan Codex/0.50mm Quality @QidiMaxEz 1.0 nozzle - TinMan Codex.json
+db76bb85e969c7dacb91df8542e4ba912166b14f0ee6baf003236612cbfae0b7  Qidi/process/TinMan Codex/0.56mm Draft @Qidi X-Plus 4 0.8 nozzle - TinMan Codex.json
+33dc033cc9e66fb1381a794c2f36c23412b35fcf9e240cec0341c9405bdb7cd9  Qidi/process/TinMan Codex/0.56mm Draft @QidiMaxEz 0.8 nozzle - TinMan Codex.json
+9be7999bdf01cb61c69fc3aee80a20457939148da64ce04bdef714f7be77c1c5  Qidi/process/TinMan Codex/0.60mm Fast @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json
+f040102b3003ef73ac53b918e2ff96a91fb77b8d2f0ccfe47c28fb7e10550e2b  Qidi/process/TinMan Codex/0.60mm Fast @QidiMaxEz 1.0 nozzle - TinMan Codex.json
+69a2a9009f2070bb382d5b70a275bb33964f90c7ae55ce067d2180bd7a677a47  Qidi/process/TinMan Codex/0.70mm Draft @Qidi X-Plus 4 1.0 nozzle - TinMan Codex.json
+18b5a0c5ec4136e515ac6d0dc6174763bd5dd93fc66af9de8c663f0efbe293b9  Qidi/process/TinMan Codex/0.70mm Draft @QidiMaxEz 1.0 nozzle - TinMan Codex.json
+7e4a5f2737935c260cc54e7b09eeba705e7e5f5ba0233708f9142714ef98a846  Ratrig.json
 1c9d216fd94446181cfdfd9edb179e22409bc581bba4fe3c8cedbedd31b0bc65  Ratrig/machine/RatRig V-Core 4 IDEX 500 COPY MODE.json
 be2bade2bd80787848e9001282e91ddeaf5ce8199183a833db5e845eb981c489  Ratrig/machine/RatRig V-Core 4 IDEX 500 MIRROR MODE.json
 ac7bc5e7cb281ffbbff27bfa3e42e23957f9e2fa1cb7c63dc10749d6dc27bf93  Ratrig/machine/RatRig V-Core 4 IDEX 500.json
-637387451ab7a3a6da28b3d3c6bfc825a6b3aaf30f7dc54cef923c72d4172812  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex.json
-40121a756670321b206dd8fb474f320134be4d9739ce1f3530acd41323b171f7  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex.json
-e1b12205cb60d0e48a8972d7bab0f6ffa88ca2a964a6c6017983de01ebbb810f  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex.json
-cafdc7f8d5c8add86df582812e5d261df18e3457e0448174742d338b4de252dd  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex.json
-95171cb6c02c668ae608d6e5552852878ddcbaf8edeea4a76d242c79e09992eb  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex.json
-d527d9b767975e294ab8e822b1b29dc16da98599dafaea52f19b11304e173a6e  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex.json
-5e493ede5e8f0c46a12d49eb23261f991e64d8004eabd2fb269256f0117e0e85  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex.json
-b8ba635414709ccaf58dcc35e43f47e7d22ace213e70c3b539ea82ffd9f2e975  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex.json
-c1f1f6d677abd06ead66a3e12dfd9184e2f094af428746c385ab28f754648e3b  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex.json
-3f7677447b7ca9923b98c56b33558ce091f09be3d4eb5a2dfe3535fc6799d745  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex.json
-686294e4e7a1eeba468cacb63a402e2857a55d69063e0c0723536389907f7957  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex.json
-442148bb105adad401b126c81c680612f5b29f56de1ac2acc0e43962591901a1  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex.json
+a90d8c248c8509f9f0093c3ba039f3b3ecdd0238046bb4fd35521ba76301883e  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex.json
+1f97891adb73dda90120b17dc6baeaa4be29b1fb592368c60025122e4e967199  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 0.6 nozzle - TinMan Codex.json
+2c5d86a56fc3aacea6c669dee3e1fd8156701fa1ab023af67f9e919eef8e506e  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex.json
+25741e0ef922ac58d4b7880e11420a6c36ff5f223ad480a9fcd2d160122addca  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 1.0 nozzle - TinMan Codex.json
+679ce2019a392cb63d5e4e578783960301a946faea1f3a4f95e31cdaf39f9648  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex.json
+2bbaf246c334cc19241754ba55b79136dd709622c4ef1abd32aa109c2c6c3154  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle - TinMan Codex.json
+17a87188f30763fdf5e6f0bafb5058a70d870eeda948106daf7000016fc5ca35  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle - TinMan Codex.json
+e29443e7eedac2fe493eca8af98aad11c4b0257f97cd269634f162cd7b2e366d  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 COPY MODE 1.0 nozzle - TinMan Codex.json
+7ca7711d4e7bca08f01fe662bbfeeba687c0caa4bb1b1ac4bbac3d426b388384  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex.json
+1784ba4fb2393ffaacf89cbc72a81956368242a1abec2d01f37de61f9fa47bfe  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle - TinMan Codex.json
+9e084686e835702d78987163cb32aaa995d5ee65ee40055419a7d1362670decc  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle - TinMan Codex.json
+b4366f85845da5a59205d5a90495b4dcfd3580c11accd0a427d21bfc925c0525  Ratrig/machine/TinMan Codex/RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex.json
 ada22d7745a881051725e02a5bfecf77078b03ed0382f12c9811a8bbdfb38e61  Ratrig/process/TinMan Codex/0.16mm Tank @RatRig V-Core 4 IDEX 500 0.4 nozzle - TinMan Codex.json
 6b2bef82ca80c188d23cf234683001ebf453714ed8222cb11ced27f87751315a  Ratrig/process/TinMan Codex/0.16mm Tank @RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle - TinMan Codex.json
 1821dea726185ed694c2a839350b090a864f436c7db9c6ae545ee377b5fa0615  Ratrig/process/TinMan Codex/0.16mm Tank @RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle - TinMan Codex.json
@@ -777,12 +777,12 @@ b864c6ad45857d4b411fa2e4834a0c513c90d27e101783d215832d0923fc2aa5  Snapmaker/proc
 91a75c4a498bd1252c7614d1c6e76362abc6313b375c36d463d39a3a946b6c5a  Snapmaker/process/TinMan Codex/0.56mm Draft @Snapmaker U1 0.8 nozzle - TinMan Codex.json
 dd82fc7a947dc7f4c2f817682ea521e1a505437fbe486b05fd462de594dc2d09  Snapmaker/process/TinMan Codex/0.60mm Fast @Snapmaker U1 1.0 nozzle - TinMan Codex.json
 ce5fd4f07285652e7457fe07e9dc1a0d49e0cbdfd989863a1c3d9048f1f08e1c  Snapmaker/process/TinMan Codex/0.70mm Draft @Snapmaker U1 1.0 nozzle - TinMan Codex.json
-1769da97d674f22e8b078f76e1054e8d073ba6d1886d15c7d767100f2b174374  Sovol.json
+4bc1d96b0213efc870d0a1b888de874756c40b3a877dd219ae26afc7c3f3304f  Sovol.json
 b83e89e822f47a107cc006ab91a8befc788c027505674e00e59817adbeb1de57  Sovol/machine/Sovol SV08 MAX.json
-feb5ed3d6cdf606c0826571a1a732008a291746a736a9c2875402eedb3e3044e  Sovol/machine/TinMan Codex/Sovol SV08 MAX 0.4 nozzle - TinMan Codex.json
-5600003a59df041a673b634e0163b76c467e38e6caf3c68e3a64c679b2fd578d  Sovol/machine/TinMan Codex/Sovol SV08 MAX 0.6 nozzle - TinMan Codex.json
-f7800b1f6b334d0fc2659fe644645f16aada5726aba15a523e26b54725966b30  Sovol/machine/TinMan Codex/Sovol SV08 MAX 0.8 nozzle - TinMan Codex.json
-1ebbe1a5246d58eea8ba43b02b197677fd07a36c992dabbbc800db4865644a1a  Sovol/machine/TinMan Codex/Sovol SV08 MAX 1.0 nozzle - TinMan Codex.json
+c1fb03ab3b42602836cf6477ec30f07405f014a9e32dc70db53167c3dc349880  Sovol/machine/TinMan Codex/Sovol SV08 MAX 0.4 nozzle - TinMan Codex.json
+d60f2c9130fa74a3ef345f3b7121fd2378b16fad126283273608ba17d311c83b  Sovol/machine/TinMan Codex/Sovol SV08 MAX 0.6 nozzle - TinMan Codex.json
+5584f8365f78c5ff97adea755a4d91906deddd16e9809ddcd19a15725be54617  Sovol/machine/TinMan Codex/Sovol SV08 MAX 0.8 nozzle - TinMan Codex.json
+5e5cc1d25c505bd2b9129640e4a088474f3373dd5063524f3ff0e269f972f6ca  Sovol/machine/TinMan Codex/Sovol SV08 MAX 1.0 nozzle - TinMan Codex.json
 5c5a83e843f3c659ffaf87ec0f7bba2eaa0a11aefaf52593a793ca049c370201  Sovol/process/TinMan Codex/0.16mm Tank @Sovol SV08 MAX 0.4 nozzle - TinMan Codex.json
 9cd066f0126f517b67970307263c18a71ad7b79864070b4f4b234a16fd0e48f6  Sovol/process/TinMan Codex/0.20mm Quality @Sovol SV08 MAX 0.4 nozzle - TinMan Codex.json
 41131c90ba56edbe49ff6a156f45eba1118a39b0e5bea54315dc3e6373764323  Sovol/process/TinMan Codex/0.24mm Fast @Sovol SV08 MAX 0.4 nozzle - TinMan Codex.json
@@ -799,7 +799,7 @@ df7f90742e9e826971d4d89903e3b9b0d185d39706d4f32b2a1a9016b535e47a  Sovol/process/
 8388bd6b8711e04e36d3c13e77115b5a986956a4f1f786d9e27b9f69fac17eaf  Sovol/process/TinMan Codex/0.56mm Draft @Sovol SV08 MAX 0.8 nozzle - TinMan Codex.json
 873ae08623589ef9310dd36360c243d6962ff6cb80adbe83318c1468db71bde4  Sovol/process/TinMan Codex/0.60mm Fast @Sovol SV08 MAX 1.0 nozzle - TinMan Codex.json
 165a69bf10b74c5367833ec981153493fee6b77964fab7032a92cba52a8040dd  Sovol/process/TinMan Codex/0.70mm Draft @Sovol SV08 MAX 1.0 nozzle - TinMan Codex.json
-8d7b0895c9993c63431794b99d9e5684a9ff9cafe27f40258b1ee4de54529417  TinManX1.json
+3d47d186a1aa207cd08fb1da144b5f153515aca3a86742681a87befe5a8678fb  TinManX1.json
 9d23f1767356f0803fa14fbe6bfe1a03adedcef5f27e9ce79c87965e6f1045ab  TinManX1/filament/CFC ABS + CBF @FibreSeek Seeker 3.json
 45d6f3358ada7283c5cdf7f3441eacc857957296040d89210c9daac261b0a7db  TinManX1/filament/CFC ABS + CGF @FibreSeek Seeker 3.json
 850897209bd8656bf086b4175bcae27d3d248f79d3f43b1d47c8154f96ef2e29  TinManX1/filament/CFC ABS + CKF @FibreSeek Seeker 3.json
@@ -903,10 +903,10 @@ deba089e22ef98fc0a4a04992529b966a3915d5da5d491a04a160f09626f8816  TinManX1/machi
 fe776ce304a4c6baca53e0e46ccc747b2aee6320b4a60b81932f5e8f5ed1c1e0  TinManX1/machine/FibreSeek Seeker 3 0.8 nozzle.json
 7676031ed5b4d8a343c919c1a07b1b6017d98f7ada4f892556da8ba2587a30ca  TinManX1/machine/FibreSeek Seeker 3 0.8+0.7 composite nozzle.json
 b83b4db893a0aff18f49d3087d422c6310330e0ac162e97910dab4b8984b7b4d  TinManX1/machine/FibreSeek Seeker 3.json
-b1fb2497c825e3089bc34cfae45bc10c5c783c342bb40055f25b75ec5a895839  TinManX1/machine/TinMan Codex/FibreSeek Seeker 3 0.4 nozzle - TinMan Codex.json
-87cdd38ade957863e64c46b53682f83e5f46df46046caf8e84ffaeee284d6c90  TinManX1/machine/TinMan Codex/FibreSeek Seeker 3 0.6 nozzle - TinMan Codex.json
-aa32c44355ff7413cfa751c4e5388a52eabc04034db71d00ea9104ac78238b8b  TinManX1/machine/TinMan Codex/FibreSeek Seeker 3 0.8 nozzle - TinMan Codex.json
-2fe6c1ef7aafc0d6e775f02a7f406cb440db2684218f09bb3b2a09458fc3dc5a  TinManX1/machine/TinMan Codex/FibreSeek Seeker 3 1.0 nozzle - TinMan Codex.json
+bb05d8485573f192a79360bd63bc7552283e85b76ec333a23830957be5cb0c06  TinManX1/machine/TinMan Codex/FibreSeek Seeker 3 0.4 nozzle - TinMan Codex.json
+8485048af403fd40cdc255a680c16002844869bb3b00e512b5539769cedcd46d  TinManX1/machine/TinMan Codex/FibreSeek Seeker 3 0.6 nozzle - TinMan Codex.json
+4346faf831b953cbffc603c4cdc9bc4511564a287ba19645907f30e9e6950d5a  TinManX1/machine/TinMan Codex/FibreSeek Seeker 3 0.8 nozzle - TinMan Codex.json
+cce0f7472860127d2e43fa68a2a0cc60db4a0aefa91f4d293b9830a51cd01024  TinManX1/machine/TinMan Codex/FibreSeek Seeker 3 1.0 nozzle - TinMan Codex.json
 f0956e680c3bc1013c51d24ce37ff4f5f3a2dafc73ba2d388eb925df24a49872  TinManX1/machine/TinManX1 FibreSeek machine common.json
 8a9664e760cb60dbeb14176520cdfe30980aa6785f62347f7505e3b3ce23eb73  TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json
 8d4b0c41fe2cbab7c872aca945ba82ee4a175dd55cf9aae8cc300147e58932c7  TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.6+0.7 nozzle.json

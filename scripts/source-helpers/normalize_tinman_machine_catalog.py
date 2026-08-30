@@ -49,7 +49,7 @@ MOTION_ENVELOPE_MODULE = (
 )
 
 NOZZLES = ("0.4", "0.6", "0.8", "1.0")
-CONTRACT_VERSION = "5"
+CONTRACT_VERSION = "6"
 NAMESPACE = uuid.UUID("c1f4d9e2-7a3b-5c8d-9e0f-1a2b3c4d5e6f")
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 CONNECTION_SECTION = "tinman_machine_connections"
@@ -90,7 +90,11 @@ class MachineFamily:
     source_names: dict[str, str]
     aliases: tuple[str, ...] = ()
     composite_second_nozzle: str | None = None
-    high_flow_nozzles: bool = True
+    nozzle_capability: str = "cm2_standard"
+
+    @property
+    def high_flow_nozzles(self) -> bool:
+        return self.nozzle_capability in {"stock_high_flow", "cm2_cht"}
 
     def canonical_name(self, nozzle: str) -> str:
         return f"{self.model} {nozzle} nozzle - TinMan Codex"
@@ -125,14 +129,25 @@ QUALITY_MODE = PROCESS_MODES[0]
 
 
 FAMILIES = (
-    MachineFamily("BBL", "Bambu Lab H2D", source_series("Bambu Lab H2D {nozzle} nozzle")),
+    MachineFamily(
+        "BBL",
+        "Bambu Lab H2D",
+        source_series("Bambu Lab H2D {nozzle} nozzle"),
+        nozzle_capability="stock_high_flow",
+    ),
     MachineFamily(
         "BBL",
         "Bambu Lab X1 Carbon",
         source_series("Bambu Lab X1 Carbon {nozzle} nozzle"),
         aliases=("Bambu Lab X1 Carbon Tinman",),
+        nozzle_capability="cm2_cht",
     ),
-    MachineFamily("Creality", "Creality K2 Plus", source_series("Creality K2 Plus {nozzle} nozzle")),
+    MachineFamily(
+        "Creality",
+        "Creality K2 Plus",
+        source_series("Creality K2 Plus {nozzle} nozzle"),
+        nozzle_capability="cm2_cht",
+    ),
     MachineFamily(
         "Elegoo",
         "Elegoo Centauri Carbon",
@@ -184,7 +199,7 @@ FAMILIES = (
         "Snapmaker U1",
         {nozzle: f"Snapmaker U1 ({nozzle} nozzle)" for nozzle in NOZZLES[:-1]},
         aliases=("CURRENT Snapmaker U1", "CURRENT U1", "fdm_U1"),
-        high_flow_nozzles=False,
+        nozzle_capability="stock_standard",
     ),
     MachineFamily("Sovol", "Sovol SV08 MAX", source_series("Sovol SV08 MAX {nozzle} nozzle")),
     MachineFamily(
@@ -545,24 +560,29 @@ def mode_settings(
         "travel_acceleration": scaled(8000, acceleration),
     }
 
-    if family is not None and family.model in {"Qidi X-Plus 4", "QidiMaxEz"}:
-        # Every installed Plus 4 / Max EZ nozzle is high flow. Spend that
-        # capacity mainly on hidden toolpaths so surface quality remains the
-        # limiting contract. The mechanically identical Plus 4 and Max EZ use
-        # the same reviewed 10,000 mm/s^2 acceleration table.
+    if family is not None and family.nozzle_capability == "cm2_cht":
+        # Micro Swiss measured 34.0 mm3/s from its FlowTech CHT nozzle versus
+        # 22.2 mm3/s from the standard reference in the same PLA test. Applying
+        # Orca's 20% production margin yields about 1.23x useful headroom. Keep
+        # visible surfaces close to the quality baseline and spend the gain on
+        # hidden paths; each filament's MVS remains the final flow governor.
         speed_factors = {
-            "outer_wall_speed": 1.10,
+            "outer_wall_speed": 1.05,
             "inner_wall_speed": 1.20,
-            "small_perimeter_speed": 1.10,
+            "small_perimeter_speed": 1.05,
             "sparse_infill_speed": 1.20,
             "internal_solid_infill_speed": 1.15,
-            "top_surface_speed": 1.08,
+            "top_surface_speed": 1.05,
             "gap_infill_speed": 1.15,
             "support_speed": 1.15,
         }
         for key, factor in speed_factors.items():
             settings[key] = str(max(1, round(float(settings[key]) * factor)))
 
+    if family is not None and family.model in {"Qidi X-Plus 4", "QidiMaxEz"}:
+        # The mechanically identical Plus 4 and Max EZ use the same reviewed
+        # 10,000 mm/s2 acceleration table. Their installed standard CM2
+        # nozzles do not receive a CHT flow multiplier.
         plus4_acceleration = {
             "Tank": ("3500", "1400", "2800", "1200", "2800", "4200", "1500", "700", "7000"),
             "Quality": ("6000", "2400", "4800", "1800", "4800", "7200", "2000", "900", "9000"),

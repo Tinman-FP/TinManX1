@@ -263,6 +263,11 @@ def desired_chamber(profile: dict[str, Any]) -> float:
     return float(CHAMBER_BY_TYPE.get(profile_type(profile), 0))
 
 
+def allows_passive_chamber_target(profile: dict[str, Any]) -> bool:
+    name = scalar(profile.get("name"))
+    return name == "PC-PBT-CF Codex-Push Plastic - Prusa CORE One L @Codex"
+
+
 def apply_profile_audit(profile: dict[str, Any], polymaker_prices: dict[tuple[str, str], PriceSource]) -> list[str]:
     changes: list[str] = []
     chamber = desired_chamber(profile)
@@ -271,7 +276,7 @@ def apply_profile_audit(profile: dict[str, Any], polymaker_prices: dict[tuple[st
         if floatish(profile.get("chamber_temperature", profile.get("chamber_temperatures"))) <= 0:
             set_like_existing(profile, "chamber_temperature", money(chamber))
             changes.append(f"chamber={money(chamber)}")
-        if active != "1":
+        if active != "1" and not allows_passive_chamber_target(profile):
             set_like_existing(profile, "activate_chamber_temp_control", "1")
             changes.append("active_chamber=1")
 
@@ -355,11 +360,14 @@ def validate(app_support: Path) -> None:
         active = scalar(profile.get("activate_chamber_temp_control"))
         if cost <= 0:
             failures.append(f"{name}: filament_cost={cost:g}")
-        if chamber > 0 and active != "1":
+        if chamber > 0 and active != "1" and not allows_passive_chamber_target(profile):
             failures.append(f"{name}: chamber={chamber:g} but active={active!r}")
     if failures:
         raise SystemExit("Codex filament audit validation failed:\n" + "\n".join(failures[:40]))
-    print("Codex filament audit validation passed: system profiles have positive costs and active chamber control where chamber > 0.")
+    print(
+        "Codex filament audit validation passed: system profiles have positive costs and "
+        "active chamber control where supported."
+    )
 
 
 def parse_args() -> argparse.Namespace:
