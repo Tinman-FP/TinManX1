@@ -1,7 +1,8 @@
 # Changelog
 
-## v2026.08.29-prusa-multitool-hardening.1
+## v2026.08.29-prusa-multitool-hardening.2
 
+- restored Linux GUI-test compilation by propagating the wxWidgets GTK port contract and removing an unnecessary dialog-header dependency from DeviceManager
 - separated physical toolhead vectors from logical material-slot vectors when normalizing mixed-nozzle and multi-material configurations
 - validated every filament-to-tool route against the selected printer's physical nozzle count and repaired stale routes deterministically
 - made full preset projection tolerate renamed or unavailable filament presets without dereferencing missing catalog entries
