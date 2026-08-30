@@ -11,6 +11,9 @@ on:
     - 'scripts/profile-contracts/**'
     - 'scripts/source-helpers/codex_filament_contracts.py'
     - 'scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py'
+    - 'scripts/source-helpers/normalize_tinman_machine_catalog.py'
+    - 'scripts/test_tinman_motion_envelope.py'
+    - 'resources/orcaslicer_codex/motion_envelope/**'
     - 'scripts/source-helpers/tinman_profile_manifest.py'
     - ".github/workflows/check_profiles.yml"
 
@@ -52,6 +55,7 @@ jobs:
         run: |
           python3 scripts/source-helpers/tinman_profile_manifest.py
           python3 scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py
+          python3 scripts/test_tinman_motion_envelope.py
 
       # download
       - name: Download

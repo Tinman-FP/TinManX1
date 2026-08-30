@@ -1,5 +1,14 @@
 # Changelog
 
+## v2026.08.29-motion-envelope.1
+
+- added fail-closed, nozzle-specific machine capability envelopes for validated Klipper CoreXY printers
+- require coupled velocity/acceleration validation, zero minimum cruise ratio, heat soak, 50 passing iterations, and an independent quality limit before an envelope can become active
+- apply calibrated values only as conservative ceilings, preserving lower Tank, Quality, Fast, and Draft feature settings and existing filament volumetric-flow limits
+- reject unsupported firmware, unsupported kinematics, independent maxima, duplicate active matches, and incomplete hardware fingerprints
+- repaired the machine-catalog generator so rerunning it preserves Snapmaker U1 mixed-nozzle machine and process profiles byte for byte
+- added motion-envelope unit, generator-integration, and CI profile-contract coverage
+
 ## v2026.08.29-prusa-multitool-hardening.2
 
 - restored Linux GUI-test compilation by propagating the wxWidgets GTK port contract and removing an unnecessary dialog-header dependency from DeviceManager

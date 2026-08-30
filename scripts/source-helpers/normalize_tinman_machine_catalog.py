@@ -21,9 +21,11 @@ from __future__ import annotations
 
 import argparse
 import copy
+import importlib.util
 import json
 import re
 import shutil
+import sys
 import time
 import uuid
 from dataclasses import dataclass
@@ -38,6 +40,13 @@ PROFILES_ROOT = REPO_ROOT / "resources" / "profiles"
 DEFAULT_APP_SUPPORT = Path.home() / "Library/Application Support/OrcaSlicer-Codex"
 DEFAULT_APP_PROFILES = Path("/Applications/TinManX1.app/Contents/Resources/profiles")
 DEFAULT_BACKUP_ROOT = Path.home() / ".tinmanx1" / "machine-profile-cleanup-backups"
+DEFAULT_SHIPPED_MOTION_REGISTRY = (
+    REPO_ROOT / "resources" / "orcaslicer_codex" / "motion_envelope" / "registry.json"
+)
+DEFAULT_USER_MOTION_REGISTRY = Path.home() / ".tinmanx1/motion-envelopes/registry.json"
+MOTION_ENVELOPE_MODULE = (
+    REPO_ROOT / "resources" / "orcaslicer_codex" / "motion_envelope" / "motion_envelope.py"
+)
 
 NOZZLES = ("0.4", "0.6", "0.8", "1.0")
 CONTRACT_VERSION = "5"
@@ -59,6 +68,19 @@ CONNECTION_OPTIONS = (
     "printhost_password",
     "printhost_ssl_ignore_revoke",
 )
+
+
+def load_motion_envelope_module() -> Any:
+    spec = importlib.util.spec_from_file_location("tinman_motion_envelope", MOTION_ENVELOPE_MODULE)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"unable to load motion-envelope engine: {MOTION_ENVELOPE_MODULE}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+MOTION_ENVELOPE = load_motion_envelope_module()
 
 
 @dataclass(frozen=True)
@@ -185,9 +207,23 @@ INDEX_VERSIONS = {
     "Prusa": "02.04.00.06",
     "Qidi": "02.04.02.13",
     "Ratrig": "02.04.00.03",
-    "Snapmaker": "02.04.00.08",
+    "Snapmaker": "02.04.00.11",
     "Sovol": "02.04.00.02",
     "TinManX1": "02.04.00.16",
+}
+
+INDEX_CONTRACT_VERSIONS = {
+    "Snapmaker": "6",
+}
+
+SNAPMAKER_MIXED_MACHINE = "Snapmaker U1 Live Mixed - TinMan Codex"
+SNAPMAKER_MIXED_SOURCE_MACHINE = "Snapmaker U1 (0.6 nozzle)"
+SNAPMAKER_MIXED_SOURCE_PROCESS = "0.20 Standard @Snapmaker U1 (0.4 nozzle)"
+SNAPMAKER_MIXED_PROCESS_IDS = {
+    "Tank": "SMU1LIVEMIXTANK016",
+    "Quality": "SMU1LIVEMIXQUAL020",
+    "Fast": "SMU1LIVEMIXFAST024",
+    "Draft": "SMU1LIVEMIXDRAFT028",
 }
 
 PROFILE_INDENTS: dict[str, int | str] = {
@@ -622,6 +658,7 @@ def canonical_process(
     source_name: str,
     source: dict[str, Any],
     mode: ProcessMode | None = None,
+    motion_envelopes: tuple[dict[str, Any], ...] = (),
 ) -> dict[str, Any]:
     name = process_name(family, nozzle, mode)
     data: dict[str, Any] = {
@@ -636,6 +673,12 @@ def canonical_process(
     }
     if mode is not None:
         data.update(mode_settings(mode, nozzle, family))
+        envelope = MOTION_ENVELOPE.find_active_envelope(
+            motion_envelopes, family.model, nozzle
+        )
+        if envelope is not None:
+            caps = MOTION_ENVELOPE.derive_caps(envelope, mode.name)
+            data = MOTION_ENVELOPE.apply_process_caps(data, caps)
     elif nozzle == "1.0":
         data.update(
             {
@@ -659,6 +702,7 @@ def canonical_machine(
     nozzle: str,
     source_name: str,
     source: dict[str, Any],
+    motion_envelopes: tuple[dict[str, Any], ...] = (),
 ) -> dict[str, Any]:
     name = family.canonical_name(nozzle)
     diameters, minimum, maximum = nozzle_arrays(source, family, nozzle)
@@ -710,6 +754,71 @@ def canonical_machine(
                 "machine_max_jerk_e": ["4"],
             }
         )
+    envelope = MOTION_ENVELOPE.find_active_envelope(
+        motion_envelopes, family.model, nozzle
+    )
+    if envelope is not None:
+        for key in (
+            MOTION_ENVELOPE.MACHINE_SPEED_KEYS
+            | MOTION_ENVELOPE.MACHINE_ACCELERATION_KEYS
+        ):
+            if key not in data and key in source:
+                data[key] = copy.deepcopy(source[key])
+        caps = MOTION_ENVELOPE.derive_caps(envelope, "Draft")
+        data = MOTION_ENVELOPE.apply_machine_caps(data, caps)
+    return data
+
+
+def snapmaker_mixed_machine() -> dict[str, Any]:
+    return {
+        "type": "machine",
+        "name": SNAPMAKER_MIXED_MACHINE,
+        "inherits": SNAPMAKER_MIXED_SOURCE_MACHINE,
+        "from": "system",
+        "instantiation": "true",
+        "printer_model": "Snapmaker U1",
+        "printer_variant": "0.6",
+        "printer_settings_id": SNAPMAKER_MIXED_MACHINE,
+        "nozzle_diameter": ["0.6", "0.4", "0.4", "0.6"],
+        "default_nozzle_volume_type": ["Standard"] * 4,
+        "min_layer_height": ["0.12", "0.08", "0.08", "0.12"],
+        "max_layer_height": ["0.42", "0.28", "0.28", "0.42"],
+        "default_print_profile": f"0.20mm Quality @{SNAPMAKER_MIXED_MACHINE}",
+        "setting_id": "SMU1LIVEMIX06040406",
+        "default_filament_profile": [DEFAULT_CODEX_FILAMENTS["Snapmaker U1"]],
+    }
+
+
+def snapmaker_mixed_process(mode: ProcessMode) -> dict[str, Any]:
+    layer = float("0.4") * mode.layer_factor
+    name = f"{layer:.2f}mm {mode.name} @{SNAPMAKER_MIXED_MACHINE}"
+    data: dict[str, Any] = {
+        "type": "process",
+        "name": name,
+        "inherits": SNAPMAKER_MIXED_SOURCE_PROCESS,
+        "from": "system",
+        "instantiation": "true",
+        "print_settings_id": name,
+        "compatible_printers": [
+            SNAPMAKER_MIXED_MACHINE,
+            "Snapmaker U1 Tooling - TinMan Codex",
+        ],
+        "setting_id": SNAPMAKER_MIXED_PROCESS_IDS[mode.name],
+    }
+    data.update(mode_settings(mode, "0.4"))
+    data.update(
+        {
+            "initial_layer_print_height": "0.20",
+            "line_width": "105%",
+            "initial_layer_line_width": "110%",
+            "outer_wall_line_width": "100%",
+            "inner_wall_line_width": "105%",
+            "top_surface_line_width": "100%",
+            "sparse_infill_line_width": "110%",
+            "internal_solid_infill_line_width": "105%",
+            "support_line_width": "100%",
+        }
+    )
     return data
 
 
@@ -759,7 +868,9 @@ def update_fibreseek_filament_compatibility(index: dict[str, Any], family: Machi
             write_json(PROFILES_ROOT / family.vendor / str(item["sub_path"]), data)
 
 
-def generate_repo_catalog() -> tuple[int, int]:
+def generate_repo_catalog(
+    motion_envelopes: tuple[dict[str, Any], ...] = (),
+) -> tuple[int, int]:
     families_by_vendor: dict[str, list[MachineFamily]] = {}
     for family in FAMILIES:
         families_by_vendor.setdefault(family.vendor, []).append(family)
@@ -841,7 +952,13 @@ def generate_repo_catalog() -> tuple[int, int]:
                     family.composite_second_nozzle is not None,
                 )
 
-                machine = canonical_machine(family, nozzle, source_machine_name, source_machine)
+                machine = canonical_machine(
+                    family,
+                    nozzle,
+                    source_machine_name,
+                    source_machine,
+                    motion_envelopes,
+                )
                 machine_rel = Path("machine") / "TinMan Codex" / f"{machine['name']}.json"
                 write_json(PROFILES_ROOT / vendor / machine_rel, machine)
                 kept_machines.append({"name": machine["name"], "sub_path": machine_rel.as_posix()})
@@ -858,7 +975,12 @@ def generate_repo_catalog() -> tuple[int, int]:
                             )
                         _, selected_process = preferred_entry
                     process = canonical_process(
-                        family, nozzle, selected_process_name, selected_process, mode
+                        family,
+                        nozzle,
+                        selected_process_name,
+                        selected_process,
+                        mode,
+                        motion_envelopes,
                     )
                     process_rel = Path("process") / "TinMan Codex" / f"{process['name']}.json"
                     write_json(PROFILES_ROOT / vendor / process_rel, process)
@@ -867,8 +989,45 @@ def generate_repo_catalog() -> tuple[int, int]:
                     )
                     process_count += 1
 
+                # Keep the live four-tool matrix next to the 0.4 mm U1
+                # processes, matching the stable selector order shipped in
+                # contract 6. These files used to be hand-maintained and were
+                # silently deleted whenever this generator was rerun.
+                if family.model == "Snapmaker U1" and nozzle == "0.4":
+                    for mixed_mode in PROCESS_MODES:
+                        mixed_process = snapmaker_mixed_process(mixed_mode)
+                        mixed_process_rel = (
+                            Path("process")
+                            / "TinMan Codex"
+                            / f"{mixed_process['name']}.json"
+                        )
+                        write_json(
+                            PROFILES_ROOT / vendor / mixed_process_rel,
+                            mixed_process,
+                        )
+                        kept_processes.append(
+                            {
+                                "name": mixed_process["name"],
+                                "sub_path": mixed_process_rel.as_posix(),
+                            }
+                        )
+                        process_count += 1
+
+        if vendor == "Snapmaker":
+            mixed_machine = snapmaker_mixed_machine()
+            mixed_machine_rel = (
+                Path("machine") / "TinMan Codex" / f"{SNAPMAKER_MIXED_MACHINE}.json"
+            )
+            write_json(PROFILES_ROOT / vendor / mixed_machine_rel, mixed_machine)
+            kept_machines.append(
+                {"name": SNAPMAKER_MIXED_MACHINE, "sub_path": mixed_machine_rel.as_posix()}
+            )
+            machine_count += 1
+
         index["version"] = INDEX_VERSIONS[vendor]
-        index["tinman_codex_machine_contract"] = CONTRACT_VERSION
+        index["tinman_codex_machine_contract"] = INDEX_CONTRACT_VERSIONS.get(
+            vendor, CONTRACT_VERSION
+        )
         index["machine_list"] = kept_machines
         index["process_list"] = kept_processes
         write_json(index_path, index)
@@ -1225,11 +1384,35 @@ def main() -> int:
     parser.add_argument("--app-support", type=Path, default=DEFAULT_APP_SUPPORT)
     parser.add_argument("--app-profiles", type=Path, default=DEFAULT_APP_PROFILES)
     parser.add_argument("--backup-root", type=Path, default=DEFAULT_BACKUP_ROOT)
+    parser.add_argument(
+        "--capability-envelopes",
+        type=Path,
+        help=(
+            "validated motion-envelope registry; apply-live uses "
+            "~/.tinmanx1/motion-envelopes/registry.json when present"
+        ),
+    )
     args = parser.parse_args()
 
-    machines, processes = generate_repo_catalog()
+    registry_path = args.capability_envelopes
+    if registry_path is None:
+        registry_path = (
+            DEFAULT_USER_MOTION_REGISTRY
+            if args.apply_live and DEFAULT_USER_MOTION_REGISTRY.is_file()
+            else DEFAULT_SHIPPED_MOTION_REGISTRY
+        )
+    if not registry_path.is_file():
+        raise FileNotFoundError(f"motion-envelope registry not found: {registry_path}")
+    motion_envelopes = tuple(MOTION_ENVELOPE.load_registry(registry_path))
+    active_envelopes = sum(
+        str(item.get("status", "")).strip().lower() == MOTION_ENVELOPE.ACTIVE_STATUS
+        for item in motion_envelopes
+    )
+
+    machines, processes = generate_repo_catalog(motion_envelopes)
     print(f"generated machine profiles: {machines}")
     print(f"generated canonical processes: {processes}")
+    print(f"motion envelopes: {active_envelopes} active from {registry_path}")
     if args.apply_live:
         backup, removed, printer_files = apply_live(args.app_support, args.app_profiles, args.backup_root)
         print(f"backup: {backup}")

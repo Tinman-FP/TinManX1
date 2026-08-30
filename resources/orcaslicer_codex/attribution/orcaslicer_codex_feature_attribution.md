@@ -55,3 +55,12 @@ The TinManX1 port preserves continuous-fiber lane metadata and review gates for 
 - Implementation credit: OpenAI Codex / GPT-5 for the TinManX1 postprocessor wrapper, real-score gating, RatRig T0/T1 detection, max-flow governor integration path, visible calibration-lane gate, profile hook, and verification scaffolding.
 
 The TinManX1 auto-PA path only applies PA, adaptive PA, or max-flow changes when real same-print calibration score files are available for the detected target printer and a named TinMan calibration lane is visible in the sliced object list. Without real scores or a visible edge-strip lane, it preserves the model G-code and emits an audit stamp rather than applying hidden or synthetic calibration data.
+
+## Machine Capability Envelopes
+
+- Source: William Tinney / Tinman-FP requirements for measured, conservative per-printer motion limits that preserve TinManX1's Tank, Quality, Fast, and Draft process intent.
+- Research credit: Anonoei's MIT-licensed Klipper Auto Speed project for the missed-step search concept. No Klipper Auto Speed source code is vendored or copied into TinManX1.
+- Method references: official Klipper resonance-compensation and motion-limit documentation, Andrew Ellis' Print Tuning Guide, and Frix-x's GPL-3.0 Shake&Tune vibration-profile methodology.
+- Implementation credit: OpenAI Codex / GPT-5 for the fail-closed envelope schema, coupled-point validation, conservative profile compiler, catalog integration, and regression tests.
+
+TinManX1 treats synthetic no-skip results only as mechanical evidence. An envelope cannot affect profiles until a coupled point passes at least 50 heated iterations with zero minimum cruise ratio and a separate quality limit is recorded. Active envelopes only lower existing profile values; they do not replace volumetric-flow, pressure-advance, cooling, adhesion, or inspected-print calibration.

@@ -42,6 +42,9 @@ REQUIRED_FILES = [
     "resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json",
     "resources/profiles/TinManX1/filament/TinManX1 PETG @FibreSeek Seeker 3.json",
     "resources/profiles/TinManX1/filament/CFC PETG + X-CCF @FibreSeek Seeker 3.json",
+    "resources/orcaslicer_codex/motion_envelope/README.md",
+    "resources/orcaslicer_codex/motion_envelope/motion_envelope.py",
+    "resources/orcaslicer_codex/motion_envelope/registry.json",
     "scripts/source-helpers/audit_fiberseek_gcode_contract.py",
     "scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py",
     "scripts/source-helpers/orcaslicer_codex_arc_support_inplace_adapter.py",
@@ -55,6 +58,7 @@ REQUIRED_FILES = [
     "scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py",
     "scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py",
     "scripts/source-helpers/normalize_tinman_machine_catalog.py",
+    "scripts/test_tinman_motion_envelope.py",
     "scripts/source-helpers/tinman_profile_manifest.py",
     "src/libslic3r/TinManMachineProfileContract.cpp",
     "src/libslic3r/TinManMachineProfileContract.hpp",
@@ -105,6 +109,9 @@ ATTRIBUTION_MARKERS = [
     "Moonraker",
     "CNC Kitchen",
     "ModBot",
+    "Anonoei",
+    "Andrew Ellis",
+    "Frix-x",
     "MechaniCalc",
     "FibreSeek",
 ]
@@ -183,6 +190,7 @@ def main() -> int:
         ([sys.executable, "scripts/orca_extra_profile_check.py"], "profile contract validation"),
         ([sys.executable, "scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py"], "CORE One L HF catalog audit"),
         ([sys.executable, "scripts/source-helpers/tinman_profile_manifest.py"], "profile checksum manifest"),
+        ([sys.executable, "scripts/test_tinman_motion_envelope.py"], "motion-envelope contract"),
     )
     for command, label in release_checks:
         result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
