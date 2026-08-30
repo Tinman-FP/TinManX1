@@ -4172,7 +4172,6 @@ void MainFrame::jump_to_monitor(std::string dev_id)
     };
 
     select_printer_webview();
-    CallAfter(select_printer_webview);
     return;
 }
 

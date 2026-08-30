@@ -2495,7 +2495,6 @@ void TabPrint::build()
         for (const char *opt_key : {
             "wave_overhangs",
             "wave_overhangs_instead_of_bridges",
-            "wave_overhang_algorithm",
             "support_remaining_areas_after_wave_overhangs",
             "wave_overhang_min_angle",
             "wave_overhang_min_length",
@@ -2509,7 +2508,6 @@ void TabPrint::build()
             "wave_overhang_minimum_width",
             "wave_overhang_min_new_area",
             "wave_overhang_flow_mm3_per_mm",
-            "wave_overhang_ring_overlap",
             "wave_overhang_fringe_reinforcement_max_cover_to_real",
             "wave_overhang_fringe_reinforcement_max_cover_area",
             "wave_overhang_fringe_contact_compensation_max_over_cap",
@@ -2522,6 +2520,7 @@ void TabPrint::build()
             "wave_overhang_travel_speed",
             "wave_overhang_end_retract_length",
             "wave_overhang_fan_speed",
+            "wave_overhang_aux_fan_speed",
             "wave_overhang_nozzle_temp",
             "wave_overhang_min_wave_time",
             "wave_overhang_min_layer_time",
@@ -2531,7 +2530,9 @@ void TabPrint::build()
             "wave_overhang_floor_hilbert_density",
             "wave_overhang_floor_print_speed",
             "wave_overhang_floor_perimeter_speed",
+            "wave_overhang_floor_speed_ramp",
             "wave_overhang_floor_fan_speed",
+            "wave_overhang_floor_aux_fan_speed",
             "wave_overhang_debug_gcode",
         }) {
             if (!m_config->has(opt_key)) {
@@ -2781,7 +2782,6 @@ void TabPrint::build()
             optgroup = page->new_optgroup(L("Wave overhangs"), L"param_overhang");
             optgroup->append_single_option_line("wave_overhangs");
             optgroup->append_single_option_line("wave_overhangs_instead_of_bridges");
-            optgroup->append_single_option_line("wave_overhang_algorithm");
             optgroup->append_single_option_line("support_remaining_areas_after_wave_overhangs");
 
             optgroup = page->new_optgroup(L("Wave detection"), L"param_overhang");
@@ -2799,7 +2799,6 @@ void TabPrint::build()
             optgroup->append_single_option_line("wave_overhang_minimum_width");
             optgroup->append_single_option_line("wave_overhang_min_new_area");
             optgroup->append_single_option_line("wave_overhang_flow_mm3_per_mm");
-            optgroup->append_single_option_line("wave_overhang_ring_overlap");
 
             optgroup = page->new_optgroup(L("Wave fringe reinforcement"), L"param_overhang");
             optgroup->append_single_option_line("wave_overhang_fringe_reinforcement_max_cover_to_real");
@@ -2820,6 +2819,7 @@ void TabPrint::build()
 
             optgroup = page->new_optgroup(L("Wave cooling"), L"param_cooling");
             optgroup->append_single_option_line("wave_overhang_fan_speed");
+            optgroup->append_single_option_line("wave_overhang_aux_fan_speed");
             optgroup->append_single_option_line("wave_overhang_nozzle_temp");
             optgroup->append_single_option_line("wave_overhang_min_wave_time");
             optgroup->append_single_option_line("wave_overhang_min_layer_time");
@@ -2831,7 +2831,9 @@ void TabPrint::build()
             optgroup->append_single_option_line("wave_overhang_floor_hilbert_density");
             optgroup->append_single_option_line("wave_overhang_floor_print_speed");
             optgroup->append_single_option_line("wave_overhang_floor_perimeter_speed");
+            optgroup->append_single_option_line("wave_overhang_floor_speed_ramp");
             optgroup->append_single_option_line("wave_overhang_floor_fan_speed");
+            optgroup->append_single_option_line("wave_overhang_floor_aux_fan_speed");
 
             optgroup = page->new_optgroup(L("Wave debug"), L"param_overhang");
             optgroup->append_single_option_line("wave_overhang_debug_gcode");

@@ -9,12 +9,13 @@ class AppConfig;
 class DynamicPrintConfig;
 
 // Non-curated machines are unaffected. Curated machines expose only the four
-// generated "TinMan Codex" nozzle profiles, regardless of local/cloud copies.
+// generated "TinMan Codex" nozzle profiles plus declared mixed-tool profiles,
+// regardless of local/cloud copies.
 bool tinmanx_machine_preset_allowed(const std::string &preset_name, const std::string &machine_hint = {});
 
-// True only for one of the canonical TinMan machine/nozzle presets. Runtime
-// connection values on these presets are maintained separately from the
-// printable profile and must not make the profile appear modified.
+// True only for a canonical TinMan machine/nozzle preset or a declared mixed-
+// tool preset. Runtime connection values on these presets are maintained
+// separately from the printable profile and must not make it appear modified.
 bool tinmanx_managed_machine_preset(const std::string &preset_name, const std::string &machine_hint = {});
 bool tinmanx_runtime_connection_option(const std::string &option_name);
 

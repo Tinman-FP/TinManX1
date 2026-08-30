@@ -94,7 +94,7 @@
         "nil"
     ],
     "filament_max_volumetric_speed": [
-        "6"
+        "8"
     ],
     "filament_ramming_volumetric_speed": [
         "-1"
@@ -304,7 +304,7 @@
     "filament_adhesiveness_category": [
         "500"
     ],
-    "setting_id": "codex-5ac30d5dd223",
+    "setting_id": "xUdiHhQBDRZ4AuWn",
     "filament_id": "CODX5AC30D5D",
     "activate_chamber_temp_control": [
         "1"

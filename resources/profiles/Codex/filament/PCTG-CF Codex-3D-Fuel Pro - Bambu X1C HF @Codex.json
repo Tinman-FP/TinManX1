@@ -116,5 +116,8 @@
     "filament_id": "CODX8E6CADA4",
     "instantiation": "true",
     "type": "filament",
-    "setting_id": "77vat3t314SLVJge"
+    "setting_id": "77vat3t314SLVJge",
+    "filament_extruder_variant": [
+        "Direct Drive High Flow"
+    ]
 }

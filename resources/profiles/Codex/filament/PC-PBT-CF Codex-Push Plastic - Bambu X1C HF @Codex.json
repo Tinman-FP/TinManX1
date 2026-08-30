@@ -184,7 +184,7 @@
     "required_nozzle_HRC": [
         "40"
     ],
-    "setting_id": "codex-05496e491c37",
+    "setting_id": "VY8yRrUzI9X48I6y",
     "slow_down_for_layer_cooling": [
         "1"
     ],
@@ -216,6 +216,9 @@
     ],
     "filament_price_source": [
         "Push Plastic Carbon Fiber PC+PBT 500 g spool, normalized to 1 kg"
+    ],
+    "filament_extruder_variant": [
+        "Direct Drive High Flow"
     ],
     "description": "Push Plastic Carbon Fiber PC+PBT profile based on the manufacturer's 250-260 C nozzle, 90-100 C bed, and hardened-nozzle guidance.",
     "filament_notes": [

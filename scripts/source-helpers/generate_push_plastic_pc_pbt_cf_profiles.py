@@ -14,6 +14,7 @@ import copy
 import hashlib
 import json
 import shutil
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -21,10 +22,15 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS_DIR = ROOT / "scripts"
 PROFILES = ROOT / "resources/profiles"
 CODEX_DIR = PROFILES / "Codex/filament"
 DEFAULT_APP_SUPPORT = Path.home() / "Library/Application Support/OrcaSlicer-Codex"
 DEFAULT_BACKUP_ROOT = Path.home() / ".tinmanx1/pc-pbt-cf-profile-backups"
+
+sys.path.insert(0, str(SCRIPTS_DIR))
+
+from assign_vendor_setting_ids import generate_preset_setting_id
 
 MATERIAL = "PC-PBT-CF"
 MANUFACTURER = "Push Plastic"
@@ -32,6 +38,18 @@ PRUSA_CORE_ONE_FILAMENT_TOKEN = "PCPBTCF"
 PRICE_PER_KG = "99.98"
 PRODUCT_URL = "https://www.pushplastic.com/products/carbon-fiber-pc-pbt-filament-1-75mm-500g"
 PRICE_SOURCE = "Push Plastic Carbon Fiber PC+PBT 500 g spool, normalized to 1 kg"
+
+# Prusa's CORE One engineering-filament presets set pressure advance in the
+# filament start gcode, with a nozzle-size lookup, rather than Orca's generic
+# pressure-advance toggle. Keep the CORE One L on that firmware-native path and
+# preserve TinMan's optional chamber-exhaust command after it.
+PRUSA_FILAMENT_START_GCODE = """; Filament gcode
+M900 K{if nozzle_diameter[filament_extruder_id]==0.4}0.07{elsif nozzle_diameter[filament_extruder_id]==0.3}0.09{elsif nozzle_diameter[filament_extruder_id]==0.35}0.08{elsif nozzle_diameter[filament_extruder_id]==0.6}0.04{elsif nozzle_diameter[filament_extruder_id]==0.5}0.05{elsif nozzle_diameter[filament_extruder_id]==0.8}0.02{else}0{endif}
+M572 S{if nozzle_diameter[filament_extruder_id]==0.4}0.05{elsif nozzle_diameter[filament_extruder_id]==0.5}0.035{elsif nozzle_diameter[filament_extruder_id]==0.6}0.025{elsif nozzle_diameter[filament_extruder_id]==0.8}0.016{elsif nozzle_diameter[filament_extruder_id]==0.25}0.14{elsif nozzle_diameter[filament_extruder_id]==0.3}0.09{else}0{endif}
+M142 S45 ; set heatbreak target temp
+{if activate_air_filtration[current_extruder] && support_air_filtration}
+M106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]}
+{endif}"""
 
 GROUPS = (
     ("Bambu H2D", "Bambu H2D"),
@@ -62,20 +80,27 @@ def scalar(value: Any, fallback: str = "") -> str:
 
 def stable_ids(name: str) -> tuple[str, str]:
     digest = hashlib.sha1(name.encode("utf-8")).hexdigest()
-    return f"codex-{digest[:12]}", f"CODX{digest[:8].upper()}"
+    return generate_preset_setting_id("Codex", "filament", name), f"CODX{digest[:8].upper()}"
 
 
 def codex_name(display_group: str) -> str:
     return f"{MATERIAL} Codex-{MANUFACTURER} - {display_group} @Codex"
 
 
-def material_settings(active_chamber: bool, flow_ratio: str, *, prusa: bool) -> dict[str, Any]:
+def material_settings(
+    active_chamber: bool,
+    flow_ratio: str,
+    *,
+    prusa: bool,
+    qidi_high_flow: bool,
+) -> dict[str, Any]:
+    chamber_target = "40" if prusa else ("55" if active_chamber else "0")
     settings: dict[str, Any] = {
         "default_filament_colour": ["#161616"],
         "filament_cost": [PRICE_PER_KG],
         "filament_density": ["1.2"],
         "filament_flow_ratio": [flow_ratio],
-        "filament_max_volumetric_speed": ["6"],
+        "filament_max_volumetric_speed": ["10" if prusa else ("8" if qidi_high_flow else "6")],
         # Prusa firmware compares this metadata byte-for-byte with the loaded
         # filament name. Its custom-material field is limited to seven ASCII
         # characters, and the CORE One L uses PCPBTCF for this material.
@@ -91,12 +116,12 @@ def material_settings(active_chamber: bool, flow_ratio: str, *, prusa: bool) -> 
         "eng_plate_temp_initial_layer": ["100"],
         "textured_plate_temp": ["100"],
         "textured_plate_temp_initial_layer": ["100"],
-        "activate_chamber_temp_control": ["1" if active_chamber else "0"],
-        "chamber_temperature": ["55" if active_chamber else "0"],
-        "chamber_temperatures": ["55" if active_chamber else "0"],
-        "fan_min_speed": ["10"],
-        "fan_max_speed": ["25"],
-        "overhang_fan_speed": ["25"],
+        "activate_chamber_temp_control": ["0" if prusa else ("1" if active_chamber else "0")],
+        "chamber_temperature": [chamber_target],
+        "chamber_temperatures": [chamber_target],
+        "fan_min_speed": ["15" if prusa else "10"],
+        "fan_max_speed": ["35" if prusa else "25"],
+        "overhang_fan_speed": ["45" if prusa else "25"],
         "required_nozzle_HRC": ["40"],
         "filament_price_source": [PRICE_SOURCE],
         "filament_price_source_url": [PRODUCT_URL],
@@ -108,6 +133,17 @@ def material_settings(active_chamber: bool, flow_ratio: str, *, prusa: bool) -> 
             "Dry before printing. Use a hardened 0.4 mm or larger nozzle; Push Plastic recommends 0.6 mm."
         ],
     }
+    if prusa:
+        settings.update(
+            {
+                "slow_down_layer_time": ["20"],
+                # This documents the active 0.6 mm value for profile audits;
+                # the nozzle-aware M572 command above is what programs it.
+                "enable_pressure_advance": ["0"],
+                "pressure_advance": ["0.025"],
+                "filament_start_gcode": [PRUSA_FILAMENT_START_GCODE],
+            }
+        )
     return settings
 
 
@@ -127,6 +163,7 @@ def generate_codex_profiles() -> list[tuple[str, dict[str, Any]]]:
                 active_chamber,
                 flow_ratio,
                 prusa=source_group == "Prusa Core One",
+                qidi_high_flow=source_group == "Qidi X-Plus 4",
             )
         )
         source.update(

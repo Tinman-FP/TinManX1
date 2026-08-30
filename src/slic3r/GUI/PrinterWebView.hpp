@@ -48,6 +48,7 @@ public:
     void UpdateState();
     void OnClose(wxCloseEvent& evt);
     void OnError(wxWebViewEvent& evt);
+    void OnNavigating(wxWebViewEvent& evt);
     void OnLoaded(wxWebViewEvent& evt);
     void OnNewWindow(wxWebViewEvent& evt);
     void OnScriptMessage(wxWebViewEvent& evt);
@@ -75,6 +76,7 @@ private:
     wxString m_apikey;
     bool m_apikey_sent;
     wxString m_url_deferred;
+    std::string m_requested_endpoint;
     std::unique_ptr<PrinterWebViewHandler> m_handler;
     std::shared_ptr<int> m_prusa_camera_token;
     std::string m_prusa_printer_host;

@@ -152,6 +152,16 @@ bool is_canonical_machine_name(std::string_view name, std::string_view model, st
     return consume(model, offset) && consume(separator, offset) && consume(nozzle, offset) && consume(suffix, offset);
 }
 
+bool is_snapmaker_u1_mixed_tooling_name(std::string_view name, std::string_view model)
+{
+    if (model != "Snapmaker U1")
+        return false;
+
+    const std::string_view bare_name = bare_preset_name(name);
+    return bare_name == "Snapmaker U1 Live Mixed - TinMan Codex" ||
+           bare_name == "Snapmaker U1 Tooling - TinMan Codex";
+}
+
 const AppConfig::VendorMap &canonical_machine_catalog()
 {
     static const AppConfig::VendorMap vendors = [] {
@@ -258,6 +268,9 @@ bool tinmanx_managed_machine_preset(const std::string &preset_name, const std::s
         return false;
 
     const std::string_view bare_name = bare_preset_name(preset_name);
+    if (is_snapmaker_u1_mixed_tooling_name(bare_name, model))
+        return true;
+
     constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
     for (const std::string_view nozzle : nozzles)
         if (is_canonical_machine_name(bare_name, model, nozzle))
@@ -424,9 +437,12 @@ bool tinmanx_process_preset_allowed(const std::string &preset_name, const std::s
 
     const std::string_view process_name = bare_preset_name(preset_name);
     const std::string_view printer_name = bare_preset_name(active_printer_name);
+    const std::string_view process_printer_name =
+        is_snapmaker_u1_mixed_tooling_name(printer_name, model) ?
+            std::string_view("Snapmaker U1 Live Mixed - TinMan Codex") : printer_name;
     size_t marker = process_name.find('@');
     while (marker != std::string_view::npos) {
-        if (process_name.substr(marker + 1, printer_name.size()) == printer_name)
+        if (process_name.substr(marker + 1, process_printer_name.size()) == process_printer_name)
             return true;
         marker = process_name.find('@', marker + 1);
     }

@@ -1,5 +1,52 @@
 # Changelog
 
+## v2026.08.29-wave-overhangs.1
+
+- updated TinManX1's native Wave Overhangs engine to the current upstream `v0.4.0` wavefront contract and retired the removed Kaiser/LaSO selector
+- added authoritative solid backing floors above angled waves, optional Hilbert floor paths, gradual floor and wall speed recovery, and distinct wave/floor/perimeter path roles
+- connected main and auxiliary cooling, nozzle-temperature restoration, wave travel speed, minimum wave/layer dwell, and end retraction to emitted G-code
+- moved Wave Overhang diagnostics outside firmware-parsed header blocks and retained TinManX1's hybrid-support, fringe-reinforcement, fallback-seeding, and route-diagnostic extensions
+- added a source regression contract that rejects retired algorithm fields and verifies the complete geometry-to-G-code control path
+
+## v2026.08.23-snapmaker-tooling.5
+
+- preserves the four-tool Snapmaker U1 tooling preset as a child of the bundled mixed-nozzle profile, keeping its mixed Tank, Quality, Fast, and Draft processes compatible after nozzle edits and restarts
+
+## v2026.08.23-snapmaker-tooling.4
+
+- Keeps the Snapmaker U1 mixed-tool preset selected across application startup instead of migrating it to the single 0.6 mm profile.
+- Exposes the mixed-nozzle Tank, Quality, Fast, and Draft process set for both the bundled and user-saved U1 tooling profiles.
+- Adds regression coverage for mixed U1 machine and process visibility while retaining the curated single-nozzle profile catalog.
+
+## v2026.08.23-snapmaker-tooling.3
+
+- Replaces the ambiguous single U1 nozzle selector in Prepare with independent T0, T1, T2, and T3 nozzle controls.
+- Persists the selected four-tool arrangement in one managed U1 tooling preset without unsaved-profile prompts.
+- Updates per-tool layer-height limits with each nozzle change and keeps mixed-tool Quality, Fast, Draft, and Tank processes compatible.
+
+## v2026.08.23-snapmaker-tooling.2
+
+- Adds a Snapmaker U1 Live Mixed machine preset matching the installed T0/T3 0.6 mm and T1/T2 0.4 mm nozzles.
+- Adds Quality, Fast, Draft, and Tank processes that use percentage-based line widths so each U1 tool slices from its own nozzle diameter.
+- Keeps nozzle choice tied to the selected U1 filament/tool slot, eliminating a separate and potentially contradictory nozzle selector.
+
+## v2026.08.23-snapmaker-tooling.1
+
+- read the Snapmaker U1's authoritative four-tool nozzle inventory from firmware product metadata, with validated saved-variable fallback for older firmware
+- subscribe to every live Klipper extruder object and carry the U1 tool IDs, diameters, materials, flow classes, and temperatures through the native device payload
+- display mixed U1 tooling by physical tool ID and validate sliced nozzle diameter/flow against the correct tool without rewriting or dirtying the selected preset
+- keep the U1 out of the legacy two-head nozzle selector, preserving the physical T0 0.6, T1 0.4, T2 0.4, and T3 0.6 arrangement
+
+## v2026.08.20-hardening.1
+
+- made multi-extruder and multi-filament preset projection tolerate empty, incomplete, and out-of-range transient UI state instead of aborting during printer changes or slicing
+- centralized generated filament setting IDs and material contracts so maintenance scripts cannot silently replace valid catalog identities or overwrite tuned PET-CF settings
+- normalized the managed Qidi and Prusa machine/process catalogs, including canonical 0.4, 0.6, 0.8, and 1.0 mm high-flow selections and Quality, Fast, Draft, and Tank processes
+- expanded profile validation to cover the manifest, CORE One L high-flow catalog, chamber/material contracts, and all 66 vendor bundles in both local and CI release checks
+- fixed Apple Silicon CI packaging under macOS Bash 3.2 and corrected an allocation-size precedence error in line splitting
+- hardened pending cloud-preset import and HTTP upload telemetry against incomplete metadata and failed transfer-speed queries
+- added regression and AddressSanitizer coverage for crash-prone preset projection, then passed the complete 245-test native suite
+
 ## v2026.08.20-bambu-lifecycle.1
 
 - replaced the destructible Bambu plug-in singleton with a process-lifetime manager so late wxWidgets destructors cannot dereference a deleted instance

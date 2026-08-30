@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -42,6 +43,7 @@ REQUIRED_FILES = [
     "resources/profiles/TinManX1/filament/TinManX1 PETG @FibreSeek Seeker 3.json",
     "resources/profiles/TinManX1/filament/CFC PETG + X-CCF @FibreSeek Seeker 3.json",
     "scripts/source-helpers/audit_fiberseek_gcode_contract.py",
+    "scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py",
     "scripts/source-helpers/orcaslicer_codex_arc_support_inplace_adapter.py",
     "scripts/source-helpers/orcaslicer_codex_arc_support_transform.py",
     "scripts/source-helpers/orcaslicer_codex_fiber_metadata_sidecar.py",
@@ -176,6 +178,17 @@ def iter_files() -> list[Path]:
 
 def main() -> int:
     errors: list[str] = []
+
+    release_checks = (
+        ([sys.executable, "scripts/orca_extra_profile_check.py"], "profile contract validation"),
+        ([sys.executable, "scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py"], "CORE One L HF catalog audit"),
+        ([sys.executable, "scripts/source-helpers/tinman_profile_manifest.py"], "profile checksum manifest"),
+    )
+    for command, label in release_checks:
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip()
+            errors.append(f"{label} failed: {detail}")
 
     k2_profile_dir = ROOT / "resources/profiles/Creality/machine/TinMan Codex"
     forbidden_k2_startup = (

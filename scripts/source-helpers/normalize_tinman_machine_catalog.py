@@ -40,7 +40,7 @@ DEFAULT_APP_PROFILES = Path("/Applications/TinManX1.app/Contents/Resources/profi
 DEFAULT_BACKUP_ROOT = Path.home() / ".tinmanx1" / "machine-profile-cleanup-backups"
 
 NOZZLES = ("0.4", "0.6", "0.8", "1.0")
-CONTRACT_VERSION = "3"
+CONTRACT_VERSION = "5"
 NAMESPACE = uuid.UUID("c1f4d9e2-7a3b-5c8d-9e0f-1a2b3c4d5e6f")
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 CONNECTION_SECTION = "tinman_machine_connections"
@@ -120,7 +120,14 @@ FAMILIES = (
     MachineFamily(
         "Prusa",
         "Prusa CORE One L",
-        source_series("Prusa CORE One L {nozzle} nozzle"),
+        {
+            "0.4": "Prusa CORE One L HF 0.4 nozzle",
+            "0.6": "Prusa CORE One L HF 0.6 nozzle",
+            # Prusa has no native 1.0 mm CORE One L preset. The generated
+            # 1.0 profile falls back to this HF 0.8 machine contract and
+            # overrides its complete nozzle geometry below.
+            "0.8": "Prusa CORE One L HF 0.8 nozzle",
+        },
         aliases=("Prusa CORE One L HF",),
     ),
     MachineFamily(
@@ -175,8 +182,8 @@ INDEX_VERSIONS = {
     "BBL": "02.01.00.20",
     "Creality": "02.03.02.76",
     "Elegoo": "02.04.00.07",
-    "Prusa": "02.04.00.04",
-    "Qidi": "02.04.02.11",
+    "Prusa": "02.04.00.06",
+    "Qidi": "02.04.02.13",
     "Ratrig": "02.04.00.03",
     "Snapmaker": "02.04.00.08",
     "Sovol": "02.04.00.02",
@@ -275,28 +282,28 @@ PRUSA_CORE_ONE_L_FIRST_LAYER = {
 
 PRUSA_CORE_ONE_L_PROCESS_BASES = {
     "0.4": {
-        "Tank": "0.20mm STRUCTURAL @CORE One L 0.4",
-        "Quality": "0.20mm STRUCTURAL @CORE One L 0.4",
-        "Fast": "0.20mm SPEED @CORE One L 0.4",
-        "Draft": "0.20mm SPEED @CORE One L 0.4",
+        "Tank": "0.25mm STRUCTURAL @CORE One L HF 0.4",
+        "Quality": "0.25mm STRUCTURAL @CORE One L HF 0.4",
+        "Fast": "0.25mm SPEED @CORE One L HF 0.4",
+        "Draft": "0.28mm DRAFT @CORE One L HF 0.4",
     },
     "0.6": {
-        "Tank": "0.25mm STRUCTURAL @CORE One L 0.6",
-        "Quality": "0.25mm STRUCTURAL @CORE One L 0.6",
-        "Fast": "0.32mm SPEED @CORE One L 0.6",
-        "Draft": "0.32mm SPEED @CORE One L 0.6",
+        "Tank": "0.32mm STRUCTURAL @CORE One L HF 0.6",
+        "Quality": "0.32mm STRUCTURAL @CORE One L HF 0.6",
+        "Fast": "0.40mm SPEED @CORE One L HF 0.6",
+        "Draft": "0.40mm SPEED @CORE One L HF 0.6",
     },
     "0.8": {
-        "Tank": "0.40mm QUALITY @CORE One L 0.8",
-        "Quality": "0.40mm QUALITY @CORE One L 0.8",
-        "Fast": "0.55mm DRAFT @CORE One L 0.8",
-        "Draft": "0.55mm DRAFT @CORE One L 0.8",
+        "Tank": "0.30mm STRUCTURAL @CORE One L HF 0.8",
+        "Quality": "0.40mm STRUCTURAL @CORE One L HF 0.8",
+        "Fast": "0.40mm SPEED @CORE One L HF 0.8",
+        "Draft": "0.55mm SPEED @CORE One L HF 0.8",
     },
     "1.0": {
-        "Tank": "0.40mm QUALITY @CORE One L 0.8",
-        "Quality": "0.40mm QUALITY @CORE One L 0.8",
-        "Fast": "0.55mm DRAFT @CORE One L 0.8",
-        "Draft": "0.55mm DRAFT @CORE One L 0.8",
+        "Tank": "0.40mm STRUCTURAL @CORE One L HF 0.8",
+        "Quality": "0.40mm STRUCTURAL @CORE One L HF 0.8",
+        "Fast": "0.55mm SPEED @CORE One L HF 0.8",
+        "Draft": "0.55mm SPEED @CORE One L HF 0.8",
     },
 }
 
@@ -502,24 +509,82 @@ def mode_settings(
         "travel_acceleration": scaled(8000, acceleration),
     }
 
+    if family is not None and family.model in {"Qidi X-Plus 4", "QidiMaxEz"}:
+        # Every installed Plus 4 / Max EZ nozzle is high flow. Spend that
+        # capacity mainly on hidden toolpaths so surface quality remains the
+        # limiting contract. The mechanically identical Plus 4 and Max EZ use
+        # the same reviewed 10,000 mm/s^2 acceleration table.
+        speed_factors = {
+            "outer_wall_speed": 1.10,
+            "inner_wall_speed": 1.20,
+            "small_perimeter_speed": 1.10,
+            "sparse_infill_speed": 1.20,
+            "internal_solid_infill_speed": 1.15,
+            "top_surface_speed": 1.08,
+            "gap_infill_speed": 1.15,
+            "support_speed": 1.15,
+        }
+        for key, factor in speed_factors.items():
+            settings[key] = str(max(1, round(float(settings[key]) * factor)))
+
+        plus4_acceleration = {
+            "Tank": ("3500", "1400", "2800", "1200", "2800", "4200", "1500", "700", "7000"),
+            "Quality": ("6000", "2400", "4800", "1800", "4800", "7200", "2000", "900", "9000"),
+            "Fast": ("8000", "3200", "6500", "2400", "6500", "9000", "2500", "1000", "10000"),
+            "Draft": ("9000", "3600", "7500", "2800", "7500", "10000", "2800", "1200", "10000"),
+        }
+        acceleration_keys = (
+            "default_acceleration",
+            "outer_wall_acceleration",
+            "inner_wall_acceleration",
+            "top_surface_acceleration",
+            "internal_solid_infill_acceleration",
+            "sparse_infill_acceleration",
+            "bridge_acceleration",
+            "initial_layer_acceleration",
+            "travel_acceleration",
+        )
+        settings.update(dict(zip(acceleration_keys, plus4_acceleration[mode.name])))
+        if family.model == "QidiMaxEz":
+            settings["travel_speed"] = "500"
+        return settings
+
     if family is None or family.model != "Prusa CORE One L":
         return settings
 
     settings.update(PRUSA_CORE_ONE_L_FIRST_LAYER[nozzle])
     is_speed_mode = mode.name in {"Fast", "Draft"}
     large_nozzle = nozzle in {"0.8", "1.0"}
+    if nozzle == "0.4" and mode.name == "Fast":
+        # The generic matrix left the 0.4 HF profile below the hotend's useful
+        # range even on hidden paths. These remain below Prusa's corresponding
+        # HF SPEED values, while exterior and top-surface speeds stay unchanged.
+        settings.update(
+            {
+                "inner_wall_speed": "180",
+                "sparse_infill_speed": "275",
+                "internal_solid_infill_speed": "170",
+                "gap_infill_speed": "100",
+            }
+        )
+    elif nozzle == "0.4" and mode.name == "Draft":
+        # Match Prusa's HF Draft sparse-infill ceiling while retaining the
+        # slower TinMan exterior-wall speed.
+        settings["sparse_infill_speed"] = "300"
     settings.update(
         {
             "default_acceleration": "3000",
-            "outer_wall_acceleration": "1500" if not is_speed_mode or large_nozzle else "3000",
-            "inner_wall_acceleration": "2500" if not is_speed_mode or large_nozzle else "5000",
-            "top_surface_acceleration": "2000",
+            "outer_wall_acceleration": (
+                "1500" if not is_speed_mode else ("2500" if large_nozzle else "3000")
+            ),
+            "inner_wall_acceleration": (
+                "2500" if not is_speed_mode else ("3000" if large_nozzle else "6000")
+            ),
+            "top_surface_acceleration": "1500" if is_speed_mode and large_nozzle else "2000",
             "internal_solid_infill_acceleration": (
-                "4000" if not is_speed_mode or large_nozzle else "5000"
+                "4000" if not is_speed_mode else ("5000" if large_nozzle else "6000")
             ),
-            "sparse_infill_acceleration": (
-                "7000" if large_nozzle else ("6000" if is_speed_mode else "5000")
-            ),
+            "sparse_infill_acceleration": "7000" if is_speed_mode else "6000",
             "bridge_acceleration": "1000" if large_nozzle else "1500",
             "initial_layer_acceleration": "500",
             "travel_acceleration": "6000",
@@ -528,6 +593,26 @@ def mode_settings(
     if is_speed_mode and large_nozzle:
         settings["outer_wall_line_width"] = "1.00" if nozzle == "0.8" else "1.20"
         settings["inner_wall_line_width"] = settings["outer_wall_line_width"]
+    support_interface_speed = {"0.4": "25", "0.6": "25", "0.8": "30", "1.0": "35"}
+    support_xy_distance = {"0.4": "0.30", "0.6": "0.40", "0.8": "0.50", "1.0": "0.60"}
+    branch_diameter = {"0.4": "3", "0.6": "4", "0.8": "5.5", "1.0": "6.5"}
+    tip_diameter = {"0.4": "0.8", "0.6": "1.2", "0.8": "1.6", "1.0": "2.0"}
+    settings.update(
+        {
+            "support_interface_speed": support_interface_speed[nozzle],
+            "support_object_xy_distance": support_xy_distance[nozzle],
+            "support_remove_small_overhang": "0",
+            "support_type": "tree(auto)",
+            "support_style": "tree_hybrid",
+            "support_threshold_angle": "30",
+            "tree_support_branch_diameter": branch_diameter[nozzle],
+            "tree_support_tip_diameter": tip_diameter[nozzle],
+            "tree_support_wall_count": "2",
+            "seam_position": "aligned_back",
+        }
+    )
+    if nozzle == "0.6" and mode.name == "Tank":
+        settings["wall_loops"] = "5"
     return settings
 
 
@@ -595,8 +680,36 @@ def canonical_machine(
         ),
         "setting_id": setting_id(family.vendor, "machine", name),
     }
+    if family.model == "Bambu Lab X1 Carbon":
+        # Do not rely on the upstream X1C inheritance chain for the installed
+        # hardware declaration: every X1C nozzle in this fleet is hardened and
+        # high flow, including the generated 1.0 mm profile.
+        data["nozzle_type"] = ["hardened_steel"] * len(diameters)
     if default_filament := DEFAULT_CODEX_FILAMENTS.get(family.model):
         data["default_filament_profile"] = [default_filament]
+    if family.model in {"Qidi X-Plus 4", "QidiMaxEz"}:
+        # The user's Max EZ and Plus 4 are mechanically identical. Keep both
+        # canonical slicer contracts aligned with their 10,000 mm/s^2 live
+        # Klipper limit; velocity remains owned by each machine base.
+        data.update(
+            {
+                "machine_max_acceleration_x": ["10000"],
+                "machine_max_acceleration_y": ["10000"],
+                "machine_max_acceleration_z": ["500"],
+                "machine_max_acceleration_e": ["5000"],
+                "machine_max_acceleration_extruding": ["10000"],
+                "machine_max_acceleration_retracting": ["10000"],
+                "machine_max_acceleration_travel": ["10000"],
+                "machine_max_speed_x": ["600"],
+                "machine_max_speed_y": ["600"],
+                "machine_max_speed_z": ["20"],
+                "machine_max_speed_e": ["80"],
+                "machine_max_jerk_x": ["9"],
+                "machine_max_jerk_y": ["9"],
+                "machine_max_jerk_z": ["4"],
+                "machine_max_jerk_e": ["4"],
+            }
+        )
     return data
 
 

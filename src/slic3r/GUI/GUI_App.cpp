@@ -6482,14 +6482,25 @@ bool GUI_App::check_preset_parent_available(const std::pair<std::string, std::ma
 
 void GUI_App::add_pending_vendor_preset(const std::pair<std::string, std::map<std::string, std::string>>& preset_data)
 {
+    const auto type_it = preset_data.second.find(BBL_JSON_KEY_TYPE);
+    const auto inherits_it = preset_data.second.find(BBL_JSON_KEY_INHERITS);
+    if (type_it == preset_data.second.end() || inherits_it == preset_data.second.end() || inherits_it->second.empty()) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": incomplete pending preset metadata, skipping";
+        return;
+    }
+
     Preset::Type type;
-    if (preset_data.second.at(BBL_JSON_KEY_TYPE) == PRESET_IOT_PRINT_TYPE)
+    if (type_it->second == PRESET_IOT_PRINT_TYPE)
         type = Preset::Type::TYPE_PRINT;
-    else if (preset_data.second.at(BBL_JSON_KEY_TYPE) == PRESET_IOT_PRINTER_TYPE)
+    else if (type_it->second == PRESET_IOT_PRINTER_TYPE)
         type = Preset::Type::TYPE_PRINTER;
-    else if (preset_data.second.at(BBL_JSON_KEY_TYPE) == PRESET_IOT_FILAMENT_TYPE)
+    else if (type_it->second == PRESET_IOT_FILAMENT_TYPE)
         type = Preset::Type::TYPE_FILAMENT;
-    std::string inherits_name = preset_data.second.at(BBL_JSON_KEY_INHERITS);
+    else {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": unsupported pending preset type " << type_it->second;
+        return;
+    }
+    const std::string& inherits_name = inherits_it->second;
 
     // Add the corresponding vendor
     std::string vendor_name = PresetBundle::find_preset_vendor(inherits_name, type);

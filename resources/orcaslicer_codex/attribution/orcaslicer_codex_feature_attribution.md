@@ -6,12 +6,12 @@ This note tracks external feature sources ported into the TinManX1 source branch
 
 - Source: `dennisklappe/OrcaSlicer-WaveOverhangs`
 - Upstream URL: `https://github.com/dennisklappe/OrcaSlicer-WaveOverhangs`
-- Ported source snapshot: `v0.3.2` / `379c18470f251b3839db12726a2c3a4e4135bfb8`
-- Algorithm credit: Janis A. Andersons (`andersonsjanis`) for the Andersons wave-overhang algorithm.
-- Algorithm credit: Rieks Kaiser (`riekskaiser`) for Kaiser LaSO wave-overhang reference work.
+- Ported source snapshot: `v0.4.0` / `f6a901d57cd128c922c81591ceae4fd0b7cc5524`
+- Research credit: Janis A. Andersons, Salome Sanchez, and Tom Vaneker for the wave-inspired path-planning method published in *Additive Manufacturing Letters* (`10.1016/j.addlet.2026.100392`).
+- Algorithm credit: Janis A. Andersons (`andersonsjanis`) for the wavefront generator used by the current implementation.
 - OrcaSlicer port credit: Dennis Klappe (`dennisklappe`) and WaveOverhangs contributors.
 
-The TinManX1 port keeps Wave Overhangs disabled by default and emits `WAVE_OVERHANG_*` debug markers for inspection when enabled.
+The TinManX1 port keeps Wave Overhangs disabled by default, follows the upstream `v0.4.0` single-wavefront contract, and emits firmware-safe `WAVE_OVERHANG_*` diagnostics outside the G-code header when debug output is enabled. TinManX1 retains its hybrid-support remainder handling, fringe filtering, reinforcement, fallback seeding, and route diagnostics while adding upstream solid backing floors for angled overhangs, gradual floor-speed recovery, independent main/auxiliary cooling, temperature restoration, travel control, dwell timing, and end retraction.
 
 ## Arc Overhangs
 

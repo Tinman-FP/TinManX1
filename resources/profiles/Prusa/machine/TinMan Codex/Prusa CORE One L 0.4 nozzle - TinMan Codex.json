@@ -1,7 +1,7 @@
 {
     "type": "machine",
     "name": "Prusa CORE One L 0.4 nozzle - TinMan Codex",
-    "inherits": "Prusa CORE One L 0.4 nozzle",
+    "inherits": "Prusa CORE One L HF 0.4 nozzle",
     "from": "system",
     "instantiation": "true",
     "printer_model": "Prusa CORE One L",

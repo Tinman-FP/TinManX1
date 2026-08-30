@@ -14,7 +14,10 @@ from codex_filament_contracts import (  # noqa: E402
     ACTIVE_CHAMBER_BUCKETS,
     FIBERON_PET_CF_FIELD_TUNE,
     MICRO_SWISS_BUCKETS,
+    QIDI_HF_MVS_OVERRIDES,
     REFERENCE_FIELDS,
+    X1C_FIBERON_PET_CF_HF_TUNE,
+    X1C_PCTG_FIELD_TUNE,
     chamber_target,
     load_contract,
     reference_for_bucket,
@@ -405,6 +408,20 @@ PET_CF_TUNING_CONTRACT = {
     "slow_down_min_speed": "6",
     "filament_max_volumetric_speed": "3.2",
 }
+PET_CF_X1C_HF_TUNING_CONTRACT = {
+    **PET_CF_TUNING_CONTRACT,
+    "filament_max_volumetric_speed": "6",
+    "eng_plate_temp": "80",
+    "eng_plate_temp_initial_layer": "80",
+    "hot_plate_temp": "80",
+    "hot_plate_temp_initial_layer": "80",
+    "textured_plate_temp": "80",
+    "textured_plate_temp_initial_layer": "80",
+    "fan_max_speed": "40",
+    "overhang_fan_speed": "70",
+    "overhang_fan_threshold": "10%",
+    "slow_down_layer_time": "35",
+}
 PET_CF_STALE_NOTE_FRAGMENTS = (
     "use 300C nozzle",
     "flow 1.08",
@@ -563,7 +580,12 @@ def check_tinman_material_tuning_contracts(profiles_dir):
         data = json.loads(path.read_bytes())
         rel = path.relative_to(profiles_dir)
         if " - Bambu H2D " not in data["name"]:
-            errors = check_profile_values(rel, data, PET_CF_TUNING_CONTRACT, errors)
+            contract = (
+                PET_CF_X1C_HF_TUNING_CONTRACT
+                if " - Bambu X1C HF " in data["name"]
+                else PET_CF_TUNING_CONTRACT
+            )
+            errors = check_profile_values(rel, data, contract, errors)
             errors = check_profile_values(rel, data, {"pressure_advance": "0.028"}, errors)
             errors = check_pet_cf_notes(rel, data, errors)
         if any(
@@ -595,11 +617,26 @@ def check_codex_reference_values(rel, data, material, manufacturer, bucket, cont
         if key not in values:
             continue
         if material == "PET-CF" and manufacturer == "Fiberon" and bucket != "Bambu H2D":
-            if key in FIBERON_PET_CF_FIELD_TUNE:
+            x1c_override = (
+                bucket == "Bambu X1C HF"
+                and key in X1C_FIBERON_PET_CF_HF_TUNE
+            )
+            if key in FIBERON_PET_CF_FIELD_TUNE or x1c_override:
                 continue
-        expected = values[key] if bucket == "Bambu H2D" else vector(
-            values[key], high_flow=bucket in MICRO_SWISS_BUCKETS
-        )
+        qidi_mvs = QIDI_HF_MVS_OVERRIDES.get((material, manufacturer))
+        if bucket == "Qidi X-Plus 4" and key == "filament_max_volumetric_speed" and qidi_mvs:
+            expected = [qidi_mvs]
+        elif (
+            material == "PCTG"
+            and manufacturer == "Generic"
+            and bucket == "Bambu X1C HF"
+            and key in X1C_PCTG_FIELD_TUNE
+        ):
+            expected = X1C_PCTG_FIELD_TUNE[key]
+        else:
+            expected = values[key] if bucket == "Bambu H2D" else vector(
+                values[key], high_flow=bucket in MICRO_SWISS_BUCKETS
+            )
         actual = data.get(key)
         if actual != expected:
             errors += 1
@@ -639,6 +676,13 @@ def check_codex_filament_thermal_contracts(profiles_dir):
         if bucket == "Bambu X1C HF" and material in {"PPS", "PPS-CF", "PPS-GF"}:
             errors += 1
             print_error(f"{rel} exposes a material without an X1C-compatible Bambu preset")
+        if bucket == "Bambu X1C HF":
+            variant = normalized_values(data.get("filament_extruder_variant"))
+            if variant != ["Direct Drive High Flow"]:
+                errors += 1
+                print_error(
+                    f"{rel} expected the X1C hardened-HF extruder variant, got {variant!r}"
+                )
 
         for key in positive_keys:
             values = positive_numeric_values(data, key)
@@ -647,10 +691,31 @@ def check_codex_filament_thermal_contracts(profiles_dir):
                 print_error(f"{rel} requires a positive {key}, got {data.get(key)!r}")
 
         entry = contract["profiles"].get(f"{material}|{manufacturer}", {})
-        expected_chamber = chamber_target(material, entry, contract) if bucket in ACTIVE_CHAMBER_BUCKETS else 0
-        if expected_chamber:
-            errors = check_active_chamber(rel, data, expected_chamber, errors)
+        passive_prusa_pc_pbt_cf = (
+            material == "PC-PBT-CF"
+            and manufacturer == "Push Plastic"
+            and bucket == "Prusa CORE One L"
+        )
+        if passive_prusa_pc_pbt_cf:
+            active = normalized_values(data.get("activate_chamber_temp_control"))
+            chamber = positive_numeric_values(
+                data, "chamber_temperature", "chamber_temperatures"
+            )
+            if active != ["0"] or not chamber or any(value != 40 for value in chamber):
+                errors += 1
+                print_error(
+                    f"{rel} expected a passive 40C CORE One L chamber target, "
+                    f"got active={active}, chamber={chamber}"
+                )
         else:
+            expected_chamber = (
+                chamber_target(material, entry, contract)
+                if bucket in ACTIVE_CHAMBER_BUCKETS
+                else 0
+            )
+        if not passive_prusa_pc_pbt_cf and expected_chamber:
+            errors = check_active_chamber(rel, data, expected_chamber, errors)
+        elif not passive_prusa_pc_pbt_cf:
             errors = check_inactive_chamber(rel, data, errors)
         errors = check_codex_reference_values(
             rel, data, material, manufacturer, bucket, contract, errors

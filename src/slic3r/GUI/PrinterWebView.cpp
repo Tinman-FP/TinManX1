@@ -83,6 +83,58 @@ std::string host_from_printer_url(std::string url)
     return port == std::string::npos ? url : url.substr(0, port);
 }
 
+std::string normalized_printer_endpoint(std::string url)
+{
+    boost::algorithm::trim(url);
+    if (url.empty())
+        return {};
+
+    std::string scheme = "http";
+    const size_t scheme_end = url.find("://");
+    if (scheme_end != std::string::npos) {
+        scheme = url.substr(0, scheme_end);
+        url.erase(0, scheme_end + 3);
+    }
+    boost::algorithm::to_lower(scheme);
+
+    const size_t authority_end = url.find_first_of("/?#");
+    if (authority_end != std::string::npos)
+        url.resize(authority_end);
+    const size_t at = url.rfind('@');
+    if (at != std::string::npos)
+        url.erase(0, at + 1);
+    boost::algorithm::to_lower(url);
+
+    // Treat the implicit HTTP port and explicit default ports alike while
+    // preserving non-default ports, which can identify a different service.
+    if ((scheme == "http" && boost::algorithm::iends_with(url, ":80")) ||
+        (scheme == "https" && boost::algorithm::iends_with(url, ":443")))
+        url.erase(url.rfind(':'));
+
+    return url.empty() ? std::string() : scheme + "://" + url;
+}
+
+bool is_legacy_router_path(std::string url)
+{
+    boost::algorithm::trim(url);
+    const size_t scheme_end = url.find("://");
+    const size_t path_start = url.find('/', scheme_end == std::string::npos ? 0 : scheme_end + 3);
+    if (path_start == std::string::npos)
+        return false;
+
+    std::string path = url.substr(path_start);
+    const size_t suffix = path.find_first_of("?#");
+    if (suffix != std::string::npos)
+        path.resize(suffix);
+    boost::algorithm::to_lower(path);
+
+    // These are Netgear/Orbi administration pages, never printer UI routes.
+    // WKWebView can synthesize them on an IP-address origin even after its
+    // network cache and website data have been rebuilt. If allowed, the
+    // navigation suspends all active Mainsail/Moonraker WebSockets.
+    return path == "/top.html" || path == "/accesscontrol_show.htm";
+}
+
 std::string normalize_prusa_camera_url(std::string url)
 {
     boost::algorithm::trim(url);
@@ -227,6 +279,7 @@ PrinterWebView::PrinterWebView(wxWindow *parent)
     , m_apikey()
     , m_apikey_sent(false)
     , m_url_deferred()
+    , m_requested_endpoint()
     , m_handler(std::make_unique<PrinterWebViewHandler>(*this))
     , m_prusa_camera_token(std::make_shared<int>(0))
     , m_prusa_camera_generation(0)
@@ -287,6 +340,7 @@ PrinterWebView::PrinterWebView(wxWindow *parent)
 #endif
 
     m_browser->Bind(wxEVT_WEBVIEW_ERROR, &PrinterWebView::OnError, this);
+    m_browser->Bind(wxEVT_WEBVIEW_NAVIGATING, &PrinterWebView::OnNavigating, this);
     m_browser->Bind(wxEVT_WEBVIEW_LOADED, &PrinterWebView::OnLoaded, this);
     m_browser->Bind(wxEVT_WEBVIEW_NEWWINDOW, &PrinterWebView::OnNewWindow, this);
     m_browser->Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, &PrinterWebView::OnScriptMessage, this);
@@ -336,11 +390,43 @@ void PrinterWebView::load_url(wxString& url, wxString apikey)
 //    this->Raise();
     if (m_browser == nullptr)
         return;
+
+    // Separate machine and status event paths may express the same address
+    // with a scheme, trailing slash, or API key. Reloading for those duplicate
+    // requests creates overlapping WebKit/Moonraker WebSockets and makes the
+    // Device tab appear to reconnect continuously.
+    const std::string endpoint = normalized_printer_endpoint(into_u8(url));
+    if (!endpoint.empty() && endpoint == m_requested_endpoint) {
+        // An empty credential on a duplicate event must not erase one already
+        // installed. If a real credential arrives later, install it once and
+        // perform the single reload required for WebView user scripts.
+        const bool credential_changed = !apikey.IsEmpty() && apikey != m_apikey;
+        if (credential_changed) {
+            m_apikey = apikey;
+            m_apikey_sent = false;
+            SendAPIKey();
+            if (IsShown())
+                m_browser->Reload();
+        }
+        BOOST_LOG_TRIVIAL(info) << "PrinterWebView ignored duplicate endpoint " << endpoint
+                                << " (credential update=" << credential_changed << ")";
+        return;
+    }
+
+    BOOST_LOG_TRIVIAL(info) << "PrinterWebView loading endpoint " << endpoint
+                            << " (credential present=" << !apikey.IsEmpty() << ")";
+
+    m_requested_endpoint = endpoint;
     m_apikey = apikey;
     m_apikey_sent = false;
     m_handler = create_printer_webview_handler(*this);
     m_url_deferred = url;
     update_prusa_camera(url);
+
+    // Install request credentials before the first navigation. Installing the
+    // user script from OnLoaded() requires another full WebView reload, which
+    // suspends the live Mainsail WebSockets and briefly empties the dashboard.
+    SendAPIKey();
 
     if (this->IsShown()) {
         m_browser->LoadURL(url);
@@ -438,6 +524,9 @@ void PrinterWebView::prompt_for_prusa_camera_url()
 
 bool PrinterWebView::Show(bool show)
 {
+    BOOST_LOG_TRIVIAL(info) << "PrinterWebView::Show(" << show << ")"
+                            << " deferred=" << !m_url_deferred.empty()
+                            << " previously_shown=" << IsShown();
     if (show && !m_url_deferred.empty()) {
         wxString url = m_url_deferred;
         m_url_deferred.clear();
@@ -448,6 +537,7 @@ bool PrinterWebView::Show(bool show)
 
 void PrinterWebView::reload()
 {
+    BOOST_LOG_TRIVIAL(info) << "PrinterWebView::reload explicit reload";
     m_browser->Reload();
 }
 
@@ -472,10 +562,12 @@ void PrinterWebView::OnClose(wxCloseEvent& evt)
 
 void PrinterWebView::SendAPIKey()
 {
-    if (m_apikey_sent || m_apikey.IsEmpty())
+    if (m_apikey_sent)
         return;
     m_apikey_sent   = true;
-    wxString script = wxString::Format(R"(
+    wxString script;
+    if (!m_apikey.IsEmpty()) {
+        script = wxString::Format(R"(
     // Check if window.fetch exists before overriding
     if (window.fetch) {
         const originalFetch = window.fetch;
@@ -486,7 +578,8 @@ void PrinterWebView::SendAPIKey()
         };
     }
 )",
-                                       m_apikey);
+                                  m_apikey);
+    }
     m_browser->RemoveAllUserScripts();
     
     // RemoveAllUserScripts causes WebView to forget about our script message handler, 
@@ -502,8 +595,8 @@ void PrinterWebView::SendAPIKey()
     inject_vue_resize_workaround(m_browser);
 #endif
 
-    m_browser->AddUserScript(script);
-    m_browser->Reload();
+    if (!script.IsEmpty())
+        m_browser->AddUserScript(script);
 }
 
 void PrinterWebView::OnError(wxWebViewEvent &evt)
@@ -538,10 +631,23 @@ void PrinterWebView::OnError(wxWebViewEvent &evt)
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": error loading page %1% %2% %3% %4%") %evt.GetURL() %evt.GetTarget() %e %evt.GetString();
 }
 
+void PrinterWebView::OnNavigating(wxWebViewEvent& evt)
+{
+    const std::string url = into_u8(evt.GetURL());
+    if (!m_requested_endpoint.empty() &&
+        normalized_printer_endpoint(url) == m_requested_endpoint &&
+        is_legacy_router_path(url)) {
+        BOOST_LOG_TRIVIAL(warning) << "PrinterWebView blocked invalid legacy-router navigation " << url
+                                   << " target=" << into_u8(evt.GetTarget());
+        evt.Veto();
+    }
+}
+
 void PrinterWebView::OnLoaded(wxWebViewEvent& evt)
 {
     if (evt.GetURL().IsEmpty())
         return;
+    BOOST_LOG_TRIVIAL(info) << "PrinterWebView::OnLoaded " << into_u8(evt.GetURL());
     //ORCA: url loaded successfully, safe to clear
     m_url_deferred.clear();
     SendAPIKey();

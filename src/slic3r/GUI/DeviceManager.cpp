@@ -3422,6 +3422,9 @@ int MachineObject::parse_json(std::string tunnel, std::string payload, bool key_
 
                             DevNozzleSystemParser::ParseV1_0(jj["nozzle_type"], jj["nozzle_diameter"], m_nozzle_system, flag_e3d);
                         }
+                        if (jj.contains("tinman_tooling")) {
+                            DevNozzleSystemParser::ParseTinManTooling(jj["tinman_tooling"], m_nozzle_system);
+                        }
                     }
 
 #pragma region upgrade

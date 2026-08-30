@@ -1150,26 +1150,14 @@ R"JS(
   function placePanel(panel) {
     if (!panel) return false;
 
-    panel.className = 'tinman-qidi-box-card v-card v-sheet collapsable-card mb-2 mb-sm-4 ' + fluiddThemeClass();
-
-    const consoleCard = findFluiddCardByTitle(['console']);
-    if (consoleCard && consoleCard.parentNode) {
-      panel.classList.remove('tq-floating-fallback');
-      consoleCard.parentNode.insertBefore(panel, consoleCard);
-      return true;
-    }
-
-    const temperatureCard = findFluiddCardByTitle(['temperature', 'temperatures']);
-    if (temperatureCard && temperatureCard.parentNode) {
-      panel.classList.remove('tq-floating-fallback');
-      temperatureCard.parentNode.insertBefore(panel, temperatureCard.nextSibling);
-      return true;
-    }
-
-    panel.classList.add('tq-floating-fallback');
-    if (!document.body.contains(panel)) {
+    // Mainsail owns its dashboard card grid through Vue. Adding a foreign child
+    // to that managed tree causes Vue to remount the dashboard on subsequent
+    // status renders, which tears down and recreates every Moonraker WebSocket.
+    // Keep the Tinman panel at body level so its polling and controls cannot
+    // invalidate Mainsail's virtual DOM.
+    panel.className = 'tinman-qidi-box-card v-card v-sheet collapsable-card mb-2 mb-sm-4 tq-floating-fallback ' + fluiddThemeClass();
+    if (panel.parentNode !== document.body)
       document.body.appendChild(panel);
-    }
     return false;
   }
 )JS"

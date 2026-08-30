@@ -18,6 +18,10 @@ TEST_CASE("TinMan curated machines expose only canonical nozzle presets", "[Pres
         "__subscribed/team/Qidi X-Plus 4 0.8 nozzle - TinMan Codex", "Qidi X-Plus 4"));
     CHECK(tinmanx_machine_preset_allowed(
         "__subscribed/team/Qidi X-Plus 4 0.6 nozzle - TinMan Codex", "qIdI pLuS 4"));
+    CHECK(tinmanx_machine_preset_allowed(
+        "Snapmaker U1 Live Mixed - TinMan Codex", "Snapmaker U1"));
+    CHECK(tinmanx_machine_preset_allowed(
+        "Snapmaker U1 Tooling - TinMan Codex", "Snapmaker U1"));
 
     CHECK_FALSE(tinmanx_machine_preset_allowed(
         "Qidi X-Plus 4 0.6 nozzle", "Qidi X-Plus 4"));
@@ -71,6 +75,24 @@ TEST_CASE("TinMan curated machines expose only their canonical process presets",
         "0.20mm STRUCTURAL @CORE One L 0.4", "Prusa CORE One L 0.4 nozzle"));
     CHECK(tinmanx_process_preset_allowed(
         "My Experimental Process", "My Experimental Printer"));
+}
+
+TEST_CASE("Snapmaker U1 tooling exposes the four mixed nozzle processes", "[Preset][TinMan]")
+{
+    for (const std::string &printer : {
+             "Snapmaker U1 Live Mixed - TinMan Codex",
+             "Snapmaker U1 Tooling - TinMan Codex"}) {
+        CHECK(tinmanx_process_preset_allowed(
+            "0.16mm Tank @Snapmaker U1 Live Mixed - TinMan Codex", printer));
+        CHECK(tinmanx_process_preset_allowed(
+            "0.20mm Quality @Snapmaker U1 Live Mixed - TinMan Codex", printer));
+        CHECK(tinmanx_process_preset_allowed(
+            "0.24mm Fast @Snapmaker U1 Live Mixed - TinMan Codex", printer));
+        CHECK(tinmanx_process_preset_allowed(
+            "0.28mm Draft @Snapmaker U1 Live Mixed - TinMan Codex", printer));
+        CHECK_FALSE(tinmanx_process_preset_allowed(
+            "0.30mm Quality @Snapmaker U1 0.6 nozzle - TinMan Codex", printer));
+    }
 }
 
 TEST_CASE("TinMan machine catalog replaces cloud-restored variants", "[Preset][TinMan]")

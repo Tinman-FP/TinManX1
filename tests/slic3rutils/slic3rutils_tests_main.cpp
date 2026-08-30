@@ -172,6 +172,47 @@ TEST_CASE("Snapmaker saved filament metadata remains a missing-live-data fallbac
     CHECK(SnapmakerPrinterAgent::resolve_filament_type("", "", "") == "PLA");
 }
 
+TEST_CASE("Snapmaker product metadata is authoritative for mixed U1 nozzles", "[SnapmakerPrinterAgent]")
+{
+    using Slic3r::SnapmakerPrinterAgent;
+
+    const nlohmann::json product = {{"nozzle_diameter", {0.6, 0.4, 0.4, 0.6}}};
+    const nlohmann::json saved = {
+        {"u1_t0_nozzle_size", 0.4}, {"u1_t0_nozzle_type", "hardened_steel"},
+        {"u1_t1_nozzle_size", 0.6}, {"u1_t1_nozzle_type", "stainless_steel"},
+        {"u1_t2_nozzle_size", 0.6}, {"u1_t2_nozzle_type", "hardened_steel"},
+        {"u1_t3_nozzle_size", 0.4}, {"u1_t3_nozzle_type", "hardened_steel"}
+    };
+
+    const auto nozzles = SnapmakerPrinterAgent::parse_nozzle_metadata(product, saved);
+    REQUIRE(nozzles.size() == 4);
+    CHECK(nozzles[0].diameter == Catch::Approx(0.6));
+    CHECK(nozzles[1].diameter == Catch::Approx(0.4));
+    CHECK(nozzles[2].diameter == Catch::Approx(0.4));
+    CHECK(nozzles[3].diameter == Catch::Approx(0.6));
+    CHECK(nozzles[0].type == "hardened_steel");
+    CHECK(nozzles[1].type == "stainless_steel");
+}
+
+TEST_CASE("Snapmaker saved nozzle metadata is a validated firmware fallback", "[SnapmakerPrinterAgent]")
+{
+    using Slic3r::SnapmakerPrinterAgent;
+
+    const nlohmann::json saved = {
+        {"u1_t0_nozzle_size", 0.6}, {"u1_t0_nozzle_type", "HARDENED_STEEL"},
+        {"u1_t1_nozzle_size", 3.0}, {"u1_t1_nozzle_type", "brass"},
+        {"u1_t2_nozzle_size", 0.4}, {"u1_t2_nozzle_type", "unknown_material"}
+    };
+
+    const auto nozzles = SnapmakerPrinterAgent::parse_nozzle_metadata(nlohmann::json::object(), saved);
+    REQUIRE(nozzles.size() == 2);
+    CHECK(nozzles[0].tool_id == 0);
+    CHECK(nozzles[0].type == "hardened_steel");
+    CHECK(nozzles[1].tool_id == 2);
+    CHECK(nozzles[1].diameter == Catch::Approx(0.4));
+    CHECK(nozzles[1].type == "undefine");
+}
+
 TEST_CASE("Creality CFS material normalization respects complete material tokens", "[CrealityPrintAgent]")
 {
     using Slic3r::CrealityPrintAgent;

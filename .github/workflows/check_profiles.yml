@@ -5,8 +5,13 @@ on:
     - main
     paths:
     - 'resources/profiles/**'
+    - 'manifests/tinmanx1-profile-resources.sha256'
     - 'scripts/lint_tinmanx1_fiberseek_profiles.py'
     - 'scripts/orca_extra_profile_check.py'
+    - 'scripts/profile-contracts/**'
+    - 'scripts/source-helpers/codex_filament_contracts.py'
+    - 'scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py'
+    - 'scripts/source-helpers/tinman_profile_manifest.py'
     - ".github/workflows/check_profiles.yml"
 
   workflow_dispatch:
@@ -42,6 +47,11 @@ jobs:
             exit "${status}"
           fi
           exit "${lint_status}"
+
+      - name: Verify TinMan profile manifest and CORE One L HF catalog
+        run: |
+          python3 scripts/source-helpers/tinman_profile_manifest.py
+          python3 scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py
 
       # download
       - name: Download

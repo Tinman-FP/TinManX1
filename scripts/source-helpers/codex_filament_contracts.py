@@ -135,6 +135,72 @@ FIBERON_PET_CF_FIELD_TUNE = {
     "pressure_advance": ["0.028"],
 }
 
+# The 2026-08-18 X1C 0.6 HF alignment-block print stayed attached and the
+# long walls remained solid, but the short upper posts curled into the nozzle.
+# The sliced job used the H2D preset, only about 18% steady part cooling, no
+# overhang boost for the shallow ledges, and a 3.2 mm3/s ceiling.  Retain the
+# field-proven melt temperature, flow ratio, and PA while restoring a
+# conservative portion of Polymaker's original X1 cooling/flow headroom.
+X1C_FIBERON_PET_CF_HF_TUNE = {
+    "filament_max_volumetric_speed": ["6"],
+    "eng_plate_temp": ["80"],
+    "eng_plate_temp_initial_layer": ["80"],
+    "hot_plate_temp": ["80"],
+    "hot_plate_temp_initial_layer": ["80"],
+    "textured_plate_temp": ["80"],
+    "textured_plate_temp_initial_layer": ["80"],
+    "fan_max_speed": ["40"],
+    "overhang_fan_speed": ["70"],
+    "overhang_fan_threshold": ["10%"],
+    "slow_down_layer_time": ["35"],
+    "filament_notes": [
+        "TinManX1 X1C HF PET-CF refinement 2026-08-18: based on the "
+        "0.6 mm Built Plate Alignment Blocks print, retain 285C first layer / "
+        "280C print, 80C bed, flow 1.00, and pressure advance 0.028; use a "
+        "6 mm3/s HF ceiling, 40% normal fan after layer 3, 70% overhang fan "
+        "from 10% overlap, and a 35 s small-layer target. This targets curled "
+        "upper posts and nozzle pickup without weakening the proven bulk-wall "
+        "tune. Dry at 100C for 10h and print from a dry box."
+    ],
+}
+
+# Conservative, material-specific flow ceilings for the user's high-flow Qidi
+# Plus 4 and Max EZ nozzle fleet. These are deliberately not a blanket
+# multiplier: already-fast manufacturer presets retain their reviewed values,
+# while flexible, PPS-family, PAHT, and field-tuned PET-CF profiles stay at
+# their proven ceilings.
+QIDI_HF_MVS_OVERRIDES = {
+    ("ABS", "Polymaker"): "18",
+    ("ABS", "RatRig Punk"): "18",
+    ("ABS-CF", "Generic"): "12",
+    ("ASA", "Polymaker"): "15",
+    ("ASA-CF", "Fiberon"): "10",
+    ("HIPS", "Generic"): "10",
+    ("HT-PLA-CF", "Polymaker"): "18",
+    ("HT-PLA-GF", "Polymaker"): "18",
+    ("PA", "Generic"): "14",
+    ("PA", "Polymaker"): "14",
+    ("PA-GF", "Fiberon"): "14",
+    ("PA12-CF", "Fila Matrix"): "12",
+    ("PA6-CF", "Polymaker"): "14",
+    ("PA6-GF", "Fiberon"): "14",
+    ("PA612-CF", "Fiberon"): "10",
+    ("PA612-ESD", "Fiberon"): "10",
+    ("PAKV", "Filamatrix"): "10",
+    ("PC", "Polymaker"): "6",
+    ("PC+PBT", "Push Plastic"): "8",
+    ("PC-CF", "Generic"): "10",
+    ("PC-PBT", "Push Plastic"): "8",
+    ("PC-PBT-CF", "Push Plastic"): "8",
+    ("PCTG-CF", "3D-Fuel Pro"): "12",
+    ("PETG", "Polymaker"): "13",
+    ("PETG-CF", "Fiberon"): "13",
+    ("PETG-CF", "Generic"): "12",
+    ("PLA", "Polymaker"): "18",
+    ("PLA-CF", "Polymaker"): "18",
+    ("PLA-GF", "Polymaker"): "18",
+}
+
 # A plate-sized 0.6 mm X1C print exposed two problems in the generic Bambu
 # baseline: the fixed PA value overrode flow-dynamics calibration, and the
 # first cooled layer remained too soft at the perimeter. Keep the conservative
@@ -193,6 +259,9 @@ def reference_for_bucket(
 def chamber_target(material: str, entry: dict[str, Any], contract: dict[str, Any]) -> int:
     if material in NO_ACTIVE_CHAMBER_MATERIALS:
         return 0
+    explicit_target = positive_int(entry.get("chamber_target"))
+    if explicit_target:
+        return explicit_target
     if material in {"PCTG", "PCTG-CF", "PET-CF"}:
         return FALLBACK_CHAMBER_TARGETS[material]
     h2d_name = entry.get("h2d")
@@ -227,14 +296,39 @@ def apply_contract(
                 if key in values:
                     data[key] = vector(values[key], high_flow=high_flow)
 
+    if bucket == "Bambu X1C HF":
+        # Every nozzle installed on this user's X1C is a hardened high-flow
+        # nozzle.  Make the filament contract single-variant so Orca cannot
+        # silently retain the Standard column from an older project or preset.
+        data["filament_extruder_variant"] = ["Direct Drive High Flow"]
+
     if material == "PET-CF" and manufacturer == "Fiberon" and bucket != "Bambu H2D":
         data.update(copy.deepcopy(FIBERON_PET_CF_FIELD_TUNE))
+
+    if material == "PET-CF" and manufacturer == "Fiberon" and bucket == "Bambu X1C HF":
+        data.update(copy.deepcopy(X1C_FIBERON_PET_CF_HF_TUNE))
 
     if material == "PCTG" and manufacturer == "Generic" and bucket == "Bambu X1C HF":
         data.update(copy.deepcopy(X1C_PCTG_FIELD_TUNE))
 
-    target = chamber_target(material, entry, contract) if bucket in ACTIVE_CHAMBER_BUCKETS else 0
-    active = "1" if target > 0 else "0"
+    if bucket == "Qidi X-Plus 4":
+        qidi_mvs = QIDI_HF_MVS_OVERRIDES.get((material, manufacturer))
+        if qidi_mvs is not None:
+            data["filament_max_volumetric_speed"] = [qidi_mvs]
+
+    if (
+        bucket == "Prusa Core One"
+        and material == "PC-PBT-CF"
+        and manufacturer == "Push Plastic"
+    ):
+        # CORE One L has no practical 55 C chamber-heating path. A 40 C
+        # nominal target is achievable from bed heat, while disabling generic
+        # active-chamber control avoids an impossible heater contract.
+        target = 40
+        active = "0"
+    else:
+        target = chamber_target(material, entry, contract) if bucket in ACTIVE_CHAMBER_BUCKETS else 0
+        active = "1" if target > 0 else "0"
     data["activate_chamber_temp_control"] = [active]
     data["chamber_temperature"] = [str(target)]
     data["chamber_temperatures"] = [str(target)]

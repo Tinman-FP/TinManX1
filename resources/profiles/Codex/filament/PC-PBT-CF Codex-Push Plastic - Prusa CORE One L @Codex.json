@@ -10,7 +10,7 @@
         "0"
     ],
     "chamber_temperatures": [
-        "55"
+        "40"
     ],
     "close_fan_the_first_x_layers": [
         "3"
@@ -58,10 +58,10 @@
         "30"
     ],
     "fan_max_speed": [
-        "25"
+        "35"
     ],
     "fan_min_speed": [
-        "10"
+        "15"
     ],
     "filament_cost": [
         "99.98"
@@ -94,7 +94,7 @@
         "nil"
     ],
     "filament_max_volumetric_speed": [
-        "6"
+        "10"
     ],
     "filament_ramming_volumetric_speed": [
         "-1"
@@ -238,7 +238,7 @@
         "260"
     ],
     "overhang_fan_speed": [
-        "25"
+        "45"
     ],
     "overhang_fan_threshold": [
         "25%"
@@ -262,7 +262,7 @@
         "1"
     ],
     "slow_down_layer_time": [
-        "8"
+        "20"
     ],
     "slow_down_min_speed": [
         "10"
@@ -286,7 +286,7 @@
         "Prusa CORE One L 1.0 nozzle - TinMan Codex"
     ],
     "filament_start_gcode": [
-        "; Filament gcode\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}"
+        "; Filament gcode\nM900 K{if nozzle_diameter[filament_extruder_id]==0.4}0.07{elsif nozzle_diameter[filament_extruder_id]==0.3}0.09{elsif nozzle_diameter[filament_extruder_id]==0.35}0.08{elsif nozzle_diameter[filament_extruder_id]==0.6}0.04{elsif nozzle_diameter[filament_extruder_id]==0.5}0.05{elsif nozzle_diameter[filament_extruder_id]==0.8}0.02{else}0{endif}\nM572 S{if nozzle_diameter[filament_extruder_id]==0.4}0.05{elsif nozzle_diameter[filament_extruder_id]==0.5}0.035{elsif nozzle_diameter[filament_extruder_id]==0.6}0.025{elsif nozzle_diameter[filament_extruder_id]==0.8}0.016{elsif nozzle_diameter[filament_extruder_id]==0.25}0.14{elsif nozzle_diameter[filament_extruder_id]==0.3}0.09{else}0{endif}\nM142 S45 ; set heatbreak target temp\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]}\n{endif}"
     ],
     "filament_end_gcode": [
         "; filament end gcode \n\n"
@@ -300,13 +300,13 @@
     "filament_adhesiveness_category": [
         "500"
     ],
-    "setting_id": "codex-858c3f59b263",
+    "setting_id": "HmgrQlyOnJVCNy1R",
     "filament_id": "CODX858C3F59",
     "activate_chamber_temp_control": [
-        "1"
+        "0"
     ],
     "chamber_temperature": [
-        "55"
+        "40"
     ],
     "compatible_printers_condition": "",
     "compatible_prints": [],
@@ -325,5 +325,11 @@
     "description": "Push Plastic Carbon Fiber PC+PBT profile based on the manufacturer's 250-260 C nozzle, 90-100 C bed, and hardened-nozzle guidance.",
     "filament_notes": [
         "Dry before printing. Use a hardened 0.4 mm or larger nozzle; Push Plastic recommends 0.6 mm."
+    ],
+    "enable_pressure_advance": [
+        "0"
+    ],
+    "pressure_advance": [
+        "0.025"
     ]
 }
