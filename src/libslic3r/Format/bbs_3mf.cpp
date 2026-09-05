@@ -13,6 +13,7 @@
 #include "../I18N.hpp"
 
 #include "bbs_3mf.hpp"
+#include "../TinManMachineProfileContract.hpp"
 
 #include <limits>
 #include <stdexcept>
@@ -2696,7 +2697,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             }
             else if (type == Preset::TYPE_FILAMENT) {
                 filament_names = dynamic_cast < ConfigOptionStrings* > (config.option("filament_settings_id"));
-                if (!filament_names) {
+                if (!filament_names || filament_names->values.empty()) {
                     BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(", can not found filament_settings_id from  %1%\n") % dest_file;
                     //skip this file
                     return;
@@ -2718,7 +2719,11 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 return;
             }
 
-            Preset *preset = new Preset(type, preset_name, false);
+            if (preset_name.empty()) {
+                BOOST_LOG_TRIVIAL(error) << "Skipping project embedded preset with an empty identity";
+                return;
+            }
+            auto preset = std::make_unique<Preset>(type, preset_name, false);
             preset->file = dest_file;
             preset->config = std::move(config);
             preset->loaded = true;
@@ -2733,20 +2738,11 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             }
             else
                 preset->version = this->m_bambuslicer_generator_version?*this->m_bambuslicer_generator_version: Semver();
-            /*for (int i = 0; i < config_substitutions.size(); i++)
-            {
-                //ConfigSubstitution config_substitution;
-                //config_substitution.opt_def   = optdef;
-                //config_substitution.old_value = value;
-                //config_substitution.new_value = ConfigOptionUniquePtr(opt->clone());
-                preset->loading_substitutions.emplace_back(std::move(config_substitutions[i]));
-            }*/
-            if (!config_substitutions.empty()) {
-                preset->loading_substitutions = new ConfigSubstitutions();
-                *(preset->loading_substitutions) = std::move(config_substitutions);
-            }
+            if (!config_substitutions.empty())
+                preset->loading_substitutions = std::make_shared<const ConfigSubstitutions>(std::move(config_substitutions));
 
-            project_presets.push_back(preset);
+            project_presets.push_back(preset.get());
+            preset.release();
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", create one project embedded preset: %1% from %2%, type %3%\n") % preset_name % dest_file %Preset::get_type_string(type);
         }
     }
@@ -6364,7 +6360,8 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             // BBS: add project config
             if (project_presets.size() > 0) {
                 // BBS: add project embedded preset files
-                _add_project_embedded_presets_to_archive(archive, model, project_presets);
+                if (!_add_project_embedded_presets_to_archive(archive, model, project_presets))
+                    return false;
 
                 BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__ << boost::format(", finished add project embedded settings, size %1%\n")%project_presets.size();
                 if (proFn) {
@@ -7718,34 +7715,35 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
         return true;
     }
 
+    static DynamicPrintConfig portable_project_config(const DynamicPrintConfig &config)
+    {
+        DynamicPrintConfig portable = config;
+        for (const auto &key : portable.keys())
+            if (tinmanx_runtime_connection_option(key))
+                portable.erase(key);
+        return portable;
+    }
+
     //BBS: add project config file logic for new json format
     bool _BBS_3MF_Exporter::_add_project_config_file_to_archive(mz_zip_archive& archive, const DynamicPrintConfig &config, Model& model)
     {
         const std::string& temp_path = model.get_backup_path();
         std::string temp_file = temp_path + std::string("/") + "_temp_1.config";
-        config.save_to_json(temp_file, std::string("project_settings"), std::string("project"), std::string(SLIC3R_VERSION));
+        portable_project_config(config).save_to_json(temp_file, std::string("project_settings"), std::string("project"), std::string(SLIC3R_VERSION));
         return _add_file_to_archive(archive, BBS_PROJECT_CONFIG_FILE, temp_file);
     }
 
     //BBS: add project embedded preset files
     bool _BBS_3MF_Exporter::_add_project_embedded_presets_to_archive(mz_zip_archive& archive, Model& model, std::vector<Preset*> project_presets)
     {
-        char buffer[1024];
-        snprintf(buffer, 1024, "; %s\n\n", header_slic3r_generated().c_str());
-        std::string out = buffer;
         int print_count = 0, filament_count = 0, printer_count = 0;
         const std::string& temp_path = model.get_backup_path();
 
         for (int i = 0; i < project_presets.size(); i++)
         {
-            Preset* preset = project_presets[i];
+            const Preset* preset = project_presets[i];
 
             if (preset) {
-                preset->file = temp_path + std::string("/") + "_temp_1.config";
-                DynamicPrintConfig& config = preset->config;
-                //config.save(preset->file);
-                config.save_to_json(preset->file, preset->name, std::string("project"), preset->version.to_string());
-
                 std::string dest_file;
                 if (preset->type == Preset::TYPE_PRINT) {
                     dest_file = (boost::format(EMBEDDED_PRINT_FILE_FORMAT) % (print_count + 1)).str();
@@ -7762,7 +7760,10 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 else
                     continue;
 
-                _add_file_to_archive(archive, dest_file, preset->file);
+                const std::string temp_file = temp_path + "/_temp_1.config";
+                portable_project_config(preset->config).save_to_json(temp_file, preset->name, "project", preset->version.to_string());
+                if (!_add_file_to_archive(archive, dest_file, temp_file))
+                    return false;
             }
         }
 

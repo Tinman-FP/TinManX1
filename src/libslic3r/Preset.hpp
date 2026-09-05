@@ -2,12 +2,14 @@
 #define slic3r_Preset_hpp_
 
 #include <deque>
+#include <algorithm>
 #include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <functional>
 #include <mutex>
+#include <memory>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -242,7 +244,8 @@ public:
 
     //BBS: add type for project-embedded
     bool                is_project_embedded = false;
-    ConfigSubstitutions *loading_substitutions{nullptr};
+    // Immutable import diagnostics may outlive or be copied with an imported preset.
+    std::shared_ptr<const ConfigSubstitutions> loading_substitutions;
     bool                is_user() const { return ! this->is_default && ! this->is_system && ! this->is_project_embedded && ! this->is_from_bundle(); }
     bool                can_overwrite() const { return ! this->is_default && ! this->is_system && ! this->is_from_bundle(); }
     //bool                is_user() const { return ! this->is_default && ! this->is_system; }
@@ -861,10 +864,17 @@ private:
 
     // Sort presets: filament presets use generic-first ordering, others sort alphabetically.
     void sort_presets() {
+        const bool had_selection = m_idx_selected < m_presets.size();
+        const std::string selected_name = had_selection ? m_presets[m_idx_selected].name : std::string();
         if (m_type == Preset::TYPE_FILAMENT)
             std::sort(m_presets.begin() + m_num_default_presets, m_presets.end(), filament_preset_less);
         else
             std::sort(m_presets.begin() + m_num_default_presets, m_presets.end());
+        if (had_selection) {
+            const auto selected = std::find_if(m_presets.begin(), m_presets.end(),
+                [&selected_name](const Preset &preset) { return preset.name == selected_name; });
+            m_idx_selected = selected == m_presets.end() ? size_t(-1) : size_t(selected - m_presets.begin());
+        }
     }
 
     // Find a preset position in the sorted list of presets.

@@ -1860,16 +1860,15 @@ Preset* PresetCollection::get_preset_differed_for_save(Preset& preset)
     if (preset.is_system || preset.is_default)
         return nullptr;
 
-    Preset* new_preset = nullptr;
+    std::unique_ptr<Preset> new_preset;
     //BBS: only save difference for user preset
-    std::string& inherits = preset.inherits();
+    const std::string& inherits = std::as_const(preset).inherits();
     Preset* parent_preset = nullptr;
     if (!inherits.empty()) {
         parent_preset = this->find_preset(inherits, false, true);
     }
     if (parent_preset) {
-        new_preset = new Preset();
-        *new_preset = preset;
+        new_preset = std::make_unique<Preset>(preset);
 
         DynamicPrintConfig temp_config;
         std::vector<std::string> dirty_options = preset.config.diff(parent_preset->config);
@@ -1908,10 +1907,18 @@ Preset* PresetCollection::get_preset_differed_for_save(Preset& preset)
             }
         }
 
-        new_preset->config = temp_config;
+        new_preset->config = std::move(temp_config);
     }
 
-    return new_preset;
+    if (inherits.empty())
+        new_preset = std::make_unique<Preset>(preset);
+
+    if (new_preset && m_type == Preset::TYPE_PRINTER)
+        for (const auto &key : new_preset->config.keys())
+            if (tinmanx_runtime_connection_option(key))
+                new_preset->config.erase(key);
+
+    return new_preset.release();
 }
 
 //BBS:get the differencen values to update
@@ -1987,106 +1994,123 @@ int PresetCollection::get_differed_values_to_update(Preset& preset, std::map<std
 //BBS: save user presets to local
 void PresetCollection::load_project_embedded_presets(std::vector<Preset*>& project_presets, const std::string& type, PresetsConfigSubstitutions& substitutions, ForwardCompatibilitySubstitutionRule rule)
 {
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    const auto requested_type = Preset::get_type_from_string(type);
+    if (requested_type != m_type)
+        return;
     std::string errors_cummulative;
-    // Store the loaded presets into a new vector, otherwise the binary search for already existing presets would be broken.
-    // (see the "Preset already present, not loading" message).
     std::deque<Preset> presets_loaded;
-    std::vector<Preset*>::iterator it;
+    std::map<std::string, const Preset *> staged;
+    std::set<std::string> seen;
+    std::vector<const Preset *> pending;
+    PresetsConfigSubstitutions reports;
+    for (const Preset *preset : project_presets) {
+        if (!preset || preset->type != requested_type || !preset->is_project_embedded)
+            continue;
+        if (preset->name.empty() || find_preset(preset->name, false) || !seen.insert(preset->name).second) {
+            BOOST_LOG_TRIVIAL(warning) << "Skipping empty or duplicate project preset: " << preset->name;
+            continue;
+        }
+        pending.push_back(preset);
+    }
 
-    BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(" enter, type %1% , total preset counts %2%")%Preset::get_type_string(m_type) %project_presets.size();
     std::string extruder_id_name, extruder_variant_name;
     std::set<std::string> *key_set1 = nullptr, *key_set2 = nullptr;
     Preset::get_extruder_names_and_keysets(m_type, extruder_id_name, extruder_variant_name, &key_set1, &key_set2);
 
-    lock();
-    for (it = project_presets.begin(); it != project_presets.end(); it++) {
-        Preset* preset = *it;
-        if (preset->type != Preset::get_type_from_string(type)) continue;
-        if (!preset->is_project_embedded) continue;
-        std::string name = preset->name;
-        if (this->find_preset(name, false)) {
-            BOOST_LOG_TRIVIAL(warning) << "Preset already present, not loading: " << name;
-            continue;
-        }
-        try {
-            DynamicPrintConfig config = preset->config;
-            if (preset->loading_substitutions && ! preset->loading_substitutions->empty()) {
-                substitutions.push_back({ preset->name, m_type, PresetConfigSubstitutions::Source::ProjectFile, preset->name, std::move(*(preset->loading_substitutions))});
-                free(preset->loading_substitutions);
-                preset->loading_substitutions = NULL;
-            }
-            //BBS: use inherit config as the base
-            Preset* inherit_preset = nullptr;
-            ConfigOption* inherits_config = config.option(BBL_JSON_KEY_INHERITS);
-            if (inherits_config) {
-                ConfigOptionString * option_str = dynamic_cast<ConfigOptionString *> (inherits_config);
-                std::string inherits_value = option_str->value;
-                /*size_t pos = inherits_value.find_first_of('*');
-                if (pos != std::string::npos) {
-                    inherits_value.replace(pos, 1, 1, '~');
-                    option_str->value = inherits_value;
-                }*/
-                inherit_preset = this->find_preset2(inherits_value, true);
-                Preset::normalize_inherits(config, inherit_preset);
-            }
-            const Preset& default_preset = this->default_preset_for(config);
-            if (inherit_preset) {
-                preset->config = inherit_preset->config;
-                preset->filament_id = inherit_preset->filament_id;
-            }
-            else {
-                // Find a default preset for the config. The PrintPresetCollection provides different default preset based on the "printer_technology" field.
-                //BBS 202407: don't load project embedded preset when can not find inherit
-                //preset->config = default_preset.config;
-                BOOST_LOG_TRIVIAL(error) << boost::format("can not find parent for config %1%!")%preset->file;
-                continue;
-            }
-            preset->config.update_diff_values_to_child_config(config, extruder_id_name, extruder_variant_name, *key_set1, *key_set2);
-            //preset->config.apply(std::move(config));
-            Preset::normalize(preset->config);
-            // Report configuration fields, which are misplaced into a wrong group.
-            std::string incorrect_keys = Preset::remove_invalid_keys(preset->config, default_preset.config);
-            if (!incorrect_keys.empty()) {
+    // Archive entry order is not an inheritance order. Resolve roots and available
+    // parents into private candidates before publishing or changing any input.
+    while (!pending.empty()) {
+        bool progressed = false;
+        for (auto it = pending.begin(); it != pending.end();) {
+            const Preset &source = **it;
+            try {
+                const auto *inherits = source.config.option<ConfigOptionString>("inherits");
+                if (source.config.has("inherits") && !inherits)
+                    throw Slic3r::RuntimeError("Invalid inheritance value in project preset: " + source.name);
+                const Preset *parent = nullptr;
+                if (inherits && !inherits->value.empty()) {
+                    const auto loaded = staged.find(inherits->value);
+                    parent = loaded == staged.end() ? find_preset2(inherits->value, true) : loaded->second;
+                    if (!parent) { ++it; continue; }
+                }
+
+                Preset candidate = source;
+                DynamicPrintConfig config = source.config;
+                const Preset &defaults = default_preset_for(config);
+                if (parent) {
+                    Preset::normalize_inherits(config, parent);
+                    candidate.config = parent->config;
+                    candidate.filament_id = parent->filament_id;
+                    extend_default_config_length(config, false, {});
+                    candidate.config.update_diff_values_to_child_config(config, extruder_id_name, extruder_variant_name, *key_set1, *key_set2);
+                } else {
+                    candidate.config = defaults.config;
+                    candidate.config.apply(std::move(config));
+                    extend_default_config_length(candidate.config, true, defaults.config);
+                }
+                Preset::normalize(candidate.config);
+                const std::string incorrect_keys = Preset::remove_invalid_keys(candidate.config, defaults.config);
+                if (!incorrect_keys.empty()) {
+                    ++m_errors;
+                    BOOST_LOG_TRIVIAL(error) << "Project preset " << source.name << " contains misplaced keys: " << incorrect_keys;
+                }
+
+                ConfigSubstitutions diagnostics;
+                if (source.loading_substitutions) {
+                    diagnostics.reserve(source.loading_substitutions->size());
+                    for (const auto &entry : *source.loading_substitutions)
+                        diagnostics.push_back({entry.opt_def, entry.old_value,
+                            ConfigOptionUniquePtr(entry.new_value ? entry.new_value->clone() : nullptr)});
+                }
+                candidate.loading_substitutions.reset();
+                candidate.loaded = true;
+                presets_loaded.emplace_back(std::move(candidate));
+                staged.emplace(source.name, &presets_loaded.back());
+                if (!diagnostics.empty())
+                    reports.push_back({source.name, m_type, PresetConfigSubstitutions::Source::ProjectFile,
+                                       source.name, std::move(diagnostics)});
+            } catch (const std::runtime_error &error) {
                 ++m_errors;
-                BOOST_LOG_TRIVIAL(error) << "Error in a preset file: The preset \"" << preset->name
-                                         << "\" contains the following incorrect keys: " << incorrect_keys << ", which were removed";
+                errors_cummulative += std::string(error.what()) + "\n";
             }
-            preset->loaded = true;
-            presets_loaded.emplace_back(*preset);
-            BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(", %1% got preset, name %2%, path %3%, is_system %4%, is_default %5% is_visible %6%")%Preset::get_type_string(m_type) %preset->name %preset->file %preset->is_system %preset->is_default %preset->is_visible;
-        } catch (const std::runtime_error &err) {
-            errors_cummulative += err.what();
-            errors_cummulative += "\n";
+            it = pending.erase(it);
+            progressed = true;
+        }
+        if (!progressed) {
+            for (const Preset *preset : pending) {
+                ++m_errors;
+                BOOST_LOG_TRIVIAL(error) << "Project preset " << preset->name
+                    << " has a missing or cyclic parent; original imported values retained";
+            }
+            break;
         }
     }
 
     m_presets.insert(m_presets.end(), std::make_move_iterator(presets_loaded.begin()), std::make_move_iterator(presets_loaded.end()));
     sort_presets();
-    //don't select it here
-    //this->select_preset(first_visible_idx());
-    unlock();
-
-    BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(" finished, %1% got %2% presets, errors_cummulative %3%")%Preset::get_type_string(m_type) %presets_loaded.size() %errors_cummulative;
-    if (! errors_cummulative.empty())
+    substitutions.insert(substitutions.end(), std::make_move_iterator(reports.begin()), std::make_move_iterator(reports.end()));
+    if (!errors_cummulative.empty())
         throw Slic3r::RuntimeError(errors_cummulative);
 }
 
 //BBS: get project embedded presets from
 std::vector<Preset*> PresetCollection::get_project_embedded_presets()
 {
-    std::vector<Preset*> project_presets;
-
-    lock();
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    std::vector<std::unique_ptr<Preset>> candidates;
     for (Preset &preset : m_presets) {
         //if (preset.type != Preset::get_type_from_string(type)) continue;
         if (!preset.is_project_embedded) continue;
 
-        Preset* new_preset = get_preset_differed_for_save(preset);
-
-        if (new_preset)
-            project_presets.push_back(new_preset);
+        std::unique_ptr<Preset> candidate(get_preset_differed_for_save(preset));
+        if (candidate)
+            candidates.emplace_back(std::move(candidate));
     }
-    unlock();
+    std::vector<Preset*> project_presets;
+    project_presets.reserve(candidates.size());
+    for (auto &candidate : candidates)
+        project_presets.push_back(candidate.release());
     BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(" enter, type %1% , total preset counts %2%")%Preset::get_type_string(m_type) %project_presets.size();
     return project_presets;
 }

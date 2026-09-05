@@ -10,9 +10,10 @@ Baseline: `a70a0d0d5a`, profile-foundation.1, installed full Apple Silicon build
 
 - Complete: optional trace of the actual full-config resolver, with native
   Setting Origins UI, missing-profile warnings, and output-equivalence tests.
-- Implemented: printer-selection preflight, duplicate dispatch, and physical
-  connection cancellation fixes. Next: staged selection/rollback. Audit mutable fields and asynchronous callbacks
-  before relying on a copied PresetBundle as a transaction snapshot.
+- Complete within the documented scope: printer-selection preflight, duplicate
+  dispatch, deferred material/color effects, staged preset/connection saves, and
+  native cancellation checks. Whole-bundle rollback and asynchronous catalog
+  generation barriers still require a field-by-field ownership audit.
 - Next: layer/plate/object/volume-aware provenance using the real PrintApply
   merge stages, not a guessed override order.
 - Next: exact inherited-key declaration provenance at load time. Flattened
@@ -289,8 +290,13 @@ declared full commit ID when the corresponding object is not present locally.
 An unknown abbreviated ID is rejected instead of guessed. Archive/shallow IDs
 are supplied build metadata, not a claim that the local object was verified.
 The complete application migration build passed in 602 seconds with 858 steps,
-and the focused native suite passed 114 cases and 184,857 assertions. A real
-application metadata-only rebuild and installed smoke verification follow.
+and the focused native suite passed 114 cases and 184,857 assertions. The next
+real application metadata-only rebuild automatically picked up commit b4c59e63c5,
+scheduled eight steps, and finished in 17 seconds. The installed native About
+dialog showed that commit and build-identity.1. Signature, 936 profile checksums,
+and real saved-project G-code verification passed (only two timestamps changed).
+The milestone was pushed and both quick GitHub workflows passed. This is a
+measured incremental-build improvement, not a runtime slicing-speed increase.
 
 This uses CMake's documented [configuration dependencies](https://cmake.org/cmake/help/latest/prop_dir/CMAKE_CONFIGURE_DEPENDS.html)
 and [content-stable configure_file output](https://cmake.org/cmake/help/latest/command/configure_file.html).
@@ -299,3 +305,45 @@ worktree HEAD and shared refs. Missing loose refs use their nearest existing
 directory as a configure dependency so their later creation is noticed. This
 can cause an extra configure after Git bookkeeping changes, but unchanged
 metadata does not trigger a compilation. No runtime slicing speed claim is made.
+
+### Project Recovery Milestone
+
+Revision `v2026.09.05-project-recovery.1`, package `2026.9.5.9`.
+
+Four generated-fixture tests first reproduced ten failures: standalone embedded
+roots were not exported, newly sorted profiles changed the selected identity,
+archive-order inheritance failed, and printer credentials entered profile
+exports. A real 3MF round-trip then reproduced 15 additional assertions at the
+archive-writing boundary. Those cases now pass. Eleven native cases pass 3,805
+assertions, including independent standard/high-flow material values and nullable
+inherited overrides. The standard native suite passes 217 cases and 237,021
+assertions; it excludes the previously documented hidden sinking-object test.
+Complete GUI build and installed smoke verification follow.
+
+- Embedded roots export their effective values, and loaded roots apply defaults
+  plus their own settings. Named missing/cyclic parents are not guessed; their
+  input records remain intact and are logged/skipped. Parent-child chains load
+  even when archive entries arrive in reverse order. Empty identities, duplicate
+  entries, unrelated types, and empty filament identity arrays are guarded.
+- Project imports stage private candidates and preserve input configs. Import
+  diagnostics previously used new with free and were aliased by Preset copies.
+  They now have immutable shared ownership; reports clone their owned values,
+  and published presets do not keep transient diagnostics. Copies, destruction,
+  successful reporting and malformed-input retry have focused coverage.
+- Sorting preserves the selected identity without discarding editor changes.
+  This covers project imports and ordinary saved-profile loading, including
+  generic-first material ordering. Import/export locks and temporary exported
+  profile ownership use RAII.
+- Embedded printer exports and both project-config archive writers omit the
+  known runtime connection options. Existing profile JSON and AppConfig
+  connections remain unchanged. The writer no longer replaces a source preset's
+  file path with its temporary path, and failed archive additions propagate.
+- Real 3MF tests retain geometry and tuned process/material/printer values,
+  reject empty identities without crashing, and verify that known connection
+  keys are absent from both global and embedded configs. Filtering is not a
+  general scanner for arbitrary user-authored secrets in custom G-code or text.
+
+This remains staged per-collection import, not an all-or-nothing transaction
+across every collection or an out-of-memory/power-loss guarantee. Earlier healthy
+imports may remain available when a later malformed record reports an error.
+No filament tuning, machine capability, or process defaults are changed.
