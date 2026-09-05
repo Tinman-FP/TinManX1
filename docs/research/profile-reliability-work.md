@@ -278,13 +278,19 @@ reporting. Core slicing and profile code no longer depends on volatile metadata.
 The troubleshooting commit link now points to TinManX1, not the upstream Orca
 repository where these commits do not exist.
 
-Seven disposable CMake/Git fixtures pass. They cover archive fallback, verified
+Eight disposable CMake/Git fixtures pass. They cover archive fallback, verified
 explicit hashes, invalid hashes, unchanged configure timestamps, revision-only
 changes, commits, detached HEAD, linked worktrees, and packed refs with reflogs
 disabled. Commit/revision changes update the displayed build ID and recompile
 the metadata consumer while preserving the unrelated core object timestamp.
 The next no-op build does no work. These fixtures are now a public-helper CI step.
-Full application migration build and installed smoke tests remain to be done.
+The shallow-checkout fixture initially failed and now preserves CI's explicitly
+declared full commit ID when the corresponding object is not present locally.
+An unknown abbreviated ID is rejected instead of guessed. Archive/shallow IDs
+are supplied build metadata, not a claim that the local object was verified.
+The complete application migration build passed in 602 seconds with 858 steps,
+and the focused native suite passed 114 cases and 184,857 assertions. A real
+application metadata-only rebuild and installed smoke verification follow.
 
 This uses CMake's documented [configuration dependencies](https://cmake.org/cmake/help/latest/prop_dir/CMAKE_CONFIGURE_DEPENDS.html)
 and [content-stable configure_file output](https://cmake.org/cmake/help/latest/command/configure_file.html).

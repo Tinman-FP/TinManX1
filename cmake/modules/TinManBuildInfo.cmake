@@ -19,7 +19,19 @@ function(tinman_configure_build_info source_dir output_file)
                 RESULT_VARIABLE _result OUTPUT_VARIABLE GIT_COMMIT_HASH
                 OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
             if(NOT _result EQUAL 0)
-                message(FATAL_ERROR "git_commit_hash does not identify a commit in the source checkout")
+                execute_process(
+                    COMMAND "${GIT_EXECUTABLE}" rev-parse --is-shallow-repository
+                    WORKING_DIRECTORY "${source_dir}"
+                    OUTPUT_VARIABLE _shallow OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+                if(_shallow STREQUAL "true" AND (_hash_length EQUAL 40 OR _hash_length EQUAL 64))
+                    # PR CI may check out only the merge object, not its supplied head ID.
+                    # Preserve that explicit full identity without guessing an abbreviation.
+                    string(SUBSTRING "${_explicit_hash}" 0 7 GIT_COMMIT_HASH)
+                    string(TOLOWER "${GIT_COMMIT_HASH}" GIT_COMMIT_HASH)
+                    message(STATUS "Using full commit ID declared by the build environment; object is absent from shallow checkout")
+                else()
+                    message(FATAL_ERROR "git_commit_hash does not identify a commit in the source checkout")
+                endif()
             endif()
         else()
             # Release archives and Flatpak builds may have no Git metadata.

@@ -182,6 +182,21 @@ class BuildInfoTests(unittest.TestCase):
         self.env["git_commit_hash"] = "1234567890abcdef1234567890abcdef12345678"
         self.assertIn("does not identify a commit", self.configure(expect_success=False))
 
+    def test_shallow_ci_checkout_accepts_declared_full_commit(self):
+        self.init_git()
+        parent = self.git("rev-parse", "HEAD")
+        self.git("commit", "--allow-empty", "-m", "Shallow tip")
+        shallow = self.root / "shallow checkout"
+        self.git("clone", "--depth=1", self.source.as_uri(), shallow)
+        self.source = shallow
+        self.assertEqual(self.git("rev-parse", "--is-shallow-repository"), "true")
+        self.env["git_commit_hash"] = parent
+        self.configure()
+        self.compile()
+        self.assertEqual(self.executable_output(), f"fixture.1 {parent[:7]} 42")
+        self.env["git_commit_hash"] = "badabcd"
+        self.assertIn("does not identify a commit", self.configure(expect_success=False))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
