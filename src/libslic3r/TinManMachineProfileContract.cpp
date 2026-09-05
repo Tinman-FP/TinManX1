@@ -29,16 +29,16 @@ constexpr std::array<MachineFamily, 13> machine_families {{
     {"BBL", "Bambu Lab H2D", 2, true},
     {"BBL", "Bambu Lab X1 Carbon", 1, true},
     {"Creality", "Creality K2 Plus", 1, true},
-    {"Elegoo", "Elegoo Centauri Carbon", 1, true},
-    {"Prusa", "Prusa CORE One L", 1, true},
-    {"Qidi", "Qidi X-Plus 4", 1, true},
-    {"Qidi", "QidiMaxEz", 1, true},
-    {"Ratrig", "RatRig V-Core 4 IDEX 500", 2, true},
-    {"Ratrig", "RatRig V-Core 4 IDEX 500 COPY MODE", 2, true},
-    {"Ratrig", "RatRig V-Core 4 IDEX 500 MIRROR MODE", 2, true},
+    {"Elegoo", "Elegoo Centauri Carbon", 1, false},
+    {"Prusa", "Prusa CORE One L", 1, false},
+    {"Qidi", "Qidi X-Plus 4", 1, false},
+    {"Qidi", "QidiMaxEz", 1, false},
+    {"Ratrig", "RatRig V-Core 4 IDEX 500", 2, false},
+    {"Ratrig", "RatRig V-Core 4 IDEX 500 COPY MODE", 2, false},
+    {"Ratrig", "RatRig V-Core 4 IDEX 500 MIRROR MODE", 2, false},
     {"Snapmaker", "Snapmaker U1", 4, false},
-    {"Sovol", "Sovol SV08 MAX", 1, true},
-    {"TinManX1", "FibreSeek Seeker 3", 2, true},
+    {"Sovol", "Sovol SV08 MAX", 1, false},
+    {"TinManX1", "FibreSeek Seeker 3", 2, false},
 }};
 
 constexpr std::array<MachineAlias, 29> machine_aliases {{
@@ -411,6 +411,7 @@ bool tinmanx_normalize_multitool_config(DynamicPrintConfig &config,
     const size_t tool_count = diameters->values.size();
     filament_count = std::max<size_t>(filament_count, 1);
     bool changed = false;
+    bool repaired_invalid_route = false;
 
     auto *filament_map = config.option<ConfigOptionInts>("filament_map", true);
     if (filament_map->values.size() != filament_count) {
@@ -421,6 +422,7 @@ bool tinmanx_normalize_multitool_config(DynamicPrintConfig &config,
         if (tool < 1 || static_cast<size_t>(tool) > tool_count) {
             tool = 1;
             changed = true;
+            repaired_invalid_route = true;
         }
     }
 
@@ -442,7 +444,10 @@ bool tinmanx_normalize_multitool_config(DynamicPrintConfig &config,
         changed = true;
     }
 
-    if (changed) {
+    // Resizing vectors is routine while a full config is assembled from a
+    // one-tool preset and must not flood the log on every UI refresh. Invalid
+    // routes are actionable and remain visible.
+    if (repaired_invalid_route) {
         BOOST_LOG_TRIVIAL(warning) << "Repaired multi-tool configuration: "
                                    << filament_count << " filament slot(s), "
                                    << tool_count << " physical tool(s)";

@@ -1,5 +1,14 @@
 # Changelog
 
+## v2026.09.05-settings-resilience.1
+
+- fixed a macOS settings-panel crash when inherited user profiles omit optional Wave Overhang fields introduced by a newer schema
+- treat missing Wave Overhang corner-taper and Hilbert-floor controls as disabled defaults while preserving inherited profile values
+- aligned the runtime machine catalog with the installed Micro Swiss hardware map so only the Bambu X1C, Bambu H2D, and Creality K2 Plus use high-flow nozzle metadata
+- stopped routine multi-tool vector normalization from flooding the log while retaining warnings for invalid filament-to-tool routes
+- normalized stale macOS SDK paths in imported wxWidgets targets so production builds use one consistent Xcode toolchain
+- added native regressions for the standard-CM2 Prusa, Qidi, and RatRig runtime contracts plus a source guard for sparse Wave Overhang profiles
+
 ## v2026.08.30-cm2-capability.1
 
 - separated Micro Swiss CM2 construction from CHT high-flow melt-zone capability throughout the machine, process, and filament generators

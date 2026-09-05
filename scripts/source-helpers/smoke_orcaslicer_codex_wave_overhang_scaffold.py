@@ -161,6 +161,13 @@ def main() -> int:
     require("support_remaining_areas_after_wave_overhangs" in manip,
             "hybrid support-remainder toggle missing")
     require("wo_enabled" in manip and "wo_floor_hilbert" in manip, "Wave Overhang visibility gates missing")
+    require("wave_option_enabled" in manip,
+            "optional Wave Overhang visibility gates must tolerate older sparse profiles")
+    for option in ("wave_overhang_corner_taper_enable", "wave_overhang_floor_use_hilbert"):
+        require(f'wave_option_enabled("{option}")' in manip,
+                f"{option} must use the null-safe compatibility accessor")
+        require(f'config->opt_bool("{option}")' not in manip,
+                f"{option} must not be dereferenced directly from a sparse profile")
     require('new_optgroup(L("Wave overhangs")' in tab, "settings group missing")
 
     require_tokens(extrusion, [

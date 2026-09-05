@@ -675,6 +675,10 @@ endif()
 
 find_package(EXPAT)
 
+if(APPLE AND EXPAT_FOUND)
+    list(FILTER EXPAT_INCLUDE_DIRS EXCLUDE REGEX "MacOSX[^/]*\\.sdk/usr/include/?$")
+endif()
+
 if (NOT EXPAT_FOUND)
     add_library(expat STATIC
         ${LIBDIR}/expat/xmlparse.c
@@ -687,6 +691,24 @@ if (NOT EXPAT_FOUND)
 endif ()
 
 find_package(PNG REQUIRED)
+
+# Apple system headers are already supplied by CMAKE_OSX_SYSROOT. Adding the
+# SDK's usr/include directory explicitly places it ahead of libc++ and breaks
+# headers which rely on include_next (for example cstddef -> stddef.h).
+if(APPLE)
+    foreach(_apple_system_target ZLIB::ZLIB EXPAT::EXPAT PNG::PNG Iconv::Iconv)
+        if(TARGET ${_apple_system_target})
+            get_target_property(_apple_system_includes ${_apple_system_target}
+                INTERFACE_INCLUDE_DIRECTORIES)
+            if(_apple_system_includes)
+                list(FILTER _apple_system_includes EXCLUDE REGEX
+                    "MacOSX[^/]*\\.sdk/usr/include/?$")
+                set_target_properties(${_apple_system_target} PROPERTIES
+                    INTERFACE_INCLUDE_DIRECTORIES "${_apple_system_includes}")
+            endif()
+        endif()
+    endforeach()
+endif()
 
 set(OpenGL_GL_PREFERENCE "LEGACY")
 find_package(OpenGL REQUIRED)

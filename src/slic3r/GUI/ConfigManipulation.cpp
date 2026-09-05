@@ -1060,7 +1060,16 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
         })
             toggle_line(k, wo_enabled);
 
-        const bool wo_corner_taper = wo_enabled && config->opt_bool("wave_overhang_corner_taper_enable");
+        // User presets created before a Wave Overhangs schema update may not
+        // contain every optional child setting. Treat absent children as their
+        // disabled default instead of dereferencing a null option while the
+        // settings panel is refreshing.
+        const auto wave_option_enabled = [config](const char *key) {
+            const auto *option = config->option<ConfigOptionBool>(key);
+            return option != nullptr && option->value;
+        };
+
+        const bool wo_corner_taper = wo_enabled && wave_option_enabled("wave_overhang_corner_taper_enable");
         for (const std::string &k : {
             std::string("wave_overhang_line_spacing_corner"),
             std::string("wave_overhang_corner_taper_distance"),
@@ -1068,7 +1077,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, co
         })
             toggle_line(k, wo_corner_taper);
 
-        const bool wo_floor_hilbert = wo_enabled && config->opt_bool("wave_overhang_floor_use_hilbert");
+        const bool wo_floor_hilbert = wo_enabled && wave_option_enabled("wave_overhang_floor_use_hilbert");
         for (const std::string &k : {
             std::string("wave_overhang_floor_hilbert_layers"),
             std::string("wave_overhang_floor_hilbert_density"),

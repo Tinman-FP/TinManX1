@@ -115,7 +115,9 @@ TEST_CASE("TinMan machine catalog replaces cloud-restored variants", "[Preset][T
     }
     CHECK(config.get("nozzle_volume_types", "Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex") == "High Flow");
     CHECK(config.get("nozzle_volume_types", "Bambu Lab H2D 0.6 nozzle") == "High Flow,High Flow");
-    CHECK(config.get("nozzle_volume_types", "RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex") == "High Flow,High Flow");
+    CHECK(config.get("nozzle_volume_types", "RatRig V-Core 4 IDEX 500 0.8 nozzle - TinMan Codex") == "Standard,Standard");
+    CHECK(config.get("nozzle_volume_types", "Prusa CORE One L 0.6 nozzle - TinMan Codex") == "Standard");
+    CHECK(config.get("nozzle_volume_types", "Qidi X-Plus 4 0.6 nozzle - TinMan Codex") == "Standard");
     CHECK(config.get("nozzle_volume_types", "Snapmaker U1 0.6 nozzle - TinMan Codex") == "Standard,Standard,Standard,Standard");
 }
 
@@ -134,6 +136,16 @@ TEST_CASE("TinMan machine hardware overrides stale project nozzle flow", "[Prese
         "Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex", x1c, project));
     CHECK(project.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values ==
           std::vector<int>{NozzleVolumeType::nvtHighFlow});
+
+    DynamicPrintConfig qidi;
+    qidi.set_key_value("printer_model", new ConfigOptionString("Qidi X-Plus 4"));
+    qidi.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.6}));
+    project.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values = {
+        NozzleVolumeType::nvtHighFlow};
+    REQUIRE(tinmanx_apply_nozzle_volume_contract(
+        "Qidi X-Plus 4 0.6 nozzle - TinMan Codex", qidi, project));
+    CHECK(project.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values ==
+          std::vector<int>{NozzleVolumeType::nvtStandard});
 
     DynamicPrintConfig export_config;
     REQUIRE(tinmanx_apply_nozzle_volume_contract(
