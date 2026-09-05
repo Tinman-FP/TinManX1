@@ -221,8 +221,14 @@ parse-status checks. Eight connection/ancestor-save cases now pass 173 assertion
 the broader suite passes 114 cases and 184,857 assertions. Successful save and
 rename round trips preserve credentials, selected identity and nozzle
 associations. Failed imports, overwrites, renames, stale association requests,
-malformed files and retries are covered. The GUI and native targets compile.
-Complete build and installed smoke verification remain to be done.
+malformed files and retries are covered. The complete 858-step Apple Silicon
+build and final focused suite passed. The installed About dialog displayed
+connection-save.1 and 75f92cef84. A temporary host edit was canceled in the native
+connection dialog; reopening showed the original host, without a save or network
+test. The dialog opened and closed cleanly. All user profile JSON/info hashes,
+936 installed resource checksums, signature validation, and saved-project G-code
+comparison passed (only two timestamp comments changed). The verified commit was
+pushed to GitHub.
 
 Additional GUI audit findings: Save As deleted the existing local/cloud profile
 inside its name-confirmation dialog, before saving the replacement. Physical
@@ -259,3 +265,31 @@ removes files whose stems are not present in the loaded map. TinManX1 should not
 adopt those failure-handling behaviors. Inspection source is the previously
 recorded 6f510128d7c2e543b62919b74bea7e876f564205 checkout, under
 src/slic3r-shared/src/Slic3r/Biz/PhysicalPrinter.
+
+### Build Identity Milestone
+
+Revision `v2026.09.05-build-identity.1`, package `2026.9.5.8`.
+
+The commit hash was a global compiler definition and the revision was in the
+common precompiled version header. Every commit/revision therefore invalidated
+almost the entire local build. Build identity now has its own generated header,
+included only by About, startup/splash, troubleshooting, and Windows crash
+reporting. Core slicing and profile code no longer depends on volatile metadata.
+The troubleshooting commit link now points to TinManX1, not the upstream Orca
+repository where these commits do not exist.
+
+Seven disposable CMake/Git fixtures pass. They cover archive fallback, verified
+explicit hashes, invalid hashes, unchanged configure timestamps, revision-only
+changes, commits, detached HEAD, linked worktrees, and packed refs with reflogs
+disabled. Commit/revision changes update the displayed build ID and recompile
+the metadata consumer while preserving the unrelated core object timestamp.
+The next no-op build does no work. These fixtures are now a public-helper CI step.
+Full application migration build and installed smoke tests remain to be done.
+
+This uses CMake's documented [configuration dependencies](https://cmake.org/cmake/help/latest/prop_dir/CMAKE_CONFIGURE_DEPENDS.html)
+and [content-stable configure_file output](https://cmake.org/cmake/help/latest/command/configure_file.html).
+Git's [git-path resolution](https://git-scm.com/docs/git-rev-parse) locates private
+worktree HEAD and shared refs. Missing loose refs use their nearest existing
+directory as a configure dependency so their later creation is noticed. This
+can cause an extra configure after Git bookkeeping changes, but unchanged
+metadata does not trigger a compilation. No runtime slicing speed claim is made.

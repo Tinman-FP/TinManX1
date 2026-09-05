@@ -39,6 +39,9 @@ jobs:
       - name: Verify public release package
         run: python3 checks/verify_release.py
 
+      - name: Verify build identity and incremental rebuild isolation
+        run: python3 checks/test_tinman_build_info.py
+
       - name: Verify shared hardware catalog and tuned profile checksums
         run: |
           python3 checks/verify_tinman_machine_profile_catalog.py
