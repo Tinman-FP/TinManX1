@@ -1119,6 +1119,7 @@ bool UnsavedChangesDialog::save(PresetCollection* dependent_presets, bool show_s
         // for system/default/external presets we should take an edited name
         //BBS: add project embedded preset logic and refine is_external
         bool save_to_project = false;
+        PendingPhysicalPrinterUpdate connection_update;
         if (!preset.can_overwrite()) {
         //if (preset.is_system || preset.is_default || preset.is_external) {
             SavePresetDialog save_dlg(this, preset.type);
@@ -1128,10 +1129,12 @@ bool UnsavedChangesDialog::save(PresetCollection* dependent_presets, bool show_s
             }
             name = save_dlg.get_name();
             save_to_project = save_dlg.get_save_to_project_selection(preset.type);
+            connection_update = save_dlg.pending_physical_printer_update(name);
         }
 
         //BBS: add project embedded preset relate logic
         PresetData preset_data(name, preset.type, save_to_project);
+        preset_data.connection_update = std::move(connection_update);
         names_and_types.emplace_back(preset_data);
         //names_and_types.emplace_back(make_pair(name, preset.type));
     }
@@ -1167,9 +1170,12 @@ bool UnsavedChangesDialog::save(PresetCollection* dependent_presets, bool show_s
             //BBS: add project embedded preset relate logic
             for (PresetData& nt : names_and_types) {
                 const std::string& name = save_dlg.get_name(nt.type);
-                if (!name.empty())
+                if (!name.empty()) {
                     nt.name = name;
-                nt.save_to_project = save_dlg.get_save_to_project_selection(nt.type);
+                    nt.save_to_project = save_dlg.get_save_to_project_selection(nt.type);
+                    if (nt.type == Preset::TYPE_PRINTER)
+                        nt.connection_update = save_dlg.pending_physical_printer_update(name);
+                }
             }
             //for (std::pair<std::string, Preset::Type>& nt : names_and_types) {
             //    const std::string& name = save_dlg.get_name(nt.second);

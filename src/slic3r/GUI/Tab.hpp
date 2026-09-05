@@ -35,6 +35,7 @@
 #include "ConfigManipulation.hpp"
 #include "OptionsGroup.hpp"
 #include "libslic3r/Preset.hpp"
+#include "libslic3r/PrinterConnectionUpdate.hpp"
 //BBS: GUI refactor
 #include "Notebook.hpp"
 #include "ParamsPanel.hpp"
@@ -350,7 +351,11 @@ public:
 	void		compare_preset();
 	void		transfer_options(const std::string&name_from, const std::string&name_to, std::vector<std::string> options);
 	//BBS: add project embedded preset relate logic
-	bool        save_preset(std::string name = std::string(), bool detach = false, bool save_to_project = false, bool from_input = false, std::string input_name = "");
+    struct SaveContext {
+        const Preset *candidate = nullptr;
+        PendingPhysicalPrinterUpdate connection_update;
+    };
+	bool        save_preset(std::string name = std::string(), bool detach = false, bool save_to_project = false, bool from_input = false, std::string input_name = "", const SaveContext *context = nullptr);
 	//void		save_preset(std::string name = std::string(), bool detach = false);
 
 	void		delete_preset();

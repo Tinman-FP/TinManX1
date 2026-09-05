@@ -2998,6 +2998,25 @@ bool PresetCollection::save_current_preset(const std::string &new_name, bool det
     } else if (m_type == Preset::TYPE_PRINTER)
         preset.config.option<ConfigOptionString>("printer_settings_id", true)->value = new_name;
 
+    const auto has_inheritance_cycle = [&]() {
+        std::set<std::string> visited{preset.name};
+        std::string parent_name = preset.inherits();
+        while (!parent_name.empty()) {
+            const Preset *parent = find_preset(parent_name, false, true);
+            if (!parent)
+                return false;
+            if (!visited.insert(parent->name).second)
+                return true;
+            parent_name = parent->inherits();
+        }
+        return false;
+    };
+    // Saving a child over its ancestor must not make that ancestor inherit itself.
+    if (overwrite && !detach && has_inheritance_cycle())
+        preset.inherits() = it->inherits();
+    if (has_inheritance_cycle())
+        throw std::runtime_error("The preset cannot be saved with cyclic inheritance.");
+
     Preset* parent_preset = nullptr;
     if (!preset.inherits().empty()) {
         parent_preset = this->find_preset2(preset.inherits(), true);
@@ -4075,13 +4094,24 @@ void PhysicalPrinter::update_preset_names_in_config()
 
 void PhysicalPrinter::save(const std::string& file_name_from, const std::string& file_name_to)
 {
-    // rename the file
-    boost::nowide::rename(file_name_from.data(), file_name_to.data());
-    this->file = file_name_to;
-    // save configuration
-    //BBS: change to save
-    //this->config.save(this->file);
-    this->config.save_to_json(this->file, std::string("Physical_Printer"), std::string("User"), std::string(SLIC3R_VERSION));
+    const auto source_status = boost::filesystem::symlink_status(file_name_from);
+    if (boost::filesystem::exists(source_status) && !boost::filesystem::is_regular_file(source_status))
+        throw std::runtime_error("The original printer connection is not a regular file: " + file_name_from);
+    const bool same_file = file_name_from == file_name_to ||
+        (boost::filesystem::exists(file_name_from) && boost::filesystem::exists(file_name_to) &&
+         boost::filesystem::equivalent(file_name_from, file_name_to));
+    if (!same_file && boost::filesystem::exists(file_name_to))
+        throw std::runtime_error("A printer connection file already exists at the new name: " + file_name_to);
+
+    // Keep the original until the complete replacement has been written.
+    config.save_to_json(file_name_to, "Physical_Printer", "User", SLIC3R_VERSION);
+    if (!same_file) {
+        boost::system::error_code error;
+        boost::filesystem::remove(file_name_from, error);
+        if (error)
+            throw std::runtime_error("The new printer connection was saved, but the original file could not be removed: " + error.message());
+    }
+    file = file_name_to;
 }
 
 void PhysicalPrinter::update_from_preset(const Preset& preset)
@@ -4241,6 +4271,11 @@ void PhysicalPrinterCollection::load_printers(
                     std::map<std::string, std::string> key_values;
                     std::string reason;
                     ConfigSubstitutions config_substitutions = config.load_from_json(printer.file, substitution_rule, key_values, reason);
+                    if (!reason.empty())
+                        throw std::runtime_error(reason);
+                    const auto version = key_values.find(BBL_JSON_KEY_VERSION);
+                    if (version != key_values.end() && !Semver::parse(version->second))
+                        throw std::runtime_error("Invalid printer connection version.");
                     if (! config_substitutions.empty())
                         substitutions.push_back({ name, Preset::TYPE_PHYSICAL_PRINTER, PresetConfigSubstitutions::Source::UserFile, printer.file, std::move(config_substitutions) });
                     printer.update_from_config(config);
@@ -4276,27 +4311,26 @@ void PhysicalPrinterCollection::load_printer(const std::string& path, const std:
 {
     const std::string selected_full_name = get_selected_full_printer_name();
     auto it = this->find_printer_internal(name, false);
-    if (it == m_printers.end()) {
-        // The preset was not found. Create a new preset.
-        it = this->find_printer_internal(name);
-        it = m_printers.emplace(it, PhysicalPrinter(name, config));
-    }
-
-    it->file = path;
-    it->config = m_default_config;
-    it->update_from_config(config);
-    it->loaded = true;
+    PhysicalPrinter candidate(it == m_printers.end() ? name : it->name, m_default_config);
+    candidate.file = path;
+    candidate.update_from_config(config);
+    candidate.loaded = true;
     if (m_preset_bundle_owner != nullptr &&
-        update_physical_printer_preset_names(it->preset_names,
+        update_physical_printer_preset_names(candidate.preset_names,
                                              m_preset_bundle_owner->printers))
-        it->update_preset_names_in_config();
+        candidate.update_preset_names_in_config();
+    if (save)
+        candidate.save(nullptr);
+
+    if (it == m_printers.end())
+        it = m_printers.emplace(find_printer_internal(name), std::move(candidate));
+    else
+        *it = std::move(candidate);
     if (select)
         this->select_printer(*it);
     else if (!selected_full_name.empty())
         this->select_printer(selected_full_name);
 
-    if (save)
-        it->save(nullptr);
 }
 
 // if there is saved user presets, contains information about "Print Host upload",
@@ -4393,46 +4427,36 @@ std::string PhysicalPrinterCollection::path_from_name(const std::string& new_nam
 
 void PhysicalPrinterCollection::save_printer(PhysicalPrinter& edited_printer, const std::string& renamed_from/* = ""*/)
 {
-    // controll and update preset_names in edited_printer config
-    edited_printer.update_preset_names_in_config();
+    PhysicalPrinter candidate = edited_printer;
+    candidate.update_preset_names_in_config();
+    const std::string name = renamed_from.empty() ? candidate.name : renamed_from;
+    auto it = find_printer_internal(name, false);
+    if (!renamed_from.empty() && it == m_printers.end())
+        throw std::runtime_error("The printer connection to rename is no longer available.");
+    const auto target = find_printer_internal(candidate.name, false);
+    if (target != m_printers.end() && target != it)
+        throw std::runtime_error("A printer connection already exists with the requested name.");
 
-    std::string name = renamed_from.empty() ? edited_printer.name : renamed_from;
-    // 1) Find the printer with a new_name or create a new one,
-    // initialize it with the edited config.
-    auto it = this->find_printer_internal(name);
-    if (it != m_printers.end() && it->name == name) {
-        // Printer with the same name found.
-        // Overwriting an existing preset.
-        if (&*it != &edited_printer) {
-            it->config = std::move(edited_printer.config);
-            it->preset_names = edited_printer.preset_names;
-        }
-        it->name = edited_printer.name;
-        // sort printers and get new it
-        std::sort(m_printers.begin(), m_printers.end());
-        it = this->find_printer_internal(edited_printer.name);
-    }
-    else {
-        // Creating a new printer.
-        it = m_printers.emplace(it, edited_printer);
-    }
-    assert(it != m_printers.end());
-
-    // 2) Save printer
-    PhysicalPrinter& printer = *it;
-    if (printer.file.empty())
-        printer.file = this->path_from_name(printer.name);
-
-    if (printer.file == this->path_from_name(printer.name))
-        printer.save(nullptr);
+    const std::string saved_name = candidate.name;
+    std::string selected_preset = m_selected_preset;
+    if (candidate.preset_names.find(selected_preset) == candidate.preset_names.end())
+        selected_preset = candidate.preset_names.empty() ? std::string() : *candidate.preset_names.begin();
+    const std::string old_file = it == m_printers.end() ? std::string() : it->file;
+    candidate.file = path_from_name(saved_name);
+    if (!old_file.empty() && old_file != candidate.file)
+        candidate.save(old_file, candidate.file);
     else
-        // if printer was renamed, we should rename a file and than save the config
-        printer.save(printer.file, this->path_from_name(printer.name));
+        candidate.save(nullptr);
 
-    // update idx_selected
+    if (it == m_printers.end())
+        it = m_printers.emplace(find_printer_internal(saved_name), std::move(candidate));
+    else {
+        *it = std::move(candidate);
+        std::sort(m_printers.begin(), m_printers.end());
+        it = find_printer_internal(saved_name);
+    }
     m_idx_selected = it - m_printers.begin();
-    if (printer.preset_names.find(m_selected_preset) == printer.preset_names.end())
-        m_selected_preset = printer.preset_names.empty() ? std::string() : *printer.preset_names.begin();
+    m_selected_preset.swap(selected_preset);
 }
 
 bool PhysicalPrinterCollection::delete_printer(const std::string& name)

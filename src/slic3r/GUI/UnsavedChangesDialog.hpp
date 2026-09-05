@@ -8,6 +8,7 @@
 #include "GUI_Utils.hpp"
 #include "wxExtensions.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/PrinterConnectionUpdate.hpp"
 #include "Widgets/Button.hpp"
 #include "Widgets/ScrolledWindow.hpp"
 
@@ -306,6 +307,7 @@ public:
         std::string name;
         Preset::Type type;
         bool save_to_project;
+        PendingPhysicalPrinterUpdate connection_update;
 
         PresetData(std::string preset_name, Preset::Type preset_type, bool save_project)
             :name(preset_name), type(preset_type), save_to_project(save_project)

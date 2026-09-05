@@ -194,9 +194,13 @@ Revision `v2026.09.05-selection-commit.1`, package `2026.9.5.6`.
 Four native cases pass 115 assertions, including all four logical slots, retained
 editor edits, material-only choices, missing/hidden profiles, changed printer,
 invalid slot, invalid color vector, and physical-name parsing. The broader suite
-passes 106 cases and 184,684 assertions. GUI/CLI compilation passed before the
-last small event guard; final full build, installed smoke, and G-code regression
-are next.
+passes 106 cases and 184,684 assertions. The complete Apple Silicon build passed.
+The installed About dialog showed revision selection-commit.1 and commit
+7bd68c03db. Signature verification and all 936 installed profile checksums passed;
+saved-project G-code differed only in two timestamp comments. The verified commit
+was pushed to GitHub. A native new-project cancellation smoke on the preceding
+preset-save build retained a temporary 0.35 mm edit; it was restored to 0.36 mm
+without saving, and user preset-file checksums were unchanged.
 
 Limits: this is a logical slot/palette commit and deferred GUI effects, not a
 transaction across all preset collections or an asynchronous catalog generation
@@ -204,3 +208,54 @@ barrier. The custom dropdowns still do not respond to the available CUA
 automation; native tests and code review do not replace that missing interactive
 switch/cancel test. Successful explicit Save actions in an earlier confirmation
 are not undone if a later confirmation is canceled.
+
+### Connection Save Milestone
+
+Revision `v2026.09.05-connection-save.1`, package `2026.9.5.7`.
+
+Three generated-fixture tests reproduced 14 failing assertions: failed physical
+connection saves mutated the stored record or selection, moved the draft's
+config away, and malformed connection JSON was published as a default record.
+Those initial 36 assertions pass after candidate-first persistence and explicit
+parse-status checks. Eight connection/ancestor-save cases now pass 173 assertions;
+the broader suite passes 114 cases and 184,857 assertions. Successful save and
+rename round trips preserve credentials, selected identity and nozzle
+associations. Failed imports, overwrites, renames, stale association requests,
+malformed files and retries are covered. The GUI and native targets compile.
+Complete build and installed smoke verification remain to be done.
+
+Additional GUI audit findings: Save As deleted the existing local/cloud profile
+inside its name-confirmation dialog, before saving the replacement. Physical
+connection associations were also changed before the new preset existed. The
+connection dialog edited the live printer config directly, cached its values
+before saving, and ignored the save result. Confirmation now gathers pending
+requests only. The connection dialog uses a private draft and rejects saves if
+the original printer changed in the meantime. Caller-side checks delay both the
+connection backup and agent refresh until preset persistence succeeds. The
+dialog's options group has explicit ownership and is released before its draft.
+Connection association changes run after preset saves in direct Save As,
+tab-switch, new-project and close paths. Errors report partial success rather
+than implying that an earlier successful save was rolled back.
+
+Removing the early-delete behavior exposed an existing inheritance defect:
+overwriting an ancestor with a descendant could make the ancestor inherit
+itself. A generated matrix reproduced 12 failing assertions. Such overwrites now
+retain the target's previous ancestry while preserving the incoming effective
+values and existing identity. Remaining cycles are rejected before writing.
+
+Limits: connection JSON and application backup are separate saves, not a
+multi-file transaction. A successful renamed-file write followed by failure to
+remove its original reports an error and retains both files for recovery. New
+collection insertion after persistence is not an out-of-memory transaction.
+Normal authentication actions retain their existing external effects; no live
+login, network test, upload or printer command is used for this milestone's QA.
+
+Prusa 3 alpha11's physical-printer code is not being copied wholesale. Its
+separate hardware configuration and connection identity are useful boundaries,
+but PhysicalPrinterStorage::save_one writes directly and reports no success to
+its caller. PhysicalPrinterInteractor updates memory before that write. Also,
+load_all calls consolidate_files after skipping invalid files, and consolidation
+removes files whose stems are not present in the loaded map. TinManX1 should not
+adopt those failure-handling behaviors. Inspection source is the previously
+recorded 6f510128d7c2e543b62919b74bea7e876f564205 checkout, under
+src/slic3r-shared/src/Slic3r/Biz/PhysicalPrinter.

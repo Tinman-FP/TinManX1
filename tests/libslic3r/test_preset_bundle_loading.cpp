@@ -387,6 +387,41 @@ TEST_CASE("Preset save commits only after persistence and retains identity", "[P
         CHECK(saved.config.opt_string(type == Preset::TYPE_PRINT ? "print_settings_id" : "printer_settings_id") == name);
 }
 
+TEST_CASE("Overwriting a parent from its child retains an acyclic hierarchy", "[Preset][SaveRecovery][ConnectionRecovery][TinMan]")
+{
+    const auto type = GENERATE(Preset::TYPE_PRINT, Preset::TYPE_FILAMENT, Preset::TYPE_PRINTER);
+    const bool parent_is_root = GENERATE(false, true);
+    TempPresetDir temp_dir;
+    PresetBundle bundle;
+    PresetCollection &presets = type == Preset::TYPE_PRINT ? bundle.prints :
+        type == Preset::TYPE_FILAMENT ? bundle.filaments : bundle.printers;
+    const std::string section = Preset::get_type_string(type);
+    presets.update_user_presets_directory(temp_dir.path.string(), section);
+    auto config = presets.default_preset().config;
+    const std::string key = type == Preset::TYPE_PRINT ? "notes" : type == Preset::TYPE_FILAMENT ? "filament_notes" : "printer_notes";
+    for (const std::string &name : {"Root", "Target", "Source"}) {
+        config.option<ConfigOptionString>("inherits", true)->value =
+            name == "Source" ? "Target" : name == "Target" && !parent_is_root ? "Root" : "";
+        auto &preset = presets.load_preset((temp_dir.path / section / (name + ".json")).string(), name, config, false);
+        preset.save(nullptr);
+    }
+    presets.find_preset("Target", false)->setting_id = "target-fixture-id";
+    presets.select_preset_by_name("Source", true);
+    presets.get_edited_preset().config.set_deserialize_strict(key, "updated from source");
+    const auto source = presets.get_edited_preset();
+    REQUIRE(presets.save_current_preset("Target"));
+    CHECK(presets.get_selected_preset().inherits() == (parent_is_root ? "" : "Root"));
+    CHECK(presets.get_selected_preset().setting_id == "target-fixture-id");
+    CHECK(presets.get_selected_preset().config.opt_serialize(key) == source.config.opt_serialize(key));
+    CHECK(presets.find_preset("Source", false) != nullptr);
+    DynamicPrintConfig saved;
+    std::map<std::string, std::string> metadata;
+    std::string reason;
+    saved.load_from_json(presets.get_selected_preset().file, ForwardCompatibilitySubstitutionRule::Disable, metadata, reason);
+    CHECK(reason.empty());
+    CHECK(Preset::inherits(saved) == (parent_is_root ? "" : "Root"));
+}
+
 TEST_CASE("Project embedded saves do not require writable preset files", "[Preset][SaveRecovery][TinMan]")
 {
     TempPresetDir temp_dir;

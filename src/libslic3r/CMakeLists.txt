@@ -366,6 +366,8 @@ set(lisbslic3r_sources
     ConfigResolutionTrace.hpp
     FilamentSelection.cpp
     FilamentSelection.hpp
+    PrinterConnectionUpdate.cpp
+    PrinterConnectionUpdate.hpp
     PrincipalComponents2D.cpp
     PrincipalComponents2D.hpp
     PrintApply.cpp

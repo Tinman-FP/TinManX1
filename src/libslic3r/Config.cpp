@@ -876,6 +876,8 @@ int ConfigBase::load_from_json(const std::string &file, ConfigSubstitutionContex
         boost::nowide::ifstream ifs(file);
         ifs >> j;
         ifs.close();
+        if (!j.is_object())
+            throw std::runtime_error("A configuration file must contain a JSON object.");
 
         const ConfigDef* config_def = this->def();
         if (config_def == nullptr) {

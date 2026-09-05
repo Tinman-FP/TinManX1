@@ -6648,7 +6648,8 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection *presets /*= nullptr
             const Preset draft = presets->get_edited_preset();
             // revert unselected options to the old values
             presets->get_edited_preset().config.apply_only(presets->get_selected_preset().config, unselected_options);
-            if (!save_preset(name, false, save_to_project)) {
+            const SaveContext save_context{nullptr, dlg.get_names_and_types().front().connection_update};
+            if (!save_preset(name, false, save_to_project, false, "", &save_context)) {
                 presets->get_edited_preset() = draft;
                 return false;
             }
@@ -6657,8 +6658,9 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection *presets /*= nullptr
         {
             try {
                 m_preset_bundle->save_changes_for_preset(name, presets->type(), unselected_options, save_to_project);
+                dlg.get_names_and_types().front().connection_update.apply(*m_preset_bundle);
             } catch (const std::exception &error) {
-                show_error(this, _L("Could not save the preset. Your unsaved changes have been kept.") + "\n\n" + wxString::FromUTF8(error.what()));
+                show_error(this, _L("Could not complete the save. Earlier successful saves have been kept.") + "\n\n" + wxString::FromUTF8(error.what()));
                 return false;
             }
 
@@ -7018,7 +7020,7 @@ void Tab::transfer_options(const std::string &name_from, const std::string &name
 // Wizard calls save_preset with a name "My Settings", otherwise no name is provided and this method
 // opens a Slic3r::GUI::SavePresetDialog dialog.
 //BBS: add project embedded preset relate logic
-bool Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_project, bool from_input, std::string input_name )
+bool Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_project, bool from_input, std::string input_name, const SaveContext *context)
 {
     // ORCA: Validate before opening any save-name UI for filament presets.
     if (!validate_filament_temperature_pairs())
@@ -7028,15 +7030,20 @@ bool Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
     // to the treectrl so that the EVT_* events are fired for the input field having
     // focus currently.is there anything better than this ?
 //!	m_tabctrl->OnSetFocus();
+    PendingPhysicalPrinterUpdate connection_update = context ? context->connection_update : PendingPhysicalPrinterUpdate{};
     if (from_input) {
         SavePresetDialog dlg(m_parent, m_type, m_mode, detach ? _u8L("Detached") : "");
         dlg.Show(false);
         dlg.input_name_from_other(input_name);
         wxCommandEvent evt(wxEVT_TEXT, GetId());
         dlg.GetEventHandler()->ProcessEvent(evt);
-        dlg.confirm_from_other();
+        if (!dlg.confirm_from_other()) {
+            show_error(this, _L("The preset name is invalid or cannot be overwritten."));
+            return false;
+        }
         name = input_name;
         detach = dlg.get_detach_value(m_type);
+        connection_update = dlg.pending_physical_printer_update(name);
     }
 
     if (name.empty()) {
@@ -7049,10 +7056,11 @@ bool Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
         //BBS: add project embedded preset relate logic
         save_to_project = dlg.get_save_to_project_selection(m_type);
         detach          = dlg.get_detach_value(m_type);
+        connection_update = dlg.pending_physical_printer_update(name);
     }
 
     //BBS record current preset name
-    Preset edited_preset = m_presets->get_edited_preset();
+    Preset edited_preset = context && context->candidate ? *context->candidate : m_presets->get_edited_preset();
     std::string curr_preset_name = edited_preset.name;
 
     bool exist_preset = false;
@@ -7102,6 +7110,14 @@ bool Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
     }
     if (!new_preset->save_info())
         show_error(this, _L("The preset was saved locally, but its synchronization metadata could not be saved. Cloud synchronization may be delayed."));
+
+    bool connection_saved = true;
+    try {
+        connection_update.apply(*m_preset_bundle);
+    } catch (const std::exception &error) {
+        connection_saved = false;
+        show_error(this, _L("The preset was saved, but its printer connection could not be updated. The previous connection was kept.") + "\n\n" + wxString::FromUTF8(error.what()));
+    }
 
     // Mark the print & filament enabled if they are compatible with the currently selected preset.
     // If saving the preset changes compatibility with other presets, keep the now incompatible dependent presets selected, however with a "red flag" icon showing that they are no more compatible.
@@ -7162,7 +7178,7 @@ bool Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
 
     // update preset comboboxes in DiffPresetDlg
     wxGetApp().mainframe->diff_dialog.update_presets(m_type);
-    return true;
+    return connection_saved;
 }
 
 // Called for a currently selected preset.
