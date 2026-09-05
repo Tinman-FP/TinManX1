@@ -6204,24 +6204,30 @@ void GUI_App::reload_settings()
             // The cloud load_user_presets() can also trigger select_preset() via
             // remove_users_preset() and overwrite m_edited_preset.config via load_user_preset().
             struct PresetSnapshot { std::string name; DynamicPrintConfig config; bool dirty; };
-            auto snapshot_collection = [](const PresetCollection& col) -> PresetSnapshot {
+            auto snapshot_collection = [](PresetCollection& col) -> PresetSnapshot {
+                col.update_dirty();
                 auto& sel = col.get_selected_preset();
                 auto& ed  = col.get_edited_preset();
-                return {sel.name, ed.config, sel.is_dirty};
+                return {sel.name, ed.config, col.current_is_dirty()};
             };
             PresetSnapshot print_snap    = snapshot_collection(preset_bundle->prints);
             PresetSnapshot filament_snap = snapshot_collection(preset_bundle->filaments);
             PresetSnapshot printer_snap  = snapshot_collection(preset_bundle->printers);
 
-            // Check the user presets for any system vendors that need to be installed
-            for (auto data : user_presets) {
-                if (!check_preset_parent_available(data))
-                    add_pending_vendor_preset(data);
+            std::string sync_error;
+            try {
+                // Check for system vendors required by the incoming profiles.
+                for (const auto &data : user_presets) {
+                    if (!check_preset_parent_available(data))
+                        add_pending_vendor_preset(data);
+                }
+                load_pending_vendors();
+                preset_bundle->load_user_presets(*app_config, user_presets, ForwardCompatibilitySubstitutionRule::Enable);
+                preset_bundle->save_user_presets(*app_config, get_delete_cache_presets());
+            } catch (const std::exception &error) {
+                sync_error = error.what();
+                BOOST_LOG_TRIVIAL(error) << "Cloud preset refresh was incomplete: " << sync_error;
             }
-            load_pending_vendors();
-
-            preset_bundle->load_user_presets(*app_config, user_presets, ForwardCompatibilitySubstitutionRule::Enable);
-            preset_bundle->save_user_presets(*app_config, get_delete_cache_presets());
 
             // Re-apply any edited config that was wiped during vendor loading or sync.
             auto restore_snapshot = [](PresetCollection& col, const PresetSnapshot& snap, const char* label) {
@@ -6240,8 +6246,7 @@ void GUI_App::reload_settings()
                         col.select_preset_by_name(snap.name, true);
                     ed = col.get_edited_preset();
                     ed.config = snap.config;
-                    col.get_selected_preset().is_dirty = snap.dirty;
-                    ed.is_dirty = snap.dirty;
+                    col.update_dirty();
                 } else {
                     BOOST_LOG_TRIVIAL(info) << "reload_settings restore " << label
                         << ": preset not found name=" << snap.name;
@@ -6259,6 +6264,9 @@ void GUI_App::reload_settings()
             }
             if (plater_)
                 plater_->sidebar().update_all_preset_comboboxes();
+            if (!sync_error.empty())
+                show_error(mainframe, _L("Some profiles could not be synchronized. Earlier successful updates were kept.") +
+                           "\n\n" + wxString::FromUTF8(sync_error));
         };
         if (is_main_thread_active())
             refresh_synced_ui();

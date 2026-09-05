@@ -2267,11 +2267,9 @@ void PresetCollection::save_user_presets(const std::string& dir_path, const std:
 bool PresetCollection::load_user_preset(std::string name, std::map<std::string, std::string> preset_values, PresetsConfigSubstitutions& substitutions, ForwardCompatibilitySubstitutionRule rule, const PresetOrigin &load_origin)
 {
     std::string errors_cummulative;
-    // Store the loaded presets into a new vector, otherwise the binary search for already existing presets would be broken.
-    // (see the "Preset already present, not loading" message).
-    //std::deque<Preset> presets_loaded;
-    int count = 0;
     const std::string canonical_name = this->canonical_preset_name(name, load_origin);
+    if (canonical_name.empty())
+        return false;
     auto update_alias = [this](Preset &preset) {
         if (! preset.alias.empty())
             return;
@@ -2301,8 +2299,17 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
 
     //update_time
     long long cloud_update_time = 0;
-    if (preset_values.find(ORCA_JSON_KEY_UPDATE_TIME) != preset_values.end()) {
-        cloud_update_time = std::atoll(preset_values[ORCA_JSON_KEY_UPDATE_TIME].c_str());
+    const auto timestamp = preset_values.find(ORCA_JSON_KEY_UPDATE_TIME);
+    if (timestamp != preset_values.end()) {
+        try {
+            const auto &value = timestamp->second;
+            if (value.empty() || !std::all_of(value.begin(), value.end(), [](char c) { return c >= '0' && c <= '9'; }))
+                throw std::invalid_argument("Invalid timestamp");
+            cloud_update_time = std::stoll(value);
+        } catch (const std::logic_error &) {
+            BOOST_LOG_TRIVIAL(warning) << "Skipping preset with an invalid cloud timestamp: " << canonical_name;
+            return false;
+        }
     }
 
     //user_id
@@ -2312,25 +2319,30 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
     }
     std::string cloud_user_id = preset_values[BBL_JSON_KEY_USER_ID];
 
-    lock();
-    //std::string name = preset->name;
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
     auto iter = this->find_preset_internal(canonical_name);
     bool need_update = false;
     if ((iter != m_presets.end()) && (iter->name == canonical_name)) {
+        const bool matching_bundle = load_origin.is_bundle() && !load_origin.bundle_id.empty() &&
+            iter->bundle_id == load_origin.bundle_id;
+        if (iter->is_system || iter->is_default || iter->is_external || iter->is_project_embedded ||
+            (iter->is_from_bundle() && !matching_bundle)) {
+            BOOST_LOG_TRIVIAL(warning) << "Cloud update cannot replace a protected preset: " << canonical_name;
+            return false;
+        }
         BOOST_LOG_TRIVIAL(info) << "Found the Preset locally: " << canonical_name;
         //BBS: we should compare the time between cloud and local
         if ((cloud_update_time == 0) || (cloud_update_time <= iter->updated_time)) {
-            if (cloud_update_time < iter->updated_time)
-                iter->sync_info = "update";
-            else
-                iter->sync_info.clear();
-            // Fixup possible data lost
-            iter->setting_id = cloud_setting_id;
-            fs::path idx_file(iter->file);
-            idx_file.replace_extension(".info");
-            iter->save_info(idx_file.string());
+            // A repeated response must not erase a failed local-write retry.
+            Preset candidate = *iter;
+            if (candidate.sync_info != "save")
+                candidate.sync_info = cloud_update_time < candidate.updated_time ? "update" : "";
+            candidate.setting_id = cloud_setting_id;
+            if (!candidate.file.empty() && candidate.save_info()) {
+                iter->sync_info = std::move(candidate.sync_info);
+                iter->setting_id = std::move(candidate.setting_id);
+            }
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format("preset %1%'s update_time is eqaul or newer, cloud  update_time %2%, local update_time %3%")%canonical_name %cloud_update_time %iter->updated_time;
-            unlock();
             return false;
         }
         else {
@@ -2368,16 +2380,22 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
     DynamicPrintConfig new_config, cloud_config;
     try {
         ConfigSubstitutions config_substitutions = cloud_config.load_string_map(preset_values, rule);
-        if (! config_substitutions.empty())
-            substitutions.push_back({ canonical_name, m_type, PresetConfigSubstitutions::Source::UserCloud, canonical_name, std::move(config_substitutions) });
-
         //BBS: use inherit config as the base
         Preset* inherit_preset = nullptr;
         ConfigOption* inherits_config = cloud_config.option(BBL_JSON_KEY_INHERITS);
         if (inherits_config) {
             ConfigOptionString * option_str = dynamic_cast<ConfigOptionString *> (inherits_config);
+            if (!option_str)
+                throw Slic3r::RuntimeError("Invalid inheritance value in cloud preset: " + canonical_name);
             std::string inherits_value = option_str->value;
             inherit_preset = this->find_preset2(inherits_value, true);
+            std::set<std::string> visited{canonical_name};
+            for (const Preset *parent = inherit_preset; parent;) {
+                if (!visited.insert(parent->name).second)
+                    throw Slic3r::RuntimeError("Cyclic inheritance in cloud preset: " + canonical_name);
+                const auto &parent_name = parent->inherits();
+                parent = parent_name.empty() ? nullptr : find_preset2(parent_name, true);
+            }
             Preset::normalize_inherits(cloud_config, inherit_preset);
         }
         const Preset& default_preset = this->default_preset_for(cloud_config);
@@ -2398,7 +2416,6 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
             if (inherits_config2 && !inherits_config2->value.empty()) {
                 //we should skip this preset here
                 BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", can not find inherit preset for user preset %1%, just skip")%canonical_name;
-                unlock();
                 return false;
             }
             // Find a default preset for the config. The PrintPresetCollection provides different default preset based on the "printer_technology" field.
@@ -2427,24 +2444,35 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
                                      << "\" contains the following incorrect keys: " << incorrect_keys << ", which were removed";
         }
         if (need_update) {
-            if (iter->name == m_edited_preset.name && iter->is_dirty) {
-                // Keep modifies when update from remote
-                new_config.apply_only(m_edited_preset.config, m_edited_preset.config.diff(iter->config));
-            } else if (iter->name == m_edited_preset.name) {
-                // Preset is not dirty (no local unsaved changes) — also update the edited preset
-                // to prevent a false "dirty" indication (orange highlight) after a silent cloud sync
-                m_edited_preset.config = new_config;
+            Preset candidate = *iter;
+            candidate.config = std::move(new_config);
+            candidate.updated_time = cloud_update_time;
+            candidate.sync_info = "save";
+            candidate.version = *cloud_version;
+            candidate.user_id = cloud_user_id;
+            candidate.setting_id = cloud_setting_id;
+            candidate.base_id = based_id;
+            candidate.filament_id = cloud_filament_id;
+            update_alias(candidate);
+            const bool selected = m_idx_selected < m_presets.size() && &*iter == &m_presets[m_idx_selected] &&
+                iter->name == m_edited_preset.name;
+            if (selected) {
+                // Remote values are the stored baseline, never a place to persist
+                // unconfirmed editor tuning. Actual differences outrank stale flags.
+                Preset editor = candidate;
+                if (is_dirty(&m_edited_preset, &*iter))
+                    editor.config = m_edited_preset.config;
+                editor.is_dirty = is_dirty(&editor, &candidate);
+                Preset saved = candidate;
+                saved.is_dirty = false;
+                candidate.is_dirty = editor.is_dirty;
+                *iter = std::move(candidate);
+                m_saved_preset = std::move(saved);
+                m_edited_preset = std::move(editor);
+            } else {
+                candidate.is_dirty = false;
+                *iter = std::move(candidate);
             }
-            iter->config = new_config;
-            iter->updated_time = cloud_update_time;
-            iter->sync_info    = "save";
-            iter->version      = cloud_version.value();
-            iter->user_id = cloud_user_id;
-            iter->setting_id = cloud_setting_id;
-            iter->base_id = based_id;
-            iter->filament_id = cloud_filament_id;
-            update_alias(*iter);
-            //presets_loaded.emplace_back(*it->second);
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", update the user preset %1% from cloud, type %2%, setting_id %3%, base_id %4%, sync_info %5% inherits %6%, filament_id %7%")
                % iter->name %Preset::get_type_string(m_type) %iter->setting_id %iter->base_id %iter->sync_info %iter->inherits() % iter->filament_id;
         }
@@ -2466,20 +2494,20 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
 
             size_t cur_index = iter - m_presets.begin();
             m_presets.insert(iter, preset);
-            //m_presets.emplace_back (preset);
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", insert a new user preset %1%, type %2%, setting_id %3%, base_id %4%, sync_info %5% inherits %6%, filament_id %7%")
                %preset.name %Preset::get_type_string(m_type) %preset.setting_id %preset.base_id %preset.sync_info %preset.inherits() %preset.filament_id;
-            if (cur_index <= m_idx_selected) {
+            if (m_idx_selected != size_t(-1) && cur_index <= m_idx_selected) {
                 m_idx_selected ++;
                 BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(", increase m_idx_selected to %1%, due to user preset inserted")%m_idx_selected;
             }
         }
+        if (!config_substitutions.empty())
+            substitutions.push_back({canonical_name, m_type, PresetConfigSubstitutions::Source::UserCloud,
+                                     canonical_name, std::move(config_substitutions)});
     } catch (const std::runtime_error &err) {
         errors_cummulative += err.what();
         errors_cummulative += "\n";
     }
-
-    unlock();
 
     if (! errors_cummulative.empty())
         throw Slic3r::RuntimeError(errors_cummulative);

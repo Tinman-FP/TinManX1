@@ -320,6 +320,15 @@ inherited overrides. The standard native suite passes 217 cases and 237,021
 assertions; it excludes the previously documented hidden sinking-object test.
 Complete GUI build and installed smoke verification follow.
 
+The complete 267-step GUI build and installation passed. Signature, all 936
+resource profile checksums, and user JSON/info hashes passed. The reference
+saved-project G-code changed only its two timestamp comments. Thirteen offline
+printer-integration cases passed 77 assertions. Installed startup reached a macOS
+Keychain authorization prompt; a process sample shows the main thread waiting in
+wxSecretStore::Load / SecKeychainFindGenericPassword, not preset loading. No
+credentials or Keychain permissions were changed. The test launch was closed;
+this revision's interactive About/project smoke remains unverified.
+
 - Embedded roots export their effective values, and loaded roots apply defaults
   plus their own settings. Named missing/cyclic parents are not guessed; their
   input records remain intact and are logged/skipped. Parent-child chains load
@@ -347,3 +356,38 @@ This remains staged per-collection import, not an all-or-nothing transaction
 across every collection or an out-of-memory/power-loss guarantee. Earlier healthy
 imports may remain available when a later malformed record reports an error.
 No filament tuning, machine capability, or process defaults are changed.
+
+### Cloud Recovery Milestone
+
+Revision `v2026.09.05-cloud-recovery.1`, package `2026.9.5.10`.
+
+Six offline cloud-import fixtures reproduced 37 failing assertions. The expanded
+suite passes 12 cases and 124 assertions. The standard native suite passes 229
+cases and 237,145 assertions. No live login or synchronization is used in tests.
+
+- Remote updates previously merged unsaved editor tuning into the stored preset,
+  then marked that preset for automatic disk persistence. Remote data now stays
+  in the stored baseline, while actual local edits remain in the editor until an
+  explicit save. Clean updates advance the editor and its saved comparison
+  baseline together. Matching values become clean without a false dirty warning.
+- Actual config differences determine whether changes need preservation, rather
+  than trusting a stale dirty flag. The GUI snapshot path uses the same check,
+  recomputes dirty status after restoration, and restores snapshots after an
+  ordinary synchronization exception before reporting partial success.
+- Repeated responses retain pending local-write markers. Failed metadata writes
+  leave in-memory metadata unchanged. Unassigned file paths cannot write a stray
+  .info file. Invalid timestamps, protected identity collisions, cyclic parents,
+  missing parents, and insertion into an unselected catalog are handled without
+  overwriting valid data. Subscribed bundle identities remain independently
+  updatable. Import locks use RAII and diagnostics publish only after success.
+- Tests include process values, independent standard/high-flow material vectors,
+  mixed four-nozzle printer vectors, save/reload, stale flags, rejected-input
+  retry, selection preservation, and protected system/default/project/external
+  identities.
+
+This is not a whole-bundle transaction or an asynchronous account-generation
+barrier. Vendor installation and earlier successful records may have effects
+before a later error. The existing server-driven deletion policy is not rewritten
+here. Complete application build and installed checks follow. An expanded FFF
+test run found one brim coordinate-range failure (36 other cases passed); its
+origin is under separate investigation and it is not claimed resolved.
