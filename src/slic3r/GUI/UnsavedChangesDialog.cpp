@@ -1899,6 +1899,7 @@ void DiffPresetDialog::create_presets_sizer()
                     update_compatibility(preset_name, new_type, preset_bundle);
                 }
                 update_tree();
+                return true;
             });
             if (collection->get_selected_idx() != (size_t)-1)
                 cb->update(collection->get_selected_preset().name);

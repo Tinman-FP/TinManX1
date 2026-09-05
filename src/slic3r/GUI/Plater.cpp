@@ -10834,30 +10834,24 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
             Preset::remove_suffix_modified(wx_name.ToUTF8().data()));
     }
 
+    std::optional<FilamentSlotSelection> filament_selection;
+    const int selection_flag = combo->GetFlag(selection);
     if (preset_type == Preset::TYPE_FILAMENT) {
-        if (idx >= 0)
-            sidebar_ensure_filament_preset_slot(wxGetApp().preset_bundle, static_cast<size_t>(idx));
-        wxGetApp().preset_bundle->set_filament_preset(idx, preset_name);
-        if (idx == 1)
-            sidebar->sync_continuous_fiber_selector_from_filament_preset(preset_name, false);
-        wxGetApp().plater()->update_project_dirty_from_presets();
-        wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
-        sidebar->update_dynamic_filament_list();
-        bool flag_is_change = is_support_filament(idx);
-        if (flag != flag_is_change && wxGetApp().app_config->get("auto_calculate_flush") == "all") {
-            sidebar->auto_calc_flushing_volumes(idx);
+        const auto *preset = wxGetApp().preset_bundle->filaments.find_preset(preset_name, false, true);
+        if (idx < 0 || static_cast<size_t>(idx) >= wxGetApp().preset_bundle->filament_presets.size() || !preset || !preset->is_visible) {
+            combo->update();
+            show_error(this->sidebar, _L("The selected filament slot or preset is no longer available."));
+            return;
         }
-        auto select_flag = combo->GetFlag(selection);
-        combo->ShowBadge(select_flag == (int)PresetComboBox::FilamentAMSType::FROM_AMS);
-        q->on_filament_change(idx);
+        filament_selection = FilamentSlotSelection{static_cast<size_t>(idx), preset->name,
+            wxGetApp().preset_bundle->printers.get_edited_preset().name, combo->pending_filament_color()};
     }
-    bool select_preset = !combo->selection_is_changed_according_to_physical_printers();
-    // TODO: ?
-    if (preset_type == Preset::TYPE_FILAMENT && sidebar->is_multifilament()) {
-        // Only update the plater UI for the 2nd and other filaments.
-        combo->update();
-    }
-    else if (select_preset) {
+    const auto physical_result = combo->selection_is_changed_according_to_physical_printers();
+    if (physical_result == PresetComboBox::PhysicalSelectionResult::Canceled)
+        return;
+    const bool select_preset = physical_result == PresetComboBox::PhysicalSelectionResult::NotApplicable;
+    // Multi-material choices change a logical slot without replacing the editor.
+    if (select_preset && !(preset_type == Preset::TYPE_FILAMENT && sidebar->is_multifilament())) {
         if (preset_type == Preset::TYPE_PRINTER) {
             PhysicalPrinterCollection& physical_printers = wxGetApp().preset_bundle->physical_printers;
             const std::string previous_physical_printer = physical_printers.get_selected_full_printer_name();
@@ -10921,13 +10915,28 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
         }
         else {
             wxWindowUpdateLocker noUpdates2(sidebar->filament_panel());
-            wxGetApp().get_tab(preset_type)->select_preset(preset_name);
+            if (!wxGetApp().get_tab(preset_type)->select_preset(preset_name))
+                return;
         }
     }
 
-    // ORCA: Always refresh the selected filament combo so its color swatch (clr_picker)
-    // matches the chosen preset. update_ams_color() (in OnSelect) updates the project
-    // filament color when the preset defines one; this repaints the swatch to match.
+    if (filament_selection) {
+        if (!combo->apply_filament_selection(*filament_selection)) {
+            combo->update();
+            return;
+        }
+        if (idx == 1)
+            sidebar->sync_continuous_fiber_selector_from_filament_preset(filament_selection->preset_name, false);
+        q->update_project_dirty_from_presets();
+        wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
+        sidebar->update_dynamic_filament_list();
+        if (flag != is_support_filament(idx) && wxGetApp().app_config->get("auto_calculate_flush") == "all")
+            sidebar->auto_calc_flushing_volumes(idx);
+        combo->ShowBadge(selection_flag == (int)PresetComboBox::FilamentAMSType::FROM_AMS);
+        q->on_filament_change(idx);
+    }
+
+    // Repaint only after the slot and its color have been committed together.
     if (preset_type == Preset::TYPE_FILAMENT)
         combo->update();
 

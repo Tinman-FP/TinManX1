@@ -230,7 +230,8 @@ void Tab::create_preset_tab()
         m_presets_choice = new TabPresetComboBox(panel, m_type);
         // m_presets_choice->SetFont(Label::Body_10); // BBS
         m_presets_choice->set_selection_changed_function([this](int selection) {
-            if (!m_presets_choice->selection_is_changed_according_to_physical_printers())
+            const auto physical_result = m_presets_choice->selection_is_changed_according_to_physical_printers();
+            if (physical_result == PresetComboBox::PhysicalSelectionResult::NotApplicable)
             {
                 const std::string previous_physical_printer = m_preset_bundle->physical_printers.get_selected_full_printer_name();
                 if (m_type == Preset::TYPE_PRINTER && !m_presets_choice->is_selected_physical_printer())
@@ -246,8 +247,9 @@ void Tab::create_preset_tab()
                         m_presets_choice->GetString(selection).ToUTF8().data());
                     preset_name = m_preset_bundle->get_preset_name_by_alias(m_type, selected_label);
                 }
-                select_preset(preset_name, false, previous_physical_printer);
+                return select_preset(preset_name, false, previous_physical_printer);
             }
+            return physical_result == PresetComboBox::PhysicalSelectionResult::Accepted;
         });
     }
 
@@ -6393,7 +6395,7 @@ bool Tab::select_preset(
     if (force_no_transfer) {
         no_transfer = true;
     }
-    if (current_dirty && ! may_discard_current_dirty_preset(nullptr, preset_name, no_transfer) && !force_select) {
+    if (current_dirty && !force_select && !may_discard_current_dirty_preset(nullptr, preset_name, no_transfer)) {
         canceled = true;
         BOOST_LOG_TRIVIAL(info) << boost::format("current dirty and cancelled");
     } else if (print_tab) {
@@ -6408,7 +6410,8 @@ bool Tab::select_preset(
         bool 			   new_preset_compatible = is_compatible_with_print(dependent.get_edited_preset_with_vendor_profile(),
         	m_presets->get_preset_with_vendor_profile(*m_presets->find_preset(preset_name, true)), printer_profile);
         if (! canceled)
-            canceled = old_preset_dirty && ! may_discard_current_dirty_preset(&dependent, preset_name) && ! new_preset_compatible && !force_select;
+            canceled = old_preset_dirty && !new_preset_compatible && !force_select &&
+                !may_discard_current_dirty_preset(&dependent, preset_name);
         if (! canceled) {
             // The preset will be switched to a different, compatible preset, or the '-- default --'.
             m_dependent_tabs.emplace_back((printer_technology == ptFFF) ? Preset::Type::TYPE_FILAMENT : Preset::Type::TYPE_SLA_MATERIAL);
@@ -6452,7 +6455,8 @@ bool Tab::select_preset(
                 pu.old_preset_dirty = (old_printer_technology == pu.technology) && pu.presets->current_is_dirty();
                 pu.new_preset_compatible = (new_printer_technology == pu.technology) && is_compatible_with_printer(pu.presets->get_edited_preset_with_vendor_profile(), new_printer_preset_with_vendor_profile);
                 if (!canceled)
-                    canceled = pu.old_preset_dirty && !may_discard_current_dirty_preset(pu.presets, preset_name, false, no_transfer_variant) && !pu.new_preset_compatible && !force_select;
+                    canceled = pu.old_preset_dirty && !pu.new_preset_compatible && !force_select &&
+                        !may_discard_current_dirty_preset(pu.presets, preset_name, false, no_transfer_variant);
             }
             if (!canceled) {
                 for (PresetUpdate &pu : updates) {
@@ -6471,6 +6475,13 @@ bool Tab::select_preset(
                 %technology_changed  % canceled;
     }
 
+    if (!canceled) {
+        const Preset *still_available = m_presets->find_preset(preset_name, false, true);
+        if (!still_available || !still_available->is_visible) {
+            canceled = true;
+            show_error(this, _L("The selected preset is no longer available. The previous selection has been kept."));
+        }
+    }
     BOOST_LOG_TRIVIAL(info) << boost::format("before delete action, canceled %1%, delete_current %2%") %canceled %delete_current;
     bool        delete_third_printer = false;
     std::deque<Preset> filament_presets;

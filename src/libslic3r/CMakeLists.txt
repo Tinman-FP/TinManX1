@@ -364,6 +364,8 @@ set(lisbslic3r_sources
     TinManHardwareCatalog.hpp
     ConfigResolutionTrace.cpp
     ConfigResolutionTrace.hpp
+    FilamentSelection.cpp
+    FilamentSelection.hpp
     PrincipalComponents2D.cpp
     PrincipalComponents2D.hpp
     PrintApply.cpp

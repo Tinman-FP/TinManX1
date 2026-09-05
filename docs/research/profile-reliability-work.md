@@ -80,9 +80,9 @@ backups remain outside the public repository. The first milestone is
 
 ### Follow-up Risks Found During Review
 
-- Single-material selection currently mutates the logical slot and exports
-  selections before the preset dialog can be canceled. It needs staged commit;
-  this milestone intentionally does not claim to fix that path.
+- The fourth milestone defers logical-slot, color, and selection-export effects
+  until after the preset dialog accepts the choice. See its scope below; this is
+  still not a whole-bundle transaction.
 - Fixed in the second milestone: local-preset parse failures removed JSON and
   .info files. Failed loads now retain the original files in place and log the
   reason. They are not silently converted to usable, partially loaded presets.
@@ -130,7 +130,11 @@ truncate an existing file, failed saves changed the selected/stored preset and
 cleared unsaved edits, and a damaged child reload replaced its tuned values with
 parent defaults. The expanded suite passes 259 assertions across 11 cases.
 The broader profile/config/hardware/CCF/AppConfig/file suite passes 102 cases,
-184,569 assertions. Full GUI build and installed smoke verification are next.
+184,569 assertions. The complete Apple Silicon build passed. Installed startup,
+About revision/commit, signature, all 936 profile checksums, and the saved-project
+G-code comparison passed (only timestamps differed). The reviewed commit was
+pushed, and both quick GitHub workflows passed. Cross-platform builds remained
+in progress.
 
 - JSON is serialized before any file is opened. JSON and .info each use a unique,
   exclusively created, same-directory temporary, checked write/close, then
@@ -160,3 +164,43 @@ values while the editor remains dirty for retry. Batch saves may have completed
 earlier profiles before a later failure. These changes are not fsync durability,
 network-filesystem guarantees, or full application transactions. Physical-printer
 save UI and printer/material selection transactions remain separate audit work.
+
+### Selection Commit Milestone
+
+Revision `v2026.09.05-selection-commit.1`, package `2026.9.5.6`.
+
+- Filament color is captured as a pending value, without applying it or queuing
+  color events. Single-material selection first completes the tab's confirmation
+  path; only accepted choices apply the material/color, flushing updates, dirty
+  status, and persisted selection. Tab selectors use a success-returning callback
+  instead of assuming the choice was accepted. Multi-material choices retain
+  their existing independent-slot behavior without replacing the active editor.
+- A native slot commit validates the requested printer identity, slot range, and
+  actual visible preset. It stages allocations before swapping in the slot and
+  project palette. Other material slots, active editor edits, process settings,
+  printer settings, and connection selection remain unchanged. No compatibility
+  filter is added: deliberately selecting a visible incompatible preset retains
+  its existing warning behavior.
+- Physical-printer selection now distinguishes not-applicable, accepted, and
+  canceled outcomes. Cancellation does not continue into downstream plate/config
+  updates. Stale associations cannot silently use a different nozzle preset.
+- Confirmation is only requested when it is required. The old dependent-preset
+  expression could show a dialog for a compatible material and then ignore
+  Cancel. Explicit force-selection skips the dialog instead of showing it and
+  ignoring its answer. The requested preset is revalidated after dialogs.
+- Physical-printer parsing no longer drops the first two characters of a bare
+  connection name to invent a preset name. Missing suffixes return no preset.
+
+Four native cases pass 115 assertions, including all four logical slots, retained
+editor edits, material-only choices, missing/hidden profiles, changed printer,
+invalid slot, invalid color vector, and physical-name parsing. The broader suite
+passes 106 cases and 184,684 assertions. GUI/CLI compilation passed before the
+last small event guard; final full build, installed smoke, and G-code regression
+are next.
+
+Limits: this is a logical slot/palette commit and deferred GUI effects, not a
+transaction across all preset collections or an asynchronous catalog generation
+barrier. The custom dropdowns still do not respond to the available CUA
+automation; native tests and code review do not replace that missing interactive
+switch/cancel test. Successful explicit Save actions in an earlier confirmation
+are not undone if a later confirmation is canceled.

@@ -361,13 +361,17 @@ void PresetComboBox::OnSelect(wxCommandEvent& evt)
     // m_presets_choice->GetSelection() will return first item, because search in PopupListCtrl is case-insensitive.
     // So, use GetSelection() from event parameter
     auto selected_item = evt.GetSelection();
-
+    if (selected_item < 0 || static_cast<unsigned>(selected_item) >= GetCount()) {
+        evt.StopPropagation();
+        return;
+    }
     auto marker = reinterpret_cast<Marker>(this->GetClientData(selected_item));
     if (marker >= LABEL_ITEM_DISABLED && marker < LABEL_ITEM_MAX)
         this->SetSelection(m_last_selected);
     else if (on_selection_changed && (m_last_selected != selected_item || m_collection->current_is_dirty())) {
         m_last_selected = selected_item;
-        on_selection_changed(selected_item);
+        if (!on_selection_changed(selected_item))
+            update_from_bundle();
         evt.StopPropagation();
     }
     evt.Skip();
@@ -463,9 +467,10 @@ void PresetComboBox::update_selection()
 #endif
 }
 
-int PresetComboBox::update_ams_color()
+std::optional<FilamentSelectionColor> PresetComboBox::pending_filament_color() const
 {
-    if (m_filament_idx < 0) return -1;
+    if (m_filament_idx < 0 || m_last_selected < 0 || static_cast<unsigned>(m_last_selected) >= GetCount())
+        return std::nullopt;
     int idx = selected_ams_filament();
     std::string color;
     std::string ctype;
@@ -487,35 +492,19 @@ int PresetComboBox::update_ams_color()
         const Preset *preset = tinmanx_find_preset_by_name_or_alias(m_collection, name);
         if (preset)
             color = preset->config.opt_string("default_filament_colour", 0u);
-        if (color.empty()) return -1;
+        if (color.empty()) return std::nullopt;
     } else {
         auto &ams_list = wxGetApp().preset_bundle->filament_ams_list;
         auto  iter     = ams_list.find(idx);
         if (iter == ams_list.end()) {
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": ams %1% out of range %2%") % idx % ams_list.size();
-            return -1;
+            return std::nullopt;
         }
         color = iter->second.opt_string("filament_colour", 0u);
         ctype = iter->second.opt_string("filament_colour_type", 0u);
         if (const auto* multi_colour = dynamic_cast<const ConfigOptionStrings*>(iter->second.option("filament_multi_colour")))
             colors = multi_colour->values;
     }
-    DynamicPrintConfig *cfg        = &wxGetApp().preset_bundle->project_config;
-    const size_t target_size = static_cast<size_t>(m_filament_idx) + 1;
-    auto color_head = tinmanx_clone_project_string_option(cfg, "filament_colour", target_size); // single color (the first color if multi-color filament)
-    auto color_pack = tinmanx_clone_project_string_option(cfg, "filament_multi_colour", target_size); // multi color (all colors in all kinds of filament)
-    auto color_type = tinmanx_clone_project_string_option(cfg, "filament_colour_type", target_size); // color type
-
-    if (color_head == nullptr || color_pack == nullptr || color_type == nullptr) {
-        delete color_head;
-        delete color_pack;
-        delete color_type;
-        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": missing or invalid filament color project config";
-        return -1;
-    }
-
-    color_head->values[m_filament_idx] = color;
-    color_type->values[m_filament_idx] = ctype;
     std::string color_str = ""; // Translate multi color info to config storage format
     for (auto &c : colors) {
         if (c.empty()) continue;
@@ -523,20 +512,28 @@ int PresetComboBox::update_ams_color()
     }
     if (color_str.empty()) color_str = color;
     else color_str.erase(color_str.size() - 1);
-    color_pack->values[m_filament_idx] = color_str;
+    return FilamentSelectionColor{std::move(color), std::move(ctype), std::move(color_str)};
+}
 
-    // Update color informations in config
-    DynamicPrintConfig new_cfg;
-    new_cfg.set_key_value("filament_colour", color_head);
-    new_cfg.set_key_value("filament_colour_type", color_type);
-    new_cfg.set_key_value("filament_multi_colour", color_pack);
-    cfg->apply(new_cfg);
-    wxGetApp().plater()->on_config_change(new_cfg);
-    //trigger the filament color changed
-    wxCommandEvent *evt = new wxCommandEvent(EVT_FILAMENT_COLOR_CHANGED);
-    evt->SetInt(m_filament_idx);
-    wxQueueEvent(wxGetApp().plater(), evt);
-    return idx;
+bool PresetComboBox::apply_filament_selection(const FilamentSlotSelection &selection)
+{
+    std::string reason;
+    try {
+        if (!apply_filament_slot_selection(*m_preset_bundle, selection, reason)) {
+            show_error(this, _L("The filament selection could not be applied.") + "\n\n" + wxString::FromUTF8(reason.c_str()));
+            return false;
+        }
+    } catch (const std::exception &error) {
+        show_error(this, _L("The filament selection could not be applied.") + "\n\n" + wxString::FromUTF8(error.what()));
+        return false;
+    }
+    if (selection.color) {
+        wxGetApp().plater()->on_config_change(m_preset_bundle->project_config);
+        auto *event = new wxCommandEvent(EVT_FILAMENT_COLOR_CHANGED);
+        event->SetInt(static_cast<int>(selection.index));
+        wxQueueEvent(wxGetApp().plater(), event);
+    }
+    return true;
 }
 
 wxColor PresetComboBox::different_color(wxColor const &clr)
@@ -1017,6 +1014,8 @@ wxBitmap *PresetComboBox::get_bmp(std::string        bitmap_key,
 bool PresetComboBox::is_selected_physical_printer()
 {
     auto selected_item = this->GetSelection();
+    if (selected_item < 0 || static_cast<unsigned>(selected_item) >= GetCount())
+        return false;
     auto marker = reinterpret_cast<Marker>(this->GetClientData(selected_item));
     return marker == LABEL_ITEM_PHYSICAL_PRINTER;
 }
@@ -1024,14 +1023,16 @@ bool PresetComboBox::is_selected_physical_printer()
 bool PresetComboBox::is_selected_printer_model()
 {
     auto selected_item = this->GetSelection();
+    if (selected_item < 0 || static_cast<unsigned>(selected_item) >= GetCount())
+        return false;
     auto marker = reinterpret_cast<Marker>(this->GetClientData(selected_item));
     return marker == LABEL_ITEM_PRINTER_MODELS;
 }
 
-bool PresetComboBox::selection_is_changed_according_to_physical_printers()
+PresetComboBox::PhysicalSelectionResult PresetComboBox::selection_is_changed_according_to_physical_printers()
 {
     if (m_type != Preset::TYPE_PRINTER || !is_selected_physical_printer())
-        return false;
+        return PhysicalSelectionResult::NotApplicable;
 
     PhysicalPrinterCollection& physical_printers = m_preset_bundle->physical_printers;
 
@@ -1044,9 +1045,28 @@ bool PresetComboBox::selection_is_changed_according_to_physical_printers()
     }
     else
         old_printer_preset = m_collection->get_edited_preset().name;
+    const auto restore_connection = [&]() {
+        if (!old_printer_full_name.empty())
+            physical_printers.select_printer(old_printer_full_name);
+        else
+            physical_printers.unselect_printer();
+        update();
+    };
+    const Preset *requested = m_collection->find_preset(PhysicalPrinter::get_preset_name(selected_string), false, true);
+    if (!requested || !requested->is_visible) {
+        restore_connection();
+        show_error(this, _L("The selected printer preset is no longer available."));
+        return PhysicalSelectionResult::Canceled;
+    }
+    const std::string requested_name = requested->name;
     // Select related printer preset on the Printer Settings Tab
     physical_printers.select_printer(selected_string);
     std::string preset_name = physical_printers.get_selected_printer_preset_name();
+    if (!physical_printers.has_selection() || preset_name != requested_name) {
+        restore_connection();
+        show_error(this, _L("The selected printer connection is no longer associated with that preset."));
+        return PhysicalSelectionResult::Canceled;
+    }
 
     // if new preset wasn't selected, there is no need to call update preset selection
     if (old_printer_preset == preset_name) {
@@ -1060,13 +1080,14 @@ bool PresetComboBox::selection_is_changed_according_to_physical_printers()
             wxGetApp().sidebar().update_presets(m_type);
 
         this->update();
-        return true;
+        return PhysicalSelectionResult::Accepted;
     }
 
     Tab* tab = wxGetApp().get_tab(Preset::TYPE_PRINTER);
-    if (tab)
-        tab->select_preset(preset_name, false, old_printer_full_name);
-    return true;
+    if (tab && tab->select_preset(preset_name, false, old_printer_full_name))
+        return PhysicalSelectionResult::Accepted;
+    restore_connection();
+    return PhysicalSelectionResult::Canceled;
 }
 
 // ---------------------------------
@@ -1203,6 +1224,10 @@ static void run_wizard(ConfigWizard::StartPage sp)
 void PlaterPresetComboBox::OnSelect(wxCommandEvent &evt)
 {
     auto selected_item = evt.GetSelection();
+    if (selected_item < 0 || static_cast<unsigned>(selected_item) >= GetCount()) {
+        evt.StopPropagation();
+        return;
+    }
 
     auto marker = reinterpret_cast<Marker>(this->GetClientData(selected_item));
     if (marker >= LABEL_ITEM_DISABLED && marker < LABEL_ITEM_MAX) {
@@ -1229,8 +1254,6 @@ void PlaterPresetComboBox::OnSelect(wxCommandEvent &evt)
         return;
     } else if (marker == LABEL_ITEM_PHYSICAL_PRINTER ||  selected_item >= 0 || m_collection->current_is_dirty()) {
         m_last_selected = selected_item;
-        if (m_type == Preset::TYPE_FILAMENT)
-            update_ams_color();
     }
 
     evt.Skip();
@@ -1999,7 +2022,10 @@ void TabPresetComboBox::OnSelect(wxCommandEvent &evt)
     // m_presets_choice->GetSelection() will return first item, because search in PopupListCtrl is case-insensitive.
     // So, use GetSelection() from event parameter
     auto selected_item = evt.GetSelection();
-
+    if (selected_item < 0 || static_cast<unsigned>(selected_item) >= GetCount()) {
+        evt.StopPropagation();
+        return;
+    }
     auto marker = reinterpret_cast<Marker>(this->GetClientData(selected_item));
     if (marker >= LABEL_ITEM_DISABLED && marker < LABEL_ITEM_MAX) {
         this->SetSelection(m_last_selected);
@@ -2019,9 +2045,20 @@ void TabPresetComboBox::OnSelect(wxCommandEvent &evt)
     }
     else if (on_selection_changed && (m_last_selected != selected_item || m_collection->current_is_dirty())) {
         m_last_selected = selected_item;
-        // BBS: ams
-        update_ams_color();
-        on_selection_changed(selected_item);
+        const auto color = pending_filament_color();
+        const auto printer_name = m_preset_bundle->printers.get_edited_preset().name;
+        const int slot = m_filament_idx;
+        if (on_selection_changed(selected_item)) {
+            if (m_type == Preset::TYPE_FILAMENT && slot >= 0) {
+                if (apply_filament_selection({static_cast<size_t>(slot), m_collection->get_selected_preset_name(), printer_name, color})) {
+                    wxGetApp().plater()->update_project_dirty_from_presets();
+                    m_preset_bundle->export_selections(*wxGetApp().app_config);
+                }
+                update();
+            }
+        } else {
+            update_from_bundle();
+        }
     }
 
     evt.StopPropagation();

@@ -4146,17 +4146,16 @@ std::string PhysicalPrinter::get_full_name(std::string preset_name) const
 
 std::string PhysicalPrinter::get_short_name(std::string full_name)
 {
-    int pos = full_name.find(separator());
-    if (pos > 0)
-        boost::erase_tail(full_name, full_name.length() - pos);
-    return full_name;
+    const size_t pos = full_name.find(separator());
+    return pos == std::string::npos ? full_name : full_name.substr(0, pos);
 }
 
 std::string PhysicalPrinter::get_preset_name(std::string name)
 {
-    int pos = name.find(separator());
-    boost::erase_head(name, pos + 3);
-    return Preset::remove_suffix_modified(name);
+    const std::string delimiter = separator();
+    const size_t pos = name.find(delimiter);
+    return pos == std::string::npos ? std::string() :
+        Preset::remove_suffix_modified(name.substr(pos + delimiter.size()));
 }
 
 
