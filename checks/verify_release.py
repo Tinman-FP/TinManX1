@@ -62,6 +62,11 @@ REQUIRED_FILES = [
     "scripts/source-helpers/tinman_profile_manifest.py",
     "src/libslic3r/TinManMachineProfileContract.cpp",
     "src/libslic3r/TinManMachineProfileContract.hpp",
+    "resources/orcaslicer_codex/hardware/catalog.json",
+    "src/libslic3r/TinManHardwareCatalog.cpp",
+    "src/libslic3r/TinManHardwareCatalog.hpp",
+    "src/libslic3r/TinManHardwareCatalogData.hpp.in",
+    "src/slic3r/Utils/RecentProjectThumbnailCache.hpp",
     "tests/libslic3r/test_tinman_machine_profile_contract.cpp",
     "scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py",
     "scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py",
@@ -270,13 +275,27 @@ def main() -> int:
         errors="replace"
     )
     for marker in (
-        'model == "Qidi X-Plus 4" || model == "QidiMaxEz"',
+        'definition->connection_mode == TinManConnectionMode::QidiMoonraker',
         'value = "moonraker";',
     ):
         if marker not in connection_contract:
             errors.append(f"Qidi connection contract is missing marker: {marker}")
 
+    hardware = json.loads((ROOT / "resources/orcaslicer_codex/hardware/catalog.json").read_text())
+    for model in ("Qidi X-Plus 4", "QidiMaxEz"):
+        definition = next((item for item in hardware["machines"] if item["model"] == model), {})
+        if definition.get("printer_agent") != "qidi" or definition.get("connection_mode") != "qidi_moonraker":
+            errors.append(f"{model}: hardware catalog must preserve Qidi Moonraker transport")
+
     gui_app = (ROOT / "src/slic3r/GUI/GUI_App.cpp").read_text(errors="replace")
+    main_frame = (ROOT / "src/slic3r/GUI/MainFrame.cpp").read_text(errors="replace")
+    thumbnail_loader = main_frame.split("void MainFrame::FileHistory::LoadThumbnails()", 1)[1].split(
+        "inline void MainFrame::FileHistory::SetMaxFiles", 1
+    )[0]
+    if "cache.read(" not in thumbnail_loader or any(
+        marker in thumbnail_loader for marker in ("bbs_3mf_get_thumbnail", "wxFileExists", "last_write_time")
+    ):
+        errors.append("recent thumbnail startup must use local cache, not inspect project files")
     shutdown_body = gui_app[gui_app.find("void GUI_App::shutdown()") : gui_app.find("GUI_App::~GUI_App()")]
     for marker in (
         "NetworkAgentFactory::clear_printer_agent_cache();",

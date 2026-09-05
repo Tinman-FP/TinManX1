@@ -48,7 +48,13 @@ MOTION_ENVELOPE_MODULE = (
     REPO_ROOT / "resources" / "orcaslicer_codex" / "motion_envelope" / "motion_envelope.py"
 )
 
-NOZZLES = ("0.4", "0.6", "0.8", "1.0")
+HARDWARE_CATALOG_PATH = REPO_ROOT / "resources/orcaslicer_codex/hardware/catalog.json"
+HARDWARE_CATALOG = json.loads(HARDWARE_CATALOG_PATH.read_text(encoding="utf-8"))
+if type(HARDWARE_CATALOG.get("schema_version")) is not int or HARDWARE_CATALOG["schema_version"] != 1:
+    raise ValueError("Unsupported TinMan hardware catalog schema")
+NOZZLES = tuple(HARDWARE_CATALOG["nozzle_variants"])
+if len(NOZZLES) != 4 or set(NOZZLES) != {"0.4", "0.6", "0.8", "1.0"}:
+    raise ValueError("Invalid TinMan hardware catalog nozzle variants")
 CONTRACT_VERSION = "6"
 NAMESPACE = uuid.UUID("c1f4d9e2-7a3b-5c8d-9e0f-1a2b3c4d5e6f")
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -103,9 +109,6 @@ class MachineFamily:
         return self.source_names.get(nozzle, self.source_names["0.8"])
 
 
-def source_series(pattern: str) -> dict[str, str]:
-    return {nozzle: pattern.format(nozzle=nozzle) for nozzle in NOZZLES[:-1]}
-
 
 @dataclass(frozen=True)
 class ProcessMode:
@@ -128,92 +131,24 @@ PROCESS_MODES = (
 QUALITY_MODE = PROCESS_MODES[0]
 
 
-FAMILIES = (
+FAMILIES = tuple(
     MachineFamily(
-        "BBL",
-        "Bambu Lab H2D",
-        source_series("Bambu Lab H2D {nozzle} nozzle"),
-        nozzle_capability="stock_high_flow",
-    ),
-    MachineFamily(
-        "BBL",
-        "Bambu Lab X1 Carbon",
-        source_series("Bambu Lab X1 Carbon {nozzle} nozzle"),
-        aliases=("Bambu Lab X1 Carbon Tinman",),
-        nozzle_capability="cm2_cht",
-    ),
-    MachineFamily(
-        "Creality",
-        "Creality K2 Plus",
-        source_series("Creality K2 Plus {nozzle} nozzle"),
-        nozzle_capability="cm2_cht",
-    ),
-    MachineFamily(
-        "Elegoo",
-        "Elegoo Centauri Carbon",
-        source_series("Elegoo Centauri Carbon {nozzle} nozzle"),
-        aliases=("Elegoo Centauri Carbon 2", "Centauri COSMOS Tinman"),
-    ),
-    MachineFamily(
-        "Prusa",
-        "Prusa CORE One L",
-        {
-            "0.4": "Prusa CORE One L HF 0.4 nozzle",
-            "0.6": "Prusa CORE One L HF 0.6 nozzle",
-            # Prusa has no native 1.0 mm CORE One L preset. The generated
-            # 1.0 profile falls back to this HF 0.8 machine contract and
-            # overrides its complete nozzle geometry below.
-            "0.8": "Prusa CORE One L HF 0.8 nozzle",
-        },
-        aliases=("Prusa CORE One L HF",),
-    ),
-    MachineFamily(
-        "Qidi",
-        "Qidi X-Plus 4",
-        source_series("Qidi X-Plus 4 {nozzle} nozzle"),
-        aliases=("QIDI Plus 4", "Qidi Plus 4", "CURRENT QIDI"),
-    ),
-    MachineFamily(
-        "Qidi",
-        "QidiMaxEz",
-        {nozzle: f"QidiMaxEz {nozzle}" for nozzle in NOZZLES},
-        aliases=("Qidi Max EZ", "Max EZ"),
-    ),
-    MachineFamily(
-        "Ratrig",
-        "RatRig V-Core 4 IDEX 500",
-        source_series("RatRig V-Core 4 IDEX 500 {nozzle} nozzle"),
-    ),
-    MachineFamily(
-        "Ratrig",
-        "RatRig V-Core 4 IDEX 500 COPY MODE",
-        source_series("RatRig V-Core 4 IDEX 500 COPY MODE {nozzle} nozzle"),
-    ),
-    MachineFamily(
-        "Ratrig",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE",
-        source_series("RatRig V-Core 4 IDEX 500 MIRROR MODE {nozzle} nozzle"),
-    ),
-    MachineFamily(
-        "Snapmaker",
-        "Snapmaker U1",
-        {nozzle: f"Snapmaker U1 ({nozzle} nozzle)" for nozzle in NOZZLES[:-1]},
-        aliases=("CURRENT Snapmaker U1", "CURRENT U1", "fdm_U1"),
-        nozzle_capability="stock_standard",
-    ),
-    MachineFamily("Sovol", "Sovol SV08 MAX", source_series("Sovol SV08 MAX {nozzle} nozzle")),
-    MachineFamily(
-        "TinManX1",
-        "FibreSeek Seeker 3",
-        {
-            "0.4": "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
-            "0.6": "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
-            "0.8": "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
-        },
-        aliases=("FibreSeek Seeker 3 - Codex",),
-        composite_second_nozzle="0.7",
-    ),
+        vendor=definition["vendor"],
+        model=definition["model"],
+        source_names=definition["source_profiles"],
+        aliases=tuple(alias for alias in definition["aliases"] if alias != definition["model"]),
+        composite_second_nozzle=definition.get("composite_second_nozzle"),
+        nozzle_capability=definition["nozzle_capability"],
+    )
+    for definition in HARDWARE_CATALOG["machines"]
 )
+if not FAMILIES or len({family.model for family in FAMILIES}) != len(FAMILIES):
+    raise ValueError("Empty or duplicate TinMan hardware catalog machines")
+for family in FAMILIES:
+    if family.nozzle_capability not in {"stock_standard", "cm2_standard", "stock_high_flow", "cm2_cht"}:
+        raise ValueError(f"Unknown nozzle capability for {family.model}")
+    if not {"0.4", "0.6", "0.8"}.issubset(family.source_names):
+        raise ValueError(f"Incomplete source profiles for {family.model}")
 
 INDEX_VERSIONS = {
     "BBL": "02.01.00.20",

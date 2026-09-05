@@ -14,6 +14,7 @@ add_executable(${_TEST_NAME}_tests
     test_preset_bundle_loading.cpp
     test_preset_setting_id.cpp
     test_tinman_machine_profile_contract.cpp
+    test_tinman_hardware_catalog.cpp
     test_elephant_foot_compensation.cpp
     test_fiberseek_composite_planner.cpp
     test_geometry.cpp

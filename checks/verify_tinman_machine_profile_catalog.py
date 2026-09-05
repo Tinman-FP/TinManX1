@@ -25,6 +25,7 @@ CONTRACT = runpy.run_path(str(HELPER))
 FAMILIES = CONTRACT["FAMILIES"]
 NOZZLES = CONTRACT["NOZZLES"]
 CONTRACT_VERSION = CONTRACT["CONTRACT_VERSION"]
+HARDWARE_CATALOG = CONTRACT["HARDWARE_CATALOG"]
 PROCESS_MODES = CONTRACT["PROCESS_MODES"]
 QUALITY_MODE = CONTRACT["QUALITY_MODE"]
 process_modes = CONTRACT["process_modes"]
@@ -44,6 +45,27 @@ def digest(path: Path) -> str:
 
 def validate_repo() -> list[str]:
     errors: list[str] = []
+
+    definitions = HARDWARE_CATALOG["machines"]
+    hardware_by_model = {definition["model"]: definition for definition in definitions}
+    if len({definition["id"] for definition in definitions}) != len(definitions):
+        errors.append("hardware catalog contains duplicate machine ids")
+    alias_owners: dict[str, str] = {}
+    for definition in definitions:
+        model = definition["model"]
+        count = definition["tool_count"]
+        if type(count) is not int or not 1 <= count <= 64:
+            errors.append(f"{model}: invalid hardware tool count")
+        if model not in definition["aliases"]:
+            errors.append(f"{model}: model is missing from hardware aliases")
+        if definition["connection_mode"] not in {
+            "inherited", "bambu", "creality", "qidi_moonraker", "snapmaker", "moonraker"
+        }:
+            errors.append(f"{model}: unknown hardware connection mode")
+        for alias in definition["aliases"]:
+            owner = alias_owners.setdefault(alias.lower(), model)
+            if not alias or owner != model:
+                errors.append(f"{model}: empty or ambiguous hardware alias {alias!r}")
 
     mode_by_name = {mode.name: mode for mode in PROCESS_MODES}
     if set(mode_by_name) != {"Tank", "Quality", "Fast", "Draft"}:
@@ -96,8 +118,10 @@ def validate_repo() -> list[str]:
 
     if PLATER_SOURCE.is_file():
         plater_source = PLATER_SOURCE.read_text()
-        if "panel_nozzle_dia->Show(!isDual);" not in plater_source:
+        if "panel_nozzle_dia->Show(!isDual && !show_tool_nozzles);" not in plater_source:
             errors.append("Plater.cpp does not expose the shared multi-extruder nozzle selector")
+        if "panel_tool_nozzles->Show(show_tool_nozzles);" not in plater_source:
+            errors.append("Plater.cpp does not expose per-tool U1 nozzle controls")
         if "if (use_split_nozzle_controls)" not in plater_source:
             errors.append("Plater.cpp does not reserve split nozzle controls for Bambu printers")
 
@@ -170,6 +194,7 @@ def validate_repo() -> list[str]:
                     and data.get("printer_variant")
                     and data.get("name") not in expected_names
                     and data.get("name") not in required_sources
+                    and data.get("name") not in hardware_by_model[family.model].get("managed_profile_names", [])
                 ):
                     unexpected_noncanonical.append(str(data.get("name")))
             if unexpected_noncanonical:
@@ -194,6 +219,8 @@ def validate_repo() -> list[str]:
                 if data.get("printer_variant") != nozzle:
                     errors.append(f"{name}: printer_variant mismatch")
                 diameters = data.get("nozzle_diameter") or []
+                if len(diameters) != hardware_by_model[family.model]["tool_count"]:
+                    errors.append(f"{name}: generated nozzle count disagrees with runtime hardware catalog")
                 if not diameters or diameters[0] != nozzle:
                     errors.append(f"{name}: primary nozzle diameter mismatch")
                 expected_flow_types = nozzle_flow_types(family, len(diameters))

@@ -5,6 +5,8 @@ on:
     - main
     paths:
     - 'resources/profiles/**'
+    - 'resources/orcaslicer_codex/hardware/**'
+    - 'checks/verify_tinman_machine_profile_catalog.py'
     - 'manifests/tinmanx1-profile-resources.sha256'
     - 'scripts/lint_tinmanx1_fiberseek_profiles.py'
     - 'scripts/orca_extra_profile_check.py'
@@ -53,6 +55,7 @@ jobs:
 
       - name: Verify TinMan profile manifest and CORE One L HF catalog
         run: |
+          python3 checks/verify_tinman_machine_profile_catalog.py
           python3 scripts/source-helpers/tinman_profile_manifest.py
           python3 scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py
           python3 scripts/test_tinman_motion_envelope.py

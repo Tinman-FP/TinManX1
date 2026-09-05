@@ -7,6 +7,26 @@
 #include "slic3r/Utils/Http.hpp"
 #include "slic3r/Utils/OrcaCloudServiceAgent.hpp"
 #include "slic3r/Utils/SnapmakerPrinterAgent.hpp"
+#include "slic3r/Utils/RecentProjectThumbnailCache.hpp"
+
+TEST_CASE("Recent thumbnail lookup never opens the original project", "[TinMan][ThumbnailCache]")
+{
+    const auto directory = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path("tinman-thumbnails-%%%%-%%%%");
+    const Slic3r::RecentProjectThumbnailCache cache(directory);
+    const std::string project = "/unavailable-volume/cloud-placeholder.3mf";
+    const std::string png = std::string("\x89PNG\r\n\x1a\n", 8) + "fixture";
+    CHECK(cache.read(project).empty());
+    cache.write(project, png);
+    CHECK(cache.read(project) == png);
+    CHECK(cache.read(project + ".other").empty());
+    cache.write(project, "invalid PNG");
+    CHECK(cache.read(project) == png);
+    cache.write(project, png + "updated");
+    CHECK(cache.read(project) == png + "updated");
+    cache.write(project + ".oversized", png + std::string(2 * 1024 * 1024, 'x'));
+    CHECK(cache.read(project + ".oversized").empty());
+    boost::filesystem::remove_all(directory);
+}
 
 namespace {
 

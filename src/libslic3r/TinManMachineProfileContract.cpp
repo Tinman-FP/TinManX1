@@ -2,6 +2,7 @@
 
 #include "AppConfig.hpp"
 #include "PrintConfig.hpp"
+#include "TinManHardwareCatalog.hpp"
 
 #include <algorithm>
 #include <array>
@@ -12,66 +13,6 @@
 namespace Slic3r {
 
 namespace {
-
-struct MachineAlias {
-    std::string_view alias;
-    std::string_view model;
-};
-
-struct MachineFamily {
-    std::string_view vendor;
-    std::string_view model;
-    size_t nozzle_count;
-    bool high_flow_nozzles;
-};
-
-constexpr std::array<MachineFamily, 13> machine_families {{
-    {"BBL", "Bambu Lab H2D", 2, true},
-    {"BBL", "Bambu Lab X1 Carbon", 1, true},
-    {"Creality", "Creality K2 Plus", 1, true},
-    {"Elegoo", "Elegoo Centauri Carbon", 1, false},
-    {"Prusa", "Prusa CORE One L", 1, false},
-    {"Qidi", "Qidi X-Plus 4", 1, false},
-    {"Qidi", "QidiMaxEz", 1, false},
-    {"Ratrig", "RatRig V-Core 4 IDEX 500", 2, false},
-    {"Ratrig", "RatRig V-Core 4 IDEX 500 COPY MODE", 2, false},
-    {"Ratrig", "RatRig V-Core 4 IDEX 500 MIRROR MODE", 2, false},
-    {"Snapmaker", "Snapmaker U1", 4, false},
-    {"Sovol", "Sovol SV08 MAX", 1, false},
-    {"TinManX1", "FibreSeek Seeker 3", 2, false},
-}};
-
-constexpr std::array<MachineAlias, 29> machine_aliases {{
-    {"RatRig V-Core 4 IDEX 500 MIRROR MODE", "RatRig V-Core 4 IDEX 500 MIRROR MODE"},
-    {"RatRig V-Core 4 IDEX 500 COPY MODE", "RatRig V-Core 4 IDEX 500 COPY MODE"},
-    {"RatRig V-Core 4 IDEX 500", "RatRig V-Core 4 IDEX 500"},
-    {"Bambu Lab X1 Carbon Tinman", "Bambu Lab X1 Carbon"},
-    {"Bambu Lab X1 Carbon", "Bambu Lab X1 Carbon"},
-    {"Bambu Lab H2D", "Bambu Lab H2D"},
-    {"Creality K2 Plus", "Creality K2 Plus"},
-    {"Elegoo Centauri Carbon 2", "Elegoo Centauri Carbon"},
-    {"Elegoo Centauri Carbon", "Elegoo Centauri Carbon"},
-    {"Centauri COSMOS Tinman", "Elegoo Centauri Carbon"},
-    {"Prusa CORE One L HF", "Prusa CORE One L"},
-    {"Prusa CORE One L", "Prusa CORE One L"},
-    {"Qidi X-Plus 4", "Qidi X-Plus 4"},
-    {"QIDI Plus 4", "Qidi X-Plus 4"},
-    {"Qidi Plus 4", "Qidi X-Plus 4"},
-    {"CURRENT QIDI", "Qidi X-Plus 4"},
-    {"QidiMaxEz", "QidiMaxEz"},
-    {"Qidi Max EZ", "QidiMaxEz"},
-    {"Max EZ", "QidiMaxEz"},
-    {"Snapmaker U1", "Snapmaker U1"},
-    {"CURRENT Snapmaker U1", "Snapmaker U1"},
-    {"CURRENT U1", "Snapmaker U1"},
-    {"fdm_U1", "Snapmaker U1"},
-    {"Sovol SV08 MAX", "Sovol SV08 MAX"},
-    {"FibreSeek Seeker 3 - Codex", "FibreSeek Seeker 3"},
-    {"FibreSeek Seeker 3", "FibreSeek Seeker 3"},
-    {"SEEKER 3", "FibreSeek Seeker 3"},
-    {"Elegoo Centauri Carbon2", "Elegoo Centauri Carbon"},
-    {"Fibreseek3", "FibreSeek Seeker 3"},
-}};
 
 constexpr std::string_view connection_section = "tinman_machine_connections";
 constexpr std::string_view nozzle_volume_section = "nozzle_volume_types";
@@ -121,18 +62,8 @@ std::string_view bare_preset_name(std::string_view name)
 
 std::string_view matched_model(std::string_view preset_name, std::string_view machine_hint)
 {
-    std::string_view best_model;
-    size_t best_length = 0;
-
-    for (const MachineAlias &entry : machine_aliases) {
-        if ((contains_ascii_case_insensitive(preset_name, entry.alias) ||
-             contains_ascii_case_insensitive(machine_hint, entry.alias)) &&
-            entry.alias.size() > best_length) {
-            best_model = entry.model;
-            best_length = entry.alias.size();
-        }
-    }
-    return best_model;
+    const auto *definition = tinmanx_hardware_catalog().match(preset_name, machine_hint);
+    return definition ? std::string_view(definition->model) : std::string_view();
 }
 
 bool is_canonical_machine_name(std::string_view name, std::string_view model, std::string_view nozzle)
@@ -154,21 +85,20 @@ bool is_canonical_machine_name(std::string_view name, std::string_view model, st
 
 bool is_snapmaker_u1_mixed_tooling_name(std::string_view name, std::string_view model)
 {
-    if (model != "Snapmaker U1")
+    const auto *definition = tinmanx_hardware_catalog().find_model(model);
+    if (!definition)
         return false;
-
-    const std::string_view bare_name = bare_preset_name(name);
-    return bare_name == "Snapmaker U1 Live Mixed - TinMan Codex" ||
-           bare_name == "Snapmaker U1 Tooling - TinMan Codex";
+    const auto &names = definition->managed_profile_names;
+    return std::find(names.begin(), names.end(), bare_preset_name(name)) != names.end();
 }
 
 const AppConfig::VendorMap &canonical_machine_catalog()
 {
     static const AppConfig::VendorMap vendors = [] {
         AppConfig::VendorMap result;
-        constexpr std::array<const char *, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
-        for (const MachineFamily &family : machine_families)
-            result[std::string(family.vendor)][std::string(family.model)].insert(nozzles.begin(), nozzles.end());
+        const auto &catalog = tinmanx_hardware_catalog();
+        for (const auto &family : catalog.machines)
+            result[family.vendor][family.model].insert(catalog.nozzle_variants.begin(), catalog.nozzle_variants.end());
         return result;
     }();
     return vendors;
@@ -209,7 +139,7 @@ std::string k2_webui_url(std::string_view host)
     return host.empty() ? std::string() : "http://" + std::string(host) + ":4408/";
 }
 
-std::string nozzle_flow_value(const MachineFamily &family, size_t nozzle_count)
+std::string nozzle_flow_value(const TinManMachineDefinition &family, size_t nozzle_count)
 {
     const std::string_view flow_type = family.high_flow_nozzles ? "High Flow" : "Standard";
     std::string value;
@@ -221,16 +151,15 @@ std::string nozzle_flow_value(const MachineFamily &family, size_t nozzle_count)
     return value;
 }
 
-const MachineFamily *family_for_model(std::string_view model)
+const TinManMachineDefinition *family_for_model(std::string_view model)
 {
-    const auto found = std::find_if(machine_families.begin(), machine_families.end(),
-        [model](const MachineFamily &family) { return family.model == model; });
-    return found == machine_families.end() ? nullptr : &*found;
+    return tinmanx_hardware_catalog().find_model(model);
 }
 
 bool is_qidi_moonraker_model(std::string_view model)
 {
-    return model == "Qidi X-Plus 4" || model == "QidiMaxEz";
+    const auto *definition = family_for_model(model);
+    return definition && definition->connection_mode == TinManConnectionMode::QidiMoonraker;
 }
 
 std::string legacy_machine_address(const AppConfig &app_config,
@@ -240,7 +169,7 @@ std::string legacy_machine_address(const AppConfig &app_config,
     if (app_config.has("ip_address", std::string(preset_name)))
         return app_config.get("ip_address", std::string(preset_name));
 
-    constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
+    const auto &nozzles = tinmanx_hardware_catalog().nozzle_variants;
     for (const std::string_view nozzle : nozzles) {
         const std::string canonical = std::string(model) + " " + std::string(nozzle) +
                                       " nozzle - TinMan Codex";
@@ -271,7 +200,7 @@ bool tinmanx_managed_machine_preset(const std::string &preset_name, const std::s
     if (is_snapmaker_u1_mixed_tooling_name(bare_name, model))
         return true;
 
-    constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
+    const auto &nozzles = tinmanx_hardware_catalog().nozzle_variants;
     for (const std::string_view nozzle : nozzles)
         if (is_canonical_machine_name(bare_name, model, nozzle))
             return true;
@@ -284,24 +213,10 @@ bool tinmanx_runtime_connection_option(const std::string &option_name)
 }
 
 std::string tinmanx_expected_printer_agent(const std::string &preset_name,
-                                           const std::string &machine_hint)
+                                          const std::string &machine_hint)
 {
-    const std::string_view model = matched_model(preset_name, machine_hint);
-    if (model == "Bambu Lab H2D" || model == "Bambu Lab X1 Carbon")
-        return "bbl";
-    if (model == "Creality K2 Plus")
-        return "crealityprint";
-    if (model == "Qidi X-Plus 4" || model == "QidiMaxEz")
-        return "qidi";
-    if (model == "Snapmaker U1")
-        return "snapmaker";
-    if (model == "Prusa CORE One L" ||
-        model == "RatRig V-Core 4 IDEX 500" ||
-        model == "RatRig V-Core 4 IDEX 500 COPY MODE" ||
-        model == "RatRig V-Core 4 IDEX 500 MIRROR MODE" ||
-        model == "Sovol SV08 MAX")
-        return "moonraker";
-    return {};
+    const auto *definition = tinmanx_hardware_catalog().match(preset_name, machine_hint);
+    return definition ? definition->printer_agent : std::string();
 }
 
 bool tinmanx_enforce_machine_connection_contract(const std::string &preset_name,
@@ -377,7 +292,7 @@ bool tinmanx_apply_nozzle_volume_contract(const std::string &preset_name,
         return false;
     }
 
-    const MachineFamily *family = family_for_model(matched_model(contract_name, machine_hint));
+    const TinManMachineDefinition *family = family_for_model(matched_model(contract_name, machine_hint));
     auto *project_flow = project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type", true);
     if (family == nullptr || project_flow == nullptr) {
         BOOST_LOG_TRIVIAL(debug) << "TinMan nozzle contract unavailable for preset '"
@@ -385,7 +300,7 @@ bool tinmanx_apply_nozzle_volume_contract(const std::string &preset_name,
         return false;
     }
 
-    size_t nozzle_count = family->nozzle_count;
+    size_t nozzle_count = family->tool_count;
     if (const auto *diameters = printer_config.option<ConfigOptionFloats>("nozzle_diameter");
         diameters != nullptr && !diameters->values.empty()) {
         nozzle_count = diameters->values.size();
@@ -463,7 +378,7 @@ std::string tinmanx_canonical_machine_preset_name(const std::string &preset_name
     if (model.empty())
         return {};
 
-    constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
+    const auto &nozzles = tinmanx_hardware_catalog().nozzle_variants;
     std::string_view nozzle = nozzle_variant;
     const auto is_supported_nozzle = [&] {
         return std::find(nozzles.begin(), nozzles.end(), nozzle) != nozzles.end();
@@ -521,16 +436,16 @@ void tinmanx_apply_machine_catalog(AppConfig &config)
     // mismatch warnings after startup or cloud synchronization.
     for (auto &[name, value] : saved_flow_types) {
         const std::string_view model = matched_model(name, {});
-        const MachineFamily *family = family_for_model(model);
+        const TinManMachineDefinition *family = family_for_model(model);
         if (family == nullptr)
             continue;
         const size_t count = std::max<size_t>(1, std::count(value.begin(), value.end(), ',') + 1);
         value = nozzle_flow_value(*family, count);
     }
 
-    constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
-    for (const MachineFamily &family : machine_families) {
-        const std::string flow_value = nozzle_flow_value(family, family.nozzle_count);
+    const auto &nozzles = tinmanx_hardware_catalog().nozzle_variants;
+    for (const TinManMachineDefinition &family : tinmanx_hardware_catalog().machines) {
+        const std::string flow_value = nozzle_flow_value(family, family.tool_count);
         for (const std::string_view nozzle : nozzles) {
             const std::string canonical = std::string(family.model) + " " + std::string(nozzle) +
                                           " nozzle - TinMan Codex";
@@ -614,7 +529,7 @@ bool tinmanx_remember_machine_connection(AppConfig &app_config,
 
     const std::string address = !overwrite_existing && !saved_address.empty() ?
         saved_address : (!print_host.empty() ? print_host : webui);
-    constexpr std::array<std::string_view, 4> nozzles {{"0.4", "0.6", "0.8", "1.0"}};
+    const auto &nozzles = tinmanx_hardware_catalog().nozzle_variants;
     for (const std::string_view nozzle : nozzles) {
         const std::string canonical = std::string(model) + " " + std::string(nozzle) +
                                       " nozzle - TinMan Codex";

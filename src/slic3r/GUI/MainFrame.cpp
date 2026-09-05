@@ -3,6 +3,7 @@
 #include <wx/panel.h>
 #include <wx/notebook.h>
 #include <wx/listbook.h>
+#include <wx/listctrl.h>
 #include <wx/simplebook.h>
 #include <wx/icon.h>
 #include <wx/sizer.h>
@@ -24,6 +25,7 @@
 #include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/TinManMachineProfileContract.hpp"
+#include "libslic3r/TinManHardwareCatalog.hpp"
 
 #include "Tab.hpp"
 #include "ProgressStatusBar.hpp"
@@ -68,6 +70,7 @@
 
 #include "DeviceCore/DevManager.h"
 #include "../Utils/NetworkAgentFactory.hpp"
+#include "../Utils/RecentProjectThumbnailCache.hpp"
 
 #ifdef _WIN32
 #include <dbt.h>
@@ -2766,6 +2769,76 @@ static const wxString sep = " - ";
 static const wxString sep = "\t";
 #endif
 
+static void show_profile_overview()
+{
+    const auto *bundle = wxGetApp().preset_bundle;
+    if (!bundle || bundle->filament_presets.empty())
+        return;
+
+    // Snapshot the same resolved bundle used by slicing. Never modify presets,
+    // connection state, or the project while inspecting their effective values.
+    const auto config = bundle->full_config();
+    const auto &printer = bundle->printers.get_edited_preset();
+    const auto &process = bundle->prints.get_edited_preset();
+    wxDialog dialog(wxGetApp().mainframe, wxID_ANY, _L("Profile Overview"),
+                    wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
+    auto *layout = new wxBoxSizer(wxVERTICAL);
+    auto *list = new wxListCtrl(&dialog, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+                                wxLC_REPORT | wxLC_SINGLE_SEL);
+    list->AppendColumn(_L("Setting"), wxLIST_FORMAT_LEFT, dialog.FromDIP(245));
+    list->AppendColumn(_L("Effective Value"), wxLIST_FORMAT_LEFT, dialog.FromDIP(490));
+    const auto row = [list](const wxString &label, const wxString &value) {
+        const long index = list->InsertItem(list->GetItemCount(), label);
+        list->SetItem(index, 1, value);
+    };
+    const auto preset_rows = [&row](const wxString &label, const Preset &preset) {
+        row(label, from_u8(preset.name));
+        row(label + " / " + _L("Source"), preset.is_project_embedded ? _L("Project") :
+            preset.is_system ? _L("System") : preset.is_default ? _L("Default") : _L("User"));
+        if (const auto *parent = preset.config.option<ConfigOptionString>("inherits"); parent && !parent->value.empty())
+            row(label + " / " + _L("Inherits"), from_u8(parent->value));
+        row(label + " / " + _L("Modified"), preset.is_dirty ? _L("Yes") : _L("No"));
+    };
+    preset_rows(_L("Printer preset"), printer);
+    preset_rows(_L("Process preset"), process);
+    row(_L("Hardware catalog"), from_u8(tinmanx_hardware_catalog().catalog_version));
+    const auto option_rows = [&row](const DynamicPrintConfig &source, const char *key,
+                                    const wxString &label, const wxString &indexed_prefix) {
+        const auto *option = source.option(key);
+        if (!option) return;
+        if (const auto *values = dynamic_cast<const ConfigOptionVectorBase *>(option)) {
+            const auto strings = values->vserialize();
+            for (size_t i = 0; i < strings.size(); ++i)
+                row(indexed_prefix + wxString::Format(" %u / ", unsigned(i + 1)) + label, from_u8(strings[i]));
+        } else {
+            row(label, from_u8(option->serialize()));
+        }
+    };
+    option_rows(printer.config, "nozzle_diameter", _L("Nozzle diameter (mm)"), _L("Tool"));
+    option_rows(config, "nozzle_volume_type", _L("Nozzle flow type"), _L("Tool"));
+    option_rows(config, "filament_settings_id", _L("Filament preset"), _L("Material"));
+    option_rows(config, "filament_map", _L("Tool number"), _L("Material"));
+    option_rows(config, "filament_type", _L("Filament type"), _L("Material"));
+    option_rows(config, "nozzle_temperature", _L("Nozzle temperature (C)"), _L("Material"));
+    option_rows(config, "chamber_temperature", _L("Chamber temperature (C)"), _L("Material"));
+    option_rows(config, "activate_chamber_temp_control", _L("Active chamber control"), _L("Material"));
+    option_rows(config, "filament_flow_ratio", _L("Flow ratio"), _L("Material"));
+    option_rows(config, "filament_max_volumetric_speed", _L("Max volumetric speed (mm3/s)"), _L("Material"));
+    option_rows(config, "enable_pressure_advance", _L("Pressure advance enabled"), _L("Material"));
+    option_rows(config, "pressure_advance", _L("Pressure advance"), _L("Material"));
+    option_rows(config, "layer_height", _L("Layer height (mm)"), wxEmptyString);
+    option_rows(config, "outer_wall_speed", _L("Outer wall speed (mm/s)"), wxEmptyString);
+    option_rows(config, "default_acceleration", _L("Default acceleration (mm/s2)"), wxEmptyString);
+    layout->Add(list, 1, wxEXPAND | wxALL, dialog.FromDIP(12));
+    layout->Add(dialog.CreateButtonSizer(wxOK), 0, wxALIGN_RIGHT | wxALL, dialog.FromDIP(12));
+    dialog.SetSizer(layout);
+    dialog.SetMinSize(dialog.FromDIP(wxSize(560, 360)));
+    dialog.SetSize(dialog.FromDIP(wxSize(820, 620)));
+    wxGetApp().UpdateDlgDarkUI(&dialog);
+    dialog.CentreOnParent();
+    dialog.ShowModal();
+}
+
 static wxMenu* generate_help_menu()
 {
     wxMenu* helpMenu = new wxMenu();
@@ -2785,6 +2858,9 @@ static wxMenu* generate_help_menu()
     helpMenu->AppendSeparator();
 
     // Troubleshoot center
+    append_menu_item(helpMenu, wxID_ANY, _L("Profile Overview"), _L("Profile Overview"),
+        [](wxCommandEvent&) { show_profile_overview(); });
+
     append_menu_item(helpMenu, wxID_ANY, _L("Troubleshoot Center"), "",
         [](wxCommandEvent&) { wxGetApp().troubleshoot(); });
 
@@ -4343,7 +4419,7 @@ void MainFrame::add_to_recent_projects(const wxString& filename)
 
 std::wstring MainFrame::FileHistory::GetThumbnailUrl(int index) const
 {
-    if (m_thumbnails[index].empty()) return L"";
+    if (index < 0 || size_t(index) >= m_thumbnails.size() || m_thumbnails[index].empty()) return L"";
     std::wstringstream wss;
     wss << L"data:image/png;base64,";
     wss << wxBase64Encode(m_thumbnails[index].data(), m_thumbnails[index].size());
@@ -4355,10 +4431,15 @@ void MainFrame::FileHistory::AddFileToHistory(const wxString &file)
     if (this->m_fileMaxFiles == 0)
         return;
     wxFileHistory::AddFileToHistory(file);
-    if (m_load_called && wxFileExists(file))
-        m_thumbnails.push_front(bbs_3mf_get_thumbnail(into_u8(file).c_str()));
-    else
-        m_thumbnails.push_front("");
+    if (m_load_called) {
+        // Only explicit opens/saves refresh the thumbnail from the project.
+        const RecentProjectThumbnailCache cache(boost::filesystem::path(data_dir()) / "cache" / "recent-thumbnails");
+        if (wxFileExists(file))
+            cache.write(into_u8(file), bbs_3mf_get_thumbnail(into_u8(file).c_str()));
+        LoadThumbnails();
+    } else {
+        m_thumbnails.resize(GetCount());
+    }
 }
 
 void MainFrame::FileHistory::RemoveFileFromHistory(size_t i)
@@ -4376,18 +4457,10 @@ size_t MainFrame::FileHistory::FindFileInHistory(const wxString & file)
 
 void MainFrame::FileHistory::LoadThumbnails()
 {
-    // Recent projects may point at short-lived CAD-export files. Avoid entering
-    // the ZIP reader for vanished paths, and keep importer calls serialized.
-    // Some 3MF import backends are not safe to run concurrently during startup.
-    for (size_t i = 0; i < GetCount(); ++i) {
-        const wxString path = GetHistoryFile(i);
-        if (!wxFileExists(path))
-            continue;
-
-        auto thumbnail = bbs_3mf_get_thumbnail(into_u8(path).c_str());
-        if (!thumbnail.empty())
-            m_thumbnails[i] = std::move(thumbnail);
-    }
+    const RecentProjectThumbnailCache cache(boost::filesystem::path(data_dir()) / "cache" / "recent-thumbnails");
+    m_thumbnails.resize(GetCount());
+    for (size_t i = 0; i < GetCount(); ++i)
+        m_thumbnails[i] = cache.read(into_u8(GetHistoryFile(i)));
     m_load_called = true;
 }
 
