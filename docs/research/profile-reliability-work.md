@@ -18,6 +18,12 @@ Baseline: `a70a0d0d5a`, profile-foundation.1, installed full Apple Silicon build
   merge stages, not a guessed override order.
 - Next: exact inherited-key declaration provenance at load time. Flattened
   preset equality alone cannot prove which ancestor supplied a value.
+- Complete within the documented scope: recoverable config/import/cloud writes,
+  cloud account-session rejection, deterministic print/tower state, reversible
+  model-dependent normalization, and material-only height-range inheritance.
+- Next after the user's return: finish the installed GUI smoke test after macOS
+  Keychain authorization, including end-to-end printer switch/cancel and a
+  representative mixed-tool slice. Do not bypass that authorization while away.
 - Required per installed milestone: native regression tests, real saved-project
   CLI G-code comparison, unchanged profile manifest, UI smoke test, updated
   splash revision, complete build, install, and reviewed GitHub push.
@@ -527,3 +533,62 @@ The height-range fixture also exposed a separate null dereference when an import
 range changes material but omits layer_height. The transition test supplies an
 explicit height here; inheritance for an absent range height is the next focused
 correction rather than being silently claimed fixed by the tower change.
+
+### Height-Range Inheritance Milestone
+
+Revision `v2026.09.05-layer-ranges.1`, package `2026.9.5.15`.
+
+A real FFF material-range fixture crashed in layer_height_profile_from_ranges
+because it dereferenced an absent layer_height option. The Mac crash report
+identified that exact function. A range that only changes material now inherits
+the object's normal layer height without inserting an override into the model.
+Explicit overrides retain their transitions. Wrong option types and nonpositive
+or non-finite explicit heights produce SlicingError instead of propagating unsafe
+heights into layer generation; four invalid-value checks failed before the guard.
+
+This follows the explicit optional override/default selection in PrusaSlicer 3
+alpha11's [LayerHeight.cpp](https://github.com/prusa3d/PrusaSlicer/blob/6f510128d7c2e543b62919b74bea7e876f564205/src/slic3r-biz-algorithms/src/Slic3r/Biz/Algorithms/LayerHeight.cpp).
+TinManX1 keeps its existing geometry representation and algorithm. The range
+comparison also recognizes two absent overrides as equal. Without that change,
+the expanded FFF tests reproduced two unnecessary full invalidations on identical
+reapplication. Presence changes and real height changes still invalidate.
+
+Four focused geometry cases pass 31 assertions. The expanded real tower/material
+cycle passes 200 assertions across two cases, including explicit and inherited
+range heights. The complete Mac application build passed; all 250 standard native
+cases / 237,310 assertions and 48 standard FFF cases / 870 assertions passed.
+The reference saved-project G-code still differs only in two timestamp comments.
+Final independent checks also pass: five nozzle-capability tests, nine motion
+envelope tests, eight build-identity fixtures, and eight CCF golden fixtures with
+70 routes. Installed-package signature/identity and GitHub status are checked
+separately after committing the final code.
+
+## Review Conclusions
+
+The useful Prusa 3 ideas were explicit ownership and scope, private candidate
+construction before publication, optional derived results, and normal inheritance
+when an override is absent. Those principles were adapted into the existing
+C++/wxWidgets system, not used as a reason to discard working CCF, IDEX, mixed
+tools, printer integrations, or tuned profiles. The native overview describes
+where global values came from; its documented scope is not a claim about every
+object/plate/layer override. Incremental build identity changes now rebuild only
+their actual consumers. No general slicing-speed percentage is claimed.
+
+Remaining high-value work is deliberately explicit:
+
+- Finish the interactive switching/import/save/close checks with the user present.
+  Native tests and CLI output are not a substitute for the blocked GUI checks.
+- Add real plate/object/volume/layer provenance and declaration ownership at the
+  loader, avoiding a second resolver or guessed ancestry.
+- Audit incremental cloud cursor persistence, logout confirmation ordering, and
+  whole-bundle commit boundaries separately from the completed full-snapshot path.
+- Audit filament-vector ownership before changing the dormant filament-option
+  initialization path. Its option list mixes physical-tool and material concerns;
+  enabling it blindly could damage mixed-tool profiles.
+- Keep the pre-existing hidden sinking-object convex-hull test failure tracked
+  separately. The standard native/FFF suites above are green; the complete hidden
+  legacy test universe is not claimed green.
+
+Private profile backups remain outside Git. The saved user-profile checksum
+baseline remained unchanged through the final source checks. No live printer
+connection, heater, motion, upload, or print command was used during this window.

@@ -244,9 +244,11 @@ TEST_CASE("Adding a second material restores the requested prime tower", "[Print
         CHECK(object->config().independent_support_layer_height.value);
 
     const bool use_height_range = GENERATE(false, true);
+    const bool explicit_height = GENERATE(false, true);
     if (use_height_range) {
         model.objects[1]->layer_config_ranges[{5., 10.}].set("extruder", 2);
-        model.objects[1]->layer_config_ranges[{5., 10.}].set("layer_height", 0.25);
+        if (explicit_height)
+            model.objects[1]->layer_config_ranges[{5., 10.}].set("layer_height", 0.25);
     } else
         model.objects[1]->volumes[0]->config.set("extruder", 2);
     print.apply(model, config);

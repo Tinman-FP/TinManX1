@@ -194,12 +194,19 @@ static bool layer_height_ranges_equal(const t_layer_config_ranges &lr1, const t_
     auto it2 = lr2.begin();
     for (const auto &kvp1 : lr1) {
         const auto &kvp2 = *it2 ++;
-        if (!kvp2.second.has("layer_height") || !kvp1.second.has("layer_height"))
-            return false;
         if (std::abs(kvp1.first.first  - kvp2.first.first ) > EPSILON ||
-            std::abs(kvp1.first.second - kvp2.first.second) > EPSILON ||
-            (check_layer_height && std::abs(kvp1.second.option("layer_height")->getFloat() - kvp2.second.option("layer_height")->getFloat()) > EPSILON))
+            std::abs(kvp1.first.second - kvp2.first.second) > EPSILON)
             return false;
+        if (check_layer_height) {
+            const auto *height1 = kvp1.second.option("layer_height");
+            const auto *height2 = kvp2.second.option("layer_height");
+            if (bool(height1) != bool(height2))
+                return false;
+            if (height1 && (height1->type() != coFloat || height2->type() != coFloat ||
+                           !std::isfinite(height1->getFloat()) || !std::isfinite(height2->getFloat()) ||
+                           std::abs(height1->getFloat() - height2->getFloat()) > EPSILON))
+                return false;
+        }
     }
     return true;
 }

@@ -22,6 +22,7 @@ add_executable(${_TEST_NAME}_tests
     test_cloud_preset_recovery.cpp
     test_cloud_preset_removal.cpp
     test_cloud_profile_snapshot.cpp
+    test_layer_range_recovery.cpp
     test_elephant_foot_compensation.cpp
     test_fiberseek_composite_planner.cpp
     test_geometry.cpp
