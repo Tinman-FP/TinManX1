@@ -498,3 +498,32 @@ utility cases / 97 assertions. The reference G-code differs only in two timestam
 comments, and all 936 repository/installed resource profiles match the manifest.
 The newly added material-transition regression is handled in the next milestone;
 it reproduces an existing prime-tower normalization issue, not a cloud change.
+
+### Current Model State Milestone
+
+Revision `v2026.09.05-model-state.1`, package `2026.9.5.14`.
+
+A reproducible test showed that adding a second material after a single-material
+slice left the requested prime tower disabled. The initial normalization used
+the old model's material count, and the second pass could only disable the
+already-normalized value. It also ran before region assignments were refreshed.
+
+The two model-dependent inputs are retained privately, then resolved again after
+the current volumes, regions and support assignments exist. Actual derived
+changes invalidate the relevant slicing/support stages and update object defaults,
+object instances and the full config consistently. The pre-projection config used
+for later filament-map recalculation stays consistent too; tests reproduced 12
+stale-value assertions before that additional correction. Unchanged reapplication
+remains a no-op, and an explicitly disabled tower never becomes enabled.
+
+Two expanded cases pass 108 assertions across both tower styles, whole-volume and
+height-range material assignments, single/multiple/single cycles, independent
+support-layer settings, sequential object-count changes and repeated no-op calls.
+The full standard FFF suite passes 48 cases / 778 assertions. The complete Mac
+build passed, as did 246 native cases / 237,279 assertions. Reference G-code still
+differs only in the two timestamp comments. No real profile tuning changed.
+
+The height-range fixture also exposed a separate null dereference when an imported
+range changes material but omits layer_height. The transition test supplies an
+explicit height here; inheritance for an absent range height is the next focused
+correction rather than being silently claimed fixed by the tower change.

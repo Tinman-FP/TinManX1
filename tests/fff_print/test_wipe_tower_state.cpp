@@ -11,6 +11,12 @@
 
 using namespace Slic3r;
 
+namespace {
+struct PrintWithOriginalConfig : Print {
+    const DynamicPrintConfig &original_config() const { return m_ori_full_print_config; }
+};
+} // namespace
+
 TEST_CASE("Wipe tower collision state starts empty", "[Print][TinMan][WipeTowerState]")
 {
     alignas(FakeWipeTower) std::array<unsigned char, sizeof(FakeWipeTower)> storage;
@@ -199,4 +205,117 @@ TEST_CASE("Reslicing between tower styles and no tower removes stale geometry", 
     CHECK(print.wipe_tower_data().height == 0.f);
     CHECK_FALSE(print.wipe_tower_data().bbx.defined);
     CHECK(print.get_fake_wipe_tower().getTrueExtrusionLayersFromWipeTower().empty());
+}
+
+TEST_CASE("Adding a second material restores the requested prime tower", "[Print][TinMan][WipeTowerReapply]")
+{
+    const std::string style = GENERATE("type1", "type2");
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_key_value("filament_diameter", new ConfigOptionFloats{1.75, 1.75});
+    config.set_key_value("filament_colour", new ConfigOptionStrings{"#000000", "#FFFFFF"});
+    config.set_key_value("filament_settings_id", new ConfigOptionStrings{"Fixture A", "Fixture B"});
+    config.set_deserialize_strict({
+        {"enable_prime_tower", true},
+        {"single_extruder_multi_material", true},
+        {"flush_volumes_matrix", "0,60,60,0"},
+        {"wipe_tower_type", style},
+        {"independent_support_layer_height", true},
+        {"layer_height", 0.25},
+        {"initial_layer_print_height", 0.25},
+        {"timelapse_type", "0"}
+    });
+    PrintWithOriginalConfig print;
+    Model model;
+    for (int i = 0; i < 2; ++i) {
+        auto *object = model.add_object();
+        object->add_volume(Test::mesh(Test::TestMesh::cube_20x20x20))->config.set("extruder", 1);
+        object->add_instance()->set_offset(Vec3d(30 * i, 0, 0));
+        object->ensure_on_bed();
+    }
+    print.set_status_silent();
+    print.apply(model, config);
+    print.process();
+    REQUIRE(print.extruders().size() == 1);
+    REQUIRE_FALSE(print.has_wipe_tower());
+    REQUIRE(config.opt_bool("enable_prime_tower"));
+    CHECK_FALSE(print.original_config().opt_bool("enable_prime_tower"));
+    CHECK(print.apply(model, config) == Print::APPLY_STATUS_UNCHANGED);
+    for (const auto *object : print.objects())
+        CHECK(object->config().independent_support_layer_height.value);
+
+    const bool use_height_range = GENERATE(false, true);
+    if (use_height_range) {
+        model.objects[1]->layer_config_ranges[{5., 10.}].set("extruder", 2);
+        model.objects[1]->layer_config_ranges[{5., 10.}].set("layer_height", 0.25);
+    } else
+        model.objects[1]->volumes[0]->config.set("extruder", 2);
+    print.apply(model, config);
+    REQUIRE(print.extruders().size() == 2);
+    REQUIRE(print.config().enable_prime_tower.value);
+    CHECK(print.original_config().opt_bool("enable_prime_tower"));
+    print.process();
+    CHECK(print.has_wipe_tower());
+    CHECK(print.wipe_tower_data().height > 0.f);
+    for (const auto *object : print.objects())
+        CHECK_FALSE(object->config().independent_support_layer_height.value);
+    CHECK(print.apply(model, config) == Print::APPLY_STATUS_UNCHANGED);
+
+    if (use_height_range)
+        model.objects[1]->layer_config_ranges.clear();
+    else
+        model.objects[1]->volumes[0]->config.set("extruder", 1);
+    print.apply(model, config);
+    REQUIRE(print.extruders().size() == 1);
+    CHECK_FALSE(print.config().enable_prime_tower.value);
+    CHECK_FALSE(print.original_config().opt_bool("enable_prime_tower"));
+    for (const auto *object : print.objects())
+        CHECK(object->config().independent_support_layer_height.value);
+    print.process();
+    CHECK_FALSE(print.has_wipe_tower());
+    CHECK(print.wipe_tower_data().height == 0.f);
+    CHECK(print.apply(model, config) == Print::APPLY_STATUS_UNCHANGED);
+}
+
+TEST_CASE("Sequential tower normalization follows the current object count", "[Print][TinMan][WipeTowerReapply]")
+{
+    const bool requested = GENERATE(false, true);
+    auto config = DynamicPrintConfig::full_print_config();
+    config.set_key_value("filament_diameter", new ConfigOptionFloats{1.75, 1.75});
+    config.set_key_value("filament_colour", new ConfigOptionStrings{"#000000", "#FFFFFF"});
+    config.set_key_value("filament_settings_id", new ConfigOptionStrings{"Fixture A", "Fixture B"});
+    config.set_deserialize_strict({
+        {"enable_prime_tower", requested},
+        {"single_extruder_multi_material", true},
+        {"print_sequence", "by object"},
+        {"timelapse_type", "0"}
+    });
+    Model model;
+    auto *object = model.add_object();
+    for (int i = 0; i < 2; ++i) {
+        auto *volume = object->add_volume(Test::mesh(Test::TestMesh::cube_20x20x20));
+        volume->config.set("extruder", i + 1);
+        volume->set_offset(Vec3d(i * 30, 0, 0));
+    }
+    object->add_instance();
+    object->ensure_on_bed();
+    Print print;
+    print.set_status_silent();
+    print.apply(model, config);
+    REQUIRE(print.extruders().size() == 2);
+    CHECK(print.config().enable_prime_tower.value == requested);
+    CHECK(print.apply(model, config) == Print::APPLY_STATUS_UNCHANGED);
+
+    auto *second = model.add_object();
+    second->add_volume(Test::mesh(Test::TestMesh::cube_20x20x20))->config.set("extruder", 1);
+    second->add_instance()->set_offset(Vec3d(80, 0, 0));
+    second->ensure_on_bed();
+    print.apply(model, config);
+    CHECK_FALSE(print.config().enable_prime_tower.value);
+    CHECK(print.apply(model, config) == Print::APPLY_STATUS_UNCHANGED);
+
+    model.delete_object(1);
+    print.apply(model, config);
+    CHECK(print.config().enable_prime_tower.value == requested);
+    CHECK(print.apply(model, config) == Print::APPLY_STATUS_UNCHANGED);
+    CHECK(config.opt_bool("enable_prime_tower") == requested);
 }
