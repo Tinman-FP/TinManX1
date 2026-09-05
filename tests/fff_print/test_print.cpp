@@ -19,10 +19,13 @@ TEST_CASE("New print jobs have a defined plate origin", "[Print][TinMan][Initial
     const auto destroy = [](Print *print) { print->~Print(); };
     std::unique_ptr<Print, decltype(destroy)> print(new (storage.data()) Print, destroy);
     REQUIRE(print->get_plate_origin().isZero());
+    CHECK_FALSE(print->is_BBL_printer());
+    print->is_BBL_printer() = true;
     print->set_plate_origin(Vec3d(100, 200, 0));
     CHECK(print->get_plate_origin().isApprox(Vec3d(100, 200, 0)));
     print->clear();
     CHECK(print->get_plate_origin().isApprox(Vec3d(100, 200, 0)));
+    CHECK(print->is_BBL_printer());
 }
 
 SCENARIO("Print: Skirt generation", "[Print]") {

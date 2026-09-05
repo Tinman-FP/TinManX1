@@ -7,6 +7,7 @@
 
 #include "BoundingBox.hpp"
 #include "ExtrusionEntityCollection.hpp"
+#include "Exception.hpp"
 #include "Flow.hpp"
 #include "Point.hpp"
 #include "Slicing.hpp"
@@ -22,6 +23,7 @@
 #include <Eigen/Geometry>
 
 #include <functional>
+#include <cmath>
 #include <set>
 
 #include "calib.hpp"
@@ -598,21 +600,25 @@ private:
 struct FakeWipeTower
 {
     // generate fake extrusion
-    Vec2f pos;
-    float width;
-    float height;
-    float layer_height;// Due to variable layer height, this parameter may be not right.
-    float depth;
+    Vec2f pos = Vec2f::Zero();
+    float width = 0.f;
+    float height = 0.f;
+    float layer_height = 0.f;// Due to variable layer height, this parameter may be not right.
+    float depth = 0.f;
     std::vector<std::pair<float, float>> z_and_depth_pairs;
-    float brim_width;
-    float rotation_angle;
-    float cone_angle;
-    Vec2d plate_origin;
+    float brim_width = 0.f;
+    float rotation_angle = 0.f;
+    float cone_angle = 0.f;
+    Vec2d plate_origin = Vec2d::Zero();
     Vec2f rib_offset{0.f,0.f};
     std::map<float , Polylines> outer_wall; //wipe tower's true outer wall and brim
 
     void set_fake_extrusion_data(Vec2f p, float w, float h, float lh, float d, float bd, Vec2d o)
     {
+        outer_wall.clear();
+        z_and_depth_pairs.clear();
+        rotation_angle = 0.f;
+        cone_angle = 0.f;
         pos          = p;
         width        = w;
         height       = h;
@@ -623,6 +629,8 @@ struct FakeWipeTower
     }
     void set_fake_extrusion_data(const Vec2f& p, float w, float h, float lh, float d, const std::vector<std::pair<float, float>>& zad, float bd, float ra, float ca, const Vec2d& o)
     {
+        outer_wall.clear();
+        rib_offset.setZero();
         pos = p;
         width = w;
         height = h;
@@ -640,6 +648,10 @@ struct FakeWipeTower
 
     std::vector<ExtrusionPaths> getFakeExtrusionPathsFromWipeTower() const
     {
+        if (height == 0.f)
+            return {};
+        if (!std::isfinite(height) || height < 0.f || !std::isfinite(layer_height) || layer_height <= 0.f)
+            throw SlicingError("Invalid wipe tower height or layer height during collision checking.");
         int   d         = scale_(depth);
         int   w         = scale_(width);
         int   bd        = scale_(brim_width);
@@ -667,6 +679,10 @@ struct FakeWipeTower
 
     std::vector<ExtrusionPaths> getFakeExtrusionPathsFromWipeTower2() const
     {
+        if (height == 0.f)
+            return {};
+        if (!std::isfinite(height) || height < 0.f || !std::isfinite(layer_height) || layer_height <= 0.f)
+            throw SlicingError("Invalid wipe tower height or layer height during collision checking.");
         float h = height;
         float lh = layer_height;
         int   d = scale_(depth);
@@ -682,12 +698,16 @@ struct FakeWipeTower
             
             if (hh != 0.f) {
                 // The wipe tower may be getting smaller. Find the depth for this layer.
-                size_t i = 0;
-                for (i=0; i<z_and_depth_pairs.size()-1; ++i)
-                    if (hh >= z_and_depth_pairs[i].first && hh < z_and_depth_pairs[i+1].first)
-                        break;
-                d = scale_(z_and_depth_pairs[i].second);
-                minCorner = {0.f, -d/2 + scale_(z_and_depth_pairs.front().second/2.f)};
+                if (z_and_depth_pairs.empty()) {
+                    minCorner = {0, 0};
+                } else {
+                    size_t i = 0;
+                    for (; i + 1 < z_and_depth_pairs.size(); ++i)
+                        if (hh >= z_and_depth_pairs[i].first && hh < z_and_depth_pairs[i+1].first)
+                            break;
+                    d = scale_(z_and_depth_pairs[i].second);
+                    minCorner = {0.f, -d/2 + scale_(z_and_depth_pairs.front().second/2.f)};
+                }
                 maxCorner = { minCorner.x() + w, minCorner.y() + d };
             }
 
@@ -776,6 +796,9 @@ struct WipeTowerData
         used_filament.clear();
         number_of_toolchanges = -1;
         depth = 0.f;
+        height = 0.f;
+        z_and_depth_pairs.clear();
+        bbx.reset();
         brim_width = 0.f;
         rib_offset = Vec2f::Zero();
         wipe_tower_mesh_data  = std::nullopt;
@@ -1159,7 +1182,7 @@ private:
     PrintRegionPtrs                         m_print_regions;
     
     //SoftFever
-    bool m_isBBLPrinter;
+    bool m_isBBLPrinter = false;
 
     // Ordered collections of extrusion paths to build skirt loops and brim.
     ExtrusionEntityCollection               m_skirt;

@@ -408,5 +408,41 @@ reproduced the missing initialization deterministically before the fix.
 The member now starts at Vec3d::Zero(). Explicit origins still round-trip and
 clear() retains the assigned plate origin. The regression test passes and the
 entire standard FFF suite now passes 38 cases and 568 assertions, including both
-brim configurations that previously threw. Complete application and saved-project
-output verification follow. No tuning values or coordinate clamping changed.
+brim configurations that previously threw. The complete 180-step application
+build passed; the saved-project G-code differed only in its two timestamp
+comments, and the standard native suite passed 229 cases / 237,145 assertions.
+No tuning values or coordinate clamping changed.
+
+Eigen documents that its [default matrix constructor does not initialize coefficients](https://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html).
+This fix initializes the member directly instead of relying on allocation history
+or a build-wide Eigen macro.
+
+### Wipe Tower State Milestone
+
+Revision `v2026.09.05-tower-state.1`, package `2026.9.5.12`.
+
+Four generated state fixtures reproduced 23 failed assertions: new collision
+geometry was uninitialized, reset retained old height/taper/bounds, and switching
+tower implementation retained incompatible wall/rib/rotation data. These are
+derived values, not user profile settings. They now start empty and reset at
+print clearing and tower regeneration; each setter replaces the incompatible
+data from the other implementation. Type 1 also publishes its measured height.
+
+An expanded real two-material test exposed another baseline uninitialized field,
+Print::m_isBBLPrinter. It could select Type 1 despite a Type 2 setting. The field
+now defaults to false; explicit GUI/CLI assignments and clear() retention are
+unchanged. The test processes Type 1, Type 2, Type 1 again, and finally no tower.
+It checks real walls, taper, bounds, height and collision layers at each stage.
+
+Eight focused tower cases pass 100 assertions. Missing taper tables use a
+constant-depth rectangle, equivalent to an explicit constant-depth table.
+Non-finite or nonpositive layer height on a nonempty tower produces a slicing
+error rather than a non-advancing loop; zero-height empty towers return no paths.
+Rotated path bounds allow one scaled coordinate unit of rounding. These changes
+do not redesign the tower or claim a complete geometric validation audit.
+
+PrusaSlicer alpha11's [Print.cpp](https://github.com/prusa3d/PrusaSlicer/blob/6f510128d7c2e543b62919b74bea7e876f564205/src/libslic3r/src/libslic3r/Print.cpp)
+replaces its optional tower result before regenerating it. Its value-initialized
+data fields and explicit absence are useful lifecycle guidance. TinManX1 retains
+both existing tower implementations and its current GUI/framework. Complete
+application and saved-project output verification follow.
