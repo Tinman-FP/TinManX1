@@ -20,6 +20,8 @@ add_executable(${_TEST_NAME}_tests
     test_physical_printer_recovery.cpp
     test_project_preset_recovery.cpp
     test_cloud_preset_recovery.cpp
+    test_cloud_preset_removal.cpp
+    test_cloud_profile_snapshot.cpp
     test_elephant_foot_compensation.cpp
     test_fiberseek_composite_planner.cpp
     test_geometry.cpp

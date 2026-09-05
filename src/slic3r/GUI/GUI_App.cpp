@@ -6187,16 +6187,28 @@ void GUI_App::reload_settings()
 {
     if (preset_bundle && m_agent) {
         // Load user's personal presets
+        const auto source_agent = m_agent->get_cloud_agent();
+        if (!source_agent)
+            return;
+        const auto requested_session = source_agent->get_profile_session();
+        if (!requested_session.logged_in || requested_session.user_id.empty())
+            return;
         std::map<std::string, std::map<std::string, std::string>> user_presets;
-        int result = m_agent->get_user_presets(&user_presets);
+        int result = source_agent->get_user_presets(&user_presets);
         if (result != 0) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": get_user_presets failed with code " << result << ", skipping sync";
             return;
         }
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " cloud user preset number is: " << user_presets.size();
-        auto refresh_synced_ui = [this, user_presets = std::move(user_presets)]() mutable {
-            if (is_closing() || !preset_bundle || !app_config || !mainframe)
+        auto refresh_synced_ui = [this, source_agent, requested_session, user_presets = std::move(user_presets)]() mutable {
+            if (is_closing() || !preset_bundle || !app_config || !mainframe || !m_agent)
                 return;
+            if (m_agent->get_cloud_agent() != source_agent ||
+                !requested_session.matches(source_agent->get_profile_session()) ||
+                app_config->get("preset_folder") != requested_session.user_id) {
+                BOOST_LOG_TRIVIAL(info) << "Discarding profile refresh from an inactive account session.";
+                return;
+            }
 
             // Snapshot each collection's edited config BEFORE any mutation.
             // load_pending_vendors() via apply_vendor_config() can call select_preset(0)

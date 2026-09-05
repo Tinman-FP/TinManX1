@@ -2096,8 +2096,15 @@ int PresetBundle::validate_presets(const std::string &file_name, DynamicPrintCon
 
 void PresetBundle::remove_users_preset(AppConfig &config, std::map<std::string, std::map<std::string, std::string>> *my_presets)
 {
-    auto check_removed = [my_presets, this](Preset &preset) -> bool {
+    if (my_presets != nullptr) {
+        PresetCollection *collections[] = {&prints, &filaments, &printers};
+        for (PresetCollection *collection : collections)
+            if (collection->get_selected_idx() < collection->size())
+                collection->update_dirty();
+    }
+    auto check_removed = [my_presets](Preset &preset) -> bool {
         if (my_presets == nullptr) return true;
+        if (preset.is_external) return false;
         if (my_presets->find(preset.name) != my_presets->end()) return false;
         if (!preset.sync_info.empty()) return false; // syncing, not remove
         if (preset.setting_id.empty()) return false; // no id, not remove

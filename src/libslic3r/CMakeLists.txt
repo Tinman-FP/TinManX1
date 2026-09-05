@@ -366,6 +366,8 @@ set(lisbslic3r_sources
     TinManHardwareCatalog.hpp
     ConfigResolutionTrace.cpp
     ConfigResolutionTrace.hpp
+    CloudProfileSnapshot.cpp
+    CloudProfileSnapshot.hpp
     FilamentSelection.cpp
     FilamentSelection.hpp
     PrinterConnectionUpdate.cpp

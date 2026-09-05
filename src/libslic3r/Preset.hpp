@@ -523,7 +523,7 @@ public:
     ConstIterator   cend() const { return m_presets.cend(); }
 
     //BBS
-    Iterator        erase(Iterator it) { return m_presets.erase(it); }
+    Iterator        erase(Iterator it);
     SyncFunc        sync_func{ nullptr };
     void            set_sync_func(SyncFunc func) { sync_func = func; }
     //BBS: mutex

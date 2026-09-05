@@ -54,11 +54,45 @@ nlohmann::json nested_session_json(const nlohmann::json& metadata)
 std::string resolved_display_name(const nlohmann::json& session)
 {
     Slic3r::OrcaCloudServiceAgent agent("");
-    REQUIRE(agent.set_user_session(session, false));
+    REQUIRE(agent.set_user_session(session, false, false));
     return agent.get_user_nickname();
 }
 
 } // namespace
+
+TEST_CASE("Cloud profile sessions invalidate account changes without invalidating token refresh", "[CloudSnapshot][TinMan]")
+{
+    Slic3r::OrcaCloudServiceAgent agent("");
+    const auto logged_out = agent.get_profile_session();
+    CHECK_FALSE(logged_out.logged_in);
+    REQUIRE(agent.set_user_session("fixture-token", "account-a", "fixture", "Fixture", "", "", false));
+    const auto original = agent.get_profile_session();
+    CHECK_FALSE(logged_out.matches(original));
+    REQUIRE(agent.set_user_session("refreshed-token", "account-a", "fixture", "Fixture", "", "", false));
+    CHECK(original.matches(agent.get_profile_session()));
+    REQUIRE(agent.set_user_session("other-token", "account-b", "fixture", "Fixture", "", "", false));
+    CHECK_FALSE(original.matches(agent.get_profile_session()));
+    REQUIRE(agent.set_user_session("new-token", "account-a", "fixture", "Fixture", "", "", false));
+    CHECK_FALSE(original.matches(agent.get_profile_session()));
+    CHECK(agent.get_profile_session().revision > original.revision);
+}
+
+TEST_CASE("Empty cloud protocol results start with defined state", "[CloudSnapshot][TinMan]")
+{
+    Slic3r::SyncPullResponse pull;
+    CHECK(pull.next_cursor == 0);
+    CHECK(pull.upserts.empty());
+    CHECK(pull.deletes.empty());
+    Slic3r::SyncPushResult push;
+    CHECK_FALSE(push.success);
+    CHECK_FALSE(push.server_deleted);
+    CHECK(push.http_code == 0);
+    CHECK(push.new_updated_time == 0);
+    CHECK(push.server_version.updated_time == 0);
+    CHECK(push.server_version.created_time == 0);
+    Slic3r::SyncState state;
+    CHECK(state.last_sync_timestamp == 0);
+}
 
 TEST_CASE("Bambu network manager survives repeated finalization", "[BBLNetworkPlugin][Lifecycle]")
 {

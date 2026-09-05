@@ -793,6 +793,12 @@ std::string OrcaCloudServiceAgent::get_user_id()
     return session.user_id;
 }
 
+CloudProfileSession OrcaCloudServiceAgent::get_profile_session()
+{
+    std::lock_guard<std::mutex> lock(session_mutex);
+    return {session.user_id, session_revision, session.logged_in};
+}
+
 std::string OrcaCloudServiceAgent::get_user_name()
 {
     std::lock_guard<std::mutex> lock(session_mutex);
@@ -972,80 +978,27 @@ void OrcaCloudServiceAgent::enable_multi_machine(bool enable)
 int OrcaCloudServiceAgent::get_user_presets(std::map<std::string, std::map<std::string, std::string>>* user_presets)
 {
     if (!user_presets) return BAMBU_NETWORK_ERR_INVALID_HANDLE;
-
-    if (!is_user_login()) {
-        BOOST_LOG_TRIVIAL(error) << "OrcaCloudServiceAgent: Not logged in";
+    const auto requested_session = get_profile_session();
+    if (!requested_session.logged_in || requested_session.user_id.empty())
         return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+
+    // A full library can authorize deletions. Never borrow the incremental cursor
+    // or publish a partial, not-modified, or superseded-account response.
+    std::string response;
+    unsigned int http_code = 0;
+    if (http_get(ORCA_SYNC_PULL_PATH, &response, &http_code) != BAMBU_NETWORK_SUCCESS)
+        return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
+    try {
+        auto snapshot = tinmanx_parse_cloud_profile_snapshot(http_code, response, requested_session.user_id);
+        std::lock_guard<std::mutex> lock(session_mutex);
+        if (!requested_session.matches({session.user_id, session_revision, session.logged_in}))
+            return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
+        user_presets->swap(snapshot);
+        return BAMBU_NETWORK_SUCCESS;
+    } catch (const std::exception &error) {
+        BOOST_LOG_TRIVIAL(error) << "OrcaCloudServiceAgent: Full profile snapshot rejected: " << error.what();
+        return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
     }
-
-    bool success = false;
-    std::string error_msg;
-    int http_code_out = 0;
-    SyncState saved_state;
-
-    {
-        std::lock_guard<std::recursive_mutex> lock(state_mutex);
-        saved_state = sync_state;
-        sync_state = SyncState{};
-    }
-
-    auto on_success = [&](const SyncPullResponse& resp) {
-        // Get current user_id for all presets (required by load_user_preset)
-        std::string current_user_id = get_user_id();
-
-        for (const auto& upsert : resp.upserts) {
-            // Parse JSON content into key-value pairs using helper
-            std::map<std::string, std::string> value_map;
-            json_to_map(upsert.content.dump(), value_map);
-
-            // Add metadata from top-level sync response if not already in content
-            // These are required by PresetCollection::load_user_preset
-            if (value_map.find(BBL_JSON_KEY_SETTING_ID) == value_map.end()) {
-                value_map[BBL_JSON_KEY_SETTING_ID] = upsert.id;
-            }
-            if (value_map.find(BBL_JSON_KEY_USER_ID) == value_map.end()) {
-                value_map[BBL_JSON_KEY_USER_ID] = current_user_id;
-            }
-            if (value_map.find(ORCA_JSON_KEY_UPDATE_TIME) == value_map.end()) {
-                value_map[ORCA_JSON_KEY_UPDATE_TIME] = std::to_string(upsert.updated_time);
-            }
-
-            // Use preset name from content or fallback to upsert.name or upsert.id
-            std::string preset_name = upsert.content.value(BBL_JSON_KEY_NAME, "");
-            if (preset_name.empty()) {
-                preset_name = upsert.name.empty() ? upsert.id : upsert.name;
-            }
-
-            // Store as: user_presets[preset_name][key] = value
-            // This matches the format expected by PresetBundle::load_user_presets
-            (*user_presets)[preset_name] = value_map;
-        }
-
-        if (resp.next_cursor != 0) {
-            std::lock_guard<std::recursive_mutex> lock(state_mutex);
-            sync_state.last_sync_timestamp = resp.next_cursor;
-            save_sync_state();
-        } else {
-            std::lock_guard<std::recursive_mutex> lock(state_mutex);
-            sync_state = saved_state;
-        }
-        success = true;
-    };
-
-    auto on_error = [&](int code, const std::string& err) {
-        http_code_out = code;
-        error_msg = err;
-        success = false;
-    };
-
-    sync_pull(on_success, on_error);
-
-    if (!success) {
-        std::lock_guard<std::recursive_mutex> lock(state_mutex);
-        sync_state = saved_state;
-    }
-
-    return success ? BAMBU_NETWORK_SUCCESS : BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
 }
 
 std::string OrcaCloudServiceAgent::request_setting_id(std::string name, std::map<std::string, std::string>* values_map, unsigned int* http_code)
@@ -1906,6 +1859,8 @@ bool OrcaCloudServiceAgent::set_user_session(const std::string& token,
 
     {
         std::lock_guard<std::mutex> lock(session_mutex);
+        if (!session.logged_in || session.user_id != user_id)
+            ++session_revision;
         session.access_token = token;
         session.refresh_token = refresh_token;
         session.user_id = user_id;
@@ -1943,7 +1898,7 @@ bool OrcaCloudServiceAgent::set_user_session(const std::string& token,
     return true;
 }
 
-bool OrcaCloudServiceAgent::set_user_session(const json& session_json, bool notify_login)
+bool OrcaCloudServiceAgent::set_user_session(const json& session_json, bool notify_login, bool persist)
 {
     std::string access_token = get_json_string_field(session_json, "access_token");
     if (access_token.empty()) {
@@ -1989,7 +1944,7 @@ bool OrcaCloudServiceAgent::set_user_session(const json& session_json, bool noti
         return false;
     }
 
-    bool success = set_user_session(access_token, user_id, username, nickname, avatar, refresh_token);
+    bool success = set_user_session(access_token, user_id, username, nickname, avatar, refresh_token, persist);
     if (success && notify_login && on_login_complete_handler) {
         on_login_complete_handler(true, user_id);
     }
@@ -2000,6 +1955,7 @@ void OrcaCloudServiceAgent::clear_session()
 {
     {
         std::lock_guard<std::mutex> lock(session_mutex);
+        ++session_revision;
         session = SessionInfo{};
     }
     clear_user_secret();

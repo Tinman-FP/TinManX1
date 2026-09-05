@@ -444,5 +444,57 @@ do not redesign the tower or claim a complete geometric validation audit.
 PrusaSlicer alpha11's [Print.cpp](https://github.com/prusa3d/PrusaSlicer/blob/6f510128d7c2e543b62919b74bea7e876f564205/src/libslic3r/src/libslic3r/Print.cpp)
 replaces its optional tower result before regenerating it. Its value-initialized
 data fields and explicit absence are useful lifecycle guidance. TinManX1 retains
-both existing tower implementations and its current GUI/framework. Complete
-application and saved-project output verification follow.
+both existing tower implementations and its current GUI/framework. The complete
+180-step application build, installation, signature and 936 resource-profile
+checksums passed. Standard FFF tests passed 46 cases / 670 assertions; standard
+native tests passed 229 cases / 237,145 assertions. The saved-project G-code
+differed only in two timestamp comments. The application remains closed because
+interactive startup awaits the user's Keychain authorization.
+
+### Cloud Library Milestone
+
+Revision `v2026.09.05-cloud-library.1`, package `2026.9.5.13`.
+
+Seven offline deletion cases pass 30 assertions. Five initial cases reproduced
+seven failed assertions before the corrections. Deletion now checks actual editor
+differences, preserves the selected identity when an earlier deque entry is
+erased, and never deletes externally imported files during cloud reconciliation.
+Pending local writes and local-only presets stay intact. A clean cloud-deleted
+preset still disappears even if a stale dirty flag was set. Empty file paths
+cannot remove an unrelated working-directory .info file. Mixed-tool and
+standard/high-flow material vectors are covered without modifying real profiles.
+
+The full-library HTTP path previously reused the incremental synchronization
+cursor, accepted a response missing its upserts array as an empty library, and
+published records one by one. It now requests a cursor-free snapshot, validates
+the complete response privately, and swaps the output only after success.
+HTTP 304 is not an empty full library. Missing lists, malformed records, duplicate
+names/identities, conflicting account metadata, invalid timestamps and explicit
+incomplete-page indicators reject the response without publishing partial data.
+An explicit valid empty upserts array remains a legitimate empty library.
+
+Account-session stamps prevent a response fetched before an account change from
+being published. The queued GUI refresh checks the agent, account revision and
+active profile folder again before profile/vendor mutations. An ordinary token
+refresh for the same logged-in account retains the stamp; logout or account
+replacement invalidates it. Default sync result scalars are initialized, including
+the incremental HTTP 304 response cursor. Other providers retain their interface
+compatibility; the generation-aware implementation is the Orca profile service.
+
+Ten parser/session-stamp cases pass 104 assertions, including large timestamps,
+nullable material values, mixed nozzle vectors, failure retry and unchanged caller
+output after a malformed later record. Authentication fixtures now explicitly
+disable persistence as well as notification; no live authentication or credential
+store access is needed to exercise the session revision logic.
+
+Limits: this validates the client's expected snapshot contract, not the server's
+truthfulness about completeness. It is not a transaction across every vendor,
+profile collection, metadata file and incremental-sync worker. Existing logout
+confirmation ordering and incremental cursor persistence need a separate audit.
+Deletion failures are not a paired-file power-loss transaction. The complete
+application build passed, followed by 246 standard native cases / 237,279
+assertions, 46 existing standard FFF cases / 670 assertions, and 15 offline GUI
+utility cases / 97 assertions. The reference G-code differs only in two timestamp
+comments, and all 936 repository/installed resource profiles match the manifest.
+The newly added material-transition regression is handled in the next milestone;
+it reproduces an existing prime-tower normalization issue, not a cloud change.

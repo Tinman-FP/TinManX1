@@ -654,7 +654,7 @@ bool Preset::save_info(std::string file)
 void Preset::remove_files(bool cloud_already_deleted)
 {
     //BBS: add project embedded preset logic
-    if (this->is_project_embedded) {
+    if (this->is_project_embedded || this->file.empty()) {
         return;
     }
     // Erase the preset file.
@@ -3711,6 +3711,19 @@ std::vector<std::string> PresetCollection::dirty_options_without_option_list(con
         }
     }
     return changed;
+}
+
+PresetCollection::Iterator PresetCollection::erase(Iterator it)
+{
+    const size_t erased_index = it - m_presets.begin();
+    auto next = m_presets.erase(it);
+    if (m_idx_selected != size_t(-1)) {
+        if (erased_index < m_idx_selected)
+            --m_idx_selected;
+        else if (erased_index == m_idx_selected)
+            m_idx_selected = size_t(-1);
+    }
+    return next;
 }
 
 // Select a new preset. This resets all the edits done to the currently selected preset.
