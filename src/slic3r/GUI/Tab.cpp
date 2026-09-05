@@ -232,6 +232,7 @@ void Tab::create_preset_tab()
         m_presets_choice->set_selection_changed_function([this](int selection) {
             if (!m_presets_choice->selection_is_changed_according_to_physical_printers())
             {
+                const std::string previous_physical_printer = m_preset_bundle->physical_printers.get_selected_full_printer_name();
                 if (m_type == Preset::TYPE_PRINTER && !m_presets_choice->is_selected_physical_printer())
                     m_preset_bundle->physical_printers.unselect_printer();
 
@@ -245,7 +246,7 @@ void Tab::create_preset_tab()
                         m_presets_choice->GetString(selection).ToUTF8().data());
                     preset_name = m_preset_bundle->get_preset_name_by_alias(m_type, selected_label);
                 }
-                select_preset(preset_name);
+                select_preset(preset_name, false, previous_physical_printer);
             }
         });
     }
@@ -6329,15 +6330,36 @@ bool Tab::select_preset(
             size_t 				      idx_new = 0;
             if (idx_new < presets.size())
                 for (; idx_new < presets.size() && ! presets[idx_new].is_visible; ++ idx_new) ;
-            preset_name = presets[idx_new].name;
             if (idx_new == presets.size()) {
                 // If no name is provided, select the "-- default --" preset.
                 preset_name = m_presets->default_preset().name;
-            }
+            } else
+                preset_name = presets[idx_new].name;
             BOOST_LOG_TRIVIAL(info) << boost::format("not cause by delete current ,choose the first visible, idx %1%, name %2%")
                                         %idx_new %preset_name;
         }
     }
+    const auto restore_previous_physical_printer = [&]() {
+        if (m_type != Preset::TYPE_PRINTER) return;
+        auto &physical = m_preset_bundle->physical_printers;
+        const auto &current_name = m_presets->get_edited_preset().name;
+        if (!last_selected_ph_printer_name.empty() &&
+            current_name == PhysicalPrinter::get_preset_name(last_selected_ph_printer_name))
+            physical.select_printer(last_selected_ph_printer_name);
+        else if (physical.has_selection() && physical.get_selected_printer_preset_name() != current_name)
+            physical.unselect_printer();
+    };
+    // A stale selector must not discard edits and silently select another
+    // printer through PresetCollection's first-visible fallback.
+    const Preset *requested_preset = m_presets->find_preset(Preset::remove_suffix_modified(preset_name), false, true);
+    if (requested_preset == nullptr || !requested_preset->is_visible) {
+        restore_previous_physical_printer();
+        update_tab_ui();
+        on_presets_changed();
+        show_error(this, _L("The selected preset is no longer available. The previous selection has been kept."));
+        return false;
+    }
+    preset_name = requested_preset->name;
     //BBS: add project embedded preset logic and refine is_external
     assert(! delete_current || (m_presets->get_edited_preset().name != preset_name && (m_presets->get_edited_preset().is_user() || m_presets->get_edited_preset().is_project_embedded)));
     //assert(! delete_current || (m_presets->get_edited_preset().name != preset_name && m_presets->get_edited_preset().is_user()));
@@ -6403,7 +6425,7 @@ bool Tab::select_preset(
         //
         // With the introduction of the SLA printer types, we need to support switching between
         // the FFF and SLA printers.
-        const Preset 		&new_printer_preset     = *m_presets->find_preset(preset_name, true);
+        const Preset          new_printer_preset = *m_presets->find_preset(preset_name, true);
 		const PresetWithVendorProfile new_printer_preset_with_vendor_profile = m_presets->get_preset_with_vendor_profile(new_printer_preset);
         PrinterTechnology    old_printer_technology = m_presets->get_edited_preset().printer_technology();
         PrinterTechnology    new_printer_technology = new_printer_preset.printer_technology();
@@ -6423,10 +6445,9 @@ bool Tab::select_preset(
                 { Preset::Type::TYPE_FILAMENT,      &m_preset_bundle->filaments,    ptFFF },
                 //{ Preset::Type::TYPE_SLA_MATERIAL,  &m_preset_bundle->sla_materials,ptSLA }
             };
-            Preset *to_be_selected = m_presets->find_preset(preset_name, false, true);
             ConfigOptionStrings* cur_opt2 = dynamic_cast <ConfigOptionStrings *>(m_presets->get_edited_preset().config.option("printer_extruder_variant"));
-            ConfigOptionStrings* to_select_opt2 = dynamic_cast <ConfigOptionStrings *>(to_be_selected->config.option("printer_extruder_variant"));
-            bool no_transfer_variant = cur_opt2->values != to_select_opt2->values;
+            const auto *to_select_opt2 = new_printer_preset.config.option<ConfigOptionStrings>("printer_extruder_variant");
+            bool no_transfer_variant = !cur_opt2 || !to_select_opt2 || cur_opt2->values != to_select_opt2->values;
             for (PresetUpdate &pu : updates) {
                 pu.old_preset_dirty = (old_printer_technology == pu.technology) && pu.presets->current_is_dirty();
                 pu.new_preset_compatible = (new_printer_technology == pu.technology) && is_compatible_with_printer(pu.presets->get_edited_preset_with_vendor_profile(), new_printer_preset_with_vendor_profile);
@@ -6497,18 +6518,7 @@ bool Tab::select_preset(
 
     if (canceled) {
         BOOST_LOG_TRIVIAL(info) << boost::format("canceled delete, update ui...");
-        if (m_type == Preset::TYPE_PRINTER) {
-            if (!last_selected_ph_printer_name.empty() &&
-                m_presets->get_edited_preset().name == PhysicalPrinter::get_preset_name(last_selected_ph_printer_name)) {
-                // If preset selection was canceled and previously was selected physical printer, we should select it back
-                m_preset_bundle->physical_printers.select_printer(last_selected_ph_printer_name);
-            }
-            if (m_preset_bundle->physical_printers.has_selection()) {
-                // If preset selection was canceled and physical printer was selected
-                // we must disable selection marker for the physical printers
-                m_preset_bundle->physical_printers.unselect_printer();
-            }
-        }
+        restore_previous_physical_printer();
 
         update_tab_ui();
 
@@ -6549,9 +6559,9 @@ bool Tab::select_preset(
              * to the corresponding printer_technology
              */
             const PrinterTechnology printer_technology = m_presets->get_edited_preset().printer_technology();
-            if (printer_technology == ptFFF && m_dependent_tabs.front() != Preset::Type::TYPE_PRINT)
+            if (printer_technology == ptFFF && (m_dependent_tabs.empty() || m_dependent_tabs.front() != Preset::Type::TYPE_PRINT))
                 m_dependent_tabs = { Preset::Type::TYPE_PRINT, Preset::Type::TYPE_FILAMENT };
-            else if (printer_technology == ptSLA && m_dependent_tabs.front() != Preset::Type::TYPE_SLA_PRINT)
+            else if (printer_technology == ptSLA && (m_dependent_tabs.empty() || m_dependent_tabs.front() != Preset::Type::TYPE_SLA_PRINT))
                 m_dependent_tabs = { Preset::Type::TYPE_SLA_PRINT, Preset::Type::TYPE_SLA_MATERIAL };
         }
 

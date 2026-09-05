@@ -66,6 +66,8 @@ REQUIRED_FILES = [
     "src/libslic3r/TinManHardwareCatalog.cpp",
     "src/libslic3r/TinManHardwareCatalog.hpp",
     "src/libslic3r/TinManHardwareCatalogData.hpp.in",
+    "src/libslic3r/ConfigResolutionTrace.hpp",
+    "src/libslic3r/ConfigResolutionTrace.cpp",
     "src/slic3r/Utils/RecentProjectThumbnailCache.hpp",
     "tests/libslic3r/test_tinman_machine_profile_contract.cpp",
     "scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py",
@@ -351,6 +353,9 @@ def main() -> int:
                 errors.append(f"missing versioned artwork: {rel}")
             elif f"TinManX1 Revision {revision}" not in artwork.read_text(errors="replace"):
                 errors.append(f"{rel} does not match TINMANX1_REVISION {revision}")
+        for rel in ("src/slic3r/GUI/GUI_App.cpp", "src/slic3r/GUI/AboutDialog.cpp"):
+            if "wxString::FromUTF8(TINMANX1_REVISION)" not in (ROOT / rel).read_text(errors="replace"):
+                errors.append(f"{rel} does not display the native TinManX1 revision")
 
     package_match = re.search(
         r'set\(TINMANX1_PACKAGE_VERSION\s+"(\d+)\.(\d+)\.(\d+)\.(\d+)"\)',

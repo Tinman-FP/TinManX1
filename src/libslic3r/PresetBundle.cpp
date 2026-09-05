@@ -10,6 +10,7 @@
 #include "Model.hpp"
 #include "libslic3r_version.h"
 #include "TinManMachineProfileContract.hpp"
+#include "ConfigResolutionTrace.hpp"
 
 #include <algorithm>
 #include <mutex>
@@ -3996,11 +3997,13 @@ bool PresetBundle::support_different_extruders()
     return supported;
 }
 
-DynamicPrintConfig PresetBundle::full_config(bool apply_extruder, std::optional<std::vector<int>>filament_maps) const
+DynamicPrintConfig PresetBundle::full_config(bool apply_extruder, std::optional<std::vector<int>>filament_maps,
+                                            ConfigResolutionTrace *trace) const
 {
+    if (trace) trace->clear();
     return (this->printers.get_edited_preset().printer_technology() == ptFFF) ?
-        this->full_fff_config(apply_extruder, filament_maps) :
-        this->full_sla_config();
+        this->full_fff_config(apply_extruder, filament_maps, trace) :
+        this->full_sla_config(trace);
 }
 
 DynamicPrintConfig PresetBundle::full_config_secure(std::optional<std::vector<int>>filament_maps) const
@@ -4022,15 +4025,22 @@ const std::set<std::string> ignore_settings_list ={
     "print_settings_id", "filament_settings_id", "printer_settings_id"
 };
 
-DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optional<std::vector<int>> filament_maps_new) const
+DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optional<std::vector<int>> filament_maps_new,
+                                                ConfigResolutionTrace *trace) const
 {
     DynamicPrintConfig out;
     out.apply(static_print_config_ref(FullPrintConfig::defaults()));
+    if (trace) trace->applied(out, {ConfigOriginKind::Defaults});
     out.apply(this->prints.get_edited_preset().config);
+    if (trace) trace->applied_preset(prints.get_edited_preset().config, prints.get_edited_preset(), prints);
     // Add the default filament preset to have the "filament_preset_id" defined.
     out.apply(this->filaments.default_preset().config);
+
+    if (trace) trace->applied_preset(filaments.default_preset().config, filaments.default_preset(), filaments);
 	out.apply(this->printers.get_edited_preset().config);
+    if (trace) trace->applied_preset(printers.get_edited_preset().config, printers.get_edited_preset(), printers);
     out.apply(this->project_config);
+    if (trace) trace->applied(project_config, {ConfigOriginKind::Project});
     const Preset &active_printer = this->printers.get_edited_preset();
 
     // Resolve persisted filament names before assembling the full configuration.
@@ -4047,11 +4057,15 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
                                        << "' is unavailable; using '"
                                        << fallback_filament->name << "'";
             preset = fallback_filament;
+            if (trace) trace->warn("Material " + std::to_string(active_filament_presets.size() + 1) +
+                                   ": missing preset '" + name + "'; using '" + preset->name + "'.");
         }
         active_filament_presets.emplace_back(preset);
     }
-    if (active_filament_presets.empty())
+    if (active_filament_presets.empty()) {
         active_filament_presets.emplace_back(fallback_filament);
+        if (trace) trace->warn("No material selected; using '" + fallback_filament->name + "'.");
+    }
 
     const size_t num_filaments = active_filament_presets.size();
 
@@ -4061,6 +4075,7 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
     //in some middle state, they may be different
     if (filament_maps.size() != num_filaments) {
         filament_maps.resize(num_filaments, 1);
+        if (trace) trace->warn("Material-to-tool map length was repaired to match the material count.");
     }
     else {
         assert(filament_maps.size() == num_filaments);
@@ -4099,6 +4114,7 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
         out.update_values_to_printer_extruders(out, printer_options_with_variant_2, "printer_extruder_id", "printer_extruder_variant", 2);
         //update print config related with variants
         out.update_values_to_printer_extruders(out, print_options_with_variant, "print_extruder_id", "print_extruder_variant");
+        if (trace) trace->checkpoint(out, {ConfigOriginKind::ToolVariant});
     }
 
     if (num_filaments <= 1) {
@@ -4108,6 +4124,7 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
         if (apply_extruder)
             filament_config.update_values_to_printer_extruders(out, filament_options_with_variant, "", "filament_extruder_variant", 1, filament_maps[0]);
         out.apply(filament_config);
+        if (trace) trace->applied_preset(filament_config, *preset, filaments, 1, apply_extruder);
         compatible_printers_condition.emplace_back(preset->compatible_printers_condition());
         compatible_prints_condition  .emplace_back(preset->compatible_prints_condition());
         //BBS: add logic for settings check between different system presets
@@ -4148,13 +4165,11 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
         for (int index = 0; index < num_filaments; index++) {
             const DynamicPrintConfig *cfg = filament_configs[index];
             const Preset *preset = filament_presets[index];
-            // The compatible_prints/printers_condition() returns a reference to configuration key, which may not yet exist.
-            DynamicPrintConfig &cfg_rw = *const_cast<DynamicPrintConfig*>(cfg);
-            compatible_printers_condition.emplace_back(Preset::compatible_printers_condition(cfg_rw));
-            compatible_prints_condition  .emplace_back(Preset::compatible_prints_condition(cfg_rw));
+            compatible_printers_condition.emplace_back(preset->compatible_printers_condition());
+            compatible_prints_condition  .emplace_back(preset->compatible_prints_condition());
 
             //BBS: add logic for settings check between different system presets
-            std::string filament_inherits = Preset::inherits(cfg_rw);
+            std::string filament_inherits = preset->inherits();
             inherits                     .emplace_back(filament_inherits);
             filament_ids.emplace_back(preset->filament_id);
             std::string different_filament_settings;
@@ -4174,7 +4189,7 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
                 filament_parent_preset =  const_cast<PresetBundle*>(this)->filaments.find_preset(filament_inherits, false, true);
 
             if (filament_parent_preset) {
-                std::vector<std::string> dirty_options = cfg_rw.diff(filament_parent_preset->config);
+                std::vector<std::string> dirty_options = cfg->diff(filament_parent_preset->config);
                 if (!dirty_options.empty()) {
                     auto iter = dirty_options.begin();
                     while (iter != dirty_options.end()) {
@@ -4236,6 +4251,19 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
                         }
                     }
                 }
+            }
+        }
+
+        if (trace) {
+            for (const auto &key : this->filaments.default_preset().config.keys()) {
+                if (key == "compatible_prints" || key == "compatible_printers") continue;
+                const auto *option = out.option(key);
+                std::vector<ConfigValueOrigin> origins;
+                const size_t source_count = option->is_scalar() ? 1 : num_filaments;
+                for (size_t i = 0; i < source_count; ++i)
+                    origins.emplace_back(ConfigResolutionTrace::preset_origin(
+                        key, *active_filament_presets[i], filaments, i + 1, apply_extruder));
+                trace->record(key, *option, std::move(origins));
             }
         }
 
@@ -4325,20 +4353,32 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
     out.option<ConfigOptionStrings>("extruder_ams_count", true)->values   = save_extruder_ams_count_to_string(this->extruder_ams_counts);
 
 	out.option<ConfigOptionEnumGeneric>("printer_technology", true)->value = ptFFF;
+    if (trace) trace->checkpoint(out, {ConfigOriginKind::Generated});
     // Filament aggregation copies every filament default into the full config, including
     // nozzle_volume_type. Apply the fixed hardware contract after that final merge.
-    tinmanx_apply_nozzle_volume_contract(active_printer.name, active_printer.config, out);
-    tinmanx_normalize_multitool_config(out, num_filaments);
+    const bool hardware_applied = tinmanx_apply_nozzle_volume_contract(active_printer.name, active_printer.config, out);
+    if (trace && hardware_applied)
+        trace->record("nozzle_volume_type", *out.option("nozzle_volume_type"),
+                      {{ConfigOriginKind::HardwareContract, active_printer.name}});
+    const bool normalized = tinmanx_normalize_multitool_config(out, num_filaments);
+    if (trace) {
+        trace->checkpoint(out, {ConfigOriginKind::Normalization});
+        if (normalized) trace->warn("Tool/material dimensions or invalid routes required normalization.");
+    }
     return out;
 }
 
-DynamicPrintConfig PresetBundle::full_sla_config() const
+DynamicPrintConfig PresetBundle::full_sla_config(ConfigResolutionTrace *trace) const
 {
     DynamicPrintConfig out;
     out.apply(static_print_config_ref(SLAFullPrintConfig::defaults()));
+    if (trace) trace->applied(out, {ConfigOriginKind::Defaults});
     out.apply(this->sla_prints.get_edited_preset().config);
+    if (trace) trace->applied_preset(sla_prints.get_edited_preset().config, sla_prints.get_edited_preset(), sla_prints);
     out.apply(this->sla_materials.get_edited_preset().config);
+    if (trace) trace->applied_preset(sla_materials.get_edited_preset().config, sla_materials.get_edited_preset(), sla_materials, 1);
     out.apply(this->printers.get_edited_preset().config);
+    if (trace) trace->applied_preset(printers.get_edited_preset().config, printers.get_edited_preset(), printers);
     // There are no project configuration values as of now, the project_config is reserved for FFF printers.
 //    out.apply(this->project_config);
 
@@ -4380,6 +4420,7 @@ DynamicPrintConfig PresetBundle::full_sla_config() const
     add_if_some_non_empty(std::move(inherits),                      "inherits_group");
 
 	out.option<ConfigOptionEnumGeneric>("printer_technology", true)->value = ptSLA;
+    if (trace) trace->checkpoint(out, {ConfigOriginKind::Generated});
 	return out;
 }
 

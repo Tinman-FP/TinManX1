@@ -318,7 +318,11 @@ public:
     // Returns the name of the preset, from which this preset inherits.
     static std::string& inherits(DynamicPrintConfig &cfg) { return cfg.option<ConfigOptionString>("inherits", true)->value; }
     std::string&        inherits() { return Preset::inherits(this->config); }
-    const std::string&  inherits() const { return Preset::inherits(const_cast<Preset*>(this)->config); }
+    const std::string&  inherits() const {
+        static const std::string empty;
+        const auto *value = config.option<ConfigOptionString>("inherits");
+        return value ? value->value : empty;
+    }
 
     // Rewrite cfg's "inherits" to the resolved parent's canonical name. find_preset2 may
     // resolve a renamed parent, or a removed vendor profile auto-matched to the
@@ -340,7 +344,11 @@ public:
 		assert(this->type == TYPE_FILAMENT || this->type == TYPE_SLA_MATERIAL);
         return Preset::compatible_prints_condition(this->config);
     }
-    const std::string&  compatible_prints_condition() const { return const_cast<Preset*>(this)->compatible_prints_condition(); }
+    const std::string&  compatible_prints_condition() const {
+        static const std::string empty;
+        const auto *value = config.option<ConfigOptionString>("compatible_prints_condition");
+        return value ? value->value : empty;
+    }
 
     // Returns the "compatible_printers_condition".
     static std::string& compatible_printers_condition(DynamicPrintConfig &cfg) { return cfg.option<ConfigOptionString>("compatible_printers_condition", true)->value; }
@@ -348,7 +356,11 @@ public:
 		assert(this->type == TYPE_PRINT || this->type == TYPE_SLA_PRINT || this->type == TYPE_FILAMENT || this->type == TYPE_SLA_MATERIAL);
         return Preset::compatible_printers_condition(this->config);
     }
-    const std::string&  compatible_printers_condition() const { return const_cast<Preset*>(this)->compatible_printers_condition(); }
+    const std::string&  compatible_printers_condition() const {
+        static const std::string empty;
+        const auto *value = config.option<ConfigOptionString>("compatible_printers_condition");
+        return value ? value->value : empty;
+    }
 
     // Return a printer technology, return ptFFF if the printer technology is not set.
     static PrinterTechnology printer_technology(const DynamicPrintConfig &cfg) {

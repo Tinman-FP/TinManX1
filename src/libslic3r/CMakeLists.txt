@@ -362,6 +362,8 @@ set(lisbslic3r_sources
     TinManMachineProfileContract.hpp
     TinManHardwareCatalog.cpp
     TinManHardwareCatalog.hpp
+    ConfigResolutionTrace.cpp
+    ConfigResolutionTrace.hpp
     PrincipalComponents2D.cpp
     PrincipalComponents2D.hpp
     PrintApply.cpp

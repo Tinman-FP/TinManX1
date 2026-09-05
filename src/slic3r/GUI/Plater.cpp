@@ -10785,6 +10785,9 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
     // So, use GetSelection() from event parameter
     int selection = evt.GetSelection();
 
+    if (selection < 0 || static_cast<unsigned>(selection) >= combo->GetCount())
+        return;
+
     auto marker = reinterpret_cast<size_t>(combo->GetClientData(selection));
     if (PresetComboBox::LabelItemType::LABEL_ITEM_WIZARD_ADD_PRINTERS == marker) {
         sidebar->create_printer_preset();
@@ -10857,6 +10860,7 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
     else if (select_preset) {
         if (preset_type == Preset::TYPE_PRINTER) {
             PhysicalPrinterCollection& physical_printers = wxGetApp().preset_bundle->physical_printers;
+            const std::string previous_physical_printer = physical_printers.get_selected_full_printer_name();
             if(combo->is_selected_physical_printer())
                 preset_name = physical_printers.get_selected_printer_preset_name();
             else
@@ -10865,17 +10869,23 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
             if (combo->is_selected_printer_model()) {
                 auto preset = wxGetApp().preset_bundle->get_similar_printer_preset(preset_name, {});
                 if (preset == nullptr) {
-                    MessageDialog dlg(this->sidebar, "", "");
-                    dlg.ShowModal();
+                    if (!previous_physical_printer.empty())
+                        physical_printers.select_printer(previous_physical_printer);
+                    combo->update();
+                    show_error(this->sidebar, _L("No printer preset is available for the selected model."));
+                    return;
                 }
                 preset->is_visible = true; // force visible
                 preset_name = preset->name;
             }
             std::string old_preset_name = wxGetApp().preset_bundle->printers.get_edited_preset().name;
 
-            update_objects_position_when_select_preset([this, &preset_type, &preset_name]() {
+            {
                 wxWindowUpdateLocker noUpdates2(sidebar->filament_panel());
-                wxGetApp().get_tab(preset_type)->select_preset(preset_name);
+                if (!wxGetApp().get_tab(preset_type)->select_preset(preset_name, false, previous_physical_printer))
+                    return;
+            }
+            update_objects_position_when_select_preset([this]() {
                 // update plater with new config
                 q->on_config_change(wxGetApp().preset_bundle->full_config());
             });
@@ -10909,10 +10919,10 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
                 }
             }
         }
-        //BBS
-        //wxWindowUpdateLocker noUpdates1(sidebar->print_panel());
-        wxWindowUpdateLocker noUpdates2(sidebar->filament_panel());
-        wxGetApp().get_tab(preset_type)->select_preset(preset_name);
+        else {
+            wxWindowUpdateLocker noUpdates2(sidebar->filament_panel());
+            wxGetApp().get_tab(preset_type)->select_preset(preset_name);
+        }
     }
 
     // ORCA: Always refresh the selected filament combo so its color swatch (clr_picker)

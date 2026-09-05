@@ -4,6 +4,7 @@
 #include <wx/notebook.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
+#include <wx/srchctrl.h>
 #include <wx/simplebook.h>
 #include <wx/icon.h>
 #include <wx/sizer.h>
@@ -26,6 +27,7 @@
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/TinManMachineProfileContract.hpp"
 #include "libslic3r/TinManHardwareCatalog.hpp"
+#include "libslic3r/ConfigResolutionTrace.hpp"
 
 #include "Tab.hpp"
 #include "ProgressStatusBar.hpp"
@@ -2769,21 +2771,48 @@ static const wxString sep = " - ";
 static const wxString sep = "\t";
 #endif
 
+static wxString profile_origin_label(const ConfigValueOrigin &origin)
+{
+    wxString label;
+    switch (origin.kind) {
+    case ConfigOriginKind::Defaults: label = _L("Defaults"); break;
+    case ConfigOriginKind::SystemPreset: label = _L("System preset"); break;
+    case ConfigOriginKind::UserPreset: label = _L("User preset"); break;
+    case ConfigOriginKind::ImportedPreset: label = _L("Imported preset"); break;
+    case ConfigOriginKind::ProjectPreset: label = _L("Project preset"); break;
+    case ConfigOriginKind::UnsavedEdit: label = _L("Unsaved edit"); break;
+    case ConfigOriginKind::Project: label = _L("Project settings"); break;
+    case ConfigOriginKind::ToolVariant: label = _L("Tool variant mapping"); break;
+    case ConfigOriginKind::Generated: label = _L("Derived settings"); break;
+    case ConfigOriginKind::HardwareContract: label = _L("Hardware contract"); break;
+    case ConfigOriginKind::Normalization: label = _L("Tool/material normalization"); break;
+    }
+    if (origin.material != 0)
+        label = _L("Material") + wxString::Format(" %u / ", unsigned(origin.material)) + label;
+    if (!origin.preset.empty()) label += ": " + from_u8(origin.preset);
+    if (origin.projected) label += " / " + _L("Tool variant mapping");
+    return label;
+}
+
 static void show_profile_overview()
 {
     const auto *bundle = wxGetApp().preset_bundle;
-    if (!bundle || bundle->filament_presets.empty())
+    if (!bundle)
         return;
 
     // Snapshot the same resolved bundle used by slicing. Never modify presets,
     // connection state, or the project while inspecting their effective values.
-    const auto config = bundle->full_config();
+    ConfigResolutionTrace trace;
+    const auto config = bundle->full_config(true, std::nullopt, &trace);
     const auto &printer = bundle->printers.get_edited_preset();
     const auto &process = bundle->prints.get_edited_preset();
     wxDialog dialog(wxGetApp().mainframe, wxID_ANY, _L("Profile Overview"),
                     wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
     auto *layout = new wxBoxSizer(wxVERTICAL);
-    auto *list = new wxListCtrl(&dialog, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+    auto *pages = new wxNotebook(&dialog, wxID_ANY);
+    auto *summary = new wxPanel(pages);
+    auto *summary_layout = new wxBoxSizer(wxVERTICAL);
+    auto *list = new wxListCtrl(summary, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                                 wxLC_REPORT | wxLC_SINGLE_SEL);
     list->AppendColumn(_L("Setting"), wxLIST_FORMAT_LEFT, dialog.FromDIP(245));
     list->AppendColumn(_L("Effective Value"), wxLIST_FORMAT_LEFT, dialog.FromDIP(490));
@@ -2794,7 +2823,8 @@ static void show_profile_overview()
     const auto preset_rows = [&row](const wxString &label, const Preset &preset) {
         row(label, from_u8(preset.name));
         row(label + " / " + _L("Source"), preset.is_project_embedded ? _L("Project") :
-            preset.is_system ? _L("System") : preset.is_default ? _L("Default") : _L("User"));
+            preset.is_system ? _L("System") : preset.is_default ? _L("Default") :
+            (preset.is_external || preset.is_from_bundle()) ? _L("Imported") : _L("User"));
         if (const auto *parent = preset.config.option<ConfigOptionString>("inherits"); parent && !parent->value.empty())
             row(label + " / " + _L("Inherits"), from_u8(parent->value));
         row(label + " / " + _L("Modified"), preset.is_dirty ? _L("Yes") : _L("No"));
@@ -2814,7 +2844,7 @@ static void show_profile_overview()
             row(label, from_u8(option->serialize()));
         }
     };
-    option_rows(printer.config, "nozzle_diameter", _L("Nozzle diameter (mm)"), _L("Tool"));
+    option_rows(config, "nozzle_diameter", _L("Nozzle diameter (mm)"), _L("Tool"));
     option_rows(config, "nozzle_volume_type", _L("Nozzle flow type"), _L("Tool"));
     option_rows(config, "filament_settings_id", _L("Filament preset"), _L("Material"));
     option_rows(config, "filament_map", _L("Tool number"), _L("Material"));
@@ -2829,11 +2859,87 @@ static void show_profile_overview()
     option_rows(config, "layer_height", _L("Layer height (mm)"), wxEmptyString);
     option_rows(config, "outer_wall_speed", _L("Outer wall speed (mm/s)"), wxEmptyString);
     option_rows(config, "default_acceleration", _L("Default acceleration (mm/s2)"), wxEmptyString);
-    layout->Add(list, 1, wxEXPAND | wxALL, dialog.FromDIP(12));
+    summary_layout->Add(list, 1, wxEXPAND | wxALL, dialog.FromDIP(8));
+    summary->SetSizer(summary_layout);
+    pages->AddPage(summary, _L("Overview"));
+
+    auto *origins_page = new wxPanel(pages);
+    auto *origins_layout = new wxBoxSizer(wxVERTICAL);
+    auto *search = new wxSearchCtrl(origins_page, wxID_ANY);
+    search->SetDescriptiveText(_L("Filter settings"));
+    search->ShowCancelButton(true);
+    auto *settings = new wxListCtrl(origins_page, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+                                    wxLC_REPORT | wxLC_SINGLE_SEL);
+    settings->AppendColumn(_L("Setting"), wxLIST_FORMAT_LEFT, dialog.FromDIP(255));
+    settings->AppendColumn(_L("Effective Value"), wxLIST_FORMAT_LEFT, dialog.FromDIP(175));
+    settings->AppendColumn(_L("Source"), wxLIST_FORMAT_LEFT, dialog.FromDIP(360));
+    auto *history = new wxTextCtrl(origins_page, wxID_ANY, wxEmptyString, wxDefaultPosition,
+                                    dialog.FromDIP(wxSize(-1, 175)), wxTE_MULTILINE | wxTE_READONLY);
+    const auto source_label = [](const ConfigResolutionStep &step) {
+        wxString text;
+        for (const auto &origin : step.origins) {
+            if (!text.empty()) text += "; ";
+            text += profile_origin_label(origin);
+        }
+        return text;
+    };
+    const auto populate = [&trace, settings, search, history, source_label]() {
+        const wxString filter = search->GetValue().Lower();
+        settings->Freeze();
+        settings->DeleteAllItems();
+        history->Clear();
+        for (const auto &[key, steps] : trace.settings()) {
+            const auto &last = steps.back();
+            const wxString source = source_label(last);
+            const wxString label = from_u8(key);
+            if (!filter.empty() && !(label + " " + source).Lower().Contains(filter)) continue;
+            const long index = settings->InsertItem(settings->GetItemCount(), label);
+            settings->SetItem(index, 1, from_u8(last.value));
+            settings->SetItem(index, 2, source);
+        }
+        settings->Thaw();
+    };
+    settings->Bind(wxEVT_LIST_ITEM_SELECTED, [&trace, settings, history, source_label](wxListEvent &event) {
+        const std::string key = into_u8(settings->GetItemText(event.GetIndex()));
+        const auto entry = trace.settings().find(key);
+        if (entry == trace.settings().end()) return;
+        wxString text = from_u8(key) + "\n";
+        size_t index = 0;
+        for (const auto &step : entry->second) {
+            text += wxString::Format("\n%u. ", unsigned(++index)) + source_label(step) + "\n" + from_u8(step.value) + "\n";
+            for (const auto &origin : step.origins) {
+                if (!origin.parent.empty())
+                    text += _L("Preset parent") + ": " + from_u8(origin.parent) + "\n";
+                if (origin.kind == ConfigOriginKind::UnsavedEdit)
+                    text += _L("Saved value") + ": " + from_u8(origin.saved_value) + "\n";
+                if (origin.projected)
+                    text += _L("Preset variant values") + ": " + from_u8(origin.input_value) + "\n";
+            }
+        }
+        history->ChangeValue(text);
+        history->SetInsertionPoint(0);
+    });
+    search->Bind(wxEVT_TEXT, [populate](wxCommandEvent &) { populate(); });
+    search->Bind(wxEVT_SEARCHCTRL_CANCEL_BTN, [search](wxCommandEvent &) { search->SetValue(wxEmptyString); });
+    origins_layout->Add(new wxStaticText(origins_page, wxID_ANY, _L("Scope: Global bundle")), 0,
+                        wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(8));
+    origins_layout->Add(search, 0, wxEXPAND | wxALL, dialog.FromDIP(8));
+    origins_layout->Add(settings, 1, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(8));
+    origins_layout->Add(history, 0, wxEXPAND | wxALL, dialog.FromDIP(8));
+    origins_page->SetSizer(origins_layout);
+    pages->AddPage(origins_page, _L("Setting Origins"));
+    populate();
+    if (!trace.warnings().empty()) {
+        wxString warnings;
+        for (const auto &warning : trace.warnings()) warnings += from_u8(warning) + "\n";
+        pages->AddPage(new wxTextCtrl(pages, wxID_ANY, warnings, wxDefaultPosition, wxDefaultSize,
+                                      wxTE_MULTILINE | wxTE_READONLY), _L("Warnings"));
+    }
+    layout->Add(pages, 1, wxEXPAND | wxALL, dialog.FromDIP(12));
     layout->Add(dialog.CreateButtonSizer(wxOK), 0, wxALIGN_RIGHT | wxALL, dialog.FromDIP(12));
     dialog.SetSizer(layout);
     dialog.SetMinSize(dialog.FromDIP(wxSize(560, 360)));
-    dialog.SetSize(dialog.FromDIP(wxSize(820, 620)));
+    dialog.SetSize(dialog.FromDIP(wxSize(920, 690)));
     wxGetApp().UpdateDlgDarkUI(&dialog);
     dialog.CentreOnParent();
     dialog.ShowModal();
@@ -2859,7 +2965,10 @@ static wxMenu* generate_help_menu()
 
     // Troubleshoot center
     append_menu_item(helpMenu, wxID_ANY, _L("Profile Overview"), _L("Profile Overview"),
-        [](wxCommandEvent&) { show_profile_overview(); });
+        [](wxCommandEvent&) {
+            try { show_profile_overview(); }
+            catch (const std::exception &error) { show_error(wxGetApp().mainframe, error.what()); }
+        });
 
     append_menu_item(helpMenu, wxID_ANY, _L("Troubleshoot Center"), "",
         [](wxCommandEvent&) { wxGetApp().troubleshoot(); });
