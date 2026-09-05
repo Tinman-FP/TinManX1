@@ -2533,16 +2533,17 @@ void PresetBundle::save_changes_for_preset(const std::string& new_name, Preset::
                                 type == Preset::TYPE_FILAMENT       ? filaments :
                                 type == Preset::TYPE_SLA_MATERIAL   ? sla_materials : printers;
 
-    // if we want to save just some from selected options
+    Preset candidate = presets.get_edited_preset();
+    // Apply the user's selection only to the candidate, not the live draft.
     if (!unselected_options.empty()) {
-        // revert unselected options to the old values
-        presets.get_edited_preset().config.apply_only(presets.get_selected_preset().config, unselected_options);
+        candidate.config.apply_only(presets.get_selected_preset().config, unselected_options);
     }
 
     // Save the preset into Slic3r::data_dir / presets / section_name / preset_name.ini
     //BBS: add project embedded preset logic
     //presets.save_current_preset(new_name);
-    presets.save_current_preset(new_name, false, save_to_project);
+    if (!presets.save_current_preset(new_name, false, save_to_project, &candidate))
+        throw std::runtime_error("The selected preset cannot be overwritten: " + new_name);
     // Mark the print & filament enabled if they are compatible with the currently selected preset.
     // If saving the preset changes compatibility with other presets, keep the now incompatible dependent presets selected, however with a "red flag" icon showing that they are no more compatible.
     update_compatible(PresetSelectCompatibleType::Never);

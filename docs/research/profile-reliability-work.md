@@ -115,9 +115,48 @@ of power-loss durability, network-filesystem guarantees, or a transaction across
 JSON and .info together.
 
 Focused native regression: 91 cases and 184,310 assertions passed. Complete
-build, final installed UI check, and saved-project comparison are next.
+Apple Silicon build passed; the installed About dialog showed the correct
+recovery revision and commit. Signature verification and all 936 installed
+profile checksums passed. Saved-project G-code differed only in timestamps.
+The verified commit was pushed; fast GitHub checks passed. The cross-platform
+build was still running, not claimed complete.
 
-Next persistence risk: ConfigBase::save_to_json and Preset::save_info still write
-directly to their destination. Audit their callers' error handling, then use a
-same-directory temporary write with checked close and replacement. Add
-write-failure tests; do not assume the load-retention fix solves interrupted saves.
+### Preset Save Milestone
+
+Revision `v2026.09.05-preset-save.1`, package `2026.9.5.5`.
+
+Three initial failure cases reproduced 11 failing assertions: serialization could
+truncate an existing file, failed saves changed the selected/stored preset and
+cleared unsaved edits, and a damaged child reload replaced its tuned values with
+parent defaults. The expanded suite passes 259 assertions across 11 cases.
+The broader profile/config/hardware/CCF/AppConfig/file suite passes 102 cases,
+184,569 assertions. Full GUI build and installed smoke verification are next.
+
+- JSON is serialized before any file is opened. JSON and .info each use a unique,
+  exclusively created, same-directory temporary, checked write/close, then
+  replacement. Temporary permissions are private before writing; existing file
+  permission bits are preserved. Non-regular targets, including symlinks, are
+  rejected rather than silently replacing them. Failed temporary writes are
+  cleaned up. UTF-8 paths, binary data, missing directories, and blocked targets
+  are covered. Exclusive creation follows the standard `x` mode documented by
+  [Microsoft](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fopen-wfopen?view=msvc-170).
+- A candidate preset is saved before insertion, stored-config replacement, or
+  selection. Failed saves retain the current selection and editor state. Partial
+  option saves stage their changes too. Protected identities return failure.
+- Valid child reloads still inherit updated parent settings while preserving
+  their overrides. Invalid child reloads leave the in-memory config intact.
+- Save errors stop the tab-switch/close/new-project paths and are reported by
+  calibration and printer-creation dialogs. Sync metadata writes report failure
+  without throwing into background callers. Pending downloaded profiles retain
+  their local-save marker until persistence succeeds. Save-related collection
+  locks use RAII so exceptions cannot leave those locks held.
+- Successful print/material/printer overwrite, Save As, detach, identity,
+  inherited-diff round trips, and project-embedded saves are covered. No tuning
+  values, process defaults, or hardware commands are changed.
+
+Limits: JSON and .info are individually replaced, not an atomic pair. If JSON
+replacement succeeds but .info fails, the JSON may already contain the new
+values while the editor remains dirty for retry. Batch saves may have completed
+earlier profiles before a later failure. These changes are not fsync durability,
+network-filesystem guarantees, or full application transactions. Physical-printer
+save UI and printer/material selection transactions remain separate audit work.

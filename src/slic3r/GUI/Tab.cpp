@@ -6634,17 +6634,22 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection *presets /*= nullptr
 
         if (m_type == presets->type()) // save changes for the current preset from this tab
         {
+            const Preset draft = presets->get_edited_preset();
             // revert unselected options to the old values
             presets->get_edited_preset().config.apply_only(presets->get_selected_preset().config, unselected_options);
-            //BBS: add project embedded preset relate logic
-            save_preset(name, false, save_to_project);
-            //save_preset(name);
+            if (!save_preset(name, false, save_to_project)) {
+                presets->get_edited_preset() = draft;
+                return false;
+            }
         }
         else
         {
-            //BBS: add project embedded preset relate logic
-            m_preset_bundle->save_changes_for_preset(name, presets->type(), unselected_options, save_to_project);
-            //m_preset_bundle->save_changes_for_preset(name, presets->type(), unselected_options);
+            try {
+                m_preset_bundle->save_changes_for_preset(name, presets->type(), unselected_options, save_to_project);
+            } catch (const std::exception &error) {
+                show_error(this, _L("Could not save the preset. Your unsaved changes have been kept.") + "\n\n" + wxString::FromUTF8(error.what()));
+                return false;
+            }
 
             // If filament preset is saved for multi-material printer preset,
             // there are cases when filament comboboxs are updated for old (non-modified) colors,
@@ -7002,11 +7007,11 @@ void Tab::transfer_options(const std::string &name_from, const std::string &name
 // Wizard calls save_preset with a name "My Settings", otherwise no name is provided and this method
 // opens a Slic3r::GUI::SavePresetDialog dialog.
 //BBS: add project embedded preset relate logic
-void Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_project, bool from_input, std::string input_name )
+bool Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_project, bool from_input, std::string input_name )
 {
     // ORCA: Validate before opening any save-name UI for filament presets.
     if (!validate_filament_temperature_pairs())
-        return;
+        return false;
 
     // since buttons(and choices too) don't get focus on Mac, we set focus manually
     // to the treectrl so that the EVT_* events are fired for the input field having
@@ -7027,7 +7032,7 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
         SavePresetDialog dlg(m_parent, m_type, m_mode, detach ? _u8L("Detached") : "");
         if (!m_just_edit) {
             if (dlg.ShowModal() != wxID_OK)
-                return;
+                return false;
         }
         name = dlg.get_name();
         //BBS: add project embedded preset relate logic
@@ -7036,7 +7041,7 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
     }
 
     //BBS record current preset name
-    Preset& edited_preset = m_presets->get_edited_preset();
+    Preset edited_preset = m_presets->get_edited_preset();
     std::string curr_preset_name = edited_preset.name;
 
     bool exist_preset = false;
@@ -7050,19 +7055,27 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
     // Can still be set for all after creation
     if (m_presets->type() == Preset::TYPE_FILAMENT && !exist_preset && edited_preset.is_system) {
         Preset* _curr_printer = const_cast<Preset*>(&wxGetApp().preset_bundle->printers.get_selected_preset_base());
-        ConfigOptionStrings* compatible_printers = m_config->option<ConfigOptionStrings>("compatible_printers");
+        ConfigOptionStrings* compatible_printers = edited_preset.config.option<ConfigOptionStrings>("compatible_printers");
         if (nullptr != _curr_printer && compatible_printers && compatible_printers->values.empty())
             compatible_printers->values.push_back(_curr_printer->name);
     }
     // Save the preset into Slic3r::data_dir / presets / section_name / preset_name.json
-    m_presets->save_current_preset(name, detach, save_to_project, nullptr);
+    try {
+        if (!m_presets->save_current_preset(name, detach, save_to_project, &edited_preset)) {
+            show_error(this, _L("This preset cannot be overwritten. Save it under a different name."));
+            return false;
+        }
+    } catch (const std::exception &error) {
+        show_error(this, _L("Could not save the preset. Your unsaved changes have been kept.") + "\n\n" + wxString::FromUTF8(error.what()));
+        return false;
+    }
 
     //BBS create new settings
     new_preset = m_presets->find_preset(name, false, true);
     //Preset* preset = &m_presets.preset(it - m_presets.begin(), true);
     if (!new_preset) {
         BOOST_LOG_TRIVIAL(info) << "create new preset failed";
-        return;
+        return false;
     }
 
     // set sync_info for sync service
@@ -7076,7 +7089,8 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
             new_preset->user_id = wxGetApp().getAgent()->get_user_id();
         BOOST_LOG_TRIVIAL(info) << "sync_preset: create preset = " << new_preset->name;
     }
-    new_preset->save_info();
+    if (!new_preset->save_info())
+        show_error(this, _L("The preset was saved locally, but its synchronization metadata could not be saved. Cloud synchronization may be delayed."));
 
     // Mark the print & filament enabled if they are compatible with the currently selected preset.
     // If saving the preset changes compatibility with other presets, keep the now incompatible dependent presets selected, however with a "red flag" icon showing that they are no more compatible.
@@ -7137,6 +7151,7 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
 
     // update preset comboboxes in DiffPresetDlg
     wxGetApp().mainframe->diff_dialog.update_presets(m_type);
+    return true;
 }
 
 // Called for a currently selected preset.

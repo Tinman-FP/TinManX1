@@ -1,6 +1,7 @@
 #include <catch2/catch_all.hpp>
 
 #include <boost/filesystem.hpp>
+#include <boost/nowide/fstream.hpp>
 #include <fstream>
 
 #include "libslic3r/PresetBundle.hpp"
@@ -32,14 +33,14 @@ struct TempPresetDir {
 
 void write_fixture(const fs::path &path, const std::string &contents)
 {
-    std::ofstream stream(path.string(), std::ios::binary);
+    boost::nowide::ofstream stream(path.string(), std::ios::binary);
     stream << contents;
     REQUIRE(stream.good());
 }
 
 std::string read_fixture(const fs::path &path)
 {
-    std::ifstream stream(path.string(), std::ios::binary);
+    boost::nowide::ifstream stream(path.string(), std::ios::binary);
     return std::string(std::istreambuf_iterator<char>(stream), {});
 }
 
@@ -256,6 +257,252 @@ TEST_CASE("App settings remain dirty after a failed replacement and retry cleanl
     AppConfig reloaded;
     CHECK(reloaded.load().empty());
     CHECK(reloaded.get("recovery_test") == "after");
+}
+
+TEST_CASE("Preset serialization failure leaves the last file intact", "[Preset][SaveRecovery][TinMan]")
+{
+    TempPresetDir temp_dir;
+    const fs::path file = temp_dir.path / "saved.json";
+    const std::string original = "{\"version\":\"1.0.0\"}\n";
+    write_fixture(file, original);
+    DynamicPrintConfig config;
+    config.set_key_value("notes", new ConfigOptionString(std::string(1, char(0xff))));
+    REQUIRE_THROWS(config.save_to_json(file.string(), "Saved", "User", "1.0.0"));
+    CHECK(read_fixture(file) == original);
+}
+
+TEST_CASE("Failed preset save keeps the selected profile and unsaved edits", "[Preset][SaveRecovery][TinMan]")
+{
+    TempPresetDir temp_dir;
+    PresetBundle bundle;
+    const fs::path file = temp_dir.path / PRESET_PRINT_NAME / "Existing.json";
+    auto config = bundle.prints.default_preset().config;
+    write_print_preset(config, file, "Existing");
+    bundle.prints.update_user_presets_directory(temp_dir.path.string(), PRESET_PRINT_NAME);
+    bundle.prints.load_preset(file.string(), "Existing", config, true);
+    const auto before = bundle.prints.get_selected_preset().config;
+    const auto count = bundle.prints.size();
+    const std::string bytes = read_fixture(file);
+    auto &edited = bundle.prints.get_edited_preset();
+    edited.config.set_key_value("notes", new ConfigOptionString(std::string(1, char(0xff))));
+    edited.is_dirty = true;
+    const auto draft = edited.config;
+    const std::string name = GENERATE(std::string("Existing"), std::string("New"));
+    REQUIRE_THROWS(bundle.prints.save_current_preset(name, false, false, nullptr));
+    CHECK(bundle.prints.size() == count);
+    CHECK(bundle.prints.get_selected_preset_name() == "Existing");
+    CHECK(bundle.prints.get_selected_preset().config == before);
+    CHECK(bundle.prints.get_edited_preset().config == draft);
+    CHECK(bundle.prints.current_is_dirty());
+    CHECK(read_fixture(file) == bytes);
+}
+
+TEST_CASE("A failed child preset reload preserves its tuned configuration", "[Preset][SaveRecovery][TinMan]")
+{
+    TempPresetDir temp_dir;
+    PresetBundle bundle;
+    Preset parent = bundle.prints.default_preset();
+    parent.config.set_key_value("layer_height", new ConfigOptionFloat(0.3));
+    Preset child(Preset::TYPE_PRINT, "Child", false);
+    child.config = parent.config;
+    child.config.set_key_value("layer_height", new ConfigOptionFloat(0.15));
+    child.file = (temp_dir.path / "Child.json").string();
+    write_fixture(child.file, "{broken json");
+    const auto before = child.config;
+    REQUIRE_NOTHROW(child.reload(parent));
+    CHECK(child.config == before);
+    CHECK(read_fixture(child.file) == "{broken json");
+}
+
+TEST_CASE("Checked configuration replacement preserves files and cleans temporary writes", "[utils][SaveRecovery][TinMan]")
+{
+    TempPresetDir temp_dir;
+    const fs::path file = temp_dir.path / fs::path("profile-\xc3\xa9.json");
+    const std::string contents("binary\0and UTF-8 \xc3\xa9\n", 20);
+    REQUIRE_NOTHROW(write_file_with_replace(file.string(), contents));
+    CHECK(read_fixture(file) == contents);
+    REQUIRE_NOTHROW(write_file_with_replace(file.string(), "replacement\n"));
+    CHECK(read_fixture(file) == "replacement\n");
+
+    const fs::path directory = temp_dir.path / "directory.json";
+    fs::create_directory(directory);
+    write_fixture(directory / "keep", "untouched");
+    REQUIRE_THROWS(write_file_with_replace(directory.string(), "cannot replace directory"));
+    CHECK(read_fixture(directory / "keep") == "untouched");
+    REQUIRE_THROWS(write_file_with_replace((temp_dir.path / "missing" / "profile.json").string(), "missing parent"));
+    for (const auto &entry : fs::directory_iterator(temp_dir.path))
+        CHECK(entry.path().filename().string().find(".tinman-save-") != 0);
+}
+
+TEST_CASE("Preset save commits only after persistence and retains identity", "[Preset][SaveRecovery][TinMan]")
+{
+    const auto type = GENERATE(Preset::TYPE_PRINT, Preset::TYPE_FILAMENT, Preset::TYPE_PRINTER);
+    const bool new_preset = GENERATE(false, true);
+    const bool detach = GENERATE(false, true);
+    TempPresetDir temp_dir;
+    PresetBundle bundle;
+    PresetCollection &presets = type == Preset::TYPE_PRINT ? bundle.prints :
+        type == Preset::TYPE_FILAMENT ? bundle.filaments : bundle.printers;
+    const std::string section = type == Preset::TYPE_PRINT ? PRESET_PRINT_NAME :
+        type == Preset::TYPE_FILAMENT ? PRESET_FILAMENT_NAME : PRESET_PRINTER_NAME;
+    presets.update_user_presets_directory(temp_dir.path.string(), section);
+    auto config = presets.default_preset().config;
+    config.option<ConfigOptionString>("inherits", true)->value.clear();
+    const fs::path file = temp_dir.path / section / "Existing.json";
+    auto &stored = presets.load_preset(file.string(), "Existing", config, true);
+    stored.setting_id = "local-fixture-id";
+    stored.save(nullptr);
+    presets.select_preset_by_name("Existing", true);
+    const std::string key = type == Preset::TYPE_PRINT ? "notes" : type == Preset::TYPE_FILAMENT ? "filament_notes" : "printer_notes";
+    auto &draft = presets.get_edited_preset();
+    REQUIRE_NOTHROW(draft.config.set_deserialize_strict(key, "a tuned value"));
+    const auto expected_value = draft.config.opt_serialize(key);
+    draft.is_dirty = true;
+    const std::string name = new_preset ? "Saved copy" : "Existing";
+    REQUIRE(presets.save_current_preset(name, detach));
+    const auto &saved = presets.get_selected_preset();
+    CHECK(saved.name == name);
+    CHECK(saved.config.opt_serialize(key) == expected_value);
+    CHECK(presets.get_edited_preset().config == saved.config);
+    CHECK_FALSE(presets.current_is_dirty());
+    CHECK(saved.is_visible);
+    CHECK(saved.is_user());
+    CHECK(saved.setting_id == (new_preset ? "" : "local-fixture-id"));
+    CHECK(saved.inherits() == (new_preset && !detach ? "Existing" : ""));
+    if (new_preset && !detach)
+        CHECK(saved.base_id == "local-fixture-id");
+    CHECK(fs::is_regular_file(saved.file));
+    fs::path info(saved.file);
+    info.replace_extension(".info");
+    CHECK(fs::is_regular_file(info));
+    DynamicPrintConfig reloaded;
+    std::map<std::string, std::string> metadata;
+    std::string reason;
+    REQUIRE_NOTHROW(reloaded.load_from_json(saved.file, ForwardCompatibilitySubstitutionRule::Disable, metadata, reason));
+    CHECK(reason.empty());
+    CHECK(reloaded.opt_serialize(key) == expected_value);
+    if (type == Preset::TYPE_FILAMENT)
+        CHECK(saved.config.option<ConfigOptionStrings>("filament_settings_id")->values.front() == name);
+    else
+        CHECK(saved.config.opt_string(type == Preset::TYPE_PRINT ? "print_settings_id" : "printer_settings_id") == name);
+}
+
+TEST_CASE("Project embedded saves do not require writable preset files", "[Preset][SaveRecovery][TinMan]")
+{
+    TempPresetDir temp_dir;
+    PresetBundle bundle;
+    bundle.prints.update_user_presets_directory(temp_dir.path.string(), PRESET_PRINT_NAME);
+    bundle.prints.get_edited_preset().config.set_key_value("layer_height", new ConfigOptionFloat(0.17));
+    bundle.prints.get_edited_preset().is_dirty = true;
+    REQUIRE(bundle.prints.save_current_preset("Project profile", false, true));
+    const auto &saved = bundle.prints.get_selected_preset();
+    CHECK(saved.is_project_embedded);
+    CHECK(saved.config.opt_float("layer_height") == Catch::Approx(0.17));
+    CHECK_FALSE(fs::exists(saved.file));
+    CHECK_FALSE(bundle.prints.current_is_dirty());
+}
+
+TEST_CASE("Partial preset saves preserve every draft option on failure", "[Preset][SaveRecovery][TinMan]")
+{
+    TempPresetDir temp_dir;
+    PresetBundle bundle;
+    bundle.prints.update_user_presets_directory(temp_dir.path.string(), PRESET_PRINT_NAME);
+    const fs::path file = temp_dir.path / PRESET_PRINT_NAME / "Existing.json";
+    bundle.prints.load_preset(file.string(), "Existing", bundle.prints.default_preset().config, true);
+    auto &draft = bundle.prints.get_edited_preset();
+    draft.config.set_key_value("layer_height", new ConfigOptionFloat(0.17));
+    draft.config.set_key_value("notes", new ConfigOptionString(std::string(1, char(0xff))));
+    draft.is_dirty = true;
+    const auto before = draft.config;
+    REQUIRE_THROWS(bundle.save_changes_for_preset("Copy", Preset::TYPE_PRINT, {"layer_height"}, false));
+    CHECK(bundle.prints.get_edited_preset().config == before);
+    CHECK(bundle.prints.current_is_dirty());
+    CHECK(bundle.prints.get_selected_preset_name() == "Existing");
+    CHECK(bundle.prints.find_preset("Copy", false, true) == nullptr);
+}
+
+TEST_CASE("Failed sidecar save is reported without publishing a preset", "[Preset][SaveRecovery][TinMan]")
+{
+    TempPresetDir temp_dir;
+    PresetBundle bundle;
+    bundle.prints.update_user_presets_directory(temp_dir.path.string(), PRESET_PRINT_NAME);
+    const fs::path file = temp_dir.path / PRESET_PRINT_NAME / "Existing.json";
+    auto &stored = bundle.prints.load_preset(file.string(), "Existing", bundle.prints.default_preset().config, true);
+    stored.save(nullptr);
+    const auto previous = stored.config;
+    fs::path info = file;
+    info.replace_extension(".info");
+    fs::remove(info);
+    fs::create_directory(info);
+    write_fixture(info / "keep", "metadata blocker");
+    auto &draft = bundle.prints.get_edited_preset();
+    draft.config.set_key_value("layer_height", new ConfigOptionFloat(0.17));
+    draft.is_dirty = true;
+    REQUIRE_THROWS(bundle.prints.save_current_preset("Existing"));
+    CHECK(bundle.prints.get_selected_preset().config == previous);
+    CHECK(bundle.prints.current_is_dirty());
+    CHECK(bundle.prints.get_edited_preset().config.opt_float("layer_height") == Catch::Approx(0.17));
+    CHECK(read_fixture(info / "keep") == "metadata blocker");
+    fs::remove_all(info);
+    REQUIRE(bundle.prints.save_current_preset("Existing"));
+    CHECK_FALSE(bundle.prints.current_is_dirty());
+    CHECK(fs::is_regular_file(info));
+}
+
+TEST_CASE("Synchronized presets retry local persistence after a failure", "[Preset][SaveRecovery][TinMan]")
+{
+    TempPresetDir temp_dir;
+    PresetBundle bundle;
+    bundle.prints.update_user_presets_directory(temp_dir.path.string(), PRESET_PRINT_NAME);
+    auto &stored = add_inmemory_preset(bundle.prints, "Pending");
+    stored.sync_info = "save";
+    const fs::path base = temp_dir.path / PRESET_PRINT_NAME / "base";
+    write_fixture(base, "directory blocker");
+    std::map<std::string, std::string> pending_deletions;
+    REQUIRE_NOTHROW(bundle.prints.save_user_presets(temp_dir.path.string(), PRESET_PRINT_NAME, pending_deletions));
+    CHECK(bundle.prints.find_preset("Pending", false, true)->sync_info == "save");
+    CHECK(read_fixture(base) == "directory blocker");
+    fs::remove(base);
+    REQUIRE_NOTHROW(bundle.prints.save_user_presets(temp_dir.path.string(), PRESET_PRINT_NAME, pending_deletions));
+    const auto *saved = bundle.prints.find_preset("Pending", false, true);
+    CHECK(saved->sync_info.empty());
+    CHECK(fs::is_regular_file(saved->file));
+}
+
+TEST_CASE("Saving a parent reloads valid child overrides", "[Preset][SaveRecovery][TinMan]")
+{
+    TempPresetDir temp_dir;
+    PresetBundle bundle;
+    bundle.prints.update_user_presets_directory(temp_dir.path.string(), PRESET_PRINT_NAME);
+    const fs::path parent_file = temp_dir.path / PRESET_PRINT_NAME / "Parent.json";
+    const fs::path child_file = temp_dir.path / PRESET_PRINT_NAME / "Child.json";
+    auto parent_config = bundle.prints.default_preset().config;
+    auto &parent = bundle.prints.load_preset(parent_file.string(), "Parent", parent_config, true);
+    parent.save(nullptr);
+    auto child_config = parent_config;
+    child_config.option<ConfigOptionString>("inherits", true)->value = "Parent";
+    child_config.set_key_value("layer_height", new ConfigOptionFloat(0.15));
+    auto &child = bundle.prints.load_preset(child_file.string(), "Child", child_config, false);
+    child.save(&parent_config);
+    bundle.prints.select_preset_by_name("Parent", true);
+    bundle.prints.get_edited_preset().config.set_key_value("notes", new ConfigOptionString("updated parent"));
+    bundle.prints.get_edited_preset().config.set_key_value("layer_height", new ConfigOptionFloat(0.3));
+    REQUIRE(bundle.prints.save_current_preset("Parent"));
+    const auto *reloaded = bundle.prints.find_preset("Child", false, true);
+    CHECK(reloaded->config.opt_float("layer_height") == Catch::Approx(0.15));
+    CHECK(reloaded->config.opt_string("notes") == "updated parent");
+}
+
+TEST_CASE("Read-only preset identities are not overwritten", "[Preset][SaveRecovery][TinMan]")
+{
+    PresetBundle bundle;
+    const auto before = bundle.prints.get_selected_preset();
+    bundle.prints.get_edited_preset().config.set_key_value("notes", new ConfigOptionString("unsaved"));
+    bundle.prints.get_edited_preset().is_dirty = true;
+    CHECK_FALSE(bundle.prints.save_current_preset(before.name));
+    CHECK(bundle.prints.get_selected_preset().config == before.config);
+    CHECK(bundle.prints.current_is_dirty());
+    CHECK(bundle.prints.get_edited_preset().config.opt_string("notes") == "unsaved");
 }
 
 TEST_CASE("Legacy bundle import without bundle metadata stays in the user preset directory", "[Preset][Identity]")

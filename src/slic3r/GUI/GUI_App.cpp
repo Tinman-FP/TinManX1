@@ -8327,8 +8327,13 @@ bool GUI_App::check_and_save_current_preset_changes(const wxString& caption, con
         if (dlg.save_preset())  // save selected changes
         {
             //BBS: add project embedded preset relate logic
-            for (const UnsavedChangesDialog::PresetData& nt : dlg.get_names_and_types())
-                preset_bundle->save_changes_for_preset(nt.name, nt.type, dlg.get_unselected_options(nt.type), nt.save_to_project);
+            try {
+                for (const UnsavedChangesDialog::PresetData& nt : dlg.get_names_and_types())
+                    preset_bundle->save_changes_for_preset(nt.name, nt.type, dlg.get_unselected_options(nt.type), nt.save_to_project);
+            } catch (const std::exception &error) {
+                show_error(mainframe, _L("Could not save a preset. The operation was canceled; unsaved changes have been kept.") + "\n\n" + wxString::FromUTF8(error.what()));
+                return false;
+            }
             //for (const std::pair<std::string, Preset::Type>& nt : dlg.get_names_and_types())
             //    preset_bundle->save_changes_for_preset(nt.first, nt.second, dlg.get_unselected_options(nt.second));
 
@@ -8392,8 +8397,13 @@ bool GUI_App::check_and_keep_current_preset_changes(const wxString& caption, con
             //BBS: add project embedded preset relate logic
             const auto& preset_names_and_types = dlg.get_names_and_types();
             if (dlg.save_preset()) {
-                for (const UnsavedChangesDialog::PresetData& nt : preset_names_and_types)
-                    preset_bundle->save_changes_for_preset(nt.name, nt.type, dlg.get_unselected_options(nt.type), nt.save_to_project);
+                try {
+                    for (const UnsavedChangesDialog::PresetData& nt : preset_names_and_types)
+                        preset_bundle->save_changes_for_preset(nt.name, nt.type, dlg.get_unselected_options(nt.type), nt.save_to_project);
+                } catch (const std::exception &error) {
+                    show_error(mainframe, _L("Could not save a preset. The operation was canceled; unsaved changes have been kept.") + "\n\n" + wxString::FromUTF8(error.what()));
+                    return false;
+                }
 
                 // if we saved changes to the new presets, we should to
                 // synchronize config.ini with the current selections.

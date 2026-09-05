@@ -299,7 +299,7 @@ public:
     static std::string  get_iot_type_string(Preset::Type type);
     static Preset::Type get_type_from_string(std::string type_str);
     void                load_info(const std::string& file);
-    void                save_info(std::string file = "");
+    bool                save_info(std::string file = "");
     void                remove_files(bool cloud_already_deleted = false);
 
     //BBS: add logic for only difference save
@@ -612,7 +612,7 @@ public:
     // a new preset is stored into the list of presets.
     // All presets are marked as not modified and the new preset is activated.
     //BBS: add project embedded preset logic
-    void            save_current_preset(const std::string &new_name, bool detach = false, bool save_to_project = false, Preset* _curr_preset = nullptr);
+    bool            save_current_preset(const std::string &new_name, bool detach = false, bool save_to_project = false, Preset* _curr_preset = nullptr);
 
     // Delete the current preset, activate the first visible preset.
     // returns true if the preset was deleted successfully.
