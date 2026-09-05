@@ -388,6 +388,25 @@ cases and 237,145 assertions. No live login or synchronization is used in tests.
 This is not a whole-bundle transaction or an asynchronous account-generation
 barrier. Vendor installation and earlier successful records may have effects
 before a later error. The existing server-driven deletion policy is not rewritten
-here. Complete application build and installed checks follow. An expanded FFF
-test run found one brim coordinate-range failure (36 other cases passed); its
-origin is under separate investigation and it is not claimed resolved.
+here. The complete application build, installation, signature and all 936
+resource-profile checksums passed. Reference G-code differed only in two
+timestamp comments. Interactive verification remains limited by the documented
+Keychain authorization prompt; the installed application is closed. Both quick
+GitHub workflows passed. The expanded FFF failure is addressed separately below.
+
+### Defined Print Origin Milestone
+
+Revision `v2026.09.05-print-origin.1`, package `2026.9.5.11`.
+
+The expanded FFF suite exposed a brim coordinate-range exception. A newly
+default-constructed Print left its Eigen plate-origin vector uninitialized;
+PrintInstance::shift_without_plate_offset read that value before callers had
+necessarily assigned an origin. The same declaration exists in the work-window
+baseline. A placement-construction test with deliberately nonzero backing bytes
+reproduced the missing initialization deterministically before the fix.
+
+The member now starts at Vec3d::Zero(). Explicit origins still round-trip and
+clear() retains the assigned plate origin. The regression test passes and the
+entire standard FFF suite now passes 38 cases and 568 assertions, including both
+brim configurations that previously threw. Complete application and saved-project
+output verification follow. No tuning values or coordinate clamping changed.
