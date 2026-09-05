@@ -1,9 +1,12 @@
 #include <catch2/catch_all.hpp>
 
 #include <boost/filesystem.hpp>
+#include <fstream>
 
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/AppConfig.hpp"
+#include "libslic3r/Utils.hpp"
+#include "libslic3r/Thread.hpp"
 
 using namespace Slic3r;
 
@@ -26,6 +29,19 @@ struct TempPresetDir {
         fs::remove_all(path, ec);
     }
 };
+
+void write_fixture(const fs::path &path, const std::string &contents)
+{
+    std::ofstream stream(path.string(), std::ios::binary);
+    stream << contents;
+    REQUIRE(stream.good());
+}
+
+std::string read_fixture(const fs::path &path)
+{
+    std::ifstream stream(path.string(), std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(stream), {});
+}
 
 void write_print_preset(const DynamicPrintConfig &default_config, const fs::path &file, const std::string &name, const std::string &inherits = {})
 {
@@ -116,6 +132,130 @@ TEST_CASE("Preset identity is canonicalized from load path", "[Preset][Identity]
     REQUIRE(subscribed != nullptr);
     CHECK(subscribed->name == "_subscribed/remote-1/Subscribed");
     CHECK(subscribed->is_from_bundle());
+}
+
+TEST_CASE("Failed user preset loads preserve original files and can recover", "[Preset][Recovery][TinMan]")
+{
+    TempPresetDir temp_dir;
+    PresetBundle bundle;
+    PresetsConfigSubstitutions substitutions;
+    const fs::path bad = temp_dir.path / PRESET_PRINT_NAME / "Recoverable.json";
+    const fs::path info = temp_dir.path / PRESET_PRINT_NAME / "Recoverable.info";
+    const fs::path good = temp_dir.path / PRESET_PRINT_NAME / "Healthy.json";
+    write_print_preset(bundle.prints.default_preset().config, good, "Healthy");
+
+    const std::string bytes = GENERATE(
+        std::string("{\"version\":\"1.0.0\",\"layer_height\":"),
+        std::string("{\"version\":\"1.0.0\",\"layer_height\":\"not-a-number\"}"),
+        std::string("[\"not a preset object\"]"),
+        std::string("{\"version\":\"invalid\",\"layer_height\":\"0.2\"}"));
+    const std::string metadata = "sync_info = create\nsetting_id = recovery-test-only\n";
+    write_fixture(bad, bytes);
+    write_fixture(info, metadata);
+
+    std::vector<std::string> callbacks;
+    const auto load = [&]() {
+        bundle.prints.load_presets(temp_dir.path.string(), PRESET_PRINT_NAME, substitutions,
+            ForwardCompatibilitySubstitutionRule::Disable,
+            [&](Preset &preset) {
+                CHECK(preset.loaded);
+                callbacks.push_back(preset.name);
+            });
+    };
+    REQUIRE_NOTHROW(load());
+    CHECK(callbacks == std::vector<std::string>{"Healthy"});
+    CHECK(bundle.prints.find_preset("Recoverable", false) == nullptr);
+    REQUIRE(bundle.prints.find_preset("Healthy", false) != nullptr);
+    CHECK(read_fixture(good).size() > 0);
+    CHECK(fs::exists(bad));
+    CHECK(fs::exists(info));
+    CHECK(read_fixture(bad) == bytes);
+    CHECK(read_fixture(info) == metadata);
+
+    // A retry must preserve the same evidence, and not publish a partial preset.
+    callbacks.clear();
+    REQUIRE_NOTHROW(load());
+    CHECK(callbacks.empty());
+    CHECK(read_fixture(bad) == bytes);
+    CHECK(read_fixture(info) == metadata);
+
+    write_print_preset(bundle.prints.default_preset().config, bad, "Recoverable");
+    callbacks.clear();
+    REQUIRE_NOTHROW(load());
+    CHECK(callbacks == std::vector<std::string>{"Recoverable"});
+    const auto *recovered = bundle.prints.find_preset("Recoverable", false);
+    REQUIRE(recovered != nullptr);
+    CHECK(recovered->loaded);
+    CHECK(recovered->setting_id == "recovery-test-only");
+    CHECK(read_fixture(info) == metadata);
+}
+
+TEST_CASE("Replacing a saved file preserves the destination on failure", "[Preset][Recovery][TinMan]")
+{
+    TempPresetDir temp_dir;
+    const fs::path source = temp_dir.path / "new.tmp";
+    const fs::path destination = temp_dir.path / "saved.json";
+    write_fixture(destination, "previous contents");
+
+    SECTION("missing replacement must not remove the saved file") {
+        const auto error = rename_file(source.string(), destination.string());
+        CHECK(bool(error));
+        CHECK(error == std::errc::no_such_file_or_directory);
+        CHECK(read_fixture(destination) == "previous contents");
+    }
+    SECTION("successful replacement publishes the new contents") {
+        write_fixture(source, "new contents");
+        CHECK_FALSE(rename_file(source.string(), destination.string()));
+        CHECK(read_fixture(destination) == "new contents");
+        CHECK_FALSE(fs::exists(source));
+    }
+    SECTION("renaming a file to itself must preserve it") {
+        CHECK_FALSE(rename_file(destination.string(), destination.string()));
+        CHECK(read_fixture(destination) == "previous contents");
+    }
+    SECTION("a directory cannot replace an existing file") {
+        fs::create_directory(source);
+        write_fixture(source / "child.txt", "retained child");
+        CHECK(bool(rename_file(source.string(), destination.string())));
+        CHECK(read_fixture(destination) == "previous contents");
+        CHECK(read_fixture(source / "child.txt") == "retained child");
+    }
+}
+
+TEST_CASE("App settings remain dirty after a failed replacement and retry cleanly", "[Preset][Recovery][TinMan][AppConfig]")
+{
+    save_main_thread_id();
+    TempPresetDir temp_dir;
+    struct DataDirectoryRestore {
+        std::string previous = data_dir();
+        ~DataDirectoryRestore() { set_data_dir(previous); }
+    } restore;
+    set_data_dir(temp_dir.path.string());
+    AppConfig config;
+    config.set("recovery_test", "before");
+    REQUIRE_NOTHROW(config.save());
+    CHECK_FALSE(config.dirty());
+    const fs::path destination(config.config_path());
+    const fs::path backup = temp_dir.path / "before.conf";
+    const std::string original = read_fixture(destination);
+    REQUIRE_FALSE(original.empty());
+    fs::rename(destination, backup);
+    fs::create_directory(destination);
+    write_fixture(destination / "blocker", "keep this fixture");
+
+    config.set("recovery_test", "after");
+    REQUIRE_NOTHROW(config.save());
+    CHECK(config.dirty());
+    CHECK(read_fixture(backup) == original);
+    CHECK(read_fixture(destination / "blocker") == "keep this fixture");
+
+    fs::remove_all(destination);
+    fs::rename(backup, destination);
+    REQUIRE_NOTHROW(config.save());
+    CHECK_FALSE(config.dirty());
+    AppConfig reloaded;
+    CHECK(reloaded.load().empty());
+    CHECK(reloaded.get("recovery_test") == "after");
 }
 
 TEST_CASE("Legacy bundle import without bundle metadata stays in the user preset directory", "[Preset][Identity]")

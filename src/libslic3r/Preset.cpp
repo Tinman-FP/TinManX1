@@ -1716,20 +1716,20 @@ void PresetCollection::load_presets(
                     if (! config_substitutions.empty())
                         substitutions.push_back({ preset.name, m_type, PresetConfigSubstitutions::Source::UserFile, preset.file, std::move(config_substitutions) });
                     if (!reason.empty()) {
-                        fs::path file_path(preset.file);
-                        if (fs::exists(file_path))
-                            fs::remove(file_path);
-                        file_path.replace_extension(".info");
-                        if (fs::exists(file_path))
-                            fs::remove(file_path);
-                        BOOST_LOG_TRIVIAL(error) << boost::format("parse config %1% failed")%preset.file;
+                        // A read failure is not permission to delete the user's
+                        // profile or sync identity. Leave both files for recovery.
+                        BOOST_LOG_TRIVIAL(error) << boost::format("Cannot parse preset %1%; original files retained. Reason: %2%") % preset.file % reason;
                         ++m_errors;
                         continue;
                     }
 
                     std::string version_str = key_values[BBL_JSON_KEY_VERSION];
                     boost::optional<Semver> version = Semver::parse(version_str);
-                    if (!version) continue;
+                    if (!version) {
+                        ++m_errors;
+                        BOOST_LOG_TRIVIAL(error) << boost::format("Invalid or missing version in preset %1%; original files retained.") % preset.file;
+                        continue;
+                    }
                     preset.version = *version;
 
                     if (key_values.find(BBL_JSON_KEY_FILAMENT_ID) != key_values.end())
@@ -1807,24 +1807,12 @@ void PresetCollection::load_presets(
                     set_custom_preset_alias(preset);
                 } catch (const std::ifstream::failure &err) {
                     ++m_errors;
-                    BOOST_LOG_TRIVIAL(error) << boost::format("The user-config cannot be loaded: %1%. Reason: %2%")%preset.file %err.what();
-                    fs::path file_path(preset.file);
-                    if (fs::exists(file_path))
-                        fs::remove(file_path);
-                    file_path.replace_extension(".info");
-                    if (fs::exists(file_path))
-                        fs::remove(file_path);
-                    //throw Slic3r::RuntimeError(std::string("The selected preset cannot be loaded: ") + preset.file + "\n\tReason: " + err.what());
+                    BOOST_LOG_TRIVIAL(error) << boost::format("Cannot read preset %1%; original files retained. Reason: %2%") % preset.file % err.what();
+                    continue;
                 } catch (const std::runtime_error &err) {
                     ++m_errors;
-                    BOOST_LOG_TRIVIAL(error) << boost::format("Failed loading the user-config file: %1%. Reason: %2%")%preset.file %err.what();
-                    //throw Slic3r::RuntimeError(std::string("Failed loading the preset file: ") + preset.file + "\n\tReason: " + err.what());
-                    fs::path file_path(preset.file);
-                    if (fs::exists(file_path))
-                        fs::remove(file_path);
-                    file_path.replace_extension(".info");
-                    if (fs::exists(file_path))
-                        fs::remove(file_path);
+                    BOOST_LOG_TRIVIAL(error) << boost::format("Cannot load preset %1%; original files retained. Reason: %2%") % preset.file % err.what();
+                    continue;
                 }
 
                 if (preset_loaded_fn != nullptr)

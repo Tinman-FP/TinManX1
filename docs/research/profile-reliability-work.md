@@ -83,8 +83,41 @@ backups remain outside the public repository. The first milestone is
 - Single-material selection currently mutates the logical slot and exports
   selections before the preset dialog can be canceled. It needs staged commit;
   this milestone intentionally does not claim to fix that path.
-- Some local-preset parse failures remove the JSON and .info files in
-  PresetCollection::load_presets. A robust recovery pass should retain/quarantine
-  malformed files rather than delete them; add failure-injection fixtures first.
+- Fixed in the second milestone: local-preset parse failures removed JSON and
+  .info files. Failed loads now retain the original files in place and log the
+  reason. They are not silently converted to usable, partially loaded presets.
 - PresetBundle::operator= does not copy every mutable field. Do not introduce
   whole-bundle transaction rollback without a field-by-field ownership audit.
+
+### Recovery Milestone
+
+Revision `v2026.09.05-profile-recovery.1`, package `2026.9.5.4`.
+
+Three test cases (with generated failures and sections) reproduced 32 failing
+assertions on the previous implementation. All 121 assertions now pass:
+
+- Malformed JSON, invalid numeric data, non-object JSON, and an invalid version
+  are skipped without deleting either the preset or its sync metadata. Healthy
+  sibling profiles still load. Retrying leaves the original bytes intact, and
+  repairing the same file allows it to load with its retained identity.
+- The POSIX rename wrapper used to unlink the destination before renaming and
+  reported `-1` instead of `errno`. It now uses the operating system's replace
+  semantics directly. Missing sources, same-file rename, and file/directory
+  mismatches are tested. The Windows implementation is unchanged.
+- AppConfig no longer marks a failed final replacement clean. It logs the error,
+  retains the temporary file, and remains dirty so the save can be retried.
+
+The file replacement behavior follows the platform contracts in
+[Apple's rename documentation](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/rename.2.html)
+and the [Linux man-pages project](https://man7.org/linux/man-pages/man2/rename.2.html).
+This is atomic namespace replacement on supported local filesystems, not a claim
+of power-loss durability, network-filesystem guarantees, or a transaction across
+JSON and .info together.
+
+Focused native regression: 91 cases and 184,310 assertions passed. Complete
+build, final installed UI check, and saved-project comparison are next.
+
+Next persistence risk: ConfigBase::save_to_json and Preset::save_info still write
+directly to their destination. Audit their callers' error handling, then use a
+same-directory temporary write with checked close and replacement. Add
+write-failure tests; do not assume the load-retention fix solves interrupted saves.
