@@ -822,15 +822,64 @@ is `/tmp/tinman-setup-transfer-slice/plate_1.gcode`.
 
 Revision `v2026.09.06-indexed-transfer.1`, package `2026.9.6.5`, updates splash/About
 revision text. The candidate remains staged, not installed. The verified local
-M5 commit is queued for publication after M4's run `34011615809` finishes, to avoid
-cancelling another platform matrix. Check that run before starting the next
-milestone, publish M5 to `tinman`, and record its matching CI and PR verification.
+M5 commit `ae6fafb69b` is queued for publication after M4's run `34011615809`
+finishes, to avoid cancelling another platform matrix. Further locally verified
+milestones are batched into that next push rather than making each small change
+wait for a separate full platform build. Each milestone still completes its local
+implementation, review, build, offline tests, and work record before the next one.
 
 Remaining limitations include actual wizard acceptance, rollback of postponed
 transfers if the outer wizard fails after staging, and destination validation
 when a kept index no longer exists on a smaller tool layout. Cache preparation
 is atomic; later application of an entire bundle is not. Do not claim these
 native helper tests validate the complete interactive setup/project workflow.
+
+## Overnight M6: Explicit Comparison Tool Counts
+
+Direct tests of the production comparison-transfer helper found that both whole
+nozzle arrays and indexed nozzle edits could change the destination's tool count
+without transferring `extruders_count`. This bypassed the normal resizing of
+companion tool settings. A separate test found that a requested FFF tool count
+was accepted for an SLA-tagged destination. Three cases covering generated layout
+combinations had 26 failures out of 81 assertions before the change.
+
+The candidate now records the destination nozzle count after confirmation and
+requires an explicit tool-count transfer for any resulting count change. An
+explicit count still uses `set_num_extruders` to resize companion settings. FFF
+counts are rejected for an SLA destination before entering that resize path.
+The final candidate count is checked before publication, so unsupported changes
+leave the destination config intact and provide an explanation. This check is
+specific to printer/nozzle topology; it does not indiscriminately prohibit
+expansion of broadcast material-variant arrays.
+
+Four new cases pass 84 assertions: all 1/2/4-tool source/destination combinations
+with and without explicit count transfer, all four indexed source nozzles into
+a two-tool destination, an SLA-tagged destination, and a destination resized
+during confirmation. All transfer-related tests together pass 29 cases / 234
+assertions. The earlier whole-array cache test now uses an already-four-tool
+destination so it tests value copying without implying permission to change
+physical topology.
+
+The complete Mac build passed. Standard offline suites passed: native 289 cases /
+242,009 assertions, FFF 48 / 870, offline utilities 20 / 211, SLA 21 / 13,447,
+nesting 14 / 488. Total: 392 cases / 257,025 assertions. Release/FibreSeek checks,
+the 936-profile manifest, and saved-profile checksums passed. Reference G-code
+differs only in its two timestamp comments, with 167 layers and an estimate of
+3h 45m 38s. Logs are `/tmp/tinman-transfer-layout-*.log`; the slice is
+`/tmp/tinman-transfer-layout-slice/plate_1.gcode`.
+
+Revision `v2026.09.06-transfer-layout.1`, package `2026.9.6.6`, updates splash/About
+revision text. The candidate is staged, not installed. M5 and M6 are queued for
+one publication after M4's run `34011615809` completes; check that run and publish
+the reviewed local commits to `tinman`, then record the matching CI and PR
+verification. No pending platform run is described as passed.
+
+Scope remains explicit: M6 guards the comparison helper, not the separate wizard
+cache-application path. A destination successfully selected by the callback is
+not switched back if its requested transfer is subsequently rejected. The
+whole selection workflow is still not transactional. Remaining work includes
+wizard failure cleanup, topology-aware application of postponed wizard changes,
+and interactive comparison/setup/project acceptance with the user present.
 
 ## Review Conclusions
 

@@ -108,9 +108,27 @@ bool transfer_preset_options(PresetCollection &presets, const std::string &sourc
     }
     try {
         DynamicPrintConfig candidate = presets.get_edited_preset().config;
-        if (extruders > 0)
+        const auto *destination_nozzles = candidate.option<ConfigOptionFloats>("nozzle_diameter");
+        size_t expected_extruders = destination_nozzles ? destination_nozzles->size() : 0;
+        if (extruders > 0) {
+            if (Preset::printer_technology(candidate) != ptFFF) {
+                reason = "Extruder counts can only be transferred to an FFF printer.";
+                return false;
+            }
             candidate.set_num_extruders(extruders);
+            expected_extruders = extruders;
+        }
         candidate.apply_only(source_config, options);
+        if (presets.type() == Preset::TYPE_PRINTER && Preset::printer_technology(candidate) == ptFFF) {
+            const auto *nozzles = candidate.option<ConfigOptionFloats>("nozzle_diameter");
+            // Indexed and whole-array copies must not add/remove tools without
+            // resizing the companion settings through the explicit count path.
+            if (!nozzles || nozzles->empty() || nozzles->size() != expected_extruders) {
+                reason = "The nozzle transfer would change the destination extruder count. "
+                         "Include the extruder count in the transfer to change the tool layout.";
+                return false;
+            }
+        }
         presets.get_edited_preset().config = std::move(candidate);
     } catch (const std::exception &error) {
         reason = "The selected settings could not be transferred: " + std::string(error.what());

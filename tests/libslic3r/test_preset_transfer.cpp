@@ -82,6 +82,7 @@ TEST_CASE("Explicit whole-vector transfers still copy all requested values", "[T
     source.set_num_extruders(4);
     source.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.6, 0.4, 0.4, 0.6}));
     auto destination = bundle.printers.default_preset().config;
+    destination.set_num_extruders(4);
     PresetTransferCache cache;
     cache.stage_options(source, {"nozzle_diameter"});
     destination.apply_only(cache.config, cache.options);
@@ -368,6 +369,110 @@ TEST_CASE("Printer tool count changes are local to an accepted transfer", "[TinM
               std::vector<double>{0.6, 0.4, 0.4, 0.6});
     else
         CHECK(presets.get_edited_preset().config == current);
+}
+
+TEST_CASE("Nozzle arrays cannot implicitly change the destination tool count", "[TinMan][Preset][TransferLayout]")
+{
+    PresetBundle bundle;
+    auto &presets = bundle.printers;
+    const unsigned source_count = GENERATE(1u, 2u, 4u);
+    const unsigned destination_count = GENERATE(1u, 2u, 4u);
+    const bool include_count = GENERATE(false, true);
+    CAPTURE(source_count, destination_count, include_count);
+    auto config = presets.default_preset().config;
+    config.set_num_extruders(source_count);
+    config.set_key_value("nozzle_diameter", new ConfigOptionFloats(std::vector<double>(source_count, 0.6)));
+    presets.load_preset({}, "Source", config, false);
+    config.set_num_extruders(destination_count);
+    config.set_key_value("nozzle_diameter", new ConfigOptionFloats(std::vector<double>(destination_count, 0.8)));
+    presets.load_preset({}, "Destination", config, true);
+    const auto before = presets.get_edited_preset().config;
+    std::vector<std::string> options{"nozzle_diameter"};
+    if (include_count)
+        options.push_back("extruders_count");
+    const bool accepted = include_count || source_count == destination_count;
+    std::string reason;
+    CHECK(transfer_preset_options(presets, "Source", "Destination", options, {}, reason) == accepted);
+    CHECK(reason.empty() == accepted);
+    if (accepted) {
+        auto expected = before;
+        if (include_count)
+            expected.set_num_extruders(source_count);
+        expected.apply_only(presets.find_preset("Source", false)->config, {"nozzle_diameter"});
+        CHECK(presets.get_edited_preset().config == expected);
+    } else {
+        CHECK(presets.get_edited_preset().config == before);
+    }
+}
+
+TEST_CASE("An out-of-layout nozzle index requires an explicit tool count transfer", "[TinMan][Preset][TransferLayout]")
+{
+    PresetBundle bundle;
+    auto &presets = bundle.printers;
+    auto config = presets.default_preset().config;
+    config.set_num_extruders(4);
+    config.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.6, 0.4, 0.4, 0.6}));
+    presets.load_preset({}, "Source", config, false);
+    config.set_num_extruders(2);
+    config.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.8, 0.8}));
+    presets.load_preset({}, "Destination", config, true);
+    const auto before = presets.get_edited_preset().config;
+    const unsigned index = GENERATE(0u, 1u, 2u, 3u);
+    const bool include_count = GENERATE(false, true);
+    const std::string key = "nozzle_diameter#" + std::to_string(index);
+    std::vector<std::string> options{key};
+    if (include_count)
+        options.push_back("extruders_count");
+    const bool accepted = include_count || index < 2;
+    std::string reason;
+    CHECK(transfer_preset_options(presets, "Source", "Destination", options, {}, reason) == accepted);
+    CHECK(reason.empty() == accepted);
+    if (accepted) {
+        auto expected = before;
+        if (include_count)
+            expected.set_num_extruders(4);
+        expected.apply_only(presets.find_preset("Source", false)->config, {key});
+        CHECK(presets.get_edited_preset().config == expected);
+    } else {
+        CHECK(presets.get_edited_preset().config == before);
+    }
+}
+
+TEST_CASE("FFF tool counts cannot be transferred to an SLA destination", "[TinMan][Preset][TransferLayout]")
+{
+    PresetBundle bundle;
+    auto &presets = bundle.printers;
+    auto config = presets.default_preset().config;
+    config.set_num_extruders(4);
+    presets.load_preset({}, "Source", config, false);
+    config.set_key_value("printer_technology", new ConfigOptionEnum<PrinterTechnology>(ptSLA));
+    presets.load_preset({}, "Destination", config, true);
+    const auto before = presets.get_edited_preset().config;
+    std::string reason;
+    CHECK_FALSE(transfer_preset_options(presets, "Source", "Destination", {"extruders_count"}, {}, reason));
+    CHECK_FALSE(reason.empty());
+    CHECK(presets.get_edited_preset().config == before);
+}
+
+TEST_CASE("Comparison uses the destination tool layout after confirmation", "[TinMan][Preset][TransferLayout]")
+{
+    PresetBundle bundle;
+    auto &presets = bundle.printers;
+    auto config = presets.default_preset().config;
+    config.set_num_extruders(4);
+    presets.load_preset({}, "Source", config, false);
+    presets.load_preset({}, "Destination", config, false);
+    DynamicPrintConfig selected;
+    std::string reason;
+    CHECK_FALSE(transfer_preset_options(presets, "Source", "Destination", {"nozzle_diameter#3"},
+        [&](const std::string &name) {
+            presets.select_preset_by_name(name, false);
+            presets.get_edited_preset().config.set_num_extruders(2);
+            selected = presets.get_edited_preset().config;
+            return true;
+        }, reason));
+    CHECK_FALSE(reason.empty());
+    CHECK(presets.get_edited_preset().config == selected);
 }
 
 TEST_CASE("Malformed or stale indexed options cannot silently use another variant", "[TinMan][Preset][PresetTransfer]")
