@@ -272,6 +272,7 @@ AboutDialog::AboutDialog()
     text_list.push_back(_L("Open-source slicing stands on a tradition of collaboration and attribution. Slic3r, created by Alessandro Ranellucci and the RepRap community, laid the foundation. PrusaSlicer by Prusa Research built on that work, Bambu Studio forked from PrusaSlicer, and SuperSlicer extended it with community-driven enhancements. Each project carried the work of its predecessors forward, crediting those who came before."));
     text_list.push_back(_L("Orca Slicer began in that same spirit, drawing from PrusaSlicer, BambuStudio, SuperSlicer, and CuraSlicer, and TinManX1 carries that open-source work forward for FibreSeek and continuous-fiber workflows."));
     text_list.push_back(_L("TinManX1 keeps upstream attribution visible while focusing this build on printer profiles, reinforced-material workflows, and local manufacturing reliability."));
+    text_list.push_back(_L("This OrcaSlicer-based build includes improvements inspired by PrusaSlicer 3.0.0-alpha11, including profile ownership, derived-state handling, and layer-height inheritance. It is not a full PrusaSlicer 3 rebase."));
 
     text_sizer->Add( 0, 0, 0, wxTOP, FromDIP(33));
     bool is_zh = wxGetApp().app_config->get("language") == "zh_CN";

@@ -359,9 +359,18 @@ def main() -> int:
                 errors.append(f"missing versioned artwork: {rel}")
             elif f"TinManX1 Revision {revision}" not in artwork.read_text(errors="replace"):
                 errors.append(f"{rel} does not match TINMANX1_REVISION {revision}")
+            elif "PrusaSlicer 3.0.0-alpha11" not in artwork.read_text(errors="replace"):
+                errors.append(f"{rel} is missing the PrusaSlicer 3 adoption credit")
         for rel in ("src/slic3r/GUI/GUI_App.cpp", "src/slic3r/GUI/AboutDialog.cpp"):
-            if "wxString::FromUTF8(TINMANX1_REVISION)" not in (ROOT / rel).read_text(errors="replace"):
+            source = (ROOT / rel).read_text(errors="replace")
+            if "wxString::FromUTF8(TINMANX1_REVISION)" not in source:
                 errors.append(f"{rel} does not display the native TinManX1 revision")
+            if "PrusaSlicer 3.0.0-alpha11" not in source:
+                errors.append(f"{rel} does not display the native PrusaSlicer 3 adoption credit")
+        app_source = (ROOT / "src/slic3r/GUI/GUI_App.cpp").read_text(errors="replace")
+        for call in ("SetAppName(SLIC3R_APP_KEY);", "SetAppDisplayName(SLIC3R_APP_NAME);"):
+            if re.search(r"^\s*" + re.escape(call) + r"\s*$", app_source, re.MULTILINE) is None:
+                errors.append(f"GUI application must preserve storage identity and native branding: {call}")
 
     package_match = re.search(
         r'set\(TINMANX1_PACKAGE_VERSION\s+"(\d+)\.(\d+)\.(\d+)\.(\d+)"\)',

@@ -346,8 +346,13 @@ public:
         rc.height = dc.GetTextExtent(m_text_revision).GetHeight();
         dc.DrawLabel(m_text_revision, rc, wxALIGN_CENTER);
 
+        dc.SetFont(m_font_credit);
+        rc.y      = c_sz.GetHeight() * 0.79;
+        rc.height = dc.GetMultiLineTextExtent(m_text_prusa_credit).GetHeight();
+        dc.DrawLabel(m_text_prusa_credit, rc, wxALIGN_CENTER);
+
         dc.SetFont(m_font_action);
-        rc.y      = c_sz.GetHeight() * 0.86;
+        rc.y      = c_sz.GetHeight() * 0.90;
         rc.height = dc.GetTextExtent(m_text_action).GetHeight();
         dc.DrawLabel(m_text_action, rc, wxALIGN_CENTER);
     }
@@ -401,11 +406,13 @@ private:
     wxString m_text_title   = _L("TinManX1");
     wxString m_text_version = _L("Based on Orca Slicer Version ") + wxString::FromUTF8(GUI_App::format_display_version().c_str());
     wxString m_text_revision = _L("TinManX1 Revision ") + wxString::FromUTF8(TINMANX1_REVISION);
+    wxString m_text_prusa_credit = _L("Includes improvements inspired by") + "\nPrusaSlicer 3.0.0-alpha11";
     wxString m_text_action  = _L("Loading configuration") + dots;
 
     wxFont m_font_title   = Label::Head_24;
     wxFont m_font_version = Label::Body_16;
     wxFont m_font_revision = Label::Body_14;
+    wxFont m_font_credit   = Label::Body_12;
     wxFont m_font_action  = Label::Body_16;
 };
 
@@ -2466,11 +2473,9 @@ void GUI_App::init_webview_runtime()
 
 void GUI_App::init_app_config()
 {
-	// Profiles for the alpha are stored into the PrusaSlicer-alpha directory to not mix with the current release.
+    // Keep the compatibility key for existing settings, but brand native menus separately.
     SetAppName(SLIC3R_APP_KEY);
-//	SetAppName(SLIC3R_APP_KEY "-alpha");
-//  SetAppName(SLIC3R_APP_KEY "-beta");
-//	SetAppDisplayName(SLIC3R_APP_NAME);
+    SetAppDisplayName(SLIC3R_APP_NAME);
 
 	// Set the Slic3r data directory at the Slic3r XS module.
 	// Unix: ~/ .Slic3r

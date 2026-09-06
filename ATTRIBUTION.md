@@ -15,7 +15,7 @@ This repository preserves source credit for the TinManX1 public patch release. I
 | --- | --- | --- |
 | OrcaSlicer / SoftFever and contributors | <https://github.com/OrcaSlicer/OrcaSlicer> | Primary upstream application and source baseline for this patchset. Preserve AGPL license, upstream notices, and contributor credit. |
 | Bambu Studio / Bambu Lab contributors | <https://github.com/bambulab/BambuStudio> | Upstream family member and connectivity behavior reference. Proprietary plugin binaries are not redistributed here. |
-| PrusaSlicer / Prusa Research contributors | <https://github.com/prusa3d/PrusaSlicer> | Upstream slicer family lineage and behavior reference. |
+| PrusaSlicer / Prusa Research contributors | <https://github.com/prusa3d/PrusaSlicer> | Upstream slicer family lineage and behavior reference. PrusaSlicer 3.0.0-alpha11 also informed profile ownership, derived-state handling, and optional layer-height inheritance; see `docs/research/profile-reliability-work.md`. TinManX1 remains OrcaSlicer-based, not a full PrusaSlicer 3 rebase. |
 | Slic3r contributors | <https://github.com/slic3r/Slic3r> | Original slicer lineage behind PrusaSlicer-derived slicers. |
 
 ## Wave Overhangs

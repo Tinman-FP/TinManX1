@@ -563,6 +563,52 @@ envelope tests, eight build-identity fixtures, and eight CCF golden fixtures wit
 70 routes. Installed-package signature/identity and GitHub status are checked
 separately after committing the final code.
 
+### Incremental Sync and Native Branding Milestone
+
+Revision `v2026.09.05-branding-sync.1`, package `2026.9.5.16`.
+The preceding `layer-ranges.1` revision completed its entire cross-platform
+GitHub workflow successfully, including macOS Universal, Windows, Linux,
+Flatpak, and unit tests.
+
+An offline extraction of the existing incremental-sync parser reproduced 31
+failed assertions across four cases. Its `json.value(key, 0)` calls inferred a
+32-bit result even though the destination was 64-bit: a cursor of 1,788,633,045,717
+became 1,926,650,581. The same pattern affected conflict and upload timestamps.
+Checked protocol decoding now preserves nonnegative 64-bit values and rejects
+invalid numeric types or overflow. A malformed later profile cannot publish a
+partial parsed page. Optional timestamps and deletion lists remain supported;
+continuation pages with a valid cursor remain legal.
+
+Cursor reload now starts from zero and accepts only a complete nonnegative
+decimal value (including legacy LF/CRLF endings). Tests reproduced stale state
+when changing to an account with no cursor file and when removing the current
+file. Account replacement now binds the session and its cursor under the same
+lock; token refresh retains the active position. Incremental responses are
+checked against the requesting session before callbacks and cursor publication.
+An expired-cursor retry leaves the durable file intact until an accepted result
+replaces it. Cursor saves use the existing checked atomic-replacement helper;
+failure is reported and the caller restores the prior in-memory cursor.
+
+Five focused cases pass 114 assertions, covering large and invalid timestamps,
+malformed/optional page fields, account switching, token refresh, newline
+compatibility, blocked destinations, and repeatable saves. The complete offline
+GUI utility suite passes 20 cases / 211 assertions. The complete Mac build and
+250 standard native cases / 237,310 assertions and 48 FFF cases / 870 assertions
+pass. All 936 resource profiles and the saved user-profile checksum baseline
+remain unchanged. These are offline fixtures,
+not a claim that every cloud-server, cancellation, or account-switch race has
+been integration-tested. The whole-bundle and logout-ordering limitations remain.
+
+The macOS menu used wxWidgets' fallback display name derived from the compatibility
+key. Setting `SetAppDisplayName(SLIC3R_APP_NAME)` fixes the native Hide/Quit labels
+without changing `SetAppName(SLIC3R_APP_KEY)`, profile directories, or credentials.
+The installed application was visually checked: Hide TinManX1 and Quit TinManX1
+are present, and About displays the new revision and PrusaSlicer credit. Native
+splash text and both light/dark artwork variants credit improvements inspired by
+PrusaSlicer 3.0.0-alpha11. OrcaSlicer 2.4.2 remains identified as the actual base;
+the UI does not misrepresent this work as a complete PrusaSlicer 3 rebase.
+The release verifier now guards the native display-name call and these credits.
+
 ## Review Conclusions
 
 The useful Prusa 3 ideas were explicit ownership and scope, private candidate

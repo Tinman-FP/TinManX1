@@ -1,4 +1,6 @@
 #include <catch2/catch_all.hpp>
+#include <fstream>
+#include <limits>
 
 #include "slic3r/GUI/TaskManager.hpp"
 #include "slic3r/Utils/BBLNetworkPlugin.hpp"
@@ -92,6 +94,146 @@ TEST_CASE("Empty cloud protocol results start with defined state", "[CloudSnapsh
     CHECK(push.server_version.created_time == 0);
     Slic3r::SyncState state;
     CHECK(state.last_sync_timestamp == 0);
+}
+
+TEST_CASE("Incremental cloud timestamps preserve the full protocol width", "[CloudCursor][TinMan]")
+{
+    const long long stamp = GENERATE(0LL, 2300000000LL, 1788633045717LL, std::numeric_limits<long long>::max());
+    const nlohmann::json body = {
+        {"next_cursor", stamp},
+        {"upserts", {{{"id", "fixture-id"}, {"name", "Fixture"}, {"updated_time", stamp}, {"created_time", stamp},
+                      {"content", {{"type", "filament"}, {"nozzle_temperature", {"280", "285"}}}}}}},
+        {"deletes", {"removed-id"}}
+    };
+    const auto parsed = Slic3r::parse_orca_sync_pull_response(body.dump());
+    CHECK(parsed.next_cursor == stamp);
+    REQUIRE(parsed.upserts.size() == 1);
+    CHECK(parsed.upserts.front().updated_time == stamp);
+    CHECK(parsed.upserts.front().created_time == stamp);
+    CHECK(parsed.upserts.front().content == body["upserts"][0]["content"]);
+    CHECK(parsed.deletes == std::vector<std::string>{"removed-id"});
+    CHECK(Slic3r::parse_orca_sync_timestamp(body["upserts"][0], "updated_time") == stamp);
+}
+
+TEST_CASE("Incremental cloud timestamps reject unsafe values", "[CloudCursor][TinMan]")
+{
+    const auto invalid = GENERATE("-1", "1.5", "true", "null", "\"123\"", "[]", "18446744073709551615");
+    const nlohmann::json body = {{"updated_time", nlohmann::json::parse(invalid)}};
+    CHECK_THROWS(Slic3r::parse_orca_sync_timestamp(body, "updated_time"));
+}
+
+TEST_CASE("Incremental cloud responses cannot advance past malformed data", "[CloudCursor][TinMan]")
+{
+    auto body = nlohmann::json{{"next_cursor", 1788633045717LL}, {"upserts", nlohmann::json::array()},
+                             {"deletes", nlohmann::json::array()}};
+    SECTION("Missing upserts") { body.erase("upserts"); }
+    SECTION("Wrong upserts type") { body["upserts"] = "invalid"; }
+    SECTION("Wrong deletes type") { body["deletes"] = "invalid"; }
+    SECTION("Missing profile identity") { body["upserts"].push_back({{"name", "Fixture"}, {"content", nlohmann::json::object()}}); }
+    SECTION("Missing profile content") { body["upserts"].push_back({{"id", "fixture-id"}, {"name", "Fixture"}}); }
+    SECTION("Empty deletion identity") { body["deletes"].push_back(""); }
+    SECTION("Wrong timestamp type") { body["next_cursor"] = 1.5; }
+    SECTION("Conflicting identity") {
+        body["upserts"].push_back({{"id", "fixture-id"}, {"content", {{"setting_id", "other-id"}}}});
+    }
+    SECTION("Page without continuation") { body["has_more"] = true; body["next_cursor"] = 0; }
+    SECTION("Wrong page flag") { body["has_more"] = "false"; }
+    CHECK_THROWS(Slic3r::parse_orca_sync_pull_response(body.dump()));
+}
+
+TEST_CASE("Incremental cloud parsing preserves valid optional fields and publishes only complete pages", "[CloudCursor][TinMan]")
+{
+    nlohmann::json body = {{"upserts", nlohmann::json::array()}};
+    auto parsed = Slic3r::parse_orca_sync_pull_response(body.dump());
+    CHECK(parsed.next_cursor == 0);
+    CHECK(parsed.upserts.empty());
+    CHECK(parsed.deletes.empty());
+    body["upserts"].push_back({{"id", "fixture-id"}, {"content", {{"type", "filament"}, {"nullable_value", nullptr}}}});
+    body["next_cursor"] = 1788633045717LL;
+    body["has_more"] = true;
+    parsed = Slic3r::parse_orca_sync_pull_response(body.dump());
+    REQUIRE(parsed.upserts.size() == 1);
+    CHECK(parsed.upserts.front().name.empty());
+    CHECK(parsed.upserts.front().created_time == 0);
+    CHECK(parsed.upserts.front().updated_time == 0);
+    CHECK(parsed.upserts.front().content.at("nullable_value").is_null());
+    body["upserts"].push_back({{"id", "later-bad-id"}, {"content", "invalid"}});
+    CHECK_THROWS(parsed = Slic3r::parse_orca_sync_pull_response(body.dump()));
+    REQUIRE(parsed.upserts.size() == 1);
+    CHECK(parsed.upserts.front().id == "fixture-id");
+    CHECK(parsed.next_cursor == 1788633045717LL);
+}
+
+TEST_CASE("Cloud cursor reload cannot leak state across accounts or accept corrupt files", "[CloudCursor][TinMan]")
+{
+    struct Directory {
+        boost::filesystem::path path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path("tinman-sync-%%%%-%%%%");
+        ~Directory() { boost::filesystem::remove_all(path); }
+        void write(const std::string& account, const std::string& value) const {
+            boost::filesystem::create_directories(path / "user" / account);
+            std::ofstream((path / "user" / account / "sync_state").string()) << value;
+        }
+    } directory;
+    directory.write("account-a", "1788633045717");
+    Slic3r::OrcaCloudServiceAgent agent("");
+    agent.set_config_dir(directory.path.string());
+    auto login = [&](const std::string& user) {
+        REQUIRE(agent.set_user_session("fixture-token", user, "fixture", "Fixture", "", "", false));
+    };
+    login("account-a");
+    CHECK(agent.get_sync_state().last_sync_timestamp == 1788633045717LL);
+    SECTION("An account without a cursor starts fresh") {
+        login("account-b");
+        CHECK(agent.get_sync_state().last_sync_timestamp == 0);
+        login("account-a");
+        CHECK(agent.get_sync_state().last_sync_timestamp == 1788633045717LL);
+    }
+    SECTION("Invalid persisted cursor resets rather than accepting a prefix") {
+        const auto invalid = GENERATE("123junk", "-2", "", "18446744073709551615", "123\n456", "+42", " 42");
+        directory.write("account-a", invalid);
+        agent.load_sync_state();
+        CHECK(agent.get_sync_state().last_sync_timestamp == 0);
+    }
+    SECTION("A removed cursor does not leave stale memory") {
+        boost::filesystem::remove(directory.path / "user" / "account-a" / "sync_state");
+        agent.load_sync_state();
+        CHECK(agent.get_sync_state().last_sync_timestamp == 0);
+    }
+    SECTION("A legacy single trailing newline remains valid") {
+        const auto ending = GENERATE("\n", "\r\n");
+        directory.write("account-a", std::string("1788633045717") + ending);
+        agent.load_sync_state();
+        CHECK(agent.get_sync_state().last_sync_timestamp == 1788633045717LL);
+    }
+    SECTION("Token refresh does not roll the current cursor back to disk") {
+        directory.write("account-a", "123");
+        login("account-a");
+        CHECK(agent.get_sync_state().last_sync_timestamp == 1788633045717LL);
+    }
+    SECTION("Checked save replaces the cursor and can be read again") {
+        directory.write("account-a", "123");
+        REQUIRE(agent.save_sync_state());
+        agent.load_sync_state();
+        CHECK(agent.get_sync_state().last_sync_timestamp == 1788633045717LL);
+        for (const auto& entry : boost::filesystem::directory_iterator(directory.path / "user" / "account-a"))
+            CHECK(entry.path().filename() == "sync_state");
+    }
+    SECTION("A blocked cursor destination reports failure and retains memory") {
+        const auto destination = directory.path / "user" / "account-a" / "sync_state";
+        boost::filesystem::remove(destination);
+        boost::filesystem::create_directory(destination);
+        CHECK_FALSE(agent.save_sync_state());
+        CHECK(boost::filesystem::is_directory(destination));
+        CHECK(agent.get_sync_state().last_sync_timestamp == 1788633045717LL);
+    }
+    SECTION("A fresh account can persist a new cursor without changing another account") {
+        login("account-b");
+        REQUIRE(agent.save_sync_state());
+        agent.load_sync_state();
+        CHECK(agent.get_sync_state().last_sync_timestamp == 0);
+        login("account-a");
+        CHECK(agent.get_sync_state().last_sync_timestamp == 1788633045717LL);
+    }
 }
 
 TEST_CASE("Bambu network manager survives repeated finalization", "[BBLNetworkPlugin][Lifecycle]")

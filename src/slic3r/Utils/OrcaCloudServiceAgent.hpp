@@ -73,6 +73,10 @@ struct SyncState {
 
 #endif // ORCA_SYNC_STRUCTS_DEFINED
 
+// Pure protocol parsing, also used by the offline synchronization tests.
+long long parse_orca_sync_timestamp(const nlohmann::json& object, const char* key);
+SyncPullResponse parse_orca_sync_pull_response(const std::string& body);
+
 /**
  * OrcaCloudServiceAgent - Native cloud service and authentication implementation for Orca Cloud.
  *
@@ -259,9 +263,12 @@ public:
 
     // Sync state management
     void load_sync_state();
-    void save_sync_state();
+    bool save_sync_state();
     void clear_sync_state();
-    const SyncState& get_sync_state() const { return sync_state; }
+    SyncState get_sync_state() const {
+        std::lock_guard<std::recursive_mutex> lock(state_mutex);
+        return sync_state;
+    }
 
     // ========================================================================
     // Orca-Specific: Bundle Subscription
