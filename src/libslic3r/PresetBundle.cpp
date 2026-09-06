@@ -5434,58 +5434,53 @@ void PresetBundle::update_multi_material_filament_presets(size_t to_delete_filam
                                                                                       this->filament_presets.back());
         num_filaments = this->filament_presets.size();
     }
-    if (to_delete_filament_id == -1)
-        to_delete_filament_id = num_filaments;
+    auto &matrix = project_config.option<ConfigOptionFloats>("flush_volumes_matrix")->values;
+    auto &volumes = project_config.option<ConfigOptionFloats>("flush_volumes_vector")->values;
+    auto &multipliers = project_config.option<ConfigOptionFloats>("flush_multiplier")->values;
+    const size_t old_tools = std::max<size_t>(multipliers.size(), 1);
+    const size_t old_materials = size_t(std::sqrt(matrix.size() / old_tools));
+    const size_t old_plane_size = old_materials * old_materials;
+    const bool valid_old_layout = old_materials > 0 &&
+        matrix.size() % old_tools == 0 && matrix.size() / old_tools == old_plane_size;
+    const bool deleting = to_delete_filament_id != size_t(-1);
+    const auto old_index = [=](size_t index) {
+        return deleting && index >= to_delete_filament_id ? index + 1 : index;
+    };
 
-    // Now verify if flush_volumes_matrix has proper size (it is used to deduce number of extruders in wipe tower generator):
-    std::vector<double> old_matrix = this->project_config.option<ConfigOptionFloats>("flush_volumes_matrix")->values;
-    size_t old_nozzle_nums = std::max<size_t>(
-        this->project_config.option<ConfigOptionFloats>("flush_multiplier")->values.size(), 1);
-    size_t old_number_of_filaments = size_t(sqrt(old_matrix.size() / old_nozzle_nums) + EPSILON);
-    size_t nozzle_nums = get_printer_extruder_count();
-    if (old_nozzle_nums != nozzle_nums) {
-        std::vector<double>& f_multiplier = this->project_config.option<ConfigOptionFloats>("flush_multiplier")->values;
-        f_multiplier.resize(nozzle_nums, 1.f);
+    // Material pairs/rows and physical-tool planes have different dimensions.
+    // Stage all three arrays before publishing; preserve existing manual values.
+    std::vector<double> new_volumes(2 * num_filaments);
+    for (size_t i = 0; i < num_filaments; ++i) {
+        const size_t source = 2 * old_index(i);
+        for (size_t part = 0; part < 2; ++part)
+            new_volumes[2 * i + part] = source + 1 < volumes.size() ? volumes[source + part] :
+                volumes.size() >= 2 ? volumes[part] : 140.;
     }
+    auto new_multipliers = multipliers;
+    new_multipliers.resize(num_extruders, 1.);
 
-    if ( (num_filaments * num_filaments) != size_t(old_matrix.size() / old_nozzle_nums) ) {
-        // First verify if purging volumes presets for each extruder matches number of extruders
-        std::vector<double>& filaments = this->project_config.option<ConfigOptionFloats>("flush_volumes_vector")->values;
-        while (filaments.size() < 2* num_filaments) {
-            filaments.push_back(filaments.size()>1 ? filaments[0] : 140.);  // copy the values from the first extruder
-            filaments.push_back(filaments.size()>1 ? filaments[1] : 140.);
-        }
-        while (filaments.size() > 2* num_filaments) {
-            filaments.pop_back();
-            filaments.pop_back();
-        }
-
-        size_t old_matrix_size = old_number_of_filaments * old_number_of_filaments;
-        size_t new_matrix_size = num_filaments * num_filaments;
-        std::vector<double> new_matrix(new_matrix_size * nozzle_nums, 0);
-        for (unsigned int i = 0; i < num_filaments; ++i)
-            for (unsigned int j = 0; j < num_filaments; ++j) {
-                if (i < old_number_of_filaments && j < old_number_of_filaments) {
-                    unsigned int old_i = i >= to_delete_filament_id ? i + 1 : i;
-                    unsigned int old_j = j >= to_delete_filament_id ? j + 1 : j;
-                    for (size_t nozzle_id = 0; nozzle_id < nozzle_nums; ++nozzle_id) {
-                        // Orca: only copy from old_matrix when the old layout actually has data
-                        // for this nozzle slot; otherwise initialize from the per-filament
-                        // flush volumes the same way the (i,j) out-of-range branch does.
-                        if (nozzle_id < old_nozzle_nums) {
-                            new_matrix[i * num_filaments + j + new_matrix_size * nozzle_id] = old_matrix[old_i * old_number_of_filaments + old_j + old_matrix_size * nozzle_id];
-                        } else {
-                            new_matrix[i * num_filaments + j + new_matrix_size * nozzle_id] = (i == j ? 0. : filaments[2 * i] + filaments[2 * j + 1]);
-                        }
-                    }
-                } else {
-                    for (size_t nozzle_id = 0; nozzle_id < nozzle_nums; ++nozzle_id) {
-                        new_matrix[i * num_filaments + j + new_matrix_size * nozzle_id] = (i == j ? 0. : filaments[2 * i] + filaments[2 * j + 1]);
-                    }
+    std::vector<double> new_matrix;
+    const bool rebuild_matrix = deleting || !valid_old_layout ||
+        old_tools != num_extruders || old_materials != num_filaments;
+    if (rebuild_matrix) {
+        if (!valid_old_layout && !matrix.empty())
+            BOOST_LOG_TRIVIAL(warning) << "Invalid purge matrix layout; rebuilding from material purge volumes.";
+        const size_t plane_size = num_filaments * num_filaments;
+        new_matrix.resize(plane_size * num_extruders);
+        for (size_t tool = 0; tool < num_extruders; ++tool)
+            for (size_t from = 0; from < num_filaments; ++from)
+                for (size_t to = 0; to < num_filaments; ++to) {
+                    const size_t old_from = old_index(from), old_to = old_index(to);
+                    new_matrix[tool * plane_size + from * num_filaments + to] =
+                        valid_old_layout && tool < old_tools && old_from < old_materials && old_to < old_materials
+                        ? matrix[tool * old_plane_size + old_from * old_materials + old_to]
+                        : from == to ? 0. : new_volumes[2 * from] + new_volumes[2 * to + 1];
                 }
-            }
-        this->project_config.option<ConfigOptionFloats>("flush_volumes_matrix")->values = new_matrix;
     }
+    volumes.swap(new_volumes);
+    multipliers.swap(new_multipliers);
+    if (rebuild_matrix)
+        matrix.swap(new_matrix);
 }
 
 // Rewrite a preset-name-list field (compatible_printers / compatible_prints) so references to a

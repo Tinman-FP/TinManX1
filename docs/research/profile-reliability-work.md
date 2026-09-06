@@ -609,6 +609,52 @@ PrusaSlicer 3.0.0-alpha11. OrcaSlicer 2.4.2 remains identified as the actual bas
 the UI does not misrepresent this work as a complete PrusaSlicer 3 rebase.
 The release verifier now guards the native display-name call and these credits.
 
+## Overnight M1: Purge Layout Ownership (September 6 UTC)
+
+The new overnight authorization runs through September 6, 2026, 12:00 UTC
+(8 AM Eastern). No live printer operations or interactive acceptance checks are
+part of the unattended work. The installed branding-sync build remains in place;
+verified candidates are built in the source build directory without interrupting
+the user's open application.
+
+`update_multi_material_filament_presets()` previously rebuilt the purge matrix
+only when the logical material count changed. Switching between one, two, and
+four physical tools while retaining four materials updated the multiplier count
+but left the matrix at its old dimensions. A second defect removed the tail of
+the load/unload volume list when deleting an earlier material, associating the
+remaining materials with the wrong purge pairs. Two regression cases reproduced
+eight failing assertions before the fix: six tool transitions and two deletion
+positions.
+
+The routine now treats material rows/pairs and physical-tool planes separately.
+Existing manual matrix cells and multipliers are retained wherever their original
+indices remain valid; newly added cells use the existing material-volume rule,
+without increasing tuned values or introducing new defaults. Deletion remaps
+both volume pairs and matrix rows/columns. When the tool-count minimum adds a
+replacement slot, its cells are initialized instead of indexing beyond the old
+matrix. Incomplete/non-square matrix layouts are rebuilt from material volumes;
+incomplete volume pairs recover to complete pairs. The three purge arrays are
+staged before their swaps. This is not a claim that the entire preset bundle or
+GUI selection workflow is transactional.
+
+Five focused cases pass 3,507 assertions, including 27 material-count transitions,
+nine tool-count transitions, first/middle/last deletion, minimum-slot replacement,
+incomplete arrays, and repeat-call stability. The complete Mac build passed, as
+did 255 standard native cases / 240,817 assertions, 48 FFF cases / 870 assertions,
+and 20 offline GUI utility cases / 211 assertions. Release and FibreSeek release
+checks passed. The trusted 167-layer reference slice still estimates 3h 45m 38s;
+its G-code differs from branding-sync only in the two generation timestamp
+comments. All 936 resource profiles and the saved user-profile checksum baseline
+remain unchanged. Revision: `v2026.09.06-purge-layout.1`, package `2026.9.6.1`;
+both splash and About artwork variants were updated, retaining native revision
+rendering and accurate Prusa credit.
+
+Remaining material-slot work is separate: palette resizing can overwrite existing
+multi-color data, and deletion/resizing at the tool-count minimum can leave the
+palette and mapping lengths behind the material list. Those paths need their own
+reproductions and tests before changes. The dormant filament-option initializer
+is still intentionally untouched.
+
 ## Review Conclusions
 
 The useful Prusa 3 ideas were explicit ownership and scope, private candidate
@@ -626,8 +672,9 @@ Remaining high-value work is deliberately explicit:
   Native tests and CLI output are not a substitute for the blocked GUI checks.
 - Add real plate/object/volume/layer provenance and declaration ownership at the
   loader, avoiding a second resolver or guessed ancestry.
-- Audit incremental cloud cursor persistence, logout confirmation ordering, and
-  whole-bundle commit boundaries separately from the completed full-snapshot path.
+- Finish incremental cloud HTTP/cancellation integration checks, logout confirmation
+  ordering, and whole-bundle commit boundaries. The branding-sync milestone covers
+  cursor parsing/persistence/account binding, not every server or callback race.
 - Audit filament-vector ownership before changing the dormant filament-option
   initialization path. Its option list mixes physical-tool and material concerns;
   enabling it blindly could damage mixed-tool profiles.
