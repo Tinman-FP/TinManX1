@@ -6,6 +6,16 @@
 
 namespace Slic3r {
 
+void PresetTransferCache::stage_options(const DynamicPrintConfig &source,
+                                      const std::vector<std::string> &selected_options)
+{
+    DynamicPrintConfig candidate;
+    candidate.apply_only(source, selected_options);
+    auto options_candidate = selected_options;
+    config.swap(candidate);
+    options.swap(options_candidate);
+}
+
 void PresetTransferCache::swap(PresetTransferCache &other) noexcept
 {
     config.swap(other.config);

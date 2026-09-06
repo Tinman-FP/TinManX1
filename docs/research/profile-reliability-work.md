@@ -779,13 +779,58 @@ revision text. The candidate remains staged; `/Applications/TinManX1.app` is not
 replaced. Logs are `/tmp/tinman-transfer-cache-*.log`, with the reference output in
 `/tmp/tinman-transfer-cache-slice/plate_1.gcode`.
 
-Publication is queued to avoid repeatedly cancelling cross-platform builds.
-Before starting the next milestone, check GitHub run `34006710543` for the pushed
-M3 commit `5cb8db1405`. Its helper and shell checks passed, while the full platform
-matrix was still running without failed jobs at the M4 checkpoint. When that run
-finishes, publish the verified local M4 commit to the existing `tinman` branch,
-record its matching CI run and PR verification, and continue the remaining audit.
-Do not claim the staged build is installed or the pending CI is green.
+M3 commit `5cb8db1405` completed the entire GitHub platform matrix successfully
+in run `34006710543`. After waiting for that result rather than cancelling the
+build, M4 was published as `c43d437440` to the existing `tinman` branch. PR #21
+verification comment: `5556896216`. M4's helper and shell checks passed; its full
+matrix is run `34011615809`, still pending at the next checkpoint.
+
+## Overnight M5: Indexed Setup Transfers
+
+The setup-wizard keep-modifications path removed `#index` from dirty option keys
+before caching them. Keeping a change to one nozzle or material variant could
+therefore copy the old printer's entire array over other destination entries.
+The current unsaved-changes UI keeps all displayed dirty items, not individually
+checkable sub-items; the problem is the expansion from those dirty indices to
+unchanged indices in the previous printer's array. Ordinary new-project partial
+selection is currently dormant (`has_unselected_options()` always returns false),
+so this change is not described as fixing an active partial-selection UI there.
+
+A headless extraction of the previous wizard normalization and tab cache staging
+reproduced three failures: a four-nozzle destination lost its unselected values,
+a four-entry material variant array did the same, and a late invalid option
+partially replaced a previously pending cache. Three cases / eight assertions
+had six failures. These were an extracted code-path reproduction, not a live
+wizard run. The GUI now preserves the indexed keys and delegates staging to
+`PresetTransferCache::stage_options`, which constructs the new config and key
+list before swapping them into the pending cache. Old unselected cache values
+are dropped, while a separately requested tool count is retained.
+
+Five new production-helper cases pass 16 assertions. Explicit whole-array copies
+still work, individual nozzle/material entries preserve other destination values,
+failed preparation keeps the previous cache, and repeated or empty preparation
+has defined replacement behavior. All transfer-related tests together pass
+25 cases / 150 assertions.
+
+The complete Mac build passed. Standard offline suites passed: native 285 cases /
+241,925 assertions, FFF 48 / 870, offline utilities 20 / 211, SLA 21 / 13,547,
+nesting 14 / 488. Total: 388 cases / 257,041 assertions. Release/FibreSeek checks,
+the 936-profile manifest, and saved-profile checksums passed. The reference slice
+still has 167 layers and an estimate of 3h 45m 38s; G-code differs from M4 only in
+the two timestamp comments. Logs are `/tmp/tinman-setup-transfer-*.log`; the slice
+is `/tmp/tinman-setup-transfer-slice/plate_1.gcode`.
+
+Revision `v2026.09.06-indexed-transfer.1`, package `2026.9.6.5`, updates splash/About
+revision text. The candidate remains staged, not installed. The verified local
+M5 commit is queued for publication after M4's run `34011615809` finishes, to avoid
+cancelling another platform matrix. Check that run before starting the next
+milestone, publish M5 to `tinman`, and record its matching CI and PR verification.
+
+Remaining limitations include actual wizard acceptance, rollback of postponed
+transfers if the outer wizard fails after staging, and destination validation
+when a kept index no longer exists on a smaller tool layout. Cache preparation
+is atomic; later application of an entire bundle is not. Do not claim these
+native helper tests validate the complete interactive setup/project workflow.
 
 ## Review Conclusions
 

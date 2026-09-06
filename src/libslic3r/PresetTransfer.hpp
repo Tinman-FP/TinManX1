@@ -15,6 +15,7 @@ struct PresetTransferCache {
     std::vector<std::string> options;
     size_t extruder_count = 0;
 
+    void stage_options(const DynamicPrintConfig &source, const std::vector<std::string> &selected_options);
     void swap(PresetTransferCache &other) noexcept;
 };
 

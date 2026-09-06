@@ -2116,8 +2116,7 @@ void Tab::apply_searcher()
 
 void Tab::cache_config_diff(const std::vector<std::string>& selected_options, const DynamicPrintConfig* config/* = nullptr*/)
 {
-    m_transfer_cache.options = selected_options;
-    m_transfer_cache.config.apply_only(config ? *config : m_presets->get_edited_preset().config, selected_options);
+    m_transfer_cache.stage_options(config ? *config : m_presets->get_edited_preset().config, selected_options);
 }
 
 void Tab::apply_config_from_cache()

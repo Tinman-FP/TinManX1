@@ -31,6 +31,83 @@ void configure_transfer(PresetCollection &presets)
 }
 }
 
+TEST_CASE("Keeping a setup nozzle edit leaves other destination nozzles unchanged", "[TinMan][Preset][SetupTransfer]")
+{
+    PresetBundle bundle;
+    auto source = bundle.printers.default_preset().config;
+    source.set_num_extruders(4);
+    source.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.4, 0.6, 0.4, 0.4}));
+    auto destination = source;
+    destination.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.8, 0.4, 0.6, 1.0}));
+    PresetTransferCache cache;
+    cache.stage_options(source, {"nozzle_diameter#1"});
+    destination.apply_only(cache.config, cache.options);
+    CHECK(destination.option<ConfigOptionFloats>("nozzle_diameter")->values ==
+          std::vector<double>{0.8, 0.6, 0.6, 1.0});
+    CHECK(cache.options == std::vector<std::string>{"nozzle_diameter#1"});
+}
+
+TEST_CASE("Keeping material variant edits preserves other destination variants", "[TinMan][Preset][SetupTransfer]")
+{
+    PresetBundle bundle;
+    auto source = bundle.filaments.default_preset().config;
+    source.set_key_value("filament_flow_ratio", new ConfigOptionFloats({0.98, 1.02, 0.96, 0.94}));
+    auto destination = source;
+    destination.set_key_value("filament_flow_ratio", new ConfigOptionFloats({1.0, 0.99, 1.01, 0.97}));
+    PresetTransferCache cache;
+    cache.stage_options(source, {"filament_flow_ratio#1", "filament_flow_ratio#3"});
+    destination.apply_only(cache.config, cache.options);
+    CHECK(destination.option<ConfigOptionFloats>("filament_flow_ratio")->values ==
+          std::vector<double>{1.0, 1.02, 1.01, 0.94});
+    CHECK(cache.options == std::vector<std::string>{"filament_flow_ratio#1", "filament_flow_ratio#3"});
+}
+
+TEST_CASE("Failed transfer preparation retains the previous pending options", "[TinMan][Preset][SetupTransfer]")
+{
+    PresetTransferCache cache;
+    stage_height(cache, 0.2);
+    cache.extruder_count = 4;
+    const auto before = cache;
+    DynamicPrintConfig invalid;
+    invalid.set_key_value("layer_height", new ConfigOptionFloat(0.32));
+    invalid.set_key_value("outer_wall_speed", new ConfigOptionString("invalid"));
+    CHECK_THROWS(cache.stage_options(invalid, {"layer_height", "outer_wall_speed"}));
+    check_cache(cache, before);
+}
+
+TEST_CASE("Explicit whole-vector transfers still copy all requested values", "[TinMan][Preset][SetupTransfer]")
+{
+    PresetBundle bundle;
+    auto source = bundle.printers.default_preset().config;
+    source.set_num_extruders(4);
+    source.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.6, 0.4, 0.4, 0.6}));
+    auto destination = bundle.printers.default_preset().config;
+    PresetTransferCache cache;
+    cache.stage_options(source, {"nozzle_diameter"});
+    destination.apply_only(cache.config, cache.options);
+    CHECK(destination.option<ConfigOptionFloats>("nozzle_diameter")->values ==
+          std::vector<double>{0.6, 0.4, 0.4, 0.6});
+}
+
+TEST_CASE("Preparing a replacement cache drops unselected old values", "[TinMan][Preset][SetupTransfer]")
+{
+    PresetTransferCache cache;
+    stage_height(cache, 0.2);
+    cache.extruder_count = 4;
+    DynamicPrintConfig source;
+    source.set_key_value("outer_wall_speed", new ConfigOptionFloat(40.0));
+    cache.stage_options(source, {"outer_wall_speed"});
+    CHECK(cache.config.keys() == std::vector<std::string>{"outer_wall_speed"});
+    CHECK(cache.options == std::vector<std::string>{"outer_wall_speed"});
+    CHECK(cache.extruder_count == 4);
+    source.set_key_value("outer_wall_speed", new ConfigOptionFloat(80.0));
+    CHECK(cache.config.opt_float("outer_wall_speed") == 40.0);
+    cache.stage_options(source, {});
+    CHECK(cache.config.empty());
+    CHECK(cache.options.empty());
+    CHECK(cache.extruder_count == 4);
+}
+
 TEST_CASE("Cancelling a later confirmation does not leak a queued process transfer", "[TinMan][Preset][TransferCache]")
 {
     PresetTransferCache process, filament, printer;
