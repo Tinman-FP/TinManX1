@@ -2116,8 +2116,8 @@ void Tab::apply_searcher()
 
 void Tab::cache_config_diff(const std::vector<std::string>& selected_options, const DynamicPrintConfig* config/* = nullptr*/)
 {
-    m_cache_options = selected_options;
-    m_cache_config.apply_only(config ? *config : m_presets->get_edited_preset().config, selected_options);
+    m_transfer_cache.options = selected_options;
+    m_transfer_cache.config.apply_only(config ? *config : m_presets->get_edited_preset().config, selected_options);
 }
 
 void Tab::apply_config_from_cache()
@@ -2128,10 +2128,10 @@ void Tab::apply_config_from_cache()
     if (m_type == Preset::TYPE_PRINTER)
         was_applied = static_cast<TabPrinter*>(this)->apply_extruder_cnt_from_cache();
 
-    if (!m_cache_config.empty()) {
-        m_presets->get_edited_preset().config.apply_only(m_cache_config, m_cache_options);
-        m_cache_config.clear();
-        m_cache_options.clear();
+    if (!m_transfer_cache.config.empty()) {
+        m_presets->get_edited_preset().config.apply_only(m_transfer_cache.config, m_transfer_cache.options);
+        m_transfer_cache.config.clear();
+        m_transfer_cache.options.clear();
 
         was_applied = true;
     }
@@ -6373,6 +6373,13 @@ bool Tab::select_preset(
     bool no_transfer = false;
     bool technology_changed = false;
     m_dependent_tabs.clear();
+    std::vector<PresetTransferCache *> transfer_caches{&m_transfer_cache};
+    for (auto type : {Preset::TYPE_PRINT, Preset::TYPE_FILAMENT, Preset::TYPE_SLA_PRINT, Preset::TYPE_SLA_MATERIAL}) {
+        if (Tab *tab = wxGetApp().get_tab(type))
+            transfer_caches.push_back(&tab->m_transfer_cache);
+    }
+    PresetTransferCacheScope transfer_scope(transfer_caches);
+    std::vector<PresetCollection *> dependent_discards;
     if ((m_presets->type() == Preset::TYPE_FILAMENT) && !preset_name.empty())
     {
         Preset *to_be_selected = m_presets->find_preset(preset_name, false, true);
@@ -6417,7 +6424,7 @@ bool Tab::select_preset(
             // The preset will be switched to a different, compatible preset, or the '-- default --'.
             m_dependent_tabs.emplace_back((printer_technology == ptFFF) ? Preset::Type::TYPE_FILAMENT : Preset::Type::TYPE_SLA_MATERIAL);
             if (old_preset_dirty && ! new_preset_compatible)
-                dependent.discard_current_changes();
+                dependent_discards.push_back(&dependent);
         }
         BOOST_LOG_TRIVIAL(info) << boost::format("select process, new_preset_compatible %1%, old_preset_dirty %2%, cancelled %3%")
             %new_preset_compatible %old_preset_dirty % canceled;
@@ -6465,7 +6472,7 @@ bool Tab::select_preset(
                     if (pu.technology == new_printer_technology)
                         m_dependent_tabs.emplace_back(pu.tab_type);
                     if (pu.old_preset_dirty && !pu.new_preset_compatible)
-                        pu.presets->discard_current_changes();
+                        dependent_discards.push_back(pu.presets);
                 }
             }
         }
@@ -6530,6 +6537,10 @@ bool Tab::select_preset(
 
     if (canceled) {
         BOOST_LOG_TRIVIAL(info) << boost::format("canceled delete, update ui...");
+        // Restore before notifying the sidebar; no dependent cache belongs to
+        // this cancelled selection, including a postponed outer-workflow cache.
+        transfer_scope.rollback();
+        m_dependent_tabs.clear();
         restore_previous_physical_printer();
 
         update_tab_ui();
@@ -6538,7 +6549,14 @@ bool Tab::select_preset(
         // if this action was initiated from the plater.
         on_presets_changed();
     } else {
+        // All confirmations succeeded. The existing selection/apply path now
+        // owns these transfers; do not resurrect consumed caches on UI errors.
+        transfer_scope.commit();
         BOOST_LOG_TRIVIAL(info) << boost::format("successfully delete, will update compatibility");
+        // Keep dependent edits until final target validation and any requested
+        // deletion succeed. Explicit saves made in the dialogs remain saved.
+        for (PresetCollection *dependent : dependent_discards)
+            dependent->discard_current_changes();
         if (current_dirty)
             m_presets->discard_current_changes();
 
@@ -7562,7 +7580,7 @@ void TabPrinter::cache_extruder_cnt(const DynamicPrintConfig* config/* = nullptr
 
     // get extruders count
     auto* nozzle_diameter = dynamic_cast<const ConfigOptionFloats*>(cached_config.option("nozzle_diameter"));
-    m_cache_extruder_count = nozzle_diameter->values.size(); //m_extruders_count;
+    m_transfer_cache.extruder_count = nozzle_diameter->values.size(); //m_extruders_count;
 }
 
 bool TabPrinter::apply_extruder_cnt_from_cache()
@@ -7570,9 +7588,9 @@ bool TabPrinter::apply_extruder_cnt_from_cache()
     if (m_presets->get_edited_preset().printer_technology() == ptSLA)
         return false;
 
-    if (m_cache_extruder_count > 0) {
-        m_presets->get_edited_preset().set_num_extruders(m_cache_extruder_count);
-        m_cache_extruder_count = 0;
+    if (m_transfer_cache.extruder_count > 0) {
+        m_presets->get_edited_preset().set_num_extruders(m_transfer_cache.extruder_count);
+        m_transfer_cache.extruder_count = 0;
         return true;
     }
     return false;

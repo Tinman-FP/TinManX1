@@ -36,6 +36,7 @@
 #include "OptionsGroup.hpp"
 #include "libslic3r/Preset.hpp"
 #include "libslic3r/PrinterConnectionUpdate.hpp"
+#include "libslic3r/PresetTransfer.hpp"
 //BBS: GUI refactor
 #include "Notebook.hpp"
 #include "ParamsPanel.hpp"
@@ -279,8 +280,7 @@ protected:
 	}
     m_highlighter;
 
-	DynamicPrintConfig 	m_cache_config;
-    std::vector<std::string> m_cache_options;
+    PresetTransferCache m_transfer_cache;
 
 
 	bool				m_page_switch_running = false;
@@ -623,7 +623,6 @@ public:
 	size_t		m_extruders_count_old = 0;
 	size_t		m_initial_extruders_count;
 	size_t		m_sys_extruders_count;
-	size_t		m_cache_extruder_count = 0;
 	std::vector<std::string> m_extruder_variant_list;
 	std::string m_base_preset_name;
 

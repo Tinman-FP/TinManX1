@@ -6,6 +6,30 @@
 
 namespace Slic3r {
 
+void PresetTransferCache::swap(PresetTransferCache &other) noexcept
+{
+    config.swap(other.config);
+    options.swap(other.options);
+    std::swap(extruder_count, other.extruder_count);
+}
+
+PresetTransferCacheScope::PresetTransferCacheScope(const std::vector<PresetTransferCache *> &caches)
+{
+    m_snapshots.reserve(caches.size());
+    for (auto *cache : caches) {
+        if (cache && std::none_of(m_snapshots.begin(), m_snapshots.end(),
+                                 [cache](const auto &entry) { return entry.first == cache; }))
+            m_snapshots.emplace_back(cache, *cache);
+    }
+}
+
+void PresetTransferCacheScope::rollback() noexcept
+{
+    for (auto &entry : m_snapshots)
+        entry.first->swap(entry.second);
+    m_snapshots.clear();
+}
+
 bool transfer_preset_options(PresetCollection &presets, const std::string &source_name,
                              const std::string &destination_name, std::vector<std::string> options,
                              const std::function<bool(const std::string &)> &select,

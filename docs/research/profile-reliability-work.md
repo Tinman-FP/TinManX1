@@ -737,6 +737,56 @@ multi-dialog printer selection still needs its own lifetime/cancellation audit.
 Actual comparison-dialog and mixed-tool project UI acceptance remains pending
 until the user is present.
 
+## Overnight M4: Cancelled Selection Transfers
+
+Code review of the separate unsaved-changes selection path found that one dialog
+could stage a process transfer, then a later filament dialog could cancel the
+printer switch without removing that pending transfer. A future accepted switch
+could apply the old values. The configuration, selected-option list, and pending
+extruder count now form one cache state. A confirmation scope snapshots existing
+tab caches and restores them on cancellation or an exception during confirmation.
+It preserves transfers deliberately postponed by an outer setup/project workflow
+rather than clearing every cache indiscriminately. Explicit rollback occurs before
+cancelled-selection UI notifications, with no dependent-tab cache application.
+Once confirmations and deletion have succeeded, the existing application path
+owns the caches; the guard does not resurrect them after consumption.
+
+Review also found dependent edited presets were discarded before final target
+validation or a requested deletion could fail. Those discards are now deferred
+until the accepted branch. Explicit successful saves made in earlier dialogs are
+still retained. This is not a whole-bundle selection transaction: a failure during
+the later selection/application phase is not rolled back by this confirmation
+scope, nor are independent asynchronous collection changes made transactional.
+
+Six new native cases exercise cancellation followed by a future application,
+pre-existing mixed-nozzle cache restoration, explicit/idempotent rollback,
+successful commit and consumption, exceptions, nested scopes, and null/duplicate
+tab entries. They pass 41 assertions; combined with the earlier comparison tests,
+20 cases pass 134 assertions. These tests exercise the production cache guard,
+not actual wxWidgets dialogs. The dependent-discard ordering change was reviewed
+and compiled, but requires the same interactive cancellation/target-disappearance
+acceptance checks as the surrounding selector workflow.
+
+Both complete Mac builds passed. Standard offline suites passed: native 280 cases
+/ 241,909 assertions, FFF 48 / 870, offline utilities 20 / 211, SLA 21 / 13,462,
+nesting 14 / 488. Total: 383 cases / 256,940 assertions. Release and FibreSeek
+checks passed, the 936-profile manifest and saved-profile checksums are unchanged,
+and the reference slice still has 167 layers and an estimate of 3h 45m 38s. Its
+G-code differs from M3 only in the two generated timestamp comments.
+
+Revision `v2026.09.06-selection-cancel.1`, package `2026.9.6.4`, updates splash/About
+revision text. The candidate remains staged; `/Applications/TinManX1.app` is not
+replaced. Logs are `/tmp/tinman-transfer-cache-*.log`, with the reference output in
+`/tmp/tinman-transfer-cache-slice/plate_1.gcode`.
+
+Publication is queued to avoid repeatedly cancelling cross-platform builds.
+Before starting the next milestone, check GitHub run `34006710543` for the pushed
+M3 commit `5cb8db1405`. Its helper and shell checks passed, while the full platform
+matrix was still running without failed jobs at the M4 checkpoint. When that run
+finishes, publish the verified local M4 commit to the existing `tinman` branch,
+record its matching CI run and PR verification, and continue the remaining audit.
+Do not claim the staged build is installed or the pending CI is green.
+
 ## Review Conclusions
 
 The useful Prusa 3 ideas were explicit ownership and scope, private candidate

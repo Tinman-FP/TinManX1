@@ -6,6 +6,19 @@
 using namespace Slic3r;
 
 namespace {
+void stage_height(PresetTransferCache &cache, double height)
+{
+    cache.options = {"layer_height"};
+    cache.config.set_key_value("layer_height", new ConfigOptionFloat(height));
+}
+
+void check_cache(const PresetTransferCache &actual, const PresetTransferCache &expected)
+{
+    CHECK(actual.config == expected.config);
+    CHECK(actual.options == expected.options);
+    CHECK(actual.extruder_count == expected.extruder_count);
+}
+
 void configure_transfer(PresetCollection &presets)
 {
     auto config = presets.default_preset().config;
@@ -16,6 +29,119 @@ void configure_transfer(PresetCollection &presets)
     presets.load_preset({}, "Destination", config, false);
     presets.get_edited_preset().config.set_key_value("layer_height", new ConfigOptionFloat(0.18));
 }
+}
+
+TEST_CASE("Cancelling a later confirmation does not leak a queued process transfer", "[TinMan][Preset][TransferCache]")
+{
+    PresetTransferCache process, filament, printer;
+    const PresetTransferCache empty;
+    {
+        PresetTransferCacheScope confirmation({&printer, &process, &filament});
+        stage_height(process, 0.32);
+        printer.extruder_count = 4;
+        // The following filament dialog cancels before the preset switch.
+    }
+    check_cache(process, empty);
+    check_cache(filament, empty);
+    check_cache(printer, empty);
+    DynamicPrintConfig later_process;
+    later_process.set_key_value("layer_height", new ConfigOptionFloat(0.16));
+    later_process.apply_only(process.config, process.options);
+    CHECK(later_process.opt_float("layer_height") == 0.16);
+}
+
+TEST_CASE("Cancelled selection preserves pre-existing postponed transfers", "[TinMan][Preset][TransferCache]")
+{
+    PresetTransferCache process, printer;
+    stage_height(process, 0.24);
+    printer.options = {"nozzle_diameter#1"};
+    printer.config.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.6, 0.4, 0.4, 0.6}));
+    printer.extruder_count = 4;
+    const auto old_process = process, old_printer = printer;
+    {
+        PresetTransferCacheScope confirmation({&process, &printer});
+        stage_height(process, 0.32);
+        printer.config.clear();
+        printer.options.clear();
+        printer.extruder_count = 1;
+        confirmation.rollback();
+        check_cache(process, old_process);
+        check_cache(printer, old_printer);
+        confirmation.rollback();
+        // Repeated rollback and destruction must not swap cancelled values back.
+    }
+    check_cache(process, old_process);
+    check_cache(printer, old_printer);
+}
+
+TEST_CASE("Accepted confirmations retain their transfers and do not resurrect consumed caches", "[TinMan][Preset][TransferCache]")
+{
+    PresetTransferCache process;
+    {
+        PresetTransferCacheScope confirmation({&process});
+        stage_height(process, 0.28);
+        confirmation.commit();
+    }
+    CHECK(process.config.opt_float("layer_height") == 0.28);
+    CHECK(process.options == std::vector<std::string>{"layer_height"});
+    {
+        PresetTransferCacheScope confirmation({&process});
+        confirmation.commit();
+        process.config.clear();
+        process.options.clear();
+    }
+    check_cache(process, PresetTransferCache{});
+}
+
+TEST_CASE("Pending transfer rollback also covers exceptions during confirmation", "[TinMan][Preset][TransferCache]")
+{
+    PresetTransferCache process;
+    stage_height(process, 0.2);
+    const auto before = process;
+    CHECK_THROWS_AS(([&]() {
+        PresetTransferCacheScope confirmation({&process});
+        stage_height(process, 0.4);
+        throw std::runtime_error("confirmation failed");
+    }()), std::runtime_error);
+    check_cache(process, before);
+}
+
+TEST_CASE("Nested pending transfer confirmations restore their own entry state", "[TinMan][Preset][TransferCache]")
+{
+    PresetTransferCache process;
+    stage_height(process, 0.12);
+    const auto initial = process;
+    {
+        PresetTransferCacheScope outer({&process});
+        stage_height(process, 0.2);
+        const auto outer_draft = process;
+        {
+            PresetTransferCacheScope inner({&process});
+            stage_height(process, 0.32);
+        }
+        check_cache(process, outer_draft);
+        {
+            PresetTransferCacheScope inner({&process});
+            stage_height(process, 0.36);
+            inner.commit();
+        }
+        CHECK(process.config.opt_float("layer_height") == 0.36);
+    }
+    check_cache(process, initial);
+}
+
+TEST_CASE("Transfer confirmation accepts absent and repeated tab caches", "[TinMan][Preset][TransferCache]")
+{
+    PresetTransferCache process;
+    stage_height(process, 0.2);
+    const auto initial = process;
+    {
+        PresetTransferCacheScope confirmation({nullptr, &process, &process, nullptr});
+        stage_height(process, 0.32);
+    }
+    check_cache(process, initial);
+    PresetTransferCacheScope no_tabs({});
+    no_tabs.commit();
 }
 
 TEST_CASE("Cancelling a comparison transfer leaves current editor settings intact", "[TinMan][Preset][PresetTransfer]")
