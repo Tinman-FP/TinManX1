@@ -1,17 +1,33 @@
 #include "PrinterWebView.hpp"
 
 #include "I18N.hpp"
+#include "DeviceManager.hpp"
+#include "DeviceCore/DevManager.h"
+#include "MediaPlayCtrl.h"
 #include "PrinterWebViewHandler.hpp"
 #include "slic3r/GUI/PrinterWebView.hpp"
+#include "slic3r/GUI/Widgets/Button.hpp"
 #include "slic3r/GUI/wxExtensions.hpp"
+#include "slic3r/GUI/wxMediaCtrl2.h"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/MainFrame.hpp"
+#include "libslic3r/Preset.hpp"
 #include "libslic3r_version.h"
 
+#include <boost/algorithm/string.hpp>
+#include <boost/asio.hpp>
 #include <boost/filesystem/path.hpp>
+#include <algorithm>
+#include <chrono>
+#include <mutex>
+#include <thread>
+#include <vector>
 #include <wx/sizer.h>
+#include <wx/stattext.h>
 #include <wx/string.h>
+#include <wx/textdlg.h>
 #include <wx/toolbar.h>
+#include <wx/uri.h>
 
 #include <slic3r/GUI/Widgets/WebView.hpp>
 #include <wx/webview.h>
@@ -22,6 +38,159 @@
 
 namespace Slic3r {
 namespace GUI {
+
+namespace {
+
+bool active_printer_is_prusa()
+{
+    if (DeviceManager* device_manager = wxGetApp().getDeviceManager()) {
+        if (MachineObject* machine = device_manager->get_selected_machine()) {
+            const std::string identity = machine->get_dev_name() + " " + machine->printer_type + " " +
+                                         machine->get_dev_id() + " " + machine->get_dev_ip();
+            return boost::algorithm::icontains(identity, "prusa");
+        }
+    }
+
+    if (wxGetApp().preset_bundle == nullptr)
+        return false;
+
+    const Preset& preset = wxGetApp().preset_bundle->printers.get_edited_preset();
+    std::string identity = preset.name;
+    for (const char* key : {"printer_model", "printer_settings_id", "printer_vendor"}) {
+        if (preset.config.has(key))
+            identity += " " + preset.config.opt_string(key);
+    }
+    return boost::algorithm::icontains(identity, "prusa");
+}
+
+std::string host_from_printer_url(std::string url)
+{
+    boost::algorithm::trim(url);
+    const size_t scheme = url.find("://");
+    if (scheme != std::string::npos)
+        url.erase(0, scheme + 3);
+    const size_t slash = url.find('/');
+    if (slash != std::string::npos)
+        url.resize(slash);
+    const size_t at = url.rfind('@');
+    if (at != std::string::npos)
+        url.erase(0, at + 1);
+    if (!url.empty() && url.front() == '[') {
+        const size_t end = url.find(']');
+        return end == std::string::npos ? std::string() : url.substr(1, end - 1);
+    }
+    const size_t port = url.find(':');
+    return port == std::string::npos ? url : url.substr(0, port);
+}
+
+std::string normalized_printer_endpoint(std::string url)
+{
+    boost::algorithm::trim(url);
+    if (url.empty())
+        return {};
+
+    std::string scheme = "http";
+    const size_t scheme_end = url.find("://");
+    if (scheme_end != std::string::npos) {
+        scheme = url.substr(0, scheme_end);
+        url.erase(0, scheme_end + 3);
+    }
+    boost::algorithm::to_lower(scheme);
+
+    const size_t authority_end = url.find_first_of("/?#");
+    if (authority_end != std::string::npos)
+        url.resize(authority_end);
+    const size_t at = url.rfind('@');
+    if (at != std::string::npos)
+        url.erase(0, at + 1);
+    boost::algorithm::to_lower(url);
+
+    // Treat the implicit HTTP port and explicit default ports alike while
+    // preserving non-default ports, which can identify a different service.
+    if ((scheme == "http" && boost::algorithm::iends_with(url, ":80")) ||
+        (scheme == "https" && boost::algorithm::iends_with(url, ":443")))
+        url.erase(url.rfind(':'));
+
+    return url.empty() ? std::string() : scheme + "://" + url;
+}
+
+bool is_legacy_router_path(std::string url)
+{
+    boost::algorithm::trim(url);
+    const size_t scheme_end = url.find("://");
+    const size_t path_start = url.find('/', scheme_end == std::string::npos ? 0 : scheme_end + 3);
+    if (path_start == std::string::npos)
+        return false;
+
+    std::string path = url.substr(path_start);
+    const size_t suffix = path.find_first_of("?#");
+    if (suffix != std::string::npos)
+        path.resize(suffix);
+    boost::algorithm::to_lower(path);
+
+    // These are Netgear/Orbi administration pages, never printer UI routes.
+    // WKWebView can synthesize them on an IP-address origin even after its
+    // network cache and website data have been rebuilt. If allowed, the
+    // navigation suspends all active Mainsail/Moonraker WebSockets.
+    return path == "/top.html" || path == "/accesscontrol_show.htm";
+}
+
+std::string normalize_prusa_camera_url(std::string url)
+{
+    boost::algorithm::trim(url);
+    if (url.empty())
+        return {};
+    if (!boost::algorithm::istarts_with(url, "rtsp://") &&
+        !boost::algorithm::istarts_with(url, "rtsps://"))
+        url = "rtsp://" + url;
+
+    const size_t authority = url.find("://") + 3;
+    if (url.find('/', authority) == std::string::npos)
+        url += "/live";
+    return url;
+}
+
+std::vector<std::string> discover_rtsp_hosts(const std::string& printer_host)
+{
+    boost::system::error_code ec;
+    const auto printer_address = boost::asio::ip::address_v4::from_string(printer_host, ec);
+    if (ec)
+        return {};
+
+    boost::asio::io_context io;
+    std::mutex results_mutex;
+    std::vector<std::string> results;
+    const auto network = printer_address.to_ulong() & 0xffffff00UL;
+
+    for (unsigned int suffix = 1; suffix < 255; ++suffix) {
+        const auto address = boost::asio::ip::address_v4(network | suffix);
+        auto socket = std::make_shared<boost::asio::ip::tcp::socket>(io);
+        auto timer  = std::make_shared<boost::asio::steady_timer>(io);
+        timer->expires_after(std::chrono::milliseconds(1200));
+        timer->async_wait([socket](const boost::system::error_code& timer_error) {
+            if (!timer_error) {
+                boost::system::error_code ignored;
+                socket->cancel(ignored);
+            }
+        });
+        socket->async_connect(boost::asio::ip::tcp::endpoint(address, 554),
+            [socket, timer, address, &results, &results_mutex](const boost::system::error_code& connect_error) {
+                boost::system::error_code ignored;
+                timer->cancel(ignored);
+                socket->close(ignored);
+                if (!connect_error) {
+                    std::lock_guard<std::mutex> lock(results_mutex);
+                    results.push_back(address.to_string());
+                }
+            });
+    }
+
+    io.run();
+    std::sort(results.begin(), results.end());
+    return results;
+}
+
+} // namespace
 
 #ifdef __linux__
 // Workaround for #7210: WebKitGTK crashes on vue-resize's hidden <object> probe used by
@@ -101,14 +270,57 @@ static void inject_vue_resize_workaround(wxWebView *webView)
 PrinterWebView::PrinterWebView(wxWindow *parent)
         : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize)
     , m_browser(nullptr)
+    , m_prusa_camera_panel(nullptr)
+    , m_prusa_camera_media(nullptr)
+    , m_prusa_camera_player(nullptr)
+    , m_prusa_camera_refresh(nullptr)
+    , m_prusa_camera_settings(nullptr)
     , m_zoomFactor(100)
     , m_apikey()
     , m_apikey_sent(false)
     , m_url_deferred()
+    , m_requested_endpoint()
     , m_handler(std::make_unique<PrinterWebViewHandler>(*this))
+    , m_prusa_camera_token(std::make_shared<int>(0))
+    , m_prusa_camera_generation(0)
  {
 
     wxBoxSizer* topsizer = new wxBoxSizer(wxVERTICAL);
+
+    m_prusa_camera_panel = new wxPanel(this);
+    m_prusa_camera_panel->SetBackgroundColour(*wxBLACK);
+    wxBoxSizer* camera_sizer = new wxBoxSizer(wxVERTICAL);
+    wxPanel* camera_header = new wxPanel(m_prusa_camera_panel);
+    camera_header->SetBackgroundColour(*wxWHITE);
+    wxBoxSizer* camera_header_sizer = new wxBoxSizer(wxHORIZONTAL);
+    wxStaticText* camera_title = new wxStaticText(camera_header, wxID_ANY, _L("CORE One L Camera"));
+    camera_title->SetFont(wxGetApp().bold_font());
+    m_prusa_camera_refresh = new Button(camera_header, "", "refresh", wxBORDER_NONE, 16);
+    m_prusa_camera_refresh->SetToolTip(_L("Find camera"));
+    m_prusa_camera_settings = new Button(camera_header, "", "settings", wxBORDER_NONE, 16);
+    m_prusa_camera_settings->SetToolTip(_L("Camera address"));
+    camera_header_sizer->Add(camera_title, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(12));
+    camera_header_sizer->AddStretchSpacer();
+    camera_header_sizer->Add(m_prusa_camera_refresh, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
+    camera_header_sizer->Add(m_prusa_camera_settings, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+    camera_header->SetSizer(camera_header_sizer);
+
+    m_prusa_camera_media = new wxMediaCtrl2(m_prusa_camera_panel);
+    m_prusa_camera_media->SetMinSize(wxSize(-1, FromDIP(260)));
+    m_prusa_camera_player = new MediaPlayCtrl(m_prusa_camera_panel, m_prusa_camera_media,
+                                               wxDefaultPosition, wxSize(-1, FromDIP(40)));
+    camera_sizer->Add(camera_header, 0, wxEXPAND);
+    camera_sizer->Add(m_prusa_camera_media, 1, wxEXPAND);
+    camera_sizer->Add(m_prusa_camera_player, 0, wxEXPAND);
+    m_prusa_camera_panel->SetSizer(camera_sizer);
+    m_prusa_camera_panel->Hide();
+
+    m_prusa_camera_refresh->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](wxCommandEvent&) {
+        start_prusa_camera_discovery();
+    });
+    m_prusa_camera_settings->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](wxCommandEvent&) {
+        prompt_for_prusa_camera_url();
+    });
 
       // Create the webview
     m_browser = WebView::CreateWebView(this, "");
@@ -128,12 +340,14 @@ PrinterWebView::PrinterWebView(wxWindow *parent)
 #endif
 
     m_browser->Bind(wxEVT_WEBVIEW_ERROR, &PrinterWebView::OnError, this);
+    m_browser->Bind(wxEVT_WEBVIEW_NAVIGATING, &PrinterWebView::OnNavigating, this);
     m_browser->Bind(wxEVT_WEBVIEW_LOADED, &PrinterWebView::OnLoaded, this);
     m_browser->Bind(wxEVT_WEBVIEW_NEWWINDOW, &PrinterWebView::OnNewWindow, this);
     m_browser->Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, &PrinterWebView::OnScriptMessage, this);
 
     SetSizer(topsizer);
 
+    topsizer->Add(m_prusa_camera_panel, 0, wxEXPAND);
     topsizer->Add(m_browser, wxSizerFlags().Expand().Proportion(1));
 
     update_mode();
@@ -157,6 +371,7 @@ PrinterWebView::~PrinterWebView()
 {
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Start";
     SetEvtHandlerEnabled(false);
+    m_prusa_camera_token.reset();
     m_handler.reset();
 
     // Destroy the webview
@@ -175,10 +390,43 @@ void PrinterWebView::load_url(wxString& url, wxString apikey)
 //    this->Raise();
     if (m_browser == nullptr)
         return;
+
+    // Separate machine and status event paths may express the same address
+    // with a scheme, trailing slash, or API key. Reloading for those duplicate
+    // requests creates overlapping WebKit/Moonraker WebSockets and makes the
+    // Device tab appear to reconnect continuously.
+    const std::string endpoint = normalized_printer_endpoint(into_u8(url));
+    if (!endpoint.empty() && endpoint == m_requested_endpoint) {
+        // An empty credential on a duplicate event must not erase one already
+        // installed. If a real credential arrives later, install it once and
+        // perform the single reload required for WebView user scripts.
+        const bool credential_changed = !apikey.IsEmpty() && apikey != m_apikey;
+        if (credential_changed) {
+            m_apikey = apikey;
+            m_apikey_sent = false;
+            SendAPIKey();
+            if (IsShown())
+                m_browser->Reload();
+        }
+        BOOST_LOG_TRIVIAL(info) << "PrinterWebView ignored duplicate endpoint " << endpoint
+                                << " (credential update=" << credential_changed << ")";
+        return;
+    }
+
+    BOOST_LOG_TRIVIAL(info) << "PrinterWebView loading endpoint " << endpoint
+                            << " (credential present=" << !apikey.IsEmpty() << ")";
+
+    m_requested_endpoint = endpoint;
     m_apikey = apikey;
     m_apikey_sent = false;
     m_handler = create_printer_webview_handler(*this);
     m_url_deferred = url;
+    update_prusa_camera(url);
+
+    // Install request credentials before the first navigation. Installing the
+    // user script from OnLoaded() requires another full WebView reload, which
+    // suspends the live Mainsail WebSockets and briefly empties the dashboard.
+    SendAPIKey();
 
     if (this->IsShown()) {
         m_browser->LoadURL(url);
@@ -188,8 +436,97 @@ void PrinterWebView::load_url(wxString& url, wxString apikey)
     UpdateState();
 }
 
+void PrinterWebView::update_prusa_camera(const wxString& printer_url)
+{
+    m_prusa_printer_host = host_from_printer_url(into_u8(printer_url));
+    const std::string saved_url = wxGetApp().app_config->get("prusa_camera", m_prusa_printer_host);
+    const bool is_prusa = active_printer_is_prusa() || !saved_url.empty();
+    m_prusa_camera_panel->Show(is_prusa);
+    if (!is_prusa) {
+        ++m_prusa_camera_generation;
+        m_prusa_camera_player->SetDirectStreamURL({}, {}, {});
+        Layout();
+        return;
+    }
+
+    if (!saved_url.empty())
+        set_prusa_camera_url(saved_url, false);
+    else
+        start_prusa_camera_discovery();
+    Layout();
+}
+
+void PrinterWebView::set_prusa_camera_url(const std::string& camera_url, bool persist)
+{
+    const std::string normalized = normalize_prusa_camera_url(camera_url);
+    m_prusa_camera_url = normalized;
+    if (persist && !m_prusa_printer_host.empty()) {
+        wxGetApp().app_config->set("prusa_camera", m_prusa_printer_host, normalized);
+        wxGetApp().app_config->save();
+    }
+
+    const std::string identity = "prusa-camera:" + m_prusa_printer_host;
+    m_prusa_camera_player->SetDirectStreamURL(normalized, identity,
+        normalized.empty() ? _L("Enable Local RTSP in Prusa App, then refresh.") : wxString());
+}
+
+void PrinterWebView::start_prusa_camera_discovery()
+{
+    if (m_prusa_printer_host.empty()) {
+        set_prusa_camera_url({}, false);
+        return;
+    }
+
+    const std::uint64_t generation = ++m_prusa_camera_generation;
+    const std::string printer_host = m_prusa_printer_host;
+    const std::weak_ptr<int> token = m_prusa_camera_token;
+    m_prusa_camera_player->SetDirectStreamURL({}, "prusa-camera:" + printer_host,
+                                               _L("Searching for Buddy3D camera..."));
+
+    std::thread([this, token, generation, printer_host] {
+        const std::vector<std::string> hosts = discover_rtsp_hosts(printer_host);
+        if (token.expired())
+            return;
+        wxGetApp().CallAfter([this, token, generation, hosts] {
+            if (token.expired() || generation != m_prusa_camera_generation)
+                return;
+            if (hosts.size() == 1) {
+                set_prusa_camera_url("rtsp://" + hosts.front() + "/live", true);
+            } else if (hosts.empty()) {
+                m_prusa_camera_player->SetDirectStreamURL({}, "prusa-camera:" + m_prusa_printer_host,
+                    _L("Buddy3D stream not found. Enable Local RTSP in Prusa App, then refresh."));
+            } else {
+                m_prusa_camera_player->SetDirectStreamURL({}, "prusa-camera:" + m_prusa_printer_host,
+                    _L("Multiple camera streams found. Set the Buddy3D camera address."));
+            }
+        });
+    }).detach();
+}
+
+void PrinterWebView::prompt_for_prusa_camera_url()
+{
+    wxTextEntryDialog dialog(this,
+        _L("Enter the Buddy3D Local RTSP address or camera IP address."),
+        _L("CORE One L Camera"), from_u8(m_prusa_camera_url));
+    if (dialog.ShowModal() != wxID_OK)
+        return;
+
+    const std::string normalized = normalize_prusa_camera_url(into_u8(dialog.GetValue()));
+    if (!normalized.empty() && !boost::algorithm::istarts_with(normalized, "rtsp://") &&
+        !boost::algorithm::istarts_with(normalized, "rtsps://")) {
+        wxMessageBox(_L("Enter an RTSP address or camera IP address."), _L("CORE One L Camera"),
+                     wxOK | wxICON_WARNING, this);
+        return;
+    }
+    ++m_prusa_camera_generation;
+    set_prusa_camera_url(normalized, true);
+}
+
 bool PrinterWebView::Show(bool show)
 {
+    BOOST_LOG_TRIVIAL(info) << "PrinterWebView::Show(" << show << ")"
+                            << " deferred=" << !m_url_deferred.empty()
+                            << " previously_shown=" << IsShown();
     if (show && !m_url_deferred.empty()) {
         wxString url = m_url_deferred;
         m_url_deferred.clear();
@@ -200,6 +537,7 @@ bool PrinterWebView::Show(bool show)
 
 void PrinterWebView::reload()
 {
+    BOOST_LOG_TRIVIAL(info) << "PrinterWebView::reload explicit reload";
     m_browser->Reload();
 }
 
@@ -224,10 +562,12 @@ void PrinterWebView::OnClose(wxCloseEvent& evt)
 
 void PrinterWebView::SendAPIKey()
 {
-    if (m_apikey_sent || m_apikey.IsEmpty())
+    if (m_apikey_sent)
         return;
     m_apikey_sent   = true;
-    wxString script = wxString::Format(R"(
+    wxString script;
+    if (!m_apikey.IsEmpty()) {
+        script = wxString::Format(R"(
     // Check if window.fetch exists before overriding
     if (window.fetch) {
         const originalFetch = window.fetch;
@@ -238,21 +578,25 @@ void PrinterWebView::SendAPIKey()
         };
     }
 )",
-                                       m_apikey);
+                                  m_apikey);
+    }
     m_browser->RemoveAllUserScripts();
     
     // RemoveAllUserScripts causes WebView to forget about our script message handler, 
     // so re-add it here.
     m_browser->RemoveScriptMessageHandler("wx");
-    m_browser->AddScriptMessageHandler("wx");
+    if (m_browser->AddScriptMessageHandler("wx"))
+        WebView::MarkScriptMessageHandlerAdded(m_browser);
+    else
+        wxLogError("Could not add script message handler");
 
 #ifdef __linux__
     // Re-inject the vue-resize/WebKitGTK workaround that RemoveAllUserScripts just cleared.
     inject_vue_resize_workaround(m_browser);
 #endif
 
-    m_browser->AddUserScript(script);
-    m_browser->Reload();
+    if (!script.IsEmpty())
+        m_browser->AddUserScript(script);
 }
 
 void PrinterWebView::OnError(wxWebViewEvent &evt)
@@ -287,10 +631,23 @@ void PrinterWebView::OnError(wxWebViewEvent &evt)
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": error loading page %1% %2% %3% %4%") %evt.GetURL() %evt.GetTarget() %e %evt.GetString();
 }
 
+void PrinterWebView::OnNavigating(wxWebViewEvent& evt)
+{
+    const std::string url = into_u8(evt.GetURL());
+    if (!m_requested_endpoint.empty() &&
+        normalized_printer_endpoint(url) == m_requested_endpoint &&
+        is_legacy_router_path(url)) {
+        BOOST_LOG_TRIVIAL(warning) << "PrinterWebView blocked invalid legacy-router navigation " << url
+                                   << " target=" << into_u8(evt.GetTarget());
+        evt.Veto();
+    }
+}
+
 void PrinterWebView::OnLoaded(wxWebViewEvent& evt)
 {
     if (evt.GetURL().IsEmpty())
         return;
+    BOOST_LOG_TRIVIAL(info) << "PrinterWebView::OnLoaded " << into_u8(evt.GetURL());
     //ORCA: url loaded successfully, safe to clear
     m_url_deferred.clear();
     SendAPIKey();

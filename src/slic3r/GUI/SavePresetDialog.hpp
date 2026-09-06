@@ -4,6 +4,7 @@
 //#include <wx/gdicmn.h>
 
 #include "libslic3r/Preset.hpp"
+#include "libslic3r/PrinterConnectionUpdate.hpp"
 #include "wxExtensions.hpp"
 #include "GUI_Utils.hpp"
 #include "Widgets/RadioGroup.hpp"
@@ -47,7 +48,6 @@ class SavePresetDialog : public DPIDialog
         Item(Preset::Type type, const std::string& suffix, wxBoxSizer* sizer, SavePresetDialog* parent);
 
         void            update_valid_bmp();
-        void accept();
         virtual void DoSetSize(int x, int y, int width, int height, int sizeFlags = wxSIZE_AUTO);
 
         bool            is_valid()      const { return m_valid_type != NoValid; }
@@ -101,7 +101,8 @@ public:
     std::string get_name();
     std::string get_name(Preset::Type type);
     void input_name_from_other(std::string new_preset_name);
-    void confirm_from_other();
+    bool confirm_from_other();
+    PendingPhysicalPrinterUpdate pending_physical_printer_update(const std::string &preset_name) const;
 
     bool enable_ok_btn() const;
     void add_info_for_edit_ph_printer(wxBoxSizer *sizer);
@@ -119,7 +120,6 @@ protected:
 private:
     void build(std::vector<Preset::Type> types, std::string suffix = "");
     void on_select_cancel(wxCommandEvent &event);
-    void update_physical_printers(const std::string &preset_name);
     void accept(wxCommandEvent &event);
 };
 

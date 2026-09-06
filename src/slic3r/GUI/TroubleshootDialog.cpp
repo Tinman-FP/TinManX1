@@ -1,5 +1,6 @@
 #include "TroubleshootDialog.hpp"
 #include "I18N.hpp"
+#include "TinManBuildInfo.hpp"
 
 #include "GUI.hpp"
 #include "GUI_App.hpp"
@@ -139,7 +140,7 @@ TroubleshootDialog::TroubleshootDialog()
 
     auto build = new Button(this, wxString(GIT_COMMIT_HASH));
     build->SetStyle(ButtonStyle::Regular, ButtonType::Window);
-    auto hash_url = "https://github.com/OrcaSlicer/OrcaSlicer/commit/" + wxString(GIT_COMMIT_HASH);
+    auto hash_url = "https://github.com/Tinman-FP/TinManX1/commit/" + wxString(GIT_COMMIT_HASH);
     build->SetToolTip(hash_url);
     build->Bind(wxEVT_BUTTON, [hash_url](wxCommandEvent &e) {
          wxLaunchDefaultBrowser(hash_url);

@@ -15,7 +15,7 @@ This repository preserves source credit for the TinManX1 public patch release. I
 | --- | --- | --- |
 | OrcaSlicer / SoftFever and contributors | <https://github.com/OrcaSlicer/OrcaSlicer> | Primary upstream application and source baseline for this patchset. Preserve AGPL license, upstream notices, and contributor credit. |
 | Bambu Studio / Bambu Lab contributors | <https://github.com/bambulab/BambuStudio> | Upstream family member and connectivity behavior reference. Proprietary plugin binaries are not redistributed here. |
-| PrusaSlicer / Prusa Research contributors | <https://github.com/prusa3d/PrusaSlicer> | Upstream slicer family lineage and behavior reference. |
+| PrusaSlicer / Prusa Research contributors | <https://github.com/prusa3d/PrusaSlicer> | Upstream slicer family lineage and behavior reference. PrusaSlicer 3.0.0-alpha11 also informed profile ownership, derived-state handling, and optional layer-height inheritance; see `docs/research/profile-reliability-work.md`. TinManX1 remains OrcaSlicer-based, not a full PrusaSlicer 3 rebase. |
 | Slic3r contributors | <https://github.com/slic3r/Slic3r> | Original slicer lineage behind PrusaSlicer-derived slicers. |
 
 ## Wave Overhangs
@@ -52,6 +52,15 @@ This repository preserves source credit for the TinManX1 public patch release. I
 | Autodesk Fusion documentation | <https://www.autodesk.com/products/fusion-360/overview> | Visual-language reference for simulation-style interpretation. Codex Strength Lens is not Fusion FEA. |
 | MechaniCalc | <https://mechanicalc.com/reference/strength-of-materials> | Mechanics vocabulary and load-path reference. |
 | Rocket/FibreSeek local reference work | Proprietary/local reference only | Used as private interoperability and planning context for command sequencing, profile comparison, and hardware constraints. No proprietary Rocket/FibreSeek assets, binaries, database exports, UI text, or private validation data are redistributed here. |
+
+## Machine Capability Envelopes
+
+| Source | URL | Credit |
+| --- | --- | --- |
+| Anonoei, Klipper Auto Speed | <https://github.com/Anonoei/klipper_auto_speed> | MIT-licensed missed-step search concept and research reference. TinManX1 does not vendor or copy its source code. |
+| Klipper documentation | <https://www.klipper3d.org/Resonance_Compensation.html> | Motion-limit, resonance-compensation, and input-shaper quality guidance. |
+| Andrew Ellis, Print Tuning Guide | <https://ellis3dp.com/Print-Tuning-Guide/articles/determining_max_speeds_accels.html> | Validation-duration, practical-limit, and safety-margin methodology. |
+| Frix-x, Shake&Tune | <https://github.com/Frix-x/klippain-shaketune> | GPL-3.0 vibration-profile methodology used as a research reference; no Shake&Tune source code is vendored. |
 
 ## TinManX1 FibreSeek Planner And Profile Work
 

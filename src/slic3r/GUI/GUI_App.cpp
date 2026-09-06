@@ -8,6 +8,7 @@
 #include "slic3r/GUI/TaskManager.hpp"
 #include "format.hpp"
 #include "libslic3r_version.h"
+#include "TinManBuildInfo.hpp"
 #include "Downloader.hpp"
 #include <boost/chrono/duration.hpp>
 #include <boost/log/detail/native_typeof.hpp>
@@ -72,6 +73,7 @@
 #include "libslic3r/Model.hpp"
 #include "libslic3r/I18N.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/TinManMachineProfileContract.hpp"
 #include "libslic3r/Thread.hpp"
 #include "libslic3r/miniz_extension.hpp"
 #include "libslic3r/Utils.hpp"
@@ -111,6 +113,7 @@
 #include "SavePresetDialog.hpp"
 #include "PrintHostDialogs.hpp"
 #include "NetworkPluginDialog.hpp"
+#include "Printer/BambuSourceLibrary.hpp"
 #include "DesktopIntegrationDialog.hpp"
 #include "SendSystemInfoDialog.hpp"
 #include "ParamsDialog.hpp"
@@ -184,12 +187,6 @@ typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS2)(
 
 using namespace std::literals;
 namespace pt = boost::property_tree;
-
-struct StaticBambuLib
-{
-    static void reset();
-    static void release();
-};
 
 namespace Slic3r {
 namespace GUI {
@@ -349,8 +346,13 @@ public:
         rc.height = dc.GetTextExtent(m_text_revision).GetHeight();
         dc.DrawLabel(m_text_revision, rc, wxALIGN_CENTER);
 
+        dc.SetFont(m_font_credit);
+        rc.y      = c_sz.GetHeight() * 0.79;
+        rc.height = dc.GetMultiLineTextExtent(m_text_prusa_credit).GetHeight();
+        dc.DrawLabel(m_text_prusa_credit, rc, wxALIGN_CENTER);
+
         dc.SetFont(m_font_action);
-        rc.y      = c_sz.GetHeight() * 0.86;
+        rc.y      = c_sz.GetHeight() * 0.90;
         rc.height = dc.GetTextExtent(m_text_action).GetHeight();
         dc.DrawLabel(m_text_action, rc, wxALIGN_CENTER);
     }
@@ -404,11 +406,13 @@ private:
     wxString m_text_title   = _L("TinManX1");
     wxString m_text_version = _L("Based on Orca Slicer Version ") + wxString::FromUTF8(GUI_App::format_display_version().c_str());
     wxString m_text_revision = _L("TinManX1 Revision ") + wxString::FromUTF8(TINMANX1_REVISION);
+    wxString m_text_prusa_credit = _L("Includes improvements inspired by") + "\nPrusaSlicer 3.0.0-alpha11";
     wxString m_text_action  = _L("Loading configuration") + dots;
 
     wxFont m_font_title   = Label::Head_24;
     wxFont m_font_version = Label::Body_16;
     wxFont m_font_revision = Label::Body_14;
+    wxFont m_font_credit   = Label::Body_12;
     wxFont m_font_action  = Label::Body_16;
 };
 
@@ -1073,6 +1077,16 @@ void GUI_App::shutdown()
 {
     BOOST_LOG_TRIVIAL(info) << "GUI_App::shutdown enter";
 
+    if (m_is_recreating_gui)
+        return;
+
+    bool expected = false;
+    if (!m_shutdown_started.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+        BOOST_LOG_TRIVIAL(info) << "GUI_App::shutdown already complete";
+        return;
+    }
+    m_is_closing.store(true, std::memory_order_release);
+
 	if (m_removable_drive_manager) {
 		removable_drive_manager()->shutdown();
 	}
@@ -1084,9 +1098,50 @@ void GUI_App::shutdown()
         login_dlg = nullptr;
     }
 
-    if (m_is_recreating_gui) return;
     stop_http_server();
-    set_closing(true);
+    stop_bambu_file_systems();
+
+    // TaskManager owns both a scheduler and per-print worker threads that call
+    // through NetworkAgent. They must be joined before the wrapper or the
+    // proprietary agent is destroyed.
+    if (m_task_manager) {
+        m_task_manager->stop();
+        delete m_task_manager;
+        m_task_manager = nullptr;
+    }
+
+    // MainFrame owns preset bundles that may still be referenced by queued network
+    // callbacks. Stop every network producer before wxWidgets destroys the frame.
+    // Waiting until OnExit is too late on macOS: the Bambu plug-in can otherwise
+    // fault on a worker thread while MainFrame members are being released.
+    if (m_agent) {
+        m_agent->set_on_ssdp_msg_fn(nullptr);
+        m_agent->set_on_printer_connected_fn(nullptr);
+        m_agent->set_on_server_connected_fn(nullptr);
+        m_agent->set_on_http_error_fn(nullptr);
+        m_agent->set_on_subscribe_failure_fn(nullptr);
+        m_agent->set_on_message_fn(nullptr);
+        m_agent->set_on_user_message_fn(nullptr);
+        m_agent->set_on_local_connect_fn(nullptr);
+        m_agent->set_on_local_message_fn(nullptr);
+        m_agent->set_queue_on_main_fn(nullptr);
+        m_agent->start_discovery(false, false);
+        m_agent->disconnect_printer();
+    }
+
+    NetworkAgentFactory::clear_printer_agent_cache();
+
+    if (m_agent) {
+        delete m_agent;
+        m_agent = nullptr;
+    }
+
+    // NetworkAgent wrappers do not own the proprietary agent. Stop it here so
+    // no plug-in callback can outlive MainFrame, while keeping module handles
+    // valid for the remaining UI/source-library destructors.
+    BBLNetworkPlugin::instance().destroy_agent();
+    BBLNetworkPlugin::shutdown();
+    BBLNetworkPlugin::prepare_for_process_exit();
     BOOST_LOG_TRIVIAL(info) << "GUI_App::shutdown exit";
 }
 
@@ -1594,7 +1649,7 @@ void GUI_App::restart_networking()
 {
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(" enter, mainframe %1%")%mainframe;
     on_init_network(true);
-    StaticBambuLib::reset();
+    refresh_bambu_source_library();
     if(m_agent) {
         init_networking_callbacks();
         m_agent->set_on_ssdp_msg_fn(
@@ -2081,11 +2136,19 @@ void GUI_App::init_networking_callbacks()
                                 obj->command_get_version();
                                 event.SetInt(0);
                                 event.SetString(obj->get_dev_id());
+                                obj->set_lan_mode_connection_state(false);
                             } else if (state == ConnectStatus::ConnectStatusFailed) {
+                                obj->set_lan_mode_connection_state(false);
                                 // Orca: only update status if same device id
                                 if (m_device_manager->selected_machine != dev_id) return;
 
-                                m_device_manager->set_selected_machine("");
+                                // The networking plug-in has already failed and is
+                                // tearing this session down. Calling disconnect here
+                                // races its MQTT keepalive worker with client removal.
+                                // Keep the selection so the UI shows the disconnected
+                                // printer and a later explicit retry can reconnect it.
+                                BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: connection failed for selected device "
+                                                        << dev_id << ", preserving selection";
                                 wxString text;
                                 if (msg == "5") {
                                     obj->set_access_code("");
@@ -2098,15 +2161,30 @@ void GUI_App::init_networking_callbacks()
                                 }
                                 event.SetInt(-1);
                             } else if (state == ConnectStatus::ConnectStatusLost) {
-                                m_device_manager->set_selected_machine("");
+                                if (m_device_manager->selected_machine != dev_id) {
+                                    BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: ignoring lost event from non-selected device " << dev_id;
+                                    return;
+                                }
+                                // disconnect_printer() reports Lost asynchronously. When a
+                                // replacement connection is already in flight, clearing the
+                                // selection here disconnects that new session as well. Keep a
+                                // brief guard after ConnectStatusOk because the old session's
+                                // queued Lost callback can arrive after the new Ok callback.
+                                if (obj->get_lan_mode_connection_state()) {
+                                    BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: ignoring stale lost event during LAN reconnect";
+                                    return;
+                                }
                                 event.SetInt(-1);
-                                BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: state = lost";
+                                // Lost is emitted after the plug-in has begun its own
+                                // teardown. Preserve the selection and never issue a
+                                // second disconnect from inside that callback.
+                                BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: state = lost for selected device "
+                                                        << dev_id << ", preserving selection";
                             } else {
+                                obj->set_lan_mode_connection_state(false);
                                 event.SetInt(-1);
                                 BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: state = " << state;
                             }
-
-                            obj->set_lan_mode_connection_state(false);
                         }
                         else {
                             if (state == ConnectStatus::ConnectStatusOk) {
@@ -2215,6 +2293,19 @@ void GUI_App::init_networking_callbacks()
 GUI_App::~GUI_App()
 {
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": enter");
+
+    // OnExit normally performs this work. Keep the destructor independently
+    // safe for partial initialization and framework-driven teardown paths.
+    shutdown();
+
+    stop_bambu_file_systems();
+    if (!wait_for_bambu_file_systems(std::chrono::seconds(5)))
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": timed out waiting for Bambu file-system workers";
+
+    release_bambu_source_library();
+    BBLNetworkPlugin::shutdown();
+    BBLNetworkPlugin::prepare_for_process_exit();
+
     if (app_config != nullptr) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy app_config");
         delete app_config;
@@ -2229,10 +2320,6 @@ GUI_App::~GUI_App()
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": destroy preset updater");
         delete preset_updater;
     }
-
-    StaticBambuLib::release();
-    BBLNetworkPlugin::shutdown();
-
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": exit");
 }
@@ -2386,11 +2473,9 @@ void GUI_App::init_webview_runtime()
 
 void GUI_App::init_app_config()
 {
-	// Profiles for the alpha are stored into the PrusaSlicer-alpha directory to not mix with the current release.
+    // Keep the compatibility key for existing settings, but brand native menus separately.
     SetAppName(SLIC3R_APP_KEY);
-//	SetAppName(SLIC3R_APP_KEY "-alpha");
-//  SetAppName(SLIC3R_APP_KEY "-beta");
-//	SetAppDisplayName(SLIC3R_APP_NAME);
+    SetAppDisplayName(SLIC3R_APP_NAME);
 
 	// Set the Slic3r data directory at the Slic3r XS module.
 	// Unix: ~/ .Slic3r
@@ -2575,6 +2660,9 @@ bool GUI_App::OnInit()
 
 int GUI_App::OnExit()
 {
+    // MainFrame normally calls shutdown first. Keep alternate/partial startup
+    // exits in the same ordered lifecycle before deleting manager wrappers.
+    shutdown();
     stop_http_server();
     stop_sync_user_preset();
 
@@ -3543,12 +3631,16 @@ unsigned GUI_App::get_colour_approx_luma(const wxColour &colour)
         ));
 }
 
-void GUI_App::switch_printer_agent()
+void GUI_App::switch_printer_agent(bool refresh_machine)
 {
     if (!m_agent) {
         BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": no agent exists";
         return;
     }
+
+    Preset &edited_printer = preset_bundle->printers.get_edited_preset();
+    if (app_config != nullptr)
+        tinmanx_restore_machine_connection(*app_config, edited_printer.name, edited_printer.config);
 
     // Read printer_agent from config, falling back to default
     std::string effective_agent_id = ORCA_PRINTER_AGENT_ID;
@@ -3557,14 +3649,17 @@ void GUI_App::switch_printer_agent()
         effective_agent_id = BBL_PRINTER_AGENT_ID;
         cloud_agent_id = BBL_CLOUD_PROVIDER;
     } else {
-        const DynamicPrintConfig& config = preset_bundle->printers.get_edited_preset().config;
-        if (config.has("printer_agent")) {
+        const DynamicPrintConfig& config = edited_printer.config;
+        const std::string model = config.has("printer_model") ? config.opt_string("printer_model") : std::string();
+        const std::string expected_agent = tinmanx_expected_printer_agent(edited_printer.name, model);
+        if (!expected_agent.empty()) {
+            effective_agent_id = expected_agent;
+        } else if (config.has("printer_agent")) {
             const std::string& value = config.option<ConfigOptionString>("printer_agent")->value;
             if (!value.empty())
                 effective_agent_id = value;
         }
         if (effective_agent_id == ORCA_PRINTER_AGENT_ID) {
-            const std::string model = config.has("printer_model") ? config.opt_string("printer_model") : std::string();
             const std::string name  = config.has("printer_settings_id") ? config.opt_string("printer_settings_id") : std::string();
             const std::string key   = model + " " + name;
             if (boost::algorithm::icontains(key, "qidi"))
@@ -3610,16 +3705,28 @@ void GUI_App::switch_printer_agent()
 
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": printer agent switched to " << effective_agent_id;
 
-        // Auto-switch MachineObject
-        select_machine(effective_agent_id);
     }
+
+    // A connection dialog may update the host without changing the agent type.
+    // Refresh explicitly so the saved address is selected and connected now.
+    if (refresh_machine || current_agent_id != effective_agent_id)
+        select_machine(effective_agent_id);
 }
 
 void GUI_App::select_machine(const std::string& agent_id)
 {
-    // Skip for BBL agent for now - uses its own device discovery/selection
-    // Orca todo: revisit in future if we want to support auto-switching for BBL printers
+    // Saved Bambu LAN machines are selected before the profile-specific agent
+    // swap during startup. Reconnect the selected machine after that swap so
+    // the first connection is made by the Bambu agent rather than the previous
+    // printer agent.
     if (agent_id == BBL_PRINTER_AGENT_ID) {
+        if (m_device_manager) {
+            MachineObject *selected = m_device_manager->get_selected_machine();
+            if (selected != nullptr && selected->is_lan_mode_printer()) {
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": reconnecting selected Bambu LAN machine after agent switch";
+                m_device_manager->set_selected_machine(selected->get_dev_id());
+            }
+        }
         return;
     }
 
@@ -6085,16 +6192,28 @@ void GUI_App::reload_settings()
 {
     if (preset_bundle && m_agent) {
         // Load user's personal presets
+        const auto source_agent = m_agent->get_cloud_agent();
+        if (!source_agent)
+            return;
+        const auto requested_session = source_agent->get_profile_session();
+        if (!requested_session.logged_in || requested_session.user_id.empty())
+            return;
         std::map<std::string, std::map<std::string, std::string>> user_presets;
-        int result = m_agent->get_user_presets(&user_presets);
+        int result = source_agent->get_user_presets(&user_presets);
         if (result != 0) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": get_user_presets failed with code " << result << ", skipping sync";
             return;
         }
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " cloud user preset number is: " << user_presets.size();
-        auto refresh_synced_ui = [this, user_presets = std::move(user_presets)]() mutable {
-            if (is_closing() || !preset_bundle || !app_config || !mainframe)
+        auto refresh_synced_ui = [this, source_agent, requested_session, user_presets = std::move(user_presets)]() mutable {
+            if (is_closing() || !preset_bundle || !app_config || !mainframe || !m_agent)
                 return;
+            if (m_agent->get_cloud_agent() != source_agent ||
+                !requested_session.matches(source_agent->get_profile_session()) ||
+                app_config->get("preset_folder") != requested_session.user_id) {
+                BOOST_LOG_TRIVIAL(info) << "Discarding profile refresh from an inactive account session.";
+                return;
+            }
 
             // Snapshot each collection's edited config BEFORE any mutation.
             // load_pending_vendors() via apply_vendor_config() can call select_preset(0)
@@ -6102,24 +6221,30 @@ void GUI_App::reload_settings()
             // The cloud load_user_presets() can also trigger select_preset() via
             // remove_users_preset() and overwrite m_edited_preset.config via load_user_preset().
             struct PresetSnapshot { std::string name; DynamicPrintConfig config; bool dirty; };
-            auto snapshot_collection = [](const PresetCollection& col) -> PresetSnapshot {
+            auto snapshot_collection = [](PresetCollection& col) -> PresetSnapshot {
+                col.update_dirty();
                 auto& sel = col.get_selected_preset();
                 auto& ed  = col.get_edited_preset();
-                return {sel.name, ed.config, sel.is_dirty};
+                return {sel.name, ed.config, col.current_is_dirty()};
             };
             PresetSnapshot print_snap    = snapshot_collection(preset_bundle->prints);
             PresetSnapshot filament_snap = snapshot_collection(preset_bundle->filaments);
             PresetSnapshot printer_snap  = snapshot_collection(preset_bundle->printers);
 
-            // Check the user presets for any system vendors that need to be installed
-            for (auto data : user_presets) {
-                if (!check_preset_parent_available(data))
-                    add_pending_vendor_preset(data);
+            std::string sync_error;
+            try {
+                // Check for system vendors required by the incoming profiles.
+                for (const auto &data : user_presets) {
+                    if (!check_preset_parent_available(data))
+                        add_pending_vendor_preset(data);
+                }
+                load_pending_vendors();
+                preset_bundle->load_user_presets(*app_config, user_presets, ForwardCompatibilitySubstitutionRule::Enable);
+                preset_bundle->save_user_presets(*app_config, get_delete_cache_presets());
+            } catch (const std::exception &error) {
+                sync_error = error.what();
+                BOOST_LOG_TRIVIAL(error) << "Cloud preset refresh was incomplete: " << sync_error;
             }
-            load_pending_vendors();
-
-            preset_bundle->load_user_presets(*app_config, user_presets, ForwardCompatibilitySubstitutionRule::Enable);
-            preset_bundle->save_user_presets(*app_config, get_delete_cache_presets());
 
             // Re-apply any edited config that was wiped during vendor loading or sync.
             auto restore_snapshot = [](PresetCollection& col, const PresetSnapshot& snap, const char* label) {
@@ -6138,8 +6263,7 @@ void GUI_App::reload_settings()
                         col.select_preset_by_name(snap.name, true);
                     ed = col.get_edited_preset();
                     ed.config = snap.config;
-                    col.get_selected_preset().is_dirty = snap.dirty;
-                    ed.is_dirty = snap.dirty;
+                    col.update_dirty();
                 } else {
                     BOOST_LOG_TRIVIAL(info) << "reload_settings restore " << label
                         << ": preset not found name=" << snap.name;
@@ -6157,6 +6281,9 @@ void GUI_App::reload_settings()
             }
             if (plater_)
                 plater_->sidebar().update_all_preset_comboboxes();
+            if (!sync_error.empty())
+                show_error(mainframe, _L("Some profiles could not be synchronized. Earlier successful updates were kept.") +
+                           "\n\n" + wxString::FromUTF8(sync_error));
         };
         if (is_main_thread_active())
             refresh_synced_ui();
@@ -6381,14 +6508,25 @@ bool GUI_App::check_preset_parent_available(const std::pair<std::string, std::ma
 
 void GUI_App::add_pending_vendor_preset(const std::pair<std::string, std::map<std::string, std::string>>& preset_data)
 {
+    const auto type_it = preset_data.second.find(BBL_JSON_KEY_TYPE);
+    const auto inherits_it = preset_data.second.find(BBL_JSON_KEY_INHERITS);
+    if (type_it == preset_data.second.end() || inherits_it == preset_data.second.end() || inherits_it->second.empty()) {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": incomplete pending preset metadata, skipping";
+        return;
+    }
+
     Preset::Type type;
-    if (preset_data.second.at(BBL_JSON_KEY_TYPE) == PRESET_IOT_PRINT_TYPE)
+    if (type_it->second == PRESET_IOT_PRINT_TYPE)
         type = Preset::Type::TYPE_PRINT;
-    else if (preset_data.second.at(BBL_JSON_KEY_TYPE) == PRESET_IOT_PRINTER_TYPE)
+    else if (type_it->second == PRESET_IOT_PRINTER_TYPE)
         type = Preset::Type::TYPE_PRINTER;
-    else if (preset_data.second.at(BBL_JSON_KEY_TYPE) == PRESET_IOT_FILAMENT_TYPE)
+    else if (type_it->second == PRESET_IOT_FILAMENT_TYPE)
         type = Preset::Type::TYPE_FILAMENT;
-    std::string inherits_name = preset_data.second.at(BBL_JSON_KEY_INHERITS);
+    else {
+        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": unsupported pending preset type " << type_it->second;
+        return;
+    }
+    const std::string& inherits_name = inherits_it->second;
 
     // Add the corresponding vendor
     std::string vendor_name = PresetBundle::find_preset_vendor(inherits_name, type);
@@ -7509,6 +7647,11 @@ bool GUI_App::load_language(wxString language, bool initial)
 {
     BOOST_LOG_TRIVIAL(info) << boost::format("%1%: language %2%, initial: %3%") %__FUNCTION__ %language %initial;
     if (initial) {
+#ifdef __APPLE__
+        // wxWidgets otherwise searches its build-time install prefix for
+        // catalogs. Keep the packaged app independent of the build tree.
+        wxSetEnv(wxS("WXPREFIX"), from_u8(resources_dir()));
+#endif
     	// There is a static list of lookup path prefixes in wxWidgets. Add ours.
 	    wxFileTranslationsLoader::AddCatalogLookupPathPrefix(from_u8(localization_dir()));
     	// Get the active language from PrusaSlicer.ini, or empty string if the key does not exist.
@@ -7708,7 +7851,9 @@ bool GUI_App::load_language(wxString language, bool initial)
     //FIXME wxWidgets cause havoc if the current locale is deleted. We just forget it causing memory leaks for now.
     m_wxLocale.release();
     m_wxLocale = Slic3r::make_unique<wxLocale>();
-    m_wxLocale->Init(locale_language_info->Language);
+    // TinManX1 loads its application catalog explicitly below. Avoid wxWidgets'
+    // default wxwin.mo search, which may retain a build-time locale path.
+    m_wxLocale->Init(locale_language_info->Language, wxLOCALE_DONT_LOAD_DEFAULT);
     // Override language at the active wxTranslations class (which is stored in the active m_wxLocale)
     // to load possibly different dictionary, for example, load Czech dictionary for Slovak language.
     wxTranslations::Get()->SetLanguage(language_dict);
@@ -8208,8 +8353,15 @@ bool GUI_App::check_and_save_current_preset_changes(const wxString& caption, con
         if (dlg.save_preset())  // save selected changes
         {
             //BBS: add project embedded preset relate logic
-            for (const UnsavedChangesDialog::PresetData& nt : dlg.get_names_and_types())
-                preset_bundle->save_changes_for_preset(nt.name, nt.type, dlg.get_unselected_options(nt.type), nt.save_to_project);
+            try {
+                for (const UnsavedChangesDialog::PresetData& nt : dlg.get_names_and_types()) {
+                    preset_bundle->save_changes_for_preset(nt.name, nt.type, dlg.get_unselected_options(nt.type), nt.save_to_project);
+                    nt.connection_update.apply(*preset_bundle);
+                }
+            } catch (const std::exception &error) {
+                show_error(mainframe, _L("Could not complete the save. The operation was canceled. Earlier successful saves have been kept.") + "\n\n" + wxString::FromUTF8(error.what()));
+                return false;
+            }
             //for (const std::pair<std::string, Preset::Type>& nt : dlg.get_names_and_types())
             //    preset_bundle->save_changes_for_preset(nt.first, nt.second, dlg.get_unselected_options(nt.second));
 
@@ -8273,8 +8425,15 @@ bool GUI_App::check_and_keep_current_preset_changes(const wxString& caption, con
             //BBS: add project embedded preset relate logic
             const auto& preset_names_and_types = dlg.get_names_and_types();
             if (dlg.save_preset()) {
-                for (const UnsavedChangesDialog::PresetData& nt : preset_names_and_types)
-                    preset_bundle->save_changes_for_preset(nt.name, nt.type, dlg.get_unselected_options(nt.type), nt.save_to_project);
+                try {
+                    for (const UnsavedChangesDialog::PresetData& nt : preset_names_and_types) {
+                        preset_bundle->save_changes_for_preset(nt.name, nt.type, dlg.get_unselected_options(nt.type), nt.save_to_project);
+                        nt.connection_update.apply(*preset_bundle);
+                    }
+                } catch (const std::exception &error) {
+                    show_error(mainframe, _L("Could not complete the save. The operation was canceled. Earlier successful saves have been kept.") + "\n\n" + wxString::FromUTF8(error.what()));
+                    return false;
+                }
 
                 // if we saved changes to the new presets, we should to
                 // synchronize config.ini with the current selections.
@@ -8304,12 +8463,9 @@ bool GUI_App::check_and_keep_current_preset_changes(const wxString& caption, con
                             static_cast<TabPrinter*>(tab)->cache_extruder_cnt();
                         }
                     }
-                    std::vector<std::string> selected_options2;
-                    std::transform(selected_options.begin(), selected_options.end(), std::back_inserter(selected_options2), [](auto & o) {
-                        auto i = o.find('#');
-                        return i != std::string::npos ? o.substr(0, i) : o;
-                    });
-                    tab->cache_config_diff(selected_options2);
+                    // Keep indexed tool/material edits scoped to the selected
+                    // entries, not the previous printer's entire option array.
+                    tab->cache_config_diff(selected_options);
                     if (!is_called_from_configwizard)
                         tab->m_presets->discard_current_changes();
                 }

@@ -10,6 +10,9 @@
     "nozzle_diameter": [
         "0.6"
     ],
+    "default_nozzle_volume_type": [
+        "High Flow"
+    ],
     "min_layer_height": [
         "0.12"
     ],
@@ -17,5 +20,11 @@
         "0.42"
     ],
     "default_print_profile": "0.30mm Quality @Bambu Lab X1 Carbon 0.6 nozzle - TinMan Codex",
-    "setting_id": "d9W2fqKODg3ukZQV"
+    "setting_id": "d9W2fqKODg3ukZQV",
+    "nozzle_type": [
+        "hardened_steel"
+    ],
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Bambu X1C HF @Codex"
+    ]
 }

@@ -141,6 +141,8 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRe
     else
         g.process_classic();
 
+    if (!g.out_wave_overhang_floor_polygons.empty())
+        append(this->layer()->wave_overhang_floor_polygons, std::move(g.out_wave_overhang_floor_polygons));
     if (!g.out_wave_overhang_covered_polygons.empty())
         append(this->layer()->wave_overhang_covered_polygons, std::move(g.out_wave_overhang_covered_polygons));
     if (!g.out_wave_overhang_diagnostics.empty())

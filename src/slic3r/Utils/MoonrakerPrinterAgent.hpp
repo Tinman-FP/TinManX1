@@ -106,6 +106,7 @@ protected:
     // Methods that derived classes may need to override or access
     virtual bool init_device_info(std::string dev_id, std::string dev_ip, std::string username, std::string password, bool use_ssl);
     virtual bool fetch_device_info(const std::string& base_url, const std::string& api_key, MoonrakerDeviceInfo& info, std::string& error) const;
+    virtual void augment_print_payload_locked(nlohmann::json& payload, const nlohmann::json& status) const;
 
     // State access for derived classes
     mutable std::recursive_mutex       state_mutex;

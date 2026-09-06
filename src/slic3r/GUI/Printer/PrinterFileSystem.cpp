@@ -1,4 +1,5 @@
 #include "PrinterFileSystem.h"
+#include "BambuSourceLibrary.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Format/bbs_3mf.hpp"
 #include "libslic3r/Model.hpp"
@@ -18,6 +19,9 @@
 #include "nlohmann/json.hpp"
 
 #include <cstring>
+#include <condition_variable>
+#include <mutex>
+#include <unordered_map>
 
 #ifndef NDEBUG
 //#define PRINTER_FILE_SYSTEM_TEST
@@ -66,17 +70,62 @@ static std::map<int, std::string> error_messages = {
      {PrinterFileSystem::SEND_ERR, L("File upload failed, please try again.")}
 };
 
+namespace {
+
 struct StaticBambuLib : BambuLib {
-    static StaticBambuLib &get(BambuLib * copy = nullptr);
+    static BambuLib snapshot();
+    static BambuLib *shared();
     static int Fake_Bambu_Create(Bambu_Tunnel*, char const*) { return -2; }
-    static void reset();
+    static void refresh();
     static void release();
+
 private:
-    std::vector<BambuLib *> copies_;
+    static StaticBambuLib &storage();
+    bool load_locked();
+    void clear_locked();
+    void *get_function_locked(const char *name) const;
+
+    std::mutex mutex_;
+    void *module_{nullptr};
+    bool loaded_{false};
+    bool load_attempted_{false};
 };
 
+std::mutex g_file_systems_mutex;
+std::condition_variable g_file_systems_idle;
+std::unordered_map<PrinterFileSystem *, boost::weak_ptr<PrinterFileSystem>> g_file_systems;
+size_t g_active_file_system_workers{0};
+
+void register_file_system(const boost::shared_ptr<PrinterFileSystem> &file_system)
+{
+    std::lock_guard<std::mutex> lock(g_file_systems_mutex);
+    g_file_systems[file_system.get()] = file_system;
+}
+
+void unregister_file_system(PrinterFileSystem *file_system)
+{
+    std::lock_guard<std::mutex> lock(g_file_systems_mutex);
+    g_file_systems.erase(file_system);
+}
+
+void file_system_worker_started()
+{
+    std::lock_guard<std::mutex> lock(g_file_systems_mutex);
+    ++g_active_file_system_workers;
+}
+
+void file_system_worker_finished()
+{
+    std::lock_guard<std::mutex> lock(g_file_systems_mutex);
+    if (g_active_file_system_workers > 0)
+        --g_active_file_system_workers;
+    g_file_systems_idle.notify_all();
+}
+
+} // namespace
+
 PrinterFileSystem::PrinterFileSystem()
-    : BambuLib(StaticBambuLib::get(this))
+    : m_bambu_lib(StaticBambuLib::snapshot())
 {
     if (!default_thumbnail.IsOk()) {
         default_thumbnail = *Slic3r::GUI::BitmapCache().load_svg("printer_file", 0, 0);
@@ -111,7 +160,10 @@ PrinterFileSystem::PrinterFileSystem()
 
 PrinterFileSystem::~PrinterFileSystem()
 {
-    m_recv_thread.detach();
+    Stop(true);
+    unregister_file_system(this);
+    if (m_recv_thread.joinable())
+        m_recv_thread.detach();
 }
 
 void PrinterFileSystem::SetFileType(FileType type, std::string const &storage)
@@ -662,10 +714,25 @@ PrinterFileSystem::File const &PrinterFileSystem::GetFile(size_t index, bool &se
 void PrinterFileSystem::Attached()
 {
     boost::unique_lock lock(m_mutex);
-    m_recv_thread = std::move(boost::thread([w = weak_from_this()] {
-        boost::shared_ptr<PrinterFileSystem> s = w.lock();
-        if (s) s->RecvMessageThread();
-    }));
+    if (m_recv_thread.joinable())
+        return;
+
+    const auto self = shared_from_this();
+    register_file_system(self);
+    file_system_worker_started();
+    try {
+        m_recv_thread = boost::thread([w = boost::weak_ptr<PrinterFileSystem>(self)] {
+            boost::shared_ptr<PrinterFileSystem> s = w.lock();
+            if (s) {
+                s->RecvMessageThread();
+                s.reset();
+            }
+            file_system_worker_finished();
+        });
+    } catch (...) {
+        file_system_worker_finished();
+        throw;
+    }
 }
 
 void PrinterFileSystem::Start()
@@ -1220,7 +1287,9 @@ void PrinterFileSystem::DumpLog(void * thiz, int, tchar const *msg)
     BOOST_LOG_TRIVIAL(info) << "PrinterFileSystem: " << wxString(msg).ToUTF8().data();
 #endif
 
-    static_cast<PrinterFileSystem*>(thiz)->Bambu_FreeLogMsg(msg);
+    auto *file_system = static_cast<PrinterFileSystem *>(thiz);
+    if (file_system->m_bambu_lib.Bambu_FreeLogMsg)
+        file_system->m_bambu_lib.Bambu_FreeLogMsg(msg);
 }
 
 boost::uint32_t PrinterFileSystem::RequestMediaAbility(int api_version)
@@ -1570,7 +1639,7 @@ void PrinterFileSystem::RecvMessageThread()
             // OutputDebugStringA("\n");
             wxLogInfo("PrinterFileSystem::SendRequest >>>: \n%s\n", wxString::FromUTF8(msg));
             l.unlock();
-            int n = Bambu_SendMessage(m_session.tunnel, CTRL_TYPE, msg.c_str(), msg.length());
+            int n = m_bambu_lib.Bambu_SendMessage(m_session.tunnel, CTRL_TYPE, msg.c_str(), msg.length());
             l.lock();
             if (n == 0)
                 m_messages.pop_front();
@@ -1580,7 +1649,7 @@ void PrinterFileSystem::RecvMessageThread()
             }
         }
         l.unlock();
-        int n = Bambu_ReadSample(m_session.tunnel, &sample);
+        int n = m_bambu_lib.Bambu_ReadSample(m_session.tunnel, &sample);
         l.lock();
         if (n == 0) {
             HandleResponse(l, sample);
@@ -1676,8 +1745,8 @@ void PrinterFileSystem::Reconnect(boost::unique_lock<boost::mutex> &l, int resul
         m_session.tunnel = nullptr;
         wxLogMessage("PrinterFileSystem::Reconnect close %d", result);
         l.unlock();
-        Bambu_Close(tunnel);
-        Bambu_Destroy(tunnel);
+        m_bambu_lib.Bambu_Close(tunnel);
+        m_bambu_lib.Bambu_Destroy(tunnel);
         l.lock();
     }
     if (m_session.owner == nullptr)
@@ -1724,11 +1793,14 @@ void PrinterFileSystem::Reconnect(boost::unique_lock<boost::mutex> &l, int resul
             wxLogMessage("PrinterFileSystem::Reconnect Connecting");
             SendChangedEvent(EVT_STATUS_CHANGED, m_status);
             Bambu_Tunnel tunnel = nullptr;
-            int ret = Bambu_Create(&tunnel, url.c_str());
+            // Keep create/read/close/destroy bound to one source image for the
+            // complete tunnel lifetime, even if networking is refreshed.
+            m_bambu_lib = StaticBambuLib::snapshot();
+            int ret = m_bambu_lib.Bambu_Create(&tunnel, url.c_str());
             if (ret == 0) {
 
-                Bambu_SetLogger(tunnel, DumpLog, this);
-                ret = Bambu_Open(tunnel);
+                m_bambu_lib.Bambu_SetLogger(tunnel, DumpLog, this);
+                ret = m_bambu_lib.Bambu_Open(tunnel);
             }
 
             if (ret == 0)
@@ -1736,7 +1808,8 @@ void PrinterFileSystem::Reconnect(boost::unique_lock<boost::mutex> &l, int resul
                 auto                             start_time = boost::posix_time::microsec_clock::universal_time();
                 boost::posix_time::time_duration timeout    = boost::posix_time::seconds(3);
                 do{
-                    ret = Bambu_StartStreamEx ? Bambu_StartStreamEx(tunnel, CTRL_TYPE) : Bambu_StartStream(tunnel, false);
+                    ret = m_bambu_lib.Bambu_StartStreamEx ? m_bambu_lib.Bambu_StartStreamEx(tunnel, CTRL_TYPE)
+                                                          : m_bambu_lib.Bambu_StartStream(tunnel, false);
                     if (ret == Bambu_would_block)
                         boost::this_thread::sleep(boost::posix_time::milliseconds(100));
 
@@ -1758,8 +1831,8 @@ void PrinterFileSystem::Reconnect(boost::unique_lock<boost::mutex> &l, int resul
                 ret = ERROR_RES_BUSY;
             }
             if (tunnel) {
-                Bambu_Close(tunnel);
-                Bambu_Destroy(tunnel);
+                m_bambu_lib.Bambu_Close(tunnel);
+                m_bambu_lib.Bambu_Destroy(tunnel);
             }
             m_last_error = ret;
         }
@@ -1789,84 +1862,165 @@ void PrinterFileSystem::Reconnect(boost::unique_lock<boost::mutex> &l, int resul
 #include <dlfcn.h>
 #endif
 
-#if defined(_MSC_VER) || defined(_WIN32)
-static HMODULE module = NULL;
-#else
-static void* module = NULL;
-#endif
-
-static void* get_function(const char* name)
+StaticBambuLib &StaticBambuLib::storage()
 {
-    void* function = nullptr;
-
-    if (!module)
-        return function;
-
-#if defined(_MSC_VER) || defined(_WIN32)
-    function = GetProcAddress(module, name);
-#else
-    function = dlsym(module, name);
-#endif
-
-    if (!function) {
-        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", can not find function %1%") % name;
-    }
-    return function;
+    // The table is intentionally process-lifetime. BambuSource may still have
+    // private worker state during CRT/static teardown, so destroying this
+    // manager would recreate the same ordering problem it exists to prevent.
+    static auto *lib = new StaticBambuLib();
+    return *lib;
 }
 
-#define GET_FUNC(x) lib.x = reinterpret_cast<decltype(lib.x)>(get_function(#x))
-
-StaticBambuLib &StaticBambuLib::get(BambuLib *copy)
+void StaticBambuLib::clear_locked()
 {
-    static StaticBambuLib lib;
-    // first load the library
-
-    if (lib.Bambu_Create)
-        return lib;
-
-    if (!module) {
-        module = Slic3r::NetworkAgent::get_bambu_source_entry();
-    }
-
-    if (!module) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", can not Load Library";
-    }
-
-    GET_FUNC(Bambu_Create);
-    GET_FUNC(Bambu_Open);
-    GET_FUNC(Bambu_StartStream);
-    GET_FUNC(Bambu_StartStreamEx);
-    GET_FUNC(Bambu_GetStreamCount);
-    GET_FUNC(Bambu_GetStreamInfo);
-    GET_FUNC(Bambu_SendMessage);
-    GET_FUNC(Bambu_ReadSample);
-    GET_FUNC(Bambu_Close);
-    GET_FUNC(Bambu_Destroy);
-    GET_FUNC(Bambu_SetLogger);
-    GET_FUNC(Bambu_FreeLogMsg);
-    GET_FUNC(Bambu_Deinit);
-
-    if (!lib.Bambu_Create) {
-        lib.Bambu_Create = Fake_Bambu_Create;
-        if (copy)
-            lib.copies_.push_back(copy);
-    }
-    return lib;
+    static_cast<BambuLib &>(*this) = BambuLib{};
+    loaded_ = false;
 }
 
-void StaticBambuLib::reset()
+void *StaticBambuLib::get_function_locked(const char *name) const
 {
-    get().Bambu_Create = nullptr;
-    auto &lib = get();
-    for (auto c : lib.copies_)
-        *c = lib;
+    if (!module_)
+        return nullptr;
+
+#if defined(_MSC_VER) || defined(_WIN32)
+    return reinterpret_cast<void *>(GetProcAddress(reinterpret_cast<HMODULE>(module_), name));
+#else
+    return dlsym(module_, name);
+#endif
+}
+
+bool StaticBambuLib::load_locked()
+{
+    if (loaded_)
+        return true;
+    if (load_attempted_)
+        return false;
+
+    load_attempted_ = true;
+    module_ = Slic3r::NetworkAgent::get_bambu_source_entry();
+    if (!module_) {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": BambuSource is unavailable";
+        Bambu_Create = Fake_Bambu_Create;
+        return false;
+    }
+
+#define LOAD_BAMBU_FUNCTION(name) name = reinterpret_cast<decltype(name)>(get_function_locked(#name))
+    LOAD_BAMBU_FUNCTION(Bambu_Create);
+    LOAD_BAMBU_FUNCTION(Bambu_SetLogger);
+    LOAD_BAMBU_FUNCTION(Bambu_Open);
+    LOAD_BAMBU_FUNCTION(Bambu_StartStream);
+    LOAD_BAMBU_FUNCTION(Bambu_StartStreamEx);
+    LOAD_BAMBU_FUNCTION(Bambu_GetStreamCount);
+    LOAD_BAMBU_FUNCTION(Bambu_GetStreamInfo);
+    LOAD_BAMBU_FUNCTION(Bambu_GetDuration);
+    LOAD_BAMBU_FUNCTION(Bambu_Seek);
+    LOAD_BAMBU_FUNCTION(Bambu_ReadSample);
+    LOAD_BAMBU_FUNCTION(Bambu_SendMessage);
+    LOAD_BAMBU_FUNCTION(Bambu_RecvMessage);
+    LOAD_BAMBU_FUNCTION(Bambu_Close);
+    LOAD_BAMBU_FUNCTION(Bambu_Destroy);
+    LOAD_BAMBU_FUNCTION(Bambu_Init);
+    LOAD_BAMBU_FUNCTION(Bambu_Deinit);
+    LOAD_BAMBU_FUNCTION(Bambu_GetLastErrorMsg);
+    LOAD_BAMBU_FUNCTION(Bambu_FreeLogMsg);
+#undef LOAD_BAMBU_FUNCTION
+
+    const bool complete = Bambu_Create && Bambu_SetLogger && Bambu_Open && Bambu_StartStream &&
+                          Bambu_GetStreamCount && Bambu_GetStreamInfo && Bambu_ReadSample &&
+                          Bambu_SendMessage && Bambu_Close && Bambu_Destroy && Bambu_FreeLogMsg;
+    if (!complete) {
+        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": BambuSource ABI is incomplete; disabling source sessions";
+        clear_locked();
+        load_attempted_ = true;
+        Bambu_Create = Fake_Bambu_Create;
+        return false;
+    }
+
+    loaded_ = true;
+    return true;
+}
+
+BambuLib StaticBambuLib::snapshot()
+{
+    auto &lib = storage();
+    std::lock_guard<std::mutex> lock(lib.mutex_);
+    lib.load_locked();
+    return static_cast<const BambuLib &>(lib);
+}
+
+BambuLib *StaticBambuLib::shared()
+{
+    auto &lib = storage();
+    std::lock_guard<std::mutex> lock(lib.mutex_);
+    lib.load_locked();
+    return static_cast<BambuLib *>(&lib);
+}
+
+void StaticBambuLib::refresh()
+{
+    auto &lib = storage();
+    std::lock_guard<std::mutex> lock(lib.mutex_);
+    if (lib.loaded_)
+        return;
+
+    lib.clear_locked();
+    lib.module_ = nullptr;
+    lib.load_attempted_ = false;
+    lib.load_locked();
 }
 
 void StaticBambuLib::release()
 {
-    if (auto f = get().Bambu_Deinit)
-        f();
+    // BambuSource is also used by platform media objects outside
+    // PrinterFileSystem. Its API has no global barrier proving those objects
+    // and their private callbacks are gone. Keep the module and immutable
+    // function table process-lifetime; the OS reclaims both at process exit.
+    // Calling Bambu_Deinit or clearing this shared table here creates a race
+    // with late GStreamer/Objective-C media finalizers.
 }
 
-extern "C" BambuLib *bambulib_get() {
-    return &StaticBambuLib::get(); }
+namespace Slic3r::GUI {
+
+void refresh_bambu_source_library()
+{
+    StaticBambuLib::refresh();
+}
+
+void stop_bambu_file_systems()
+{
+    std::vector<boost::shared_ptr<PrinterFileSystem>> file_systems;
+    {
+        std::lock_guard<std::mutex> lock(g_file_systems_mutex);
+        for (auto it = g_file_systems.begin(); it != g_file_systems.end();) {
+            if (auto file_system = it->second.lock()) {
+                file_systems.emplace_back(std::move(file_system));
+                ++it;
+            } else {
+                it = g_file_systems.erase(it);
+            }
+        }
+    }
+
+    // Never hold the registry mutex while acquiring a file-system mutex. An
+    // Attached()/destructor path registers in the opposite direction.
+    for (const auto &file_system : file_systems)
+        file_system->Stop(true);
+}
+
+bool wait_for_bambu_file_systems(std::chrono::milliseconds timeout)
+{
+    std::unique_lock<std::mutex> lock(g_file_systems_mutex);
+    return g_file_systems_idle.wait_for(lock, timeout, [] { return g_active_file_system_workers == 0; });
+}
+
+void release_bambu_source_library()
+{
+    StaticBambuLib::release();
+}
+
+} // namespace Slic3r::GUI
+
+extern "C" BambuLib *bambulib_get()
+{
+    return StaticBambuLib::shared();
+}

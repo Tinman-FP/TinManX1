@@ -29,6 +29,11 @@ std::once_flag            s_bambu_exit_guard_once;
 std::atomic_bool          s_process_exiting_after_bambu_load{false};
 std::terminate_handler    s_previous_terminate_handler = nullptr;
 
+void mark_bambu_process_exiting()
+{
+    s_process_exiting_after_bambu_load.store(true, std::memory_order_release);
+}
+
 void install_bambu_networking_exit_guard()
 {
     if (std::getenv("TINMANX1_DISABLE_BAMBU_EXIT_GUARD"))
@@ -47,10 +52,13 @@ void install_bambu_networking_exit_guard()
             std::abort();
         });
 
-        std::atexit([] {
-            s_process_exiting_after_bambu_load.store(true, std::memory_order_release);
-        });
     });
+}
+
+void arm_bambu_networking_exit_guard()
+{
+    if (!std::getenv("TINMANX1_DISABLE_BAMBU_EXIT_GUARD"))
+        std::atexit(mark_bambu_process_exiting);
 }
 
 } // namespace
@@ -60,25 +68,25 @@ void install_bambu_networking_exit_guard()
 // Singleton Implementation
 // ============================================================================
 
-// Static pointer initialization (null by default, created on first access)
-BBLNetworkPlugin* BBLNetworkPlugin::s_instance = nullptr;
-
 BBLNetworkPlugin& BBLNetworkPlugin::instance()
 {
-    static std::once_flag flag;
-    std::call_once(flag, [] {
-        s_instance = new BBLNetworkPlugin();
-    });
-    return *s_instance;
+    // Intentional process-lifetime object. wxWidgets and the proprietary
+    // libraries both have late destructors that may still query the manager
+    // after GUI_App has completed its own teardown.
+    static auto *plugin = new BBLNetworkPlugin();
+    return *plugin;
 }
 
 void BBLNetworkPlugin::shutdown()
 {
-    // Note: Do not call instance() after shutdown() - the singleton is destroyed.
-    if (s_instance) {
-        delete s_instance;
-        s_instance = nullptr;
-    }
+    instance().unload();
+}
+
+void BBLNetworkPlugin::prepare_for_process_exit()
+{
+#if defined(__APPLE__)
+    s_process_exiting_after_bambu_load.store(true, std::memory_order_release);
+#endif
 }
 
 BBLNetworkPlugin::BBLNetworkPlugin() = default;
@@ -172,7 +180,11 @@ int BBLNetworkPlugin::initialize(bool using_backup, const std::string& version)
         m_networking_module = LoadLibrary(lib_wstr);
     }
 #else
-    m_networking_module = dlopen(library.c_str(), RTLD_LAZY);
+    int dlopen_flags = RTLD_LAZY;
+#if defined(__APPLE__)
+    dlopen_flags |= RTLD_NODELETE;
+#endif
+    m_networking_module = dlopen(library.c_str(), dlopen_flags);
     if (!m_networking_module) {
         char* dll_error = dlerror();
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": dlopen failed: " << (dll_error ? dll_error : "unknown error");
@@ -205,6 +217,12 @@ int BBLNetworkPlugin::initialize(bool using_backup, const std::string& version)
     // Load all function pointers
     load_all_function_pointers();
 
+#if defined(__APPLE__)
+    // Register after plug-in initialization so this callback runs before any
+    // C++ finalizers that the proprietary module registered during InitFTModule.
+    arm_bambu_networking_exit_guard();
+#endif
+
     // Sync legacy network flag from loaded plugin
     m_use_legacy_network = is_legacy_version(version);
 
@@ -230,43 +248,25 @@ int BBLNetworkPlugin::initialize(bool using_backup, const std::string& version)
 
 int BBLNetworkPlugin::unload()
 {
+    // The agent was created by this module and must be destroyed while its
+    // destroy entry point is still callable. This also makes direct unload and
+    // hot-reload callers safe instead of relying on wrapper destruction.
+    destroy_agent();
     UnloadFTModule();
 
-#if defined(_MSC_VER) || defined(_WIN32)
+    // Do not unmap proprietary images in-process. Their internal workers and
+    // static destructors have been observed to outlive the public destroy call.
+    // Clearing our handle/function table disables further calls, while the OS
+    // reclaims the mappings atomically at process exit. A plug-in update uses a
+    // versioned path, so the replacement can still be loaded beside this image.
     if (m_networking_module) {
-        FreeLibrary(m_networking_module);
-        m_networking_module = NULL;
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": keeping Bambu networking module resident until process exit";
+        m_networking_module = nullptr;
     }
-    if (m_source_module) {
-        FreeLibrary(m_source_module);
-        m_source_module = NULL;
-    }
-#else
-#if defined(__APPLE__)
-    // libbambu_networking_02.06.00.50.dylib has been observed to throw from
-    // static teardown on macOS when it is dlclose'd or finalized during quit.
-    // Keep the image resident and let the exit-time terminate guard above handle
-    // the process-finalizer path. This trades a tiny process-lifetime leak for a
-    // clean quit and avoids user-visible crash reports.
-    if (m_networking_module) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": keeping Bambu networking dylib resident on macOS";
-        m_networking_module = NULL;
-    }
-    if (m_source_module) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": keeping Bambu source dylib resident on macOS";
-        m_source_module = NULL;
-    }
-#else
-    if (m_networking_module) {
-        dlclose(m_networking_module);
-        m_networking_module = NULL;
-    }
-    if (m_source_module) {
-        dlclose(m_source_module);
-        m_source_module = NULL;
-    }
-#endif
-#endif
+
+    // BambuSource has a separate set of live tunnel owners. Its handle remains
+    // stable across networking reloads; the source manager finalizes it only
+    // after every file-system worker has stopped.
 
     clear_all_function_pointers();
 
@@ -315,6 +315,14 @@ void* BBLNetworkPlugin::create_agent(const std::string& log_dir)
     if (m_create_agent) {
         m_agent = m_create_agent(log_dir);
     }
+
+#if defined(__APPLE__)
+    // Agent construction registers additional process-lifetime finalizers.
+    // A later atexit registration runs first and arms the terminate guard even
+    // when macOS requests quit before MainFrame has installed its close handler.
+    if (m_agent)
+        arm_bambu_networking_exit_guard();
+#endif
 
     return m_agent;
 }
@@ -369,7 +377,11 @@ void* BBLNetworkPlugin::get_source_module()
 #else
     library = plugin_folder.string() + "/" + std::string("lib") + std::string(BAMBU_SOURCE_LIBRARY) + ".so";
 #endif
-    m_source_module = dlopen(library.c_str(), RTLD_LAZY);
+    int dlopen_flags = RTLD_LAZY;
+#if defined(__APPLE__)
+    dlopen_flags |= RTLD_NODELETE;
+#endif
+    m_source_module = dlopen(library.c_str(), dlopen_flags);
 #endif
 
     return m_source_module;

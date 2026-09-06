@@ -5668,6 +5668,12 @@
       "x1c": "Bambu PC @BBL X1C",
       "h2d": "Generic PC @BBL H2D"
     },
+    "PC-PBT-CF|Push Plastic": {
+      "mode": "analog",
+      "chamber_target": 55,
+      "x1c": "Bambu PC @BBL X1C",
+      "h2d": "Generic PC @BBL H2D"
+    },
     "PCTG|Generic": {
       "mode": "exact",
       "x1c": "Generic PCTG @BBL X1C",

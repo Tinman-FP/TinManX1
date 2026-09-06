@@ -3,6 +3,8 @@
 #include <wx/panel.h>
 #include <wx/notebook.h>
 #include <wx/listbook.h>
+#include <wx/listctrl.h>
+#include <wx/srchctrl.h>
 #include <wx/simplebook.h>
 #include <wx/icon.h>
 #include <wx/sizer.h>
@@ -23,6 +25,9 @@
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/TinManMachineProfileContract.hpp"
+#include "libslic3r/TinManHardwareCatalog.hpp"
+#include "libslic3r/ConfigResolutionTrace.hpp"
 
 #include "Tab.hpp"
 #include "ProgressStatusBar.hpp"
@@ -67,6 +72,7 @@
 
 #include "DeviceCore/DevManager.h"
 #include "../Utils/NetworkAgentFactory.hpp"
+#include "../Utils/RecentProjectThumbnailCache.hpp"
 
 #ifdef _WIN32
 #include <dbt.h>
@@ -236,6 +242,12 @@ static std::string agent_id_for_machine(MachineObject* obj)
 {
     if (is_bambu_monitor_device(obj))
         return BBL_PRINTER_AGENT_ID;
+
+    if (obj != nullptr) {
+        const std::string key = obj->get_dev_name() + " " + obj->get_dev_id() + " " + obj->get_dev_ip();
+        if (std::string expected = tinmanx_expected_printer_agent(key, obj->printer_type); !expected.empty())
+            return expected;
+    }
 
     if (std::string agent_id = configured_agent_for_machine(obj); !agent_id.empty())
         return agent_id;
@@ -967,16 +979,18 @@ void MainFrame::bind_diff_dialog()
     };
 
     auto transfer = [this, get_tab](Preset::Type type) {
-        get_tab(type)->transfer_options(diff_dialog.get_left_preset_name(type),
-                                        diff_dialog.get_right_preset_name(type),
-                                        diff_dialog.get_selected_options(type));
+        Tab *tab = get_tab(type);
+        return tab && tab->transfer_options(diff_dialog.get_left_preset_name(type),
+                                           diff_dialog.get_right_preset_name(type),
+                                           diff_dialog.get_selected_options(type));
     };
 
-    auto process_options = [this](std::function<void(Preset::Type)> process) {
+    auto process_options = [this](std::function<bool(Preset::Type)> process) {
         const Preset::Type diff_dlg_type = diff_dialog.view_type();
         if (diff_dlg_type == Preset::TYPE_INVALID) {
             for (const Preset::Type& type : diff_dialog.types_list() )
-                process(type);
+                if (!process(type))
+                    break;
         }
         else
             process(diff_dlg_type);
@@ -2759,6 +2773,180 @@ static const wxString sep = " - ";
 static const wxString sep = "\t";
 #endif
 
+static wxString profile_origin_label(const ConfigValueOrigin &origin)
+{
+    wxString label;
+    switch (origin.kind) {
+    case ConfigOriginKind::Defaults: label = _L("Defaults"); break;
+    case ConfigOriginKind::SystemPreset: label = _L("System preset"); break;
+    case ConfigOriginKind::UserPreset: label = _L("User preset"); break;
+    case ConfigOriginKind::ImportedPreset: label = _L("Imported preset"); break;
+    case ConfigOriginKind::ProjectPreset: label = _L("Project preset"); break;
+    case ConfigOriginKind::UnsavedEdit: label = _L("Unsaved edit"); break;
+    case ConfigOriginKind::Project: label = _L("Project settings"); break;
+    case ConfigOriginKind::ToolVariant: label = _L("Tool variant mapping"); break;
+    case ConfigOriginKind::Generated: label = _L("Derived settings"); break;
+    case ConfigOriginKind::HardwareContract: label = _L("Hardware contract"); break;
+    case ConfigOriginKind::Normalization: label = _L("Tool/material normalization"); break;
+    }
+    if (origin.material != 0)
+        label = _L("Material") + wxString::Format(" %u / ", unsigned(origin.material)) + label;
+    if (!origin.preset.empty()) label += ": " + from_u8(origin.preset);
+    if (origin.projected) label += " / " + _L("Tool variant mapping");
+    return label;
+}
+
+static void show_profile_overview()
+{
+    const auto *bundle = wxGetApp().preset_bundle;
+    if (!bundle)
+        return;
+
+    // Snapshot the same resolved bundle used by slicing. Never modify presets,
+    // connection state, or the project while inspecting their effective values.
+    ConfigResolutionTrace trace;
+    const auto config = bundle->full_config(true, std::nullopt, &trace);
+    const auto &printer = bundle->printers.get_edited_preset();
+    const auto &process = bundle->prints.get_edited_preset();
+    wxDialog dialog(wxGetApp().mainframe, wxID_ANY, _L("Profile Overview"),
+                    wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
+    auto *layout = new wxBoxSizer(wxVERTICAL);
+    auto *pages = new wxNotebook(&dialog, wxID_ANY);
+    auto *summary = new wxPanel(pages);
+    auto *summary_layout = new wxBoxSizer(wxVERTICAL);
+    auto *list = new wxListCtrl(summary, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+                                wxLC_REPORT | wxLC_SINGLE_SEL);
+    list->AppendColumn(_L("Setting"), wxLIST_FORMAT_LEFT, dialog.FromDIP(245));
+    list->AppendColumn(_L("Effective Value"), wxLIST_FORMAT_LEFT, dialog.FromDIP(490));
+    const auto row = [list](const wxString &label, const wxString &value) {
+        const long index = list->InsertItem(list->GetItemCount(), label);
+        list->SetItem(index, 1, value);
+    };
+    const auto preset_rows = [&row](const wxString &label, const Preset &preset) {
+        row(label, from_u8(preset.name));
+        row(label + " / " + _L("Source"), preset.is_project_embedded ? _L("Project") :
+            preset.is_system ? _L("System") : preset.is_default ? _L("Default") :
+            (preset.is_external || preset.is_from_bundle()) ? _L("Imported") : _L("User"));
+        if (const auto *parent = preset.config.option<ConfigOptionString>("inherits"); parent && !parent->value.empty())
+            row(label + " / " + _L("Inherits"), from_u8(parent->value));
+        row(label + " / " + _L("Modified"), preset.is_dirty ? _L("Yes") : _L("No"));
+    };
+    preset_rows(_L("Printer preset"), printer);
+    preset_rows(_L("Process preset"), process);
+    row(_L("Hardware catalog"), from_u8(tinmanx_hardware_catalog().catalog_version));
+    const auto option_rows = [&row](const DynamicPrintConfig &source, const char *key,
+                                    const wxString &label, const wxString &indexed_prefix) {
+        const auto *option = source.option(key);
+        if (!option) return;
+        if (const auto *values = dynamic_cast<const ConfigOptionVectorBase *>(option)) {
+            const auto strings = values->vserialize();
+            for (size_t i = 0; i < strings.size(); ++i)
+                row(indexed_prefix + wxString::Format(" %u / ", unsigned(i + 1)) + label, from_u8(strings[i]));
+        } else {
+            row(label, from_u8(option->serialize()));
+        }
+    };
+    option_rows(config, "nozzle_diameter", _L("Nozzle diameter (mm)"), _L("Tool"));
+    option_rows(config, "nozzle_volume_type", _L("Nozzle flow type"), _L("Tool"));
+    option_rows(config, "filament_settings_id", _L("Filament preset"), _L("Material"));
+    option_rows(config, "filament_map", _L("Tool number"), _L("Material"));
+    option_rows(config, "filament_type", _L("Filament type"), _L("Material"));
+    option_rows(config, "nozzle_temperature", _L("Nozzle temperature (C)"), _L("Material"));
+    option_rows(config, "chamber_temperature", _L("Chamber temperature (C)"), _L("Material"));
+    option_rows(config, "activate_chamber_temp_control", _L("Active chamber control"), _L("Material"));
+    option_rows(config, "filament_flow_ratio", _L("Flow ratio"), _L("Material"));
+    option_rows(config, "filament_max_volumetric_speed", _L("Max volumetric speed (mm3/s)"), _L("Material"));
+    option_rows(config, "enable_pressure_advance", _L("Pressure advance enabled"), _L("Material"));
+    option_rows(config, "pressure_advance", _L("Pressure advance"), _L("Material"));
+    option_rows(config, "layer_height", _L("Layer height (mm)"), wxEmptyString);
+    option_rows(config, "outer_wall_speed", _L("Outer wall speed (mm/s)"), wxEmptyString);
+    option_rows(config, "default_acceleration", _L("Default acceleration (mm/s2)"), wxEmptyString);
+    summary_layout->Add(list, 1, wxEXPAND | wxALL, dialog.FromDIP(8));
+    summary->SetSizer(summary_layout);
+    pages->AddPage(summary, _L("Overview"));
+
+    auto *origins_page = new wxPanel(pages);
+    auto *origins_layout = new wxBoxSizer(wxVERTICAL);
+    auto *search = new wxSearchCtrl(origins_page, wxID_ANY);
+    search->SetDescriptiveText(_L("Filter settings"));
+    search->ShowCancelButton(true);
+    auto *settings = new wxListCtrl(origins_page, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+                                    wxLC_REPORT | wxLC_SINGLE_SEL);
+    settings->AppendColumn(_L("Setting"), wxLIST_FORMAT_LEFT, dialog.FromDIP(255));
+    settings->AppendColumn(_L("Effective Value"), wxLIST_FORMAT_LEFT, dialog.FromDIP(175));
+    settings->AppendColumn(_L("Source"), wxLIST_FORMAT_LEFT, dialog.FromDIP(360));
+    auto *history = new wxTextCtrl(origins_page, wxID_ANY, wxEmptyString, wxDefaultPosition,
+                                    dialog.FromDIP(wxSize(-1, 175)), wxTE_MULTILINE | wxTE_READONLY);
+    const auto source_label = [](const ConfigResolutionStep &step) {
+        wxString text;
+        for (const auto &origin : step.origins) {
+            if (!text.empty()) text += "; ";
+            text += profile_origin_label(origin);
+        }
+        return text;
+    };
+    const auto populate = [&trace, settings, search, history, source_label]() {
+        const wxString filter = search->GetValue().Lower();
+        settings->Freeze();
+        settings->DeleteAllItems();
+        history->Clear();
+        for (const auto &[key, steps] : trace.settings()) {
+            const auto &last = steps.back();
+            const wxString source = source_label(last);
+            const wxString label = from_u8(key);
+            if (!filter.empty() && !(label + " " + source).Lower().Contains(filter)) continue;
+            const long index = settings->InsertItem(settings->GetItemCount(), label);
+            settings->SetItem(index, 1, from_u8(last.value));
+            settings->SetItem(index, 2, source);
+        }
+        settings->Thaw();
+    };
+    settings->Bind(wxEVT_LIST_ITEM_SELECTED, [&trace, settings, history, source_label](wxListEvent &event) {
+        const std::string key = into_u8(settings->GetItemText(event.GetIndex()));
+        const auto entry = trace.settings().find(key);
+        if (entry == trace.settings().end()) return;
+        wxString text = from_u8(key) + "\n";
+        size_t index = 0;
+        for (const auto &step : entry->second) {
+            text += wxString::Format("\n%u. ", unsigned(++index)) + source_label(step) + "\n" + from_u8(step.value) + "\n";
+            for (const auto &origin : step.origins) {
+                if (!origin.parent.empty())
+                    text += _L("Preset parent") + ": " + from_u8(origin.parent) + "\n";
+                if (origin.kind == ConfigOriginKind::UnsavedEdit)
+                    text += _L("Saved value") + ": " + from_u8(origin.saved_value) + "\n";
+                if (origin.projected)
+                    text += _L("Preset variant values") + ": " + from_u8(origin.input_value) + "\n";
+            }
+        }
+        history->ChangeValue(text);
+        history->SetInsertionPoint(0);
+    });
+    search->Bind(wxEVT_TEXT, [populate](wxCommandEvent &) { populate(); });
+    search->Bind(wxEVT_SEARCHCTRL_CANCEL_BTN, [search](wxCommandEvent &) { search->SetValue(wxEmptyString); });
+    origins_layout->Add(new wxStaticText(origins_page, wxID_ANY, _L("Scope: Global bundle")), 0,
+                        wxLEFT | wxRIGHT | wxTOP, dialog.FromDIP(8));
+    origins_layout->Add(search, 0, wxEXPAND | wxALL, dialog.FromDIP(8));
+    origins_layout->Add(settings, 1, wxEXPAND | wxLEFT | wxRIGHT, dialog.FromDIP(8));
+    origins_layout->Add(history, 0, wxEXPAND | wxALL, dialog.FromDIP(8));
+    origins_page->SetSizer(origins_layout);
+    pages->AddPage(origins_page, _L("Setting Origins"));
+    populate();
+    if (!trace.warnings().empty()) {
+        wxString warnings;
+        for (const auto &warning : trace.warnings()) warnings += from_u8(warning) + "\n";
+        pages->AddPage(new wxTextCtrl(pages, wxID_ANY, warnings, wxDefaultPosition, wxDefaultSize,
+                                      wxTE_MULTILINE | wxTE_READONLY), _L("Warnings"));
+    }
+    layout->Add(pages, 1, wxEXPAND | wxALL, dialog.FromDIP(12));
+    layout->Add(dialog.CreateButtonSizer(wxOK), 0, wxALIGN_RIGHT | wxALL, dialog.FromDIP(12));
+    dialog.SetSizer(layout);
+    dialog.SetMinSize(dialog.FromDIP(wxSize(560, 360)));
+    dialog.SetSize(dialog.FromDIP(wxSize(920, 690)));
+    wxGetApp().UpdateDlgDarkUI(&dialog);
+    dialog.CentreOnParent();
+    dialog.ShowModal();
+}
+
 static wxMenu* generate_help_menu()
 {
     wxMenu* helpMenu = new wxMenu();
@@ -2778,6 +2966,12 @@ static wxMenu* generate_help_menu()
     helpMenu->AppendSeparator();
 
     // Troubleshoot center
+    append_menu_item(helpMenu, wxID_ANY, _L("Profile Overview"), _L("Profile Overview"),
+        [](wxCommandEvent&) {
+            try { show_profile_overview(); }
+            catch (const std::exception &error) { show_error(wxGetApp().mainframe, error.what()); }
+        });
+
     append_menu_item(helpMenu, wxID_ANY, _L("Troubleshoot Center"), "",
         [](wxCommandEvent&) { wxGetApp().troubleshoot(); });
 
@@ -4165,7 +4359,6 @@ void MainFrame::jump_to_monitor(std::string dev_id)
     };
 
     select_printer_webview();
-    CallAfter(select_printer_webview);
     return;
 }
 
@@ -4337,7 +4530,7 @@ void MainFrame::add_to_recent_projects(const wxString& filename)
 
 std::wstring MainFrame::FileHistory::GetThumbnailUrl(int index) const
 {
-    if (m_thumbnails[index].empty()) return L"";
+    if (index < 0 || size_t(index) >= m_thumbnails.size() || m_thumbnails[index].empty()) return L"";
     std::wstringstream wss;
     wss << L"data:image/png;base64,";
     wss << wxBase64Encode(m_thumbnails[index].data(), m_thumbnails[index].size());
@@ -4349,10 +4542,15 @@ void MainFrame::FileHistory::AddFileToHistory(const wxString &file)
     if (this->m_fileMaxFiles == 0)
         return;
     wxFileHistory::AddFileToHistory(file);
-    if (m_load_called)
-        m_thumbnails.push_front(bbs_3mf_get_thumbnail(into_u8(file).c_str()));
-    else
-        m_thumbnails.push_front("");
+    if (m_load_called) {
+        // Only explicit opens/saves refresh the thumbnail from the project.
+        const RecentProjectThumbnailCache cache(boost::filesystem::path(data_dir()) / "cache" / "recent-thumbnails");
+        if (wxFileExists(file))
+            cache.write(into_u8(file), bbs_3mf_get_thumbnail(into_u8(file).c_str()));
+        LoadThumbnails();
+    } else {
+        m_thumbnails.resize(GetCount());
+    }
 }
 
 void MainFrame::FileHistory::RemoveFileFromHistory(size_t i)
@@ -4370,14 +4568,10 @@ size_t MainFrame::FileHistory::FindFileInHistory(const wxString & file)
 
 void MainFrame::FileHistory::LoadThumbnails()
 {
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, GetCount()), [this](tbb::blocked_range<size_t> range) {
-        for (size_t i = range.begin(); i < range.end(); ++i) {
-            auto thumbnail = bbs_3mf_get_thumbnail(into_u8(GetHistoryFile(i)).c_str());
-            if (!thumbnail.empty()) {
-                m_thumbnails[i] = thumbnail;
-            }
-        }
-    });
+    const RecentProjectThumbnailCache cache(boost::filesystem::path(data_dir()) / "cache" / "recent-thumbnails");
+    m_thumbnails.resize(GetCount());
+    for (size_t i = 0; i < GetCount(); ++i)
+        m_thumbnails[i] = cache.read(into_u8(GetHistoryFile(i)));
     m_load_called = true;
 }
 

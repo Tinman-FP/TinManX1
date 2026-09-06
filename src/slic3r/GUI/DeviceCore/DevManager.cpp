@@ -10,6 +10,7 @@
 #include "slic3r/GUI/I18N.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/Plater.hpp"
+#include "slic3r/Utils/NetworkAgentFactory.hpp"
 
 #include "libslic3r/Time.hpp"
 
@@ -17,6 +18,39 @@ using namespace nlohmann;
 
 namespace Slic3r
 {
+    namespace
+    {
+        bool ensure_bambu_agent_for_machine(NetworkAgent* agent, const MachineObject* machine)
+        {
+            if (agent == nullptr || machine == nullptr)
+                return false;
+
+            const bool is_bambu = machine->is_series_x() || machine->is_series_p() ||
+                                  machine->is_series_n() || machine->is_series_o() ||
+                                  machine->printer_type == "O1D" ||
+                                  boost::algorithm::istarts_with(machine->printer_type, "BL-");
+            if (!is_bambu)
+                return false;
+
+            if (const auto current = agent->get_printer_agent();
+                current && current->get_agent_info().id == BBL_PRINTER_AGENT_ID)
+                return true;
+
+            const auto cloud = agent->get_cloud_agent(BBL_CLOUD_PROVIDER);
+            const auto printer_agent = NetworkAgentFactory::create_printer_agent_by_id(
+                BBL_PRINTER_AGENT_ID, cloud, data_dir());
+            if (!printer_agent) {
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": failed to create Bambu printer agent";
+                return false;
+            }
+
+            agent->set_printer_agent(printer_agent);
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": selected Bambu agent before connecting "
+                                    << machine->get_dev_id();
+            return true;
+        }
+    }
+
     DeviceManager::DeviceManager(NetworkAgent* agent)
     {
         m_agent = agent;
@@ -202,6 +236,8 @@ namespace Slic3r
                 connection_name = j["connection_name"].get<std::string>();
             }
 
+            const std::string printer_type = _parse_printer_type(printer_type_str);
+
             MachineObject* obj;
 
             /* update userMachineList info */
@@ -260,13 +296,13 @@ namespace Slic3r
                     obj->bind_state != bind_state ||
                     obj->bind_sec_link != sec_link ||
                     obj->bind_ssdp_version != ssdp_version ||
-                    obj->printer_type != _parse_printer_type(printer_type_str))
+                    obj->printer_type != printer_type)
                 {
                     if (obj->dev_connection_type != connect_type ||
                         obj->bind_state != bind_state ||
                         obj->bind_sec_link != sec_link ||
                         obj->bind_ssdp_version != ssdp_version ||
-                        obj->printer_type != _parse_printer_type(printer_type_str))
+                        obj->printer_type != printer_type)
                     {
                         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " UpdateLocalMachineInfo"
                             << ", dev_id= " << dev_id
@@ -290,7 +326,7 @@ namespace Slic3r
                     obj->bind_state          = bind_state;
                     obj->bind_sec_link       = sec_link;
                     obj->bind_ssdp_version   = ssdp_version;
-                    obj->printer_type        = _parse_printer_type(printer_type_str);
+                    obj->printer_type        = printer_type;
                 }
 
                 // U0 firmware
@@ -299,7 +335,14 @@ namespace Slic3r
 
                 obj->last_alive = Slic3r::Utils::get_current_time_utc();
                 obj->m_is_online = true;
-                obj->set_dev_name(dev_name);
+                const std::string generic_name = DevPrinterConfigUtil::get_printer_display_name(printer_type);
+                if (!dev_name.empty() &&
+                    (obj->get_dev_name().empty() || dev_name != generic_name || obj->get_dev_name() == generic_name)) {
+                    obj->set_dev_name(dev_name);
+                } else {
+                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": preserving custom device name "
+                                            << obj->get_dev_name() << " over generic discovery name " << dev_name;
+                }
                 /* if (!obj->dev_ip.empty()) {
                 Slic3r::GUI::wxGetApp().app_config->set_str("ip_address", obj->dev_id, obj->dev_ip);
                 Slic3r::GUI::wxGetApp().app_config->save();
@@ -308,7 +351,7 @@ namespace Slic3r
             else {
                 /* insert a new machine */
                 obj = new MachineObject(this, m_agent, dev_name, dev_id, dev_ip);
-                obj->printer_type = _parse_printer_type(printer_type_str);
+                obj->printer_type = printer_type;
                 obj->wifi_signal = printer_signal;
                 obj->dev_connection_type = connect_type;
                 obj->bind_state     = bind_state;
@@ -484,6 +527,12 @@ namespace Slic3r
         auto my_machine_list = get_my_machine_list();
         auto it = my_machine_list.find(dev_id);
 
+        // Route Bambu devices before the first connect call. If the previously
+        // selected printer used another agent, connecting first can queue a
+        // stale failure that tears down the replacement Bambu LAN session.
+        if (it != my_machine_list.end())
+            ensure_bambu_agent_for_machine(m_agent, it->second);
+
         // disconnect last if dev_id difference from previous one
         auto last_selected = my_machine_list.find(selected_machine);
         if (last_selected != my_machine_list.end() && selected_machine != dev_id)
@@ -516,16 +565,25 @@ namespace Slic3r
 
                     return true;
                 }
-                // same dev_id, lan => disconnect and reconnect
+                // Same LAN device: keep a live session or start a clean retry.
                 else
                 {
-                    BOOST_LOG_TRIVIAL(info) << "set_selected_machine: same lan machine, dev_id =" << dev_id
-                        << ", disconnect and reconnect";
+                    // Selecting the current LAN printer is a common UI refresh path.
+                    // Restarting a live (or still-starting) MQTT session here can race
+                    // the networking plug-in's keepalive thread with client teardown.
+                    if (it->second->is_connected() || it->second->is_connecting()) {
+                        BOOST_LOG_TRIVIAL(info) << "set_selected_machine: same lan machine already active, dev_id ="
+                                                << dev_id << ", keeping existing connection";
+                        return true;
+                    }
 
-                    // lan mode printer reconnect printer
+                    BOOST_LOG_TRIVIAL(info) << "set_selected_machine: retry disconnected lan machine, dev_id =" << dev_id;
+
+                    // A failed/lost callback has already torn down the previous
+                    // session. Do not call disconnect_printer() a second time.
                     if (m_agent)
                     {
-                        m_agent->disconnect_printer();
+                        it->second->set_lan_mode_connection_state(true);
                         it->second->reset();
 
 #if !BBL_RELEASE_TO_PUBLIC
@@ -533,7 +591,6 @@ namespace Slic3r
 #else
                         it->second->connect(it->second->local_use_ssl);
 #endif
-                        it->second->set_lan_mode_connection_state(true);
                     }
                 }
             }
@@ -551,13 +608,13 @@ namespace Slic3r
                     else
                     {
                         BOOST_LOG_TRIVIAL(info) << "set_selected_machine: select new lan machine, dev_id =" << dev_id;
+                        it->second->set_lan_mode_connection_state(true);
                         it->second->reset();
 #if !BBL_RELEASE_TO_PUBLIC
                         it->second->connect(Slic3r::GUI::wxGetApp().app_config->get("enable_ssl_for_mqtt") == "true" ? true : false);
 #else
                         it->second->connect(it->second->local_use_ssl);
 #endif
-                        it->second->set_lan_mode_connection_state(true);
                     }
                 }
             }

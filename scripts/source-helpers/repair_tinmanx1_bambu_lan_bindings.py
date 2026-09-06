@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Repair TinManX1 Bambu LAN bindings by matching printer TLS certificate CNs.
+"""Repair TinManX1 Bambu LAN bindings and canonical device identities.
 
-This helper intentionally avoids access codes. It only reads local_machines,
-tests Bambu MQTT TLS endpoints, and updates dev_ip when a configured serial
-number is found at a different LAN address.
+This helper intentionally avoids access codes. It reads local_machines,
+canonicalizes known Bambu model names, tests Bambu MQTT TLS endpoints, updates
+dev_ip when a configured serial number is found at a different LAN address,
+and preserves access-code LAN mode across upgrades.
 """
 
 from __future__ import annotations
@@ -37,10 +38,27 @@ BAMBU_TYPES = {
     "O1S",
 }
 
+BAMBU_TYPE_ALIASES = {
+    "3DPrinter-X1": "BL-P002",
+    "3DPrinter-X1-Carbon": "BL-P001",
+    "Bambu Lab X1 Carbon": "BL-P001",
+    "Bambu Lab X1": "BL-P002",
+    "Bambu Lab P1P": "C11",
+    "Bambu Lab P1S": "C12",
+    "Bambu Lab X1E": "C13",
+    "Bambu Lab A1 mini": "N1",
+    "Bambu Lab A1": "N2S",
+    "Bambu Lab X2D": "N6",
+    "Bambu Lab P2S": "N7",
+    "Bambu Lab H2D": "O1D",
+    "Bambu Lab H2D Pro": "O1E",
+    "Bambu Lab H2S": "O1S",
+}
+
 
 def is_probably_bambu(serial: str, machine: dict) -> bool:
     printer_type = str(machine.get("printer_type", ""))
-    if printer_type in BAMBU_TYPES:
+    if printer_type in BAMBU_TYPES or printer_type in BAMBU_TYPE_ALIASES:
         return True
     return bool(re.fullmatch(r"[0-9A-Z]{10,24}", serial)) and bool(machine.get("dev_ip"))
 
@@ -146,6 +164,14 @@ def repair(datadir: pathlib.Path, dry_run: bool = False) -> int:
     if not bambu:
         return 0
 
+    app = data.get("app")
+    mqtt_mode_changed = isinstance(app, dict) and app.get("enable_ssl_for_mqtt") is not False
+    if mqtt_mode_changed:
+        # TinManX1's local Bambu bindings authenticate with the printer access
+        # code. Certificate-managed MQTT can reject an otherwise valid H2D LAN
+        # session after an upgrade regenerates this preference.
+        app["enable_ssl_for_mqtt"] = False
+
     serial_hosts: dict[str, str] = {}
     for serial, machine in bambu.items():
         current_ip = str(machine.get("dev_ip", ""))
@@ -158,21 +184,34 @@ def repair(datadir: pathlib.Path, dry_run: bool = False) -> int:
     if missing:
         serial_hosts.update(discover_serial_hosts(candidate_prefixes(machines)))
 
-    changes: list[tuple[str, str, str]] = []
+    changes: list[tuple[str, str, str, str]] = []
     for serial, machine in bambu.items():
-        new_ip = serial_hosts.get(serial)
-        if not new_ip:
-            continue
-        old_ip = str(machine.get("dev_ip", ""))
-        if old_ip != new_ip:
-            machine["dev_ip"] = new_ip
-            changes.append((serial, old_ip, new_ip))
+        old_type = str(machine.get("printer_type", ""))
+        new_type = BAMBU_TYPE_ALIASES.get(old_type, old_type)
+        if new_type != old_type:
+            machine["printer_type"] = new_type
 
-    if not changes:
+        new_ip = serial_hosts.get(serial)
+        old_ip = str(machine.get("dev_ip", ""))
+        if new_ip and old_ip != new_ip:
+            machine["dev_ip"] = new_ip
+        else:
+            new_ip = old_ip
+
+        if old_type != new_type or old_ip != new_ip:
+            changes.append((serial, old_ip, new_ip, f"{old_type} -> {new_type}"))
+
+    if not changes and not mqtt_mode_changed:
         return 0
 
-    for serial, old_ip, new_ip in changes:
-        print(f"TinManX1 Bambu LAN repair: {serial} {old_ip} -> {new_ip}", file=sys.stderr)
+    if mqtt_mode_changed:
+        print("TinManX1 Bambu LAN repair: restored access-code MQTT mode", file=sys.stderr)
+
+    for serial, old_ip, new_ip, type_change in changes:
+        print(
+            f"TinManX1 Bambu LAN repair: {serial} ip {old_ip} -> {new_ip}; model {type_change}",
+            file=sys.stderr,
+        )
 
     if dry_run:
         return 0

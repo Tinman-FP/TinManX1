@@ -3,6 +3,7 @@
 
 #include "bambu_networking.hpp"
 #include "../../libslic3r/ProjectTask.hpp"
+#include "../../libslic3r/CloudProfileSnapshot.hpp"
 #include <string>
 #include <string_view>
 #include <map>
@@ -113,6 +114,7 @@ public:
      * Return the backend-generated user ID for the current session.
      */
     virtual std::string get_user_id() = 0;
+    virtual CloudProfileSession get_profile_session() { return {get_user_id(), 0, is_user_login()}; }
 
     /**
      * Return the display name for the current user.

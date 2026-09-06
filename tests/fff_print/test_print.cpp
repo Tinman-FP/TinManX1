@@ -1,4 +1,7 @@
 #include <catch2/catch_all.hpp>
+#include <array>
+#include <memory>
+#include <new>
 
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/Print.hpp"
@@ -8,6 +11,22 @@
 
 using namespace Slic3r;
 using namespace Slic3r::Test;
+
+TEST_CASE("New print jobs have a defined plate origin", "[Print][TinMan][Initialization]")
+{
+    alignas(Print) std::array<unsigned char, sizeof(Print)> storage;
+    storage.fill(0x42);
+    const auto destroy = [](Print *print) { print->~Print(); };
+    std::unique_ptr<Print, decltype(destroy)> print(new (storage.data()) Print, destroy);
+    REQUIRE(print->get_plate_origin().isZero());
+    CHECK_FALSE(print->is_BBL_printer());
+    print->is_BBL_printer() = true;
+    print->set_plate_origin(Vec3d(100, 200, 0));
+    CHECK(print->get_plate_origin().isApprox(Vec3d(100, 200, 0)));
+    print->clear();
+    CHECK(print->get_plate_origin().isApprox(Vec3d(100, 200, 0)));
+    CHECK(print->is_BBL_printer());
+}
 
 SCENARIO("Print: Skirt generation", "[Print]") {
     GIVEN("20mm cube and default config") {
@@ -171,4 +190,3 @@ TEST_CASE("Print: {first_object_name} is not replaced by the saved-project file 
     add_named_cube(model, "WidgetPart");
     CHECK(resolved_output_name(model, "{first_object_name}", "SavedProject") == "WidgetPart.gcode");
 }
-

@@ -1,5 +1,6 @@
 #include "AboutDialog.hpp"
 #include "I18N.hpp"
+#include "TinManBuildInfo.hpp"
 
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Color.hpp"
@@ -245,7 +246,9 @@ AboutDialog::AboutDialog()
         vesizer->Add(0, 0, 1, wxEXPAND, FromDIP(5));
         auto          version_string = std::string(SoftFever_VERSION); // _L("Orca Slicer ") + " " + std::string(SoftFever_VERSION);
         wxStaticText* version = new wxStaticText(this, wxID_ANY, version_string.c_str(), wxDefaultPosition, wxDefaultSize);
-        wxStaticText* credits_string = new wxStaticText(this, wxID_ANY, wxString::Format("Build %s", std::string(GIT_COMMIT_HASH)), wxDefaultPosition, wxDefaultSize);
+        const wxString revision = wxString::FromUTF8(TINMANX1_REVISION) + "\n" +
+                                  wxString::Format("Build %s", std::string(GIT_COMMIT_HASH));
+        wxStaticText* credits_string = new wxStaticText(this, wxID_ANY, revision, wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
         credits_string->SetFont(_build_string_font);
         wxFont version_font = GetFont();
         version_font = version_font.Scaled(1.85f); // SetPointSize(20) not works on macOS because it uses a 72 PPI reference
@@ -269,6 +272,7 @@ AboutDialog::AboutDialog()
     text_list.push_back(_L("Open-source slicing stands on a tradition of collaboration and attribution. Slic3r, created by Alessandro Ranellucci and the RepRap community, laid the foundation. PrusaSlicer by Prusa Research built on that work, Bambu Studio forked from PrusaSlicer, and SuperSlicer extended it with community-driven enhancements. Each project carried the work of its predecessors forward, crediting those who came before."));
     text_list.push_back(_L("Orca Slicer began in that same spirit, drawing from PrusaSlicer, BambuStudio, SuperSlicer, and CuraSlicer, and TinManX1 carries that open-source work forward for FibreSeek and continuous-fiber workflows."));
     text_list.push_back(_L("TinManX1 keeps upstream attribution visible while focusing this build on printer profiles, reinforced-material workflows, and local manufacturing reliability."));
+    text_list.push_back(_L("This OrcaSlicer-based build includes improvements inspired by PrusaSlicer 3.0.0-alpha11, including profile ownership, derived-state handling, and layer-height inheritance. It is not a full PrusaSlicer 3 rebase."));
 
     text_sizer->Add( 0, 0, 0, wxTOP, FromDIP(33));
     bool is_zh = wxGetApp().app_config->get("language") == "zh_CN";

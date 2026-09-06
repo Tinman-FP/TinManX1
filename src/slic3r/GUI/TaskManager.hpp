@@ -7,6 +7,8 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/log/trivial.hpp>
 
+#include <atomic>
+
 
 namespace Slic3r { 
 
@@ -39,32 +41,20 @@ public:
         task_info_id = ++TaskStateInfo::g_task_info_id;
     }
 
-    TaskState state() { return m_state; }
-    void set_state(TaskState ts) {
-        BOOST_LOG_TRIVIAL(trace) << "TaskStateInfo set state = " << get_task_state_enum_str(ts);
-        m_state = ts;
-        if (m_state_changed_fn) {
-            m_state_changed_fn(m_state, m_sending_percent);
-        }
-    }
+    TaskState state() const;
+    void set_state(TaskState ts);
     PrintParams get_params() { return m_params; }
 
     PrintParams& params() { return m_params; }
 
     std::string get_job_id(){return profile_id;}
 
-    void update_sending_percent(int percent) {
-        m_sending_percent = percent;
-        update();
-    }
+    void update_sending_percent(int percent);
     void set_sent_time(std::chrono::system_clock::time_point time) {
         sent_time = time;
         update();
     }
-    void set_state_changed_fn(StateChangedFn fn) {
-        m_state_changed_fn = fn;
-        update();
-    }
+    void set_state_changed_fn(StateChangedFn fn);
     void set_cancel_fn(WasCancelledFn fn) {
         cancel_fn = fn;
     }
@@ -73,14 +63,10 @@ public:
     void set_device_name(std::string name) { m_device_name = name; }
     void set_job_id(std::string job_id) { m_job_id = job_id; }
 
-    void update() {
-        if (m_state_changed_fn) {
-            m_state_changed_fn(m_state, m_sending_percent);
-        }
-    }
+    void update();
 
     void cancel();
-    bool is_canceled() { return m_cancel; }
+    bool is_canceled() const;
 
     std::string get_device_name() {return m_device_name;};
     std::string get_task_name() {return m_task_name;};
@@ -105,14 +91,19 @@ public:
     std::string       profile_id;
     int               task_info_id;
 private:
-    bool              m_cancel;
-    TaskState         m_state;
+    struct RuntimeState {
+        std::atomic_bool cancel{false};
+        std::atomic<TaskState> state{TaskState::TS_PENDING};
+        std::atomic_int sending_percent{0};
+        std::mutex callback_mutex;
+        StateChangedFn state_changed_fn;
+    };
+
+    std::shared_ptr<RuntimeState> m_runtime = std::make_shared<RuntimeState>();
     std::string       m_task_name;
     std::string       m_device_name;
     PrintParams  m_params;
-    int               m_sending_percent;
     std::string       m_job_id;
-    StateChangedFn    m_state_changed_fn;
 };
 
 class TaskSettings
@@ -146,6 +137,7 @@ public:
     static int MaxSendingAtSameTime;
     static int SendingInterval;
     TaskManager(NetworkAgent* agent);
+    ~TaskManager();
 
     int start_print(const std::vector<PrintParams>& params, TaskSettings* settings = nullptr);
 
@@ -172,7 +164,7 @@ private:
     std::vector<TaskStateInfo*>   m_scedule_list;
     std::vector<boost::thread*>   m_sending_thread_list;
     std::mutex                    m_scedule_mutex;
-    bool                        m_started { false };
+    std::atomic_bool            m_started { false };
     NetworkAgent*               m_agent { nullptr };
 
     std::chrono::system_clock::time_point last_sent_timestamp;

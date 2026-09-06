@@ -12,24 +12,27 @@ names are hidden.
 
 With --apply-live the script also creates a recoverable backup, mirrors the
 generated resources into the installed app and Application Support, removes
-legacy user machine copies, and rewrites the enabled-model list to the curated
-catalog. It intentionally does not alter filament tuning values.
+legacy user machine copies, migrates their connection details into a private
+per-machine overlay, and rewrites the enabled-model list to the curated catalog.
+It intentionally does not alter filament tuning values.
 """
 
 from __future__ import annotations
 
 import argparse
 import copy
+import importlib.util
 import json
 import re
 import shutil
+import sys
 import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-
+from urllib.parse import urlsplit, urlunsplit
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
@@ -37,11 +40,53 @@ PROFILES_ROOT = REPO_ROOT / "resources" / "profiles"
 DEFAULT_APP_SUPPORT = Path.home() / "Library/Application Support/OrcaSlicer-Codex"
 DEFAULT_APP_PROFILES = Path("/Applications/TinManX1.app/Contents/Resources/profiles")
 DEFAULT_BACKUP_ROOT = Path.home() / ".tinmanx1" / "machine-profile-cleanup-backups"
+DEFAULT_SHIPPED_MOTION_REGISTRY = (
+    REPO_ROOT / "resources" / "orcaslicer_codex" / "motion_envelope" / "registry.json"
+)
+DEFAULT_USER_MOTION_REGISTRY = Path.home() / ".tinmanx1/motion-envelopes/registry.json"
+MOTION_ENVELOPE_MODULE = (
+    REPO_ROOT / "resources" / "orcaslicer_codex" / "motion_envelope" / "motion_envelope.py"
+)
 
-NOZZLES = ("0.4", "0.6", "0.8", "1.0")
-CONTRACT_VERSION = "2"
+HARDWARE_CATALOG_PATH = REPO_ROOT / "resources/orcaslicer_codex/hardware/catalog.json"
+HARDWARE_CATALOG = json.loads(HARDWARE_CATALOG_PATH.read_text(encoding="utf-8"))
+if type(HARDWARE_CATALOG.get("schema_version")) is not int or HARDWARE_CATALOG["schema_version"] != 1:
+    raise ValueError("Unsupported TinMan hardware catalog schema")
+NOZZLES = tuple(HARDWARE_CATALOG["nozzle_variants"])
+if len(NOZZLES) != 4 or set(NOZZLES) != {"0.4", "0.6", "0.8", "1.0"}:
+    raise ValueError("Invalid TinMan hardware catalog nozzle variants")
+CONTRACT_VERSION = "6"
 NAMESPACE = uuid.UUID("c1f4d9e2-7a3b-5c8d-9e0f-1a2b3c4d5e6f")
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+CONNECTION_SECTION = "tinman_machine_connections"
+CONNECTION_OPTIONS = (
+    "bbl_use_printhost",
+    "host_type",
+    "printer_agent",
+    "print_host",
+    "print_host_webui",
+    "printhost_apikey",
+    "flashforge_serial_number",
+    "printhost_cafile",
+    "printhost_port",
+    "printhost_authorization_type",
+    "printhost_user",
+    "printhost_password",
+    "printhost_ssl_ignore_revoke",
+)
+
+
+def load_motion_envelope_module() -> Any:
+    spec = importlib.util.spec_from_file_location("tinman_motion_envelope", MOTION_ENVELOPE_MODULE)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"unable to load motion-envelope engine: {MOTION_ENVELOPE_MODULE}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+MOTION_ENVELOPE = load_motion_envelope_module()
 
 
 @dataclass(frozen=True)
@@ -51,6 +96,11 @@ class MachineFamily:
     source_names: dict[str, str]
     aliases: tuple[str, ...] = ()
     composite_second_nozzle: str | None = None
+    nozzle_capability: str = "cm2_standard"
+
+    @property
+    def high_flow_nozzles(self) -> bool:
+        return self.nozzle_capability in {"stock_high_flow", "cm2_cht"}
 
     def canonical_name(self, nozzle: str) -> str:
         return f"{self.model} {nozzle} nozzle - TinMan Codex"
@@ -58,9 +108,6 @@ class MachineFamily:
     def source_name(self, nozzle: str) -> str:
         return self.source_names.get(nozzle, self.source_names["0.8"])
 
-
-def source_series(pattern: str) -> dict[str, str]:
-    return {nozzle: pattern.format(nozzle=nozzle) for nozzle in NOZZLES[:-1]}
 
 
 @dataclass(frozen=True)
@@ -84,84 +131,49 @@ PROCESS_MODES = (
 QUALITY_MODE = PROCESS_MODES[0]
 
 
-FAMILIES = (
-    MachineFamily("BBL", "Bambu Lab H2D", source_series("Bambu Lab H2D {nozzle} nozzle")),
+FAMILIES = tuple(
     MachineFamily(
-        "BBL",
-        "Bambu Lab X1 Carbon",
-        source_series("Bambu Lab X1 Carbon {nozzle} nozzle"),
-        aliases=("Bambu Lab X1 Carbon Tinman",),
-    ),
-    MachineFamily("Creality", "Creality K2 Plus", source_series("Creality K2 Plus {nozzle} nozzle")),
-    MachineFamily(
-        "Elegoo",
-        "Elegoo Centauri Carbon",
-        source_series("Elegoo Centauri Carbon {nozzle} nozzle"),
-        aliases=("Elegoo Centauri Carbon 2", "Centauri COSMOS Tinman"),
-    ),
-    MachineFamily(
-        "Prusa",
-        "Prusa CORE One L",
-        source_series("Prusa CORE One L {nozzle} nozzle"),
-        aliases=("Prusa CORE One L HF",),
-    ),
-    MachineFamily(
-        "Qidi",
-        "Qidi X-Plus 4",
-        source_series("Qidi X-Plus 4 {nozzle} nozzle"),
-        aliases=("QIDI Plus 4", "Qidi Plus 4", "CURRENT QIDI"),
-    ),
-    MachineFamily(
-        "Qidi",
-        "QidiMaxEz",
-        {nozzle: f"QidiMaxEz {nozzle}" for nozzle in NOZZLES},
-        aliases=("Qidi Max EZ", "Max EZ"),
-    ),
-    MachineFamily(
-        "Ratrig",
-        "RatRig V-Core 4 IDEX 500",
-        source_series("RatRig V-Core 4 IDEX 500 {nozzle} nozzle"),
-    ),
-    MachineFamily(
-        "Ratrig",
-        "RatRig V-Core 4 IDEX 500 COPY MODE",
-        source_series("RatRig V-Core 4 IDEX 500 COPY MODE {nozzle} nozzle"),
-    ),
-    MachineFamily(
-        "Ratrig",
-        "RatRig V-Core 4 IDEX 500 MIRROR MODE",
-        source_series("RatRig V-Core 4 IDEX 500 MIRROR MODE {nozzle} nozzle"),
-    ),
-    MachineFamily(
-        "Snapmaker",
-        "Snapmaker U1",
-        {nozzle: f"Snapmaker U1 ({nozzle} nozzle)" for nozzle in NOZZLES[:-1]},
-        aliases=("CURRENT Snapmaker U1", "CURRENT U1", "fdm_U1"),
-    ),
-    MachineFamily("Sovol", "Sovol SV08 MAX", source_series("Sovol SV08 MAX {nozzle} nozzle")),
-    MachineFamily(
-        "TinManX1",
-        "FibreSeek Seeker 3",
-        {
-            "0.4": "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
-            "0.6": "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
-            "0.8": "FibreSeek Seeker 3 0.8+0.7 composite nozzle",
-        },
-        aliases=("FibreSeek Seeker 3 - Codex",),
-        composite_second_nozzle="0.7",
-    ),
+        vendor=definition["vendor"],
+        model=definition["model"],
+        source_names=definition["source_profiles"],
+        aliases=tuple(alias for alias in definition["aliases"] if alias != definition["model"]),
+        composite_second_nozzle=definition.get("composite_second_nozzle"),
+        nozzle_capability=definition["nozzle_capability"],
+    )
+    for definition in HARDWARE_CATALOG["machines"]
 )
+if not FAMILIES or len({family.model for family in FAMILIES}) != len(FAMILIES):
+    raise ValueError("Empty or duplicate TinMan hardware catalog machines")
+for family in FAMILIES:
+    if family.nozzle_capability not in {"stock_standard", "cm2_standard", "stock_high_flow", "cm2_cht"}:
+        raise ValueError(f"Unknown nozzle capability for {family.model}")
+    if not {"0.4", "0.6", "0.8"}.issubset(family.source_names):
+        raise ValueError(f"Incomplete source profiles for {family.model}")
 
 INDEX_VERSIONS = {
     "BBL": "02.01.00.20",
     "Creality": "02.03.02.76",
     "Elegoo": "02.04.00.07",
-    "Prusa": "02.04.00.04",
-    "Qidi": "02.04.02.11",
+    "Prusa": "02.04.00.06",
+    "Qidi": "02.04.02.13",
     "Ratrig": "02.04.00.03",
-    "Snapmaker": "02.04.00.08",
+    "Snapmaker": "02.04.00.11",
     "Sovol": "02.04.00.02",
     "TinManX1": "02.04.00.16",
+}
+
+INDEX_CONTRACT_VERSIONS = {
+    "Snapmaker": "6",
+}
+
+SNAPMAKER_MIXED_MACHINE = "Snapmaker U1 Live Mixed - TinMan Codex"
+SNAPMAKER_MIXED_SOURCE_MACHINE = "Snapmaker U1 (0.6 nozzle)"
+SNAPMAKER_MIXED_SOURCE_PROCESS = "0.20 Standard @Snapmaker U1 (0.4 nozzle)"
+SNAPMAKER_MIXED_PROCESS_IDS = {
+    "Tank": "SMU1LIVEMIXTANK016",
+    "Quality": "SMU1LIVEMIXQUAL020",
+    "Fast": "SMU1LIVEMIXFAST024",
+    "Draft": "SMU1LIVEMIXDRAFT028",
 }
 
 PROFILE_INDENTS: dict[str, int | str] = {
@@ -175,6 +187,110 @@ PROFILE_FILE_INDENTS: dict[str, int | str] = {
     "Qidi/machine/Qidi X-Plus 4.json": 4,
     "Qidi/machine/QidiMaxEz.json": 4,
     "Snapmaker/machine/Snapmaker U1.json": 4,
+}
+
+DEFAULT_CODEX_FILAMENTS = {
+    "Bambu Lab H2D": "PLA Codex-Polymaker - Bambu H2D @Codex",
+    "Bambu Lab X1 Carbon": "PLA Codex-Polymaker - Bambu X1C HF @Codex",
+    "Creality K2 Plus": "PLA Codex-Polymaker - Creality K2 Plus @Codex",
+    "Elegoo Centauri Carbon": "PLA Codex-Polymaker - Elegoo Centauri @Codex",
+    "Prusa CORE One L": "PLA Codex-Polymaker - Prusa Core One @Codex",
+    "Qidi X-Plus 4": "PLA Codex-Polymaker - Qidi X-Plus 4 @Codex",
+    "QidiMaxEz": "PLA Codex-Polymaker - Qidi X-Plus 4 @Codex",
+    "RatRig V-Core 4 IDEX 500": "PLA Codex-Polymaker - RatRig V-Core 4 @Codex",
+    "RatRig V-Core 4 IDEX 500 COPY MODE": "PLA Codex-Polymaker - RatRig V-Core 4 @Codex",
+    "RatRig V-Core 4 IDEX 500 MIRROR MODE": "PLA Codex-Polymaker - RatRig V-Core 4 @Codex",
+    "Snapmaker U1": "PLA Codex-Polymaker - Snapmaker U1 @Codex",
+    "Sovol SV08 MAX": "PLA Codex-Polymaker - Sovol SV08 MAX @Codex",
+}
+
+
+# Prusa uses one deliberately conservative first-layer contract across every
+# standard CORE One L nozzle. Keep these values separate from the generic
+# nozzle-scaled TinMan modes so catalog regeneration cannot change bed contact.
+PRUSA_CORE_ONE_L_FIRST_LAYER = {
+    "0.4": {
+        "initial_layer_print_height": "0.20",
+        "line_width": "0.45",
+        "initial_layer_line_width": "0.50",
+        "outer_wall_line_width": "0.45",
+        "inner_wall_line_width": "0.45",
+        "top_surface_line_width": "0.42",
+        "sparse_infill_line_width": "0.45",
+        "internal_solid_infill_line_width": "0.45",
+        "support_line_width": "0.40",
+        "initial_layer_speed": "45",
+        "initial_layer_infill_speed": "100",
+    },
+    "0.6": {
+        "initial_layer_print_height": "0.20",
+        "line_width": "0.68",
+        "initial_layer_line_width": "0.68",
+        "outer_wall_line_width": "0.68",
+        "inner_wall_line_width": "0.68",
+        "top_surface_line_width": "0.55",
+        "sparse_infill_line_width": "0.68",
+        "internal_solid_infill_line_width": "0.68",
+        "support_line_width": "0.50",
+        "initial_layer_speed": "45",
+        "initial_layer_infill_speed": "70",
+    },
+    "0.8": {
+        "initial_layer_print_height": "0.20",
+        "line_width": "0.90",
+        "initial_layer_line_width": "1.00",
+        "outer_wall_line_width": "0.90",
+        "inner_wall_line_width": "0.90",
+        "top_surface_line_width": "0.75",
+        "sparse_infill_line_width": "0.90",
+        "internal_solid_infill_line_width": "0.90",
+        "support_line_width": "0.65",
+        "initial_layer_speed": "45",
+        "initial_layer_infill_speed": "55",
+    },
+    # Prusa does not publish a standard 1.0 mm CORE One L profile. These
+    # dimensions conservatively extend its 0.8 mm ratios while retaining the
+    # exact 0.20 mm / 500 mm/s^2 first-layer motion contract.
+    "1.0": {
+        "initial_layer_print_height": "0.20",
+        "line_width": "1.10",
+        "initial_layer_line_width": "1.20",
+        "outer_wall_line_width": "1.10",
+        "inner_wall_line_width": "1.10",
+        "top_surface_line_width": "0.95",
+        "sparse_infill_line_width": "1.10",
+        "internal_solid_infill_line_width": "1.10",
+        "support_line_width": "0.80",
+        "initial_layer_speed": "45",
+        "initial_layer_infill_speed": "45",
+    },
+}
+
+PRUSA_CORE_ONE_L_PROCESS_BASES = {
+    "0.4": {
+        "Tank": "0.25mm STRUCTURAL @CORE One L HF 0.4",
+        "Quality": "0.25mm STRUCTURAL @CORE One L HF 0.4",
+        "Fast": "0.25mm SPEED @CORE One L HF 0.4",
+        "Draft": "0.28mm DRAFT @CORE One L HF 0.4",
+    },
+    "0.6": {
+        "Tank": "0.32mm STRUCTURAL @CORE One L HF 0.6",
+        "Quality": "0.32mm STRUCTURAL @CORE One L HF 0.6",
+        "Fast": "0.40mm SPEED @CORE One L HF 0.6",
+        "Draft": "0.40mm SPEED @CORE One L HF 0.6",
+    },
+    "0.8": {
+        "Tank": "0.30mm STRUCTURAL @CORE One L HF 0.8",
+        "Quality": "0.40mm STRUCTURAL @CORE One L HF 0.8",
+        "Fast": "0.40mm SPEED @CORE One L HF 0.8",
+        "Draft": "0.55mm SPEED @CORE One L HF 0.8",
+    },
+    "1.0": {
+        "Tank": "0.40mm STRUCTURAL @CORE One L HF 0.8",
+        "Quality": "0.40mm STRUCTURAL @CORE One L HF 0.8",
+        "Fast": "0.55mm SPEED @CORE One L HF 0.8",
+        "Draft": "0.55mm SPEED @CORE One L HF 0.8",
+    },
 }
 
 
@@ -234,6 +350,11 @@ def nozzle_arrays(source: dict[str, Any], family: MachineFamily, nozzle: str) ->
         minimum[1] = "0.14"
         maximum[1] = "0.40"
     return diameters, minimum, maximum
+
+
+def nozzle_flow_types(family: MachineFamily, count: int) -> list[str]:
+    flow_type = "High Flow" if family.high_flow_nozzles else "Standard"
+    return [flow_type] * count
 
 
 def process_score(
@@ -317,7 +438,15 @@ def default_process_name(family: MachineFamily, nozzle: str) -> str:
     return process_name(family, nozzle, mode)
 
 
-def mode_settings(mode: ProcessMode, nozzle: str) -> dict[str, str]:
+def prusa_core_one_l_source_process_name(nozzle: str, mode: ProcessMode) -> str:
+    return PRUSA_CORE_ONE_L_PROCESS_BASES[nozzle][mode.name]
+
+
+def mode_settings(
+    mode: ProcessMode,
+    nozzle: str,
+    family: MachineFamily | None = None,
+) -> dict[str, str]:
     diameter = float(nozzle)
     nozzle_speed_scale = {"0.4": 1.00, "0.6": 0.80, "0.8": 0.65, "1.0": 0.55}[nozzle]
     speed = mode.speed_scale * nozzle_speed_scale
@@ -329,7 +458,7 @@ def mode_settings(mode: ProcessMode, nozzle: str) -> dict[str, str]:
     def dimension(factor: float) -> str:
         return f"{diameter * factor:.2f}"
 
-    return {
+    settings = {
         "layer_height": f"{diameter * mode.layer_factor:.2f}",
         "initial_layer_print_height": f"{diameter * 0.50:.2f}",
         "line_width": dimension(1.05),
@@ -366,6 +495,117 @@ def mode_settings(mode: ProcessMode, nozzle: str) -> dict[str, str]:
         "travel_acceleration": scaled(8000, acceleration),
     }
 
+    if family is not None and family.nozzle_capability == "cm2_cht":
+        # Micro Swiss measured 34.0 mm3/s from its FlowTech CHT nozzle versus
+        # 22.2 mm3/s from the standard reference in the same PLA test. Applying
+        # Orca's 20% production margin yields about 1.23x useful headroom. Keep
+        # visible surfaces close to the quality baseline and spend the gain on
+        # hidden paths; each filament's MVS remains the final flow governor.
+        speed_factors = {
+            "outer_wall_speed": 1.05,
+            "inner_wall_speed": 1.20,
+            "small_perimeter_speed": 1.05,
+            "sparse_infill_speed": 1.20,
+            "internal_solid_infill_speed": 1.15,
+            "top_surface_speed": 1.05,
+            "gap_infill_speed": 1.15,
+            "support_speed": 1.15,
+        }
+        for key, factor in speed_factors.items():
+            settings[key] = str(max(1, round(float(settings[key]) * factor)))
+
+    if family is not None and family.model in {"Qidi X-Plus 4", "QidiMaxEz"}:
+        # The mechanically identical Plus 4 and Max EZ use the same reviewed
+        # 10,000 mm/s2 acceleration table. Their installed standard CM2
+        # nozzles do not receive a CHT flow multiplier.
+        plus4_acceleration = {
+            "Tank": ("3500", "1400", "2800", "1200", "2800", "4200", "1500", "700", "7000"),
+            "Quality": ("6000", "2400", "4800", "1800", "4800", "7200", "2000", "900", "9000"),
+            "Fast": ("8000", "3200", "6500", "2400", "6500", "9000", "2500", "1000", "10000"),
+            "Draft": ("9000", "3600", "7500", "2800", "7500", "10000", "2800", "1200", "10000"),
+        }
+        acceleration_keys = (
+            "default_acceleration",
+            "outer_wall_acceleration",
+            "inner_wall_acceleration",
+            "top_surface_acceleration",
+            "internal_solid_infill_acceleration",
+            "sparse_infill_acceleration",
+            "bridge_acceleration",
+            "initial_layer_acceleration",
+            "travel_acceleration",
+        )
+        settings.update(dict(zip(acceleration_keys, plus4_acceleration[mode.name])))
+        if family.model == "QidiMaxEz":
+            settings["travel_speed"] = "500"
+        return settings
+
+    if family is None or family.model != "Prusa CORE One L":
+        return settings
+
+    settings.update(PRUSA_CORE_ONE_L_FIRST_LAYER[nozzle])
+    is_speed_mode = mode.name in {"Fast", "Draft"}
+    large_nozzle = nozzle in {"0.8", "1.0"}
+    if nozzle == "0.4" and mode.name == "Fast":
+        # The generic matrix left the 0.4 HF profile below the hotend's useful
+        # range even on hidden paths. These remain below Prusa's corresponding
+        # HF SPEED values, while exterior and top-surface speeds stay unchanged.
+        settings.update(
+            {
+                "inner_wall_speed": "180",
+                "sparse_infill_speed": "275",
+                "internal_solid_infill_speed": "170",
+                "gap_infill_speed": "100",
+            }
+        )
+    elif nozzle == "0.4" and mode.name == "Draft":
+        # Match Prusa's HF Draft sparse-infill ceiling while retaining the
+        # slower TinMan exterior-wall speed.
+        settings["sparse_infill_speed"] = "300"
+    settings.update(
+        {
+            "default_acceleration": "3000",
+            "outer_wall_acceleration": (
+                "1500" if not is_speed_mode else ("2500" if large_nozzle else "3000")
+            ),
+            "inner_wall_acceleration": (
+                "2500" if not is_speed_mode else ("3000" if large_nozzle else "6000")
+            ),
+            "top_surface_acceleration": "1500" if is_speed_mode and large_nozzle else "2000",
+            "internal_solid_infill_acceleration": (
+                "4000" if not is_speed_mode else ("5000" if large_nozzle else "6000")
+            ),
+            "sparse_infill_acceleration": "7000" if is_speed_mode else "6000",
+            "bridge_acceleration": "1000" if large_nozzle else "1500",
+            "initial_layer_acceleration": "500",
+            "travel_acceleration": "6000",
+        }
+    )
+    if is_speed_mode and large_nozzle:
+        settings["outer_wall_line_width"] = "1.00" if nozzle == "0.8" else "1.20"
+        settings["inner_wall_line_width"] = settings["outer_wall_line_width"]
+    support_interface_speed = {"0.4": "25", "0.6": "25", "0.8": "30", "1.0": "35"}
+    support_xy_distance = {"0.4": "0.30", "0.6": "0.40", "0.8": "0.50", "1.0": "0.60"}
+    branch_diameter = {"0.4": "3", "0.6": "4", "0.8": "5.5", "1.0": "6.5"}
+    tip_diameter = {"0.4": "0.8", "0.6": "1.2", "0.8": "1.6", "1.0": "2.0"}
+    settings.update(
+        {
+            "support_interface_speed": support_interface_speed[nozzle],
+            "support_object_xy_distance": support_xy_distance[nozzle],
+            "support_remove_small_overhang": "0",
+            "support_type": "tree(auto)",
+            "support_style": "tree_hybrid",
+            "support_threshold_angle": "30",
+            "tree_support_branch_diameter": branch_diameter[nozzle],
+            "tree_support_tip_diameter": tip_diameter[nozzle],
+            "tree_support_wall_count": "2",
+            "seam_position": "aligned_back",
+        }
+    )
+    if nozzle == "0.6" and mode.name == "Tank":
+        settings["wall_loops"] = "5"
+    return settings
+
 
 def canonical_process(
     family: MachineFamily,
@@ -373,6 +613,7 @@ def canonical_process(
     source_name: str,
     source: dict[str, Any],
     mode: ProcessMode | None = None,
+    motion_envelopes: tuple[dict[str, Any], ...] = (),
 ) -> dict[str, Any]:
     name = process_name(family, nozzle, mode)
     data: dict[str, Any] = {
@@ -386,7 +627,13 @@ def canonical_process(
         "setting_id": setting_id(family.vendor, "process", name),
     }
     if mode is not None:
-        data.update(mode_settings(mode, nozzle))
+        data.update(mode_settings(mode, nozzle, family))
+        envelope = MOTION_ENVELOPE.find_active_envelope(
+            motion_envelopes, family.model, nozzle
+        )
+        if envelope is not None:
+            caps = MOTION_ENVELOPE.derive_caps(envelope, mode.name)
+            data = MOTION_ENVELOPE.apply_process_caps(data, caps)
     elif nozzle == "1.0":
         data.update(
             {
@@ -410,10 +657,11 @@ def canonical_machine(
     nozzle: str,
     source_name: str,
     source: dict[str, Any],
+    motion_envelopes: tuple[dict[str, Any], ...] = (),
 ) -> dict[str, Any]:
     name = family.canonical_name(nozzle)
     diameters, minimum, maximum = nozzle_arrays(source, family, nozzle)
-    return {
+    data = {
         "type": "machine",
         "name": name,
         "inherits": source_name,
@@ -423,6 +671,7 @@ def canonical_machine(
         "printer_variant": nozzle,
         "printer_settings_id": name,
         "nozzle_diameter": diameters,
+        "default_nozzle_volume_type": nozzle_flow_types(family, len(diameters)),
         "min_layer_height": minimum,
         "max_layer_height": maximum,
         "default_print_profile": process_name(
@@ -430,6 +679,102 @@ def canonical_machine(
         ),
         "setting_id": setting_id(family.vendor, "machine", name),
     }
+    if family.model == "Bambu Lab X1 Carbon":
+        # Do not rely on the upstream X1C inheritance chain for the installed
+        # hardware declaration: every X1C nozzle in this fleet is hardened and
+        # high flow, including the generated 1.0 mm profile.
+        data["nozzle_type"] = ["hardened_steel"] * len(diameters)
+    if default_filament := DEFAULT_CODEX_FILAMENTS.get(family.model):
+        data["default_filament_profile"] = [default_filament]
+    if family.model in {"Qidi X-Plus 4", "QidiMaxEz"}:
+        # The user's Max EZ and Plus 4 are mechanically identical. Keep both
+        # canonical slicer contracts aligned with their 10,000 mm/s^2 live
+        # Klipper limit; velocity remains owned by each machine base.
+        data.update(
+            {
+                "machine_max_acceleration_x": ["10000"],
+                "machine_max_acceleration_y": ["10000"],
+                "machine_max_acceleration_z": ["500"],
+                "machine_max_acceleration_e": ["5000"],
+                "machine_max_acceleration_extruding": ["10000"],
+                "machine_max_acceleration_retracting": ["10000"],
+                "machine_max_acceleration_travel": ["10000"],
+                "machine_max_speed_x": ["600"],
+                "machine_max_speed_y": ["600"],
+                "machine_max_speed_z": ["20"],
+                "machine_max_speed_e": ["80"],
+                "machine_max_jerk_x": ["9"],
+                "machine_max_jerk_y": ["9"],
+                "machine_max_jerk_z": ["4"],
+                "machine_max_jerk_e": ["4"],
+            }
+        )
+    envelope = MOTION_ENVELOPE.find_active_envelope(
+        motion_envelopes, family.model, nozzle
+    )
+    if envelope is not None:
+        for key in (
+            MOTION_ENVELOPE.MACHINE_SPEED_KEYS
+            | MOTION_ENVELOPE.MACHINE_ACCELERATION_KEYS
+        ):
+            if key not in data and key in source:
+                data[key] = copy.deepcopy(source[key])
+        caps = MOTION_ENVELOPE.derive_caps(envelope, "Draft")
+        data = MOTION_ENVELOPE.apply_machine_caps(data, caps)
+    return data
+
+
+def snapmaker_mixed_machine() -> dict[str, Any]:
+    return {
+        "type": "machine",
+        "name": SNAPMAKER_MIXED_MACHINE,
+        "inherits": SNAPMAKER_MIXED_SOURCE_MACHINE,
+        "from": "system",
+        "instantiation": "true",
+        "printer_model": "Snapmaker U1",
+        "printer_variant": "0.6",
+        "printer_settings_id": SNAPMAKER_MIXED_MACHINE,
+        "nozzle_diameter": ["0.6", "0.4", "0.4", "0.6"],
+        "default_nozzle_volume_type": ["Standard"] * 4,
+        "min_layer_height": ["0.12", "0.08", "0.08", "0.12"],
+        "max_layer_height": ["0.42", "0.28", "0.28", "0.42"],
+        "default_print_profile": f"0.20mm Quality @{SNAPMAKER_MIXED_MACHINE}",
+        "setting_id": "SMU1LIVEMIX06040406",
+        "default_filament_profile": [DEFAULT_CODEX_FILAMENTS["Snapmaker U1"]],
+    }
+
+
+def snapmaker_mixed_process(mode: ProcessMode) -> dict[str, Any]:
+    layer = float("0.4") * mode.layer_factor
+    name = f"{layer:.2f}mm {mode.name} @{SNAPMAKER_MIXED_MACHINE}"
+    data: dict[str, Any] = {
+        "type": "process",
+        "name": name,
+        "inherits": SNAPMAKER_MIXED_SOURCE_PROCESS,
+        "from": "system",
+        "instantiation": "true",
+        "print_settings_id": name,
+        "compatible_printers": [
+            SNAPMAKER_MIXED_MACHINE,
+            "Snapmaker U1 Tooling - TinMan Codex",
+        ],
+        "setting_id": SNAPMAKER_MIXED_PROCESS_IDS[mode.name],
+    }
+    data.update(mode_settings(mode, "0.4"))
+    data.update(
+        {
+            "initial_layer_print_height": "0.20",
+            "line_width": "105%",
+            "initial_layer_line_width": "110%",
+            "outer_wall_line_width": "100%",
+            "inner_wall_line_width": "105%",
+            "top_surface_line_width": "100%",
+            "sparse_infill_line_width": "110%",
+            "internal_solid_infill_line_width": "105%",
+            "support_line_width": "100%",
+        }
+    )
+    return data
 
 
 def profile_data_for_item(vendor: str, item: dict[str, Any]) -> dict[str, Any] | None:
@@ -478,7 +823,9 @@ def update_fibreseek_filament_compatibility(index: dict[str, Any], family: Machi
             write_json(PROFILES_ROOT / family.vendor / str(item["sub_path"]), data)
 
 
-def generate_repo_catalog() -> tuple[int, int]:
+def generate_repo_catalog(
+    motion_envelopes: tuple[dict[str, Any], ...] = (),
+) -> tuple[int, int]:
     families_by_vendor: dict[str, list[MachineFamily]] = {}
     for family in FAMILIES:
         families_by_vendor.setdefault(family.vendor, []).append(family)
@@ -560,14 +907,35 @@ def generate_repo_catalog() -> tuple[int, int]:
                     family.composite_second_nozzle is not None,
                 )
 
-                machine = canonical_machine(family, nozzle, source_machine_name, source_machine)
+                machine = canonical_machine(
+                    family,
+                    nozzle,
+                    source_machine_name,
+                    source_machine,
+                    motion_envelopes,
+                )
                 machine_rel = Path("machine") / "TinMan Codex" / f"{machine['name']}.json"
                 write_json(PROFILES_ROOT / vendor / machine_rel, machine)
                 kept_machines.append({"name": machine["name"], "sub_path": machine_rel.as_posix()})
                 machine_count += 1
                 for mode in process_modes(family):
+                    selected_process_name = source_process_name
+                    selected_process = source_process
+                    if family.model == "Prusa CORE One L" and mode is not None:
+                        selected_process_name = prusa_core_one_l_source_process_name(nozzle, mode)
+                        preferred_entry = process_profiles.get(selected_process_name)
+                        if preferred_entry is None:
+                            raise RuntimeError(
+                                f"missing Prusa CORE One L process source: {selected_process_name}"
+                            )
+                        _, selected_process = preferred_entry
                     process = canonical_process(
-                        family, nozzle, source_process_name, source_process, mode
+                        family,
+                        nozzle,
+                        selected_process_name,
+                        selected_process,
+                        mode,
+                        motion_envelopes,
                     )
                     process_rel = Path("process") / "TinMan Codex" / f"{process['name']}.json"
                     write_json(PROFILES_ROOT / vendor / process_rel, process)
@@ -576,8 +944,45 @@ def generate_repo_catalog() -> tuple[int, int]:
                     )
                     process_count += 1
 
+                # Keep the live four-tool matrix next to the 0.4 mm U1
+                # processes, matching the stable selector order shipped in
+                # contract 6. These files used to be hand-maintained and were
+                # silently deleted whenever this generator was rerun.
+                if family.model == "Snapmaker U1" and nozzle == "0.4":
+                    for mixed_mode in PROCESS_MODES:
+                        mixed_process = snapmaker_mixed_process(mixed_mode)
+                        mixed_process_rel = (
+                            Path("process")
+                            / "TinMan Codex"
+                            / f"{mixed_process['name']}.json"
+                        )
+                        write_json(
+                            PROFILES_ROOT / vendor / mixed_process_rel,
+                            mixed_process,
+                        )
+                        kept_processes.append(
+                            {
+                                "name": mixed_process["name"],
+                                "sub_path": mixed_process_rel.as_posix(),
+                            }
+                        )
+                        process_count += 1
+
+        if vendor == "Snapmaker":
+            mixed_machine = snapmaker_mixed_machine()
+            mixed_machine_rel = (
+                Path("machine") / "TinMan Codex" / f"{SNAPMAKER_MIXED_MACHINE}.json"
+            )
+            write_json(PROFILES_ROOT / vendor / mixed_machine_rel, mixed_machine)
+            kept_machines.append(
+                {"name": SNAPMAKER_MIXED_MACHINE, "sub_path": mixed_machine_rel.as_posix()}
+            )
+            machine_count += 1
+
         index["version"] = INDEX_VERSIONS[vendor]
-        index["tinman_codex_machine_contract"] = CONTRACT_VERSION
+        index["tinman_codex_machine_contract"] = INDEX_CONTRACT_VERSIONS.get(
+            vendor, CONTRACT_VERSION
+        )
         index["machine_list"] = kept_machines
         index["process_list"] = kept_processes
         write_json(index_path, index)
@@ -601,8 +1006,118 @@ def nozzle_from_name(name: str) -> str | None:
     return match.group(1) if match else None
 
 
+def serialized_connection_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if isinstance(value, list):
+        return ";".join(str(item) for item in value)
+    return str(value)
+
+
+def default_webui_for_family(family: MachineFamily, address: str) -> str:
+    """Return the printer UI origin while keeping the control API address separate."""
+    if family.vendor != "Creality" or not address:
+        return address
+
+    candidate = address if "://" in address else f"http://{address}"
+    parsed = urlsplit(candidate)
+    if parsed.port is not None or (parsed.path and parsed.path != "/"):
+        return candidate
+
+    hostname = parsed.hostname or ""
+    if not hostname:
+        return candidate
+    if ":" in hostname and not hostname.startswith("["):
+        hostname = f"[{hostname}]"
+    netloc = f"{hostname}:4408"
+    if parsed.username:
+        credentials = parsed.username
+        if parsed.password:
+            credentials += f":{parsed.password}"
+        netloc = f"{credentials}@{netloc}"
+    return urlunsplit((parsed.scheme or "http", netloc, "/", parsed.query, parsed.fragment))
+
+
+def collect_live_connections(app_support: Path, conf: dict[str, Any]) -> tuple[dict[str, str], dict[str, dict[str, str]]]:
+    """Resolve one current address and any explicit host options per family."""
+    addresses: dict[str, str] = {}
+    details: dict[str, dict[str, str]] = {}
+    overlay = conf.get(CONNECTION_SECTION)
+    if isinstance(overlay, dict):
+        for family in FAMILIES:
+            prefix = f"{family.model}::"
+            family_details = {
+                key[len(prefix):]: str(value)
+                for key, value in overlay.items()
+                if key.startswith(prefix) and key[len(prefix):] in CONNECTION_OPTIONS
+            }
+            if family_details:
+                details[family.model] = family_details
+                address = family_details.get("print_host") or family_details.get("print_host_webui")
+                if address:
+                    addresses[family.model] = address
+
+    # Saved user copies contain the richest connection settings, so retain
+    # those before the obsolete presets are removed from the visible catalog.
+    for path in sorted((app_support / "user").glob("*/machine/*.json")):
+        try:
+            data = load_json(path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        family = family_for_name(f"{path.stem} {data.get('printer_model', '')}")
+        if not family:
+            continue
+        host = str(data.get("print_host") or data.get("print_host_webui") or "")
+        if not host:
+            continue
+        family_details = details.setdefault(family.model, {})
+        for option in CONNECTION_OPTIONS:
+            if option in data:
+                value = serialized_connection_value(data[option])
+                if value:
+                    family_details[option] = value
+        addresses[family.model] = host
+
+    ip_addresses = conf.get("ip_address")
+    if not isinstance(ip_addresses, dict):
+        ip_addresses = {}
+    # Prefer an existing canonical mapping, then recover any older alias.
+    for family in FAMILIES:
+        if family.model in addresses:
+            continue
+        for nozzle in NOZZLES:
+            address = str(ip_addresses.get(family.canonical_name(nozzle), ""))
+            if address:
+                addresses[family.model] = address
+                break
+        if family.model in addresses:
+            continue
+        for name, value in ip_addresses.items():
+            if family_for_name(str(name)) == family and value:
+                addresses[family.model] = str(value)
+                break
+
+    # Local device discovery fills families that never had a preset-side host,
+    # notably the serial-bound Bambu machines.
+    bambu_types = {"O1D": "Bambu Lab H2D", "BL-P001": "Bambu Lab X1 Carbon"}
+    local_machines = conf.get("local_machines")
+    if isinstance(local_machines, dict):
+        for machine in local_machines.values():
+            if not isinstance(machine, dict):
+                continue
+            printer_type = str(machine.get("printer_type", ""))
+            family = family_for_name(f"{machine.get('dev_name', '')} {printer_type}")
+            if family is None and printer_type in bambu_types:
+                family = next(item for item in FAMILIES if item.model == bambu_types[printer_type])
+            address = str(machine.get("dev_ip", ""))
+            if family and address and family.model not in addresses:
+                addresses[family.model] = address
+
+    return addresses, details
+
+
 def backup_live_state(app_support: Path, backup_root: Path) -> Path:
-    backup = backup_root / datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup = backup_root / datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
     backup.mkdir(parents=True, exist_ok=False)
     for rel in (Path("OrcaSlicer.conf"), Path("printers")):
         source = app_support / rel
@@ -714,6 +1229,7 @@ def rewrite_printer_compatibility(app_support: Path) -> int:
 def rewrite_live_config(app_support: Path) -> tuple[int, int]:
     conf_path = app_support / "OrcaSlicer.conf"
     conf = load_json(conf_path)
+    addresses, connection_details = collect_live_connections(app_support, conf)
     conf["models"] = [
         {"model": family.model, "nozzle_diameter": ";".join(NOZZLES), "vendor": family.vendor}
         for family in FAMILIES
@@ -740,12 +1256,62 @@ def rewrite_live_config(app_support: Path) -> tuple[int, int]:
     current_family = family_for_name(current) or next(family for family in FAMILIES if family.model == "Qidi X-Plus 4")
     current_nozzle = nozzle_from_name(current) or "0.6"
     conf.setdefault("presets", {})["machine"] = current_family.canonical_name(current_nozzle)
+
+    # Orca persists nozzle-flow selections separately from machine presets and
+    # gives those saved values precedence over default_nozzle_volume_type. Keep
+    # both canonical and hidden inheritance-base entries aligned with the
+    # actual TinMan hardware so an old Standard value cannot revive the Bambu
+    # mismatch warning after a restart.
+    nozzle_volume_types = conf.get("nozzle_volume_types")
+    if not isinstance(nozzle_volume_types, dict):
+        nozzle_volume_types = {}
+        conf["nozzle_volume_types"] = nozzle_volume_types
+    for family in FAMILIES:
+        machine_profiles = indexed_profiles(family.vendor, "machine")
+        for nozzle in NOZZLES:
+            names = (family.canonical_name(nozzle), family.source_name(nozzle))
+            for name in names:
+                entry = machine_profiles.get(name)
+                if entry is None:
+                    continue
+                _, machine_data = entry
+                count = len(machine_data.get("nozzle_diameter") or []) or 1
+                nozzle_volume_types[name] = ",".join(nozzle_flow_types(family, count))
+
     pack = conf.get("tinmanx1_profile_pack")
     if not isinstance(pack, dict):
         pack = {"legacy_value": pack} if pack not in (None, "") else {}
         conf["tinmanx1_profile_pack"] = pack
     pack["machine_contract_version"] = CONTRACT_VERSION
     pack["machine_contract_applied_at"] = int(time.time())
+
+    ip_addresses = conf.get("ip_address")
+    if not isinstance(ip_addresses, dict):
+        ip_addresses = {}
+        conf["ip_address"] = ip_addresses
+    overlay = conf.get(CONNECTION_SECTION)
+    if not isinstance(overlay, dict):
+        overlay = {}
+        conf[CONNECTION_SECTION] = overlay
+    for family in FAMILIES:
+        address = addresses.get(family.model)
+        if not address:
+            continue
+        for nozzle in NOZZLES:
+            ip_addresses[family.canonical_name(nozzle)] = address
+        # Bambu devices remain serial-bound in local_machines. Their canonical
+        # address aliases are useful, but third-party print-host settings are not.
+        if family.vendor == "BBL":
+            continue
+        family_details = connection_details.get(family.model, {})
+        family_details.setdefault("print_host", address)
+        current_webui = family_details.get("print_host_webui", "")
+        family_details["print_host_webui"] = default_webui_for_family(
+            family, current_webui or address
+        )
+        for option, value in family_details.items():
+            if option in CONNECTION_OPTIONS:
+                overlay[f"{family.model}::{option}"] = value
     write_json(conf_path, conf)
 
     removed = 0
@@ -773,11 +1339,35 @@ def main() -> int:
     parser.add_argument("--app-support", type=Path, default=DEFAULT_APP_SUPPORT)
     parser.add_argument("--app-profiles", type=Path, default=DEFAULT_APP_PROFILES)
     parser.add_argument("--backup-root", type=Path, default=DEFAULT_BACKUP_ROOT)
+    parser.add_argument(
+        "--capability-envelopes",
+        type=Path,
+        help=(
+            "validated motion-envelope registry; apply-live uses "
+            "~/.tinmanx1/motion-envelopes/registry.json when present"
+        ),
+    )
     args = parser.parse_args()
 
-    machines, processes = generate_repo_catalog()
+    registry_path = args.capability_envelopes
+    if registry_path is None:
+        registry_path = (
+            DEFAULT_USER_MOTION_REGISTRY
+            if args.apply_live and DEFAULT_USER_MOTION_REGISTRY.is_file()
+            else DEFAULT_SHIPPED_MOTION_REGISTRY
+        )
+    if not registry_path.is_file():
+        raise FileNotFoundError(f"motion-envelope registry not found: {registry_path}")
+    motion_envelopes = tuple(MOTION_ENVELOPE.load_registry(registry_path))
+    active_envelopes = sum(
+        str(item.get("status", "")).strip().lower() == MOTION_ENVELOPE.ACTIVE_STATUS
+        for item in motion_envelopes
+    )
+
+    machines, processes = generate_repo_catalog(motion_envelopes)
     print(f"generated machine profiles: {machines}")
     print(f"generated canonical processes: {processes}")
+    print(f"motion envelopes: {active_envelopes} active from {registry_path}")
     if args.apply_live:
         backup, removed, printer_files = apply_live(args.app_support, args.app_profiles, args.backup_root)
         print(f"backup: {backup}")

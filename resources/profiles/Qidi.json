@@ -1,6 +1,6 @@
 {
   "name": "Qidi",
-  "version": "02.04.02.11",
+  "version": "02.04.02.13",
   "force_update": "0",
   "description": "Qidi configurations",
   "machine_model_list": [
@@ -6423,5 +6423,5 @@
       "sub_path": "machine/TinMan Codex/QidiMaxEz 1.0 nozzle - TinMan Codex.json"
     }
   ],
-  "tinman_codex_machine_contract": "2"
+  "tinman_codex_machine_contract": "6"
 }

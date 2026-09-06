@@ -1875,6 +1875,10 @@ void CrealityPrintHostSendDialog::init()
 {
     PrintHostSendDialog::init();
 
+    m_printer_slots.clear();
+    m_gcode_filament_types.clear();
+    m_slot_combos.clear();
+
     auto* creality_host = static_cast<CrealityPrint*>(m_printhost);
     bool multi_color;
     std::string printer_name;
@@ -1979,6 +1983,7 @@ void CrealityPrintHostSendDialog::init()
                                    ? filament_colors->values[i] : "#FFFFFF";
             std::string gc_type  = (filament_types && i < (int)filament_types->values.size())
                                    ? filament_types->values[i] : "?";
+            m_gcode_filament_types.push_back(gc_type);
 
             // Color indicator panel
             auto* color_panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(16), FromDIP(16)));
@@ -2097,8 +2102,11 @@ std::map<std::string, std::string> CrealityPrintHostSendDialog::extendedInfo() c
             // id = gcode tool index (T1A for first filament, T1B for second, ...),
             // not the destination CFS slot — firmware matches by gcode tool.
             std::string gcode_tool = "T1" + std::string(1, 'A' + i);
+            const std::string& gcode_type = i < (int)m_gcode_filament_types.size()
+                ? m_gcode_filament_types[i]
+                : slot.type;
             info["colorMatch_" + std::to_string(i)] =
-                gcode_tool + "\t" + slot.type + "\t" + slot.color + "\t" +
+                gcode_tool + "\t" + gcode_type + "\t" + slot.color + "\t" +
                 std::to_string(slot.box_id) + "\t" + std::to_string(slot.material_id);
         }
     }

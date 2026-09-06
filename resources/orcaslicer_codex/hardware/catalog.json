@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "catalog_version": "2026.09.05.1",
+  "nozzle_variants": ["0.4", "0.6", "0.8", "1.0"],
+  "machines": [
+    {
+      "id": "bambu-h2d",
+      "vendor": "BBL",
+      "model": "Bambu Lab H2D",
+      "aliases": ["Bambu Lab H2D"],
+      "tool_count": 2,
+      "nozzle_capability": "stock_high_flow",
+      "printer_agent": "bbl",
+      "connection_mode": "bambu",
+      "source_profiles": {
+        "0.4": "Bambu Lab H2D 0.4 nozzle",
+        "0.6": "Bambu Lab H2D 0.6 nozzle",
+        "0.8": "Bambu Lab H2D 0.8 nozzle"
+      }
+    },
+    {
+      "id": "bambu-x1c",
+      "vendor": "BBL",
+      "model": "Bambu Lab X1 Carbon",
+      "aliases": ["Bambu Lab X1 Carbon Tinman", "Bambu Lab X1 Carbon"],
+      "tool_count": 1,
+      "nozzle_capability": "cm2_cht",
+      "printer_agent": "bbl",
+      "connection_mode": "bambu",
+      "source_profiles": {
+        "0.4": "Bambu Lab X1 Carbon 0.4 nozzle",
+        "0.6": "Bambu Lab X1 Carbon 0.6 nozzle",
+        "0.8": "Bambu Lab X1 Carbon 0.8 nozzle"
+      }
+    },
+    {
+      "id": "creality-k2-plus",
+      "vendor": "Creality",
+      "model": "Creality K2 Plus",
+      "aliases": ["Creality K2 Plus"],
+      "tool_count": 1,
+      "nozzle_capability": "cm2_cht",
+      "printer_agent": "crealityprint",
+      "connection_mode": "creality",
+      "source_profiles": {
+        "0.4": "Creality K2 Plus 0.4 nozzle",
+        "0.6": "Creality K2 Plus 0.6 nozzle",
+        "0.8": "Creality K2 Plus 0.8 nozzle"
+      }
+    },
+    {
+      "id": "elegoo-centauri-carbon",
+      "vendor": "Elegoo",
+      "model": "Elegoo Centauri Carbon",
+      "aliases": [
+        "Elegoo Centauri Carbon 2",
+        "Elegoo Centauri Carbon2",
+        "Centauri COSMOS Tinman",
+        "Elegoo Centauri Carbon"
+      ],
+      "tool_count": 1,
+      "nozzle_capability": "cm2_standard",
+      "printer_agent": "",
+      "connection_mode": "inherited",
+      "source_profiles": {
+        "0.4": "Elegoo Centauri Carbon 0.4 nozzle",
+        "0.6": "Elegoo Centauri Carbon 0.6 nozzle",
+        "0.8": "Elegoo Centauri Carbon 0.8 nozzle"
+      }
+    },
+    {
+      "id": "prusa-core-one-l",
+      "vendor": "Prusa",
+      "model": "Prusa CORE One L",
+      "aliases": ["Prusa CORE One L HF", "Prusa CORE One L"],
+      "tool_count": 1,
+      "nozzle_capability": "cm2_standard",
+      "printer_agent": "moonraker",
+      "connection_mode": "moonraker",
+      "source_profiles": {
+        "0.4": "Prusa CORE One L HF 0.4 nozzle",
+        "0.6": "Prusa CORE One L HF 0.6 nozzle",
+        "0.8": "Prusa CORE One L HF 0.8 nozzle"
+      }
+    },
+    {
+      "id": "qidi-x-plus-4",
+      "vendor": "Qidi",
+      "model": "Qidi X-Plus 4",
+      "aliases": ["Qidi X-Plus 4", "QIDI Plus 4", "Qidi Plus 4", "CURRENT QIDI"],
+      "tool_count": 1,
+      "nozzle_capability": "cm2_standard",
+      "printer_agent": "qidi",
+      "connection_mode": "qidi_moonraker",
+      "source_profiles": {
+        "0.4": "Qidi X-Plus 4 0.4 nozzle",
+        "0.6": "Qidi X-Plus 4 0.6 nozzle",
+        "0.8": "Qidi X-Plus 4 0.8 nozzle"
+      }
+    },
+    {
+      "id": "qidi-max-ez",
+      "vendor": "Qidi",
+      "model": "QidiMaxEz",
+      "aliases": ["QidiMaxEz", "Qidi Max EZ", "Max EZ"],
+      "tool_count": 1,
+      "nozzle_capability": "cm2_standard",
+      "printer_agent": "qidi",
+      "connection_mode": "qidi_moonraker",
+      "source_profiles": {
+        "0.4": "QidiMaxEz 0.4",
+        "0.6": "QidiMaxEz 0.6",
+        "0.8": "QidiMaxEz 0.8",
+        "1.0": "QidiMaxEz 1.0"
+      }
+    },
+    {
+      "id": "ratrig-v-core-4-idex-500",
+      "vendor": "Ratrig",
+      "model": "RatRig V-Core 4 IDEX 500",
+      "aliases": ["RatRig V-Core 4 IDEX 500"],
+      "tool_count": 2,
+      "nozzle_capability": "cm2_standard",
+      "printer_agent": "moonraker",
+      "connection_mode": "moonraker",
+      "source_profiles": {
+        "0.4": "RatRig V-Core 4 IDEX 500 0.4 nozzle",
+        "0.6": "RatRig V-Core 4 IDEX 500 0.6 nozzle",
+        "0.8": "RatRig V-Core 4 IDEX 500 0.8 nozzle"
+      }
+    },
+    {
+      "id": "ratrig-v-core-4-idex-500-copy",
+      "vendor": "Ratrig",
+      "model": "RatRig V-Core 4 IDEX 500 COPY MODE",
+      "aliases": ["RatRig V-Core 4 IDEX 500 COPY MODE"],
+      "tool_count": 2,
+      "nozzle_capability": "cm2_standard",
+      "printer_agent": "moonraker",
+      "connection_mode": "moonraker",
+      "source_profiles": {
+        "0.4": "RatRig V-Core 4 IDEX 500 COPY MODE 0.4 nozzle",
+        "0.6": "RatRig V-Core 4 IDEX 500 COPY MODE 0.6 nozzle",
+        "0.8": "RatRig V-Core 4 IDEX 500 COPY MODE 0.8 nozzle"
+      }
+    },
+    {
+      "id": "ratrig-v-core-4-idex-500-mirror",
+      "vendor": "Ratrig",
+      "model": "RatRig V-Core 4 IDEX 500 MIRROR MODE",
+      "aliases": ["RatRig V-Core 4 IDEX 500 MIRROR MODE"],
+      "tool_count": 2,
+      "nozzle_capability": "cm2_standard",
+      "printer_agent": "moonraker",
+      "connection_mode": "moonraker",
+      "source_profiles": {
+        "0.4": "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.4 nozzle",
+        "0.6": "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.6 nozzle",
+        "0.8": "RatRig V-Core 4 IDEX 500 MIRROR MODE 0.8 nozzle"
+      }
+    },
+    {
+      "id": "snapmaker-u1",
+      "vendor": "Snapmaker",
+      "model": "Snapmaker U1",
+      "aliases": ["Snapmaker U1", "CURRENT Snapmaker U1", "CURRENT U1", "fdm_U1"],
+      "tool_count": 4,
+      "nozzle_capability": "stock_standard",
+      "printer_agent": "snapmaker",
+      "connection_mode": "snapmaker",
+      "managed_profile_names": [
+        "Snapmaker U1 Live Mixed - TinMan Codex",
+        "Snapmaker U1 Tooling - TinMan Codex"
+      ],
+      "source_profiles": {
+        "0.4": "Snapmaker U1 (0.4 nozzle)",
+        "0.6": "Snapmaker U1 (0.6 nozzle)",
+        "0.8": "Snapmaker U1 (0.8 nozzle)"
+      }
+    },
+    {
+      "id": "sovol-sv08-max",
+      "vendor": "Sovol",
+      "model": "Sovol SV08 MAX",
+      "aliases": ["Sovol SV08 MAX"],
+      "tool_count": 1,
+      "nozzle_capability": "cm2_standard",
+      "printer_agent": "moonraker",
+      "connection_mode": "moonraker",
+      "source_profiles": {
+        "0.4": "Sovol SV08 MAX 0.4 nozzle",
+        "0.6": "Sovol SV08 MAX 0.6 nozzle",
+        "0.8": "Sovol SV08 MAX 0.8 nozzle"
+      }
+    },
+    {
+      "id": "fiberseek-seeker-3",
+      "vendor": "TinManX1",
+      "model": "FibreSeek Seeker 3",
+      "aliases": [
+        "FibreSeek Seeker 3 - Codex",
+        "FibreSeek Seeker 3",
+        "SEEKER 3",
+        "Fibreseek3"
+      ],
+      "tool_count": 2,
+      "nozzle_capability": "cm2_standard",
+      "printer_agent": "",
+      "connection_mode": "inherited",
+      "composite_second_nozzle": "0.7",
+      "source_profiles": {
+        "0.4": "FibreSeek Seeker 3 0.4+0.7 composite nozzle",
+        "0.6": "FibreSeek Seeker 3 0.6+0.7 composite nozzle",
+        "0.8": "FibreSeek Seeker 3 0.8+0.7 composite nozzle"
+      }
+    }
+  ]
+}

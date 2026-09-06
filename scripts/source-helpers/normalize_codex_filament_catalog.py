@@ -42,6 +42,7 @@ DEFAULT_MIRROR_ROOTS = [
 
 SYSTEM_SUFFIX = " @Codex"
 BLACK = "#000000"
+PRUSA_PC_PBT_CF_TOKEN = "PCPBTCF"
 PROFILE_RE = re.compile(
     r"^(?P<material>.+?) Codex-(?P<manufacturer>.+?) - "
     r"(?P<printer>.+?)(?: \((?P<copy>\d+)\))? @Codex$"
@@ -95,6 +96,10 @@ LEGACY_BUCKET_EXPANSIONS: dict[str, tuple[str, ...]] = {
     "Bambu": ("Bambu H2D", "Bambu X1C HF"),
 }
 
+SOURCE_BUCKET_ALIASES = {
+    "Prusa CORE One L": "Prusa Core One",
+}
+
 X1C_UNSUPPORTED_MATERIALS = {"PPS", "PPS-CF", "PPS-GF"}
 
 BUCKET_ORDER = {name: index for index, name in enumerate(TARGET_BUCKETS)}
@@ -137,7 +142,10 @@ class ParsedProfile:
 
     @property
     def canonical_name(self) -> str:
-        return f"{self.material_type} Codex-{self.manufacturer} - {self.target_bucket}{SYSTEM_SUFFIX}"
+        display_bucket = self.target_bucket
+        if self.key == ("PC-PBT-CF", "Push Plastic", "Prusa Core One"):
+            display_bucket = "Prusa CORE One L"
+        return f"{self.material_type} Codex-{self.manufacturer} - {display_bucket}{SYSTEM_SUFFIX}"
 
     @property
     def user_name(self) -> str:
@@ -178,6 +186,8 @@ def clean_material_type(material_label: str, profile: dict[str, Any]) -> str:
         type_value = filament_type.strip()
 
     label = material_label.strip()
+    if label.upper() == "PC-PBT-CF":
+        return "PC-PBT-CF"
     if "PEBA" in label.upper():
         return "PEBA"
     if label.startswith(PRODUCT_PREFIXES) and type_value:
@@ -197,6 +207,7 @@ def normalize_type_alias(value: str) -> str:
     aliases = {
         "PET GF": "PET-GF",
         "Push Plastic PC-PBT": "PC-PBT",
+        "Push Plastic PC-PBT-CF": "PC-PBT-CF",
         "PE": "PE",
     }
     return aliases.get(value, value)
@@ -226,7 +237,7 @@ def parse_profile(path: Path, data: dict[str, Any]) -> ParsedProfile | None:
     match = PROFILE_RE.match(name)
     if not match:
         return None
-    source_bucket = match.group("printer")
+    source_bucket = SOURCE_BUCKET_ALIASES.get(match.group("printer"), match.group("printer"))
     if source_bucket == "FibreSeek Seeker 3":
         return None
     material_label = match.group("material").strip()
@@ -347,7 +358,10 @@ def canonical_profile(
     data["name"] = profile.canonical_name
     data["filament_settings_id"] = [profile.canonical_name]
     data["filament_vendor"] = ["Codex"]
-    data["filament_type"] = [profile.material_type]
+    if profile.key == ("PC-PBT-CF", "Push Plastic", "Prusa Core One"):
+        data["filament_type"] = [PRUSA_PC_PBT_CF_TOKEN]
+    else:
+        data["filament_type"] = [profile.material_type]
     data["default_filament_colour"] = [BLACK]
     data.pop("filament_colour", None)
     data["compatible_printers"] = compatible_printers
@@ -475,7 +489,7 @@ def rewrite_catalog(
         canonical.append((selected.canonical_name, data, selected.user_name))
 
     index = load_json(index_path)
-    index["version"] = "00.00.02.00"
+    index["version"] = "00.00.02.01"
     index["filament_list"] = [
         {"name": name, "sub_path": f"filament/{name}.json"}
         for name, _, _ in canonical

@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 DEFAULT_APP = Path("/Applications/TinManX1.app")
-DEFAULT_TINMANX_APP = Path("/Applications/TinManX TinManX1.app")
+DEFAULT_LEGACY_APP = Path("/Applications/TinManX TinManX1.app")
 DEFAULT_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "OrcaSlicer-Codex"
 EXPECTED_BUNDLE_ID = "com.tinmanfp.TinManX1"
 EXPECTED_DISPLAY_NAME = "TinManX1"
@@ -43,6 +43,13 @@ FEATURE_RESOURCES = (
     "sidecars/orcaslicer_codex_fiber_metadata_sidecar.py",
     "sidecars/orcaslicer_codex_strength_lens_sidecar.py",
     "tools/repair_bambu_lan_bindings.py",
+    "tools/repair_prusalink_bindings.py",
+    "tools/sync_bambu_network_plugin.py",
+    "tools/tinman-rtsp-bridge",
+    "tools/FFmpeg-LGPL-2.1.txt",
+    "motion_envelope/motion_envelope.py",
+    "motion_envelope/registry.json",
+    "motion_envelope/README.md",
     "third_party/gpl/arc-overhang/LICENSE",
     "third_party/gpl/arc-overhang/NOTICE.md",
     "third_party/gpl/arc-overhang/requirements.txt",
@@ -173,6 +180,16 @@ def check_launcher(state: CheckState, app: Path, app_support: Path) -> None:
     else:
         state.fail("launcher does not run Bambu LAN binding repair helper")
 
+    if "repair_prusalink_bindings.py" in text:
+        state.ok("launcher runs authenticated PrusaLink rediscovery and binding repair")
+    else:
+        state.fail("launcher does not run PrusaLink binding repair helper")
+
+    if "sync_bambu_network_plugin.py" in text:
+        state.ok("launcher can adopt a newer locally installed official Bambu network plug-in")
+    else:
+        state.fail("launcher does not run the local Bambu plug-in sync helper")
+
     if "orca_codex_launch_preflight.py" in text:
         state.fail("launcher still executes the mutable legacy launch preflight")
     else:
@@ -260,6 +277,8 @@ def check_feature_resources(state: CheckState, app: Path) -> None:
         path = resources / rel
         if path.exists() and path.stat().st_size > 0:
             state.ok(f"feature resource present: {rel}")
+            if rel == "tools/tinman-rtsp-bridge" and path.stat().st_mode & 0o111 == 0:
+                state.fail("Prusa RTSP decoder is not executable")
         else:
             state.fail(f"missing feature resource: {rel}")
 
@@ -280,22 +299,22 @@ def check_feature_resources(state: CheckState, app: Path) -> None:
             state.ok(f"feature resource uses LF line endings: {rel}")
 
 
-def check_tinmanx_separation(state: CheckState, app: Path, tinmanx_app: Path) -> None:
-    if not tinmanx_app.exists():
-        state.ok(f"legacy TinManX app is absent: {tinmanx_app}")
+def check_legacy_app_separation(state: CheckState, app: Path, legacy_app: Path) -> None:
+    if not legacy_app.exists():
+        state.ok(f"legacy TinManX app is absent: {legacy_app}")
         return
-    if tinmanx_app.is_symlink():
-        state.fail(f"TinManX app is a symlink to {tinmanx_app.resolve()}")
+    if legacy_app.is_symlink():
+        state.fail(f"legacy TinManX app is a symlink to {legacy_app.resolve()}")
     else:
-        state.ok("TinManX app is not a symlink")
+        state.ok("legacy TinManX app is not a symlink")
 
     try:
-        if tinmanx_app.resolve() == app.resolve():
-            state.fail("TinManX app resolves to the Codex app")
+        if legacy_app.resolve() == app.resolve():
+            state.fail("legacy TinManX app resolves to the current TinManX1 app")
         else:
-            state.ok("TinManX and Codex resolve to different app bundles")
+            state.ok("legacy TinManX and current TinManX1 are separate app bundles")
     except FileNotFoundError:
-        state.warn("could not resolve TinManX app path")
+        state.warn("could not resolve legacy TinManX app path")
 
 
 def check_codesign(state: CheckState, app: Path) -> None:
@@ -311,7 +330,14 @@ def check_codesign(state: CheckState, app: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--app", type=Path, default=DEFAULT_APP)
-    parser.add_argument("--tinmanx-app", type=Path, default=DEFAULT_TINMANX_APP)
+    parser.add_argument(
+        "--legacy-app",
+        "--tinmanx-app",
+        dest="legacy_app",
+        type=Path,
+        default=DEFAULT_LEGACY_APP,
+        help="obsolete app bundle that must not alias the current TinManX1 installation",
+    )
     parser.add_argument("--app-support", type=Path, default=DEFAULT_APP_SUPPORT)
     parser.add_argument("--expected-version", default="2.4.2")
     parser.add_argument("--codesign", action="store_true")
@@ -319,11 +345,11 @@ def main() -> int:
 
     state = CheckState()
     if not args.app.exists():
-        state.fail(f"Codex app missing: {args.app}")
+        state.fail(f"TinManX1 app missing: {args.app}")
     elif args.app.is_symlink():
-        state.fail(f"Codex app is a symlink: {args.app}")
+        state.fail(f"TinManX1 app is a symlink: {args.app}")
     else:
-        state.ok(f"Codex app exists: {args.app}")
+        state.ok(f"TinManX1 app exists: {args.app}")
 
     check_info(state, args.app, args.expected_version)
     check_launcher(state, args.app, args.app_support)
@@ -331,7 +357,7 @@ def main() -> int:
     check_config(state, args.app_support, args.expected_version)
     check_bambu_plugins(state, args.app_support)
     check_feature_resources(state, args.app)
-    check_tinmanx_separation(state, args.app, args.tinmanx_app)
+    check_legacy_app_separation(state, args.app, args.legacy_app)
     if args.codesign:
         check_codesign(state, args.app)
 

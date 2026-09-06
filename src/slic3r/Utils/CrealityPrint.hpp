@@ -33,6 +33,11 @@ public:
     bool supports_multi_color_print() const;
     std::string query_boxes_info() const;
     std::string model_name() const;
+    static std::string get_device_api_url(std::string url);
+    static std::string get_device_webui_url(std::string url);
+    static bool validate_cfs_file_info_response(const std::string& response,
+                                                const std::string& filename,
+                                                std::string& error);
 
 protected:
     virtual void set_auth(Http& http) const;

@@ -240,9 +240,20 @@ public:
         assert(iter != g_webviews.end());
         if (iter != g_webviews.end())
             g_webviews.erase(iter);
+        g_delay_webviews.erase(std::remove(g_delay_webviews.begin(), g_delay_webviews.end(), m_webView),
+                               g_delay_webviews.end());
     }
     wxWebView *m_webView;
+    // WKWebView raises an Objective-C exception if the same handler is registered twice.
+    bool m_script_handler_added = false;
 };
+
+static WebViewRef *webview_ref(wxWebView *webView)
+{
+    if (!webView || std::find(g_webviews.begin(), g_webviews.end(), webView) == g_webviews.end())
+        return nullptr;
+    return static_cast<WebViewRef *>(webView->GetRefData());
+}
 
 wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
 {
@@ -304,25 +315,36 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
         Slic3r::GUI::WKWebView_setTransparentBackground(wkWebView);
 #endif
         auto addScriptMessageHandler = [] (wxWebView *webView) {
+            WebViewRef *ref = webview_ref(webView);
+            if (!ref || ref->m_script_handler_added || Slic3r::GUI::wxGetApp().is_closing())
+                return;
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": begin to add script message handler for wx.";
             Slic3r::GUI::wxGetApp().set_adding_script_handler(true);
-            if (!webView->AddScriptMessageHandler("wx"))
-                wxLogError("Could not add script message handler");
+            const bool added = webView->AddScriptMessageHandler("wx");
             Slic3r::GUI::wxGetApp().set_adding_script_handler(false);
+            if (!added)
+                wxLogError("Could not add script message handler");
+            else if (WebViewRef *live_ref = webview_ref(webView))
+                live_ref->m_script_handler_added = true;
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": finished add script message handler for wx.";
         };
 #ifndef __WIN32__
         webView->CallAfter([webView, addScriptMessageHandler] {
+            if (!webview_ref(webView) || Slic3r::GUI::wxGetApp().is_closing())
+                return;
 #endif
             if (Slic3r::GUI::wxGetApp().is_adding_script_handler()) {
-                g_delay_webviews.push_back(webView);
+                if (std::find(g_delay_webviews.begin(), g_delay_webviews.end(), webView) == g_delay_webviews.end())
+                    g_delay_webviews.push_back(webView);
             } else {
                 addScriptMessageHandler(webView);
-                while (!g_delay_webviews.empty()) {
+                while (!Slic3r::GUI::wxGetApp().is_closing() && !g_delay_webviews.empty()) {
                     auto views = std::move(g_delay_webviews);
                     for (auto wv : views)
                         addScriptMessageHandler(wv);
                 }
+                if (Slic3r::GUI::wxGetApp().is_closing())
+                    g_delay_webviews.clear();
             }
 #ifndef __WIN32__
         });
@@ -335,6 +357,12 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
     webView->SetRefData(new WebViewRef(webView));
     g_webviews.push_back(webView);
     return webView;
+}
+
+void WebView::MarkScriptMessageHandlerAdded(wxWebView *webView)
+{
+    if (WebViewRef *ref = webview_ref(webView))
+        ref->m_script_handler_added = true;
 }
 #if wxUSE_WEBVIEW_EDGE
 bool WebView::CheckWebViewRuntime()

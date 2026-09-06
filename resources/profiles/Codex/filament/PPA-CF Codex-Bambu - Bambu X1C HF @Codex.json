@@ -223,5 +223,8 @@
     ],
     "additional_cooling_fan_speed": [
         "0"
+    ],
+    "filament_extruder_variant": [
+        "Direct Drive High Flow"
     ]
 }

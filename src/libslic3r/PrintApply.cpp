@@ -1,6 +1,7 @@
 #include "ClipperUtils.hpp"
 #include "Model.hpp"
 #include "Print.hpp"
+#include "TinManMachineProfileContract.hpp"
 
 #include <boost/log/trivial.hpp>
 #include <algorithm>
@@ -193,12 +194,19 @@ static bool layer_height_ranges_equal(const t_layer_config_ranges &lr1, const t_
     auto it2 = lr2.begin();
     for (const auto &kvp1 : lr1) {
         const auto &kvp2 = *it2 ++;
-        if (!kvp2.second.has("layer_height") || !kvp1.second.has("layer_height"))
-            return false;
         if (std::abs(kvp1.first.first  - kvp2.first.first ) > EPSILON ||
-            std::abs(kvp1.first.second - kvp2.first.second) > EPSILON ||
-            (check_layer_height && std::abs(kvp1.second.option("layer_height")->getFloat() - kvp2.second.option("layer_height")->getFloat()) > EPSILON))
+            std::abs(kvp1.first.second - kvp2.first.second) > EPSILON)
             return false;
+        if (check_layer_height) {
+            const auto *height1 = kvp1.second.option("layer_height");
+            const auto *height2 = kvp2.second.option("layer_height");
+            if (bool(height1) != bool(height2))
+                return false;
+            if (height1 && (height1->type() != coFloat || height2->type() != coFloat ||
+                           !std::isfinite(height1->getFloat()) || !std::isfinite(height2->getFloat()) ||
+                           std::abs(height1->getFloat() - height2->getFloat()) > EPSILON))
+                return false;
+        }
     }
     return true;
 }
@@ -1146,6 +1154,28 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
 
     //new_full_config.normalize_fdm(used_filaments);
     new_full_config.normalize_fdm_1();
+
+    // PresetBundle normally enforces this contract, but imported 3MF projects
+    // and direct API callers may reach Print::apply without passing through it.
+    // Keep this final boundary safe because ToolOrdering intentionally assumes
+    // every logical filament has a valid one-based physical-tool route.
+    size_t filament_count = 1;
+    if (const auto *ids = new_full_config.option<ConfigOptionStrings>("filament_settings_id");
+        ids != nullptr && !ids->values.empty()) {
+        filament_count = ids->values.size();
+    } else if (const auto *diameters = new_full_config.option<ConfigOptionFloats>("filament_diameter");
+               diameters != nullptr && !diameters->values.empty()) {
+        filament_count = diameters->values.size();
+    }
+    tinmanx_normalize_multitool_config(new_full_config, filament_count);
+
+    // The first pass uses the previous model for change detection. Retain the
+    // requested values so that its material-dependent decisions are reversible.
+    const std::array<const char *, 2> model_normalization_keys{{"enable_prime_tower", "independent_support_layer_height"}};
+    DynamicPrintConfig requested_model_config;
+    for (const char *key : model_normalization_keys)
+        if (const auto *option = new_full_config.option(key))
+            requested_model_config.set_key_value(key, option->clone());
     t_config_option_keys changed_keys = new_full_config.normalize_fdm_2(objects().size(), used_filaments.size());
     if (changed_keys.size() > 0) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", got changed_keys, size=%1%")%changed_keys.size();
@@ -1634,46 +1664,6 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
         }
     }
 
-    //BBS: check the config again
-    int new_used_filaments = this->extruders(true).size();
-    t_config_option_keys new_changed_keys = new_full_config.normalize_fdm_2(objects().size(), new_used_filaments);
-    if (new_changed_keys.size() > 0) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", got new_changed_keys, size=%1%")%new_changed_keys.size();
-        for (int i = 0; i < new_changed_keys.size(); i++)
-        {
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", i=%1%, key=%2%")%i %new_changed_keys[i];
-        }
-
-        update_apply_status(false);
-
-        // The following call may stop the background processing.
-        update_apply_status(this->invalidate_state_by_config_options(new_full_config, new_changed_keys));
-
-        update_apply_status(this->invalidate_step(psGCodeExport));
-
-        if (full_config_diff.empty()) {
-            //BBS: previous empty
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(" %1%: full_config_diff previous empty, need to apply now.")%__LINE__;
-
-            m_placeholder_parser.clear_config();
-            // clear_config() wiped the constructor-set "version"; restore it for custom G-code.
-            m_placeholder_parser.set("version", std::string(SoftFever_VERSION));
-            // Set the profile aliases for the PrintBase::output_filename()
-            m_placeholder_parser.set("print_preset",              new_full_config.option("print_settings_id")->clone());
-            m_placeholder_parser.set("filament_preset",           new_full_config.option("filament_settings_id")->clone());
-            m_placeholder_parser.set("printer_preset",            new_full_config.option("printer_settings_id")->clone());
-
-            //m_placeholder_parser.apply_config(filament_overrides);
-        }
-        // It is also safe to change m_config now after this->invalidate_state_by_config_options() call.
-        m_config.apply_only(new_full_config, new_changed_keys, true);
-        // Handle changes to object config defaults
-        m_default_object_config.apply_only(new_full_config, new_changed_keys, true);
-        // Handle changes to regions config defaults
-        m_default_region_config.apply_only(new_full_config, new_changed_keys, true);
-        m_full_print_config = std::move(new_full_config);
-    }
-
     // All regions now have distinct settings.
     // Check whether applying the new region config defaults we would get different regions,
     // update regions or create regions from scratch.
@@ -1784,6 +1774,45 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
                         print_region->m_print_region_id = (*it)->print_region_id();
                     }
             }
+    }
+
+    // Model volumes, painted regions and support assignments now describe this
+    // slice. Re-evaluate from the request, not from the previous slice's result.
+    for (const char *key : model_normalization_keys) {
+        if (const auto *option = requested_model_config.option(key))
+            new_full_config.set_key_value(key, option->clone());
+        else
+            new_full_config.erase(key);
+    }
+    new_full_config.normalize_fdm_2(objects().size(), this->extruders(true).size());
+    t_config_option_keys model_changed_keys;
+    for (const char *key : model_normalization_keys) {
+        const auto *current = m_full_print_config.option(key);
+        const auto *resolved = new_full_config.option(key);
+        if (resolved && (!current || *current != *resolved))
+            model_changed_keys.emplace_back(key);
+    }
+    if (!model_changed_keys.empty()) {
+        update_apply_status(false);
+        update_apply_status(this->invalidate_state_by_config_options(new_full_config, model_changed_keys));
+        update_apply_status(this->invalidate_step(psGCodeExport));
+        m_config.apply_only(new_full_config, model_changed_keys, true);
+        m_default_object_config.apply_only(new_full_config, model_changed_keys, true);
+        m_default_region_config.apply_only(new_full_config, model_changed_keys, true);
+        if (!m_ori_full_print_config.empty())
+            m_ori_full_print_config.apply_only(new_full_config, model_changed_keys, true);
+        const bool tower_changed = std::find(model_changed_keys.begin(), model_changed_keys.end(), "enable_prime_tower") != model_changed_keys.end();
+        for (PrintObject *object : m_objects) {
+            auto resolved = PrintObject::object_config_from_model_object(m_default_object_config, *object->model_object(), num_extruders);
+            const auto diff = object->config().diff(resolved);
+            if (!diff.empty()) {
+                update_apply_status(object->invalidate_state_by_config_options(object->config(), resolved, diff));
+                object->config_apply_only(resolved, diff, true);
+            }
+            if (tower_changed)
+                update_apply_status(object->invalidate_step(posSlice));
+        }
+        m_full_print_config = std::move(new_full_config);
     }
 
     // Update SlicingParameters for each object where the SlicingParameters is not valid.

@@ -10,6 +10,9 @@
     "nozzle_diameter": [
         "0.4"
     ],
+    "default_nozzle_volume_type": [
+        "Standard"
+    ],
     "min_layer_height": [
         "0.08"
     ],
@@ -17,5 +20,53 @@
         "0.28"
     ],
     "default_print_profile": "0.20mm Quality @Qidi X-Plus 4 0.4 nozzle - TinMan Codex",
-    "setting_id": "tmow9nxdxeerLjij"
+    "setting_id": "tmow9nxdxeerLjij",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Qidi X-Plus 4 @Codex"
+    ],
+    "machine_max_acceleration_x": [
+        "10000"
+    ],
+    "machine_max_acceleration_y": [
+        "10000"
+    ],
+    "machine_max_acceleration_z": [
+        "500"
+    ],
+    "machine_max_acceleration_e": [
+        "5000"
+    ],
+    "machine_max_acceleration_extruding": [
+        "10000"
+    ],
+    "machine_max_acceleration_retracting": [
+        "10000"
+    ],
+    "machine_max_acceleration_travel": [
+        "10000"
+    ],
+    "machine_max_speed_x": [
+        "600"
+    ],
+    "machine_max_speed_y": [
+        "600"
+    ],
+    "machine_max_speed_z": [
+        "20"
+    ],
+    "machine_max_speed_e": [
+        "80"
+    ],
+    "machine_max_jerk_x": [
+        "9"
+    ],
+    "machine_max_jerk_y": [
+        "9"
+    ],
+    "machine_max_jerk_z": [
+        "4"
+    ],
+    "machine_max_jerk_e": [
+        "4"
+    ]
 }

@@ -12,6 +12,7 @@
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/GUI/format.hpp"
 #include "Http.hpp"
+#include "MoonrakerStorage.hpp"
 
 namespace pt = boost::property_tree;
 
@@ -153,7 +154,9 @@ bool Moonraker::get_storage(wxArrayString &storage_path, wxArrayString &storage_
             for (const auto &child : *result_node) {
                 const std::string &root = child.second.get<std::string>("name", "");
                 const std::string &perms = child.second.get<std::string>("permissions", "");
-                if (root.empty() || perms.find('w') == std::string::npos)
+                // Only the virtual_sdcard's gcodes root is printable. Other writable
+                // roots accept uploads, but Klippy cannot start files stored there.
+                if (!MoonrakerStorage::is_printable_root(root, perms))
                     continue;
                 storage_path.Add(wxString::FromUTF8(root));
                 storage_name.Add(wxString::FromUTF8(root));
@@ -228,10 +231,15 @@ bool Moonraker::upload(PrintHostUpload upload_data, ProgressFn progress_fn, Erro
     const char *name = get_name();
     const auto upload_filename = upload_data.upload_path.filename();
     const auto upload_parent_path = upload_data.upload_path.parent_path();
-    //ORCA: upload_data.storage is plumbed from the (future) per-printer storage dropdown. When unset,
-    //      fall back to the Moonraker-standard "gcodes" root. Reading it through here means a UI
-    //      addition later (storage picker) needs no change to this method.
-    const std::string root = upload_data.storage.empty() ? std::string("gcodes") : upload_data.storage;
+    // Moonraker may advertise several writable roots, but only the virtual_sdcard's
+    // gcodes root can be started as a print. Ignore stale UI preferences that point
+    // at config, timelapse, or another non-printable root.
+    const std::string root = MoonrakerStorage::print_root(upload_data.storage);
+    if (!upload_data.storage.empty() && upload_data.storage != root) {
+        BOOST_LOG_TRIVIAL(warning) << boost::format(
+            "%1%: Ignoring non-printable Moonraker storage root `%2%`; uploading to `%3%` instead")
+            % get_name() % upload_data.storage % root;
+    }
 
     std::string url = make_url("server/files/upload");
     bool result = true;
@@ -264,18 +272,14 @@ bool Moonraker::upload(PrintHostUpload upload_data, ProgressFn progress_fn, Erro
                 pt::ptree ptree;
                 pt::read_json(ss, ptree);
 
-                //ORCA: Moonraker confirms the storage-relative path in result.item.path. We pass exactly
-                //      that string to /printer/print/start so any server-side renaming (collision suffix,
-                //      etc.) is respected.
-                const auto stored_path = ptree.get_optional<std::string>("result.item.path");
-                if (stored_path) {
-                    uploaded_path = *stored_path;
-                } else {
-                    //ORCA: fallback if the server response omits result.item.path (older Moonraker, or
-                    //      a buddy-fork that returns a slimmer envelope). Use the original filename.
-                    uploaded_path = upload_filename.string();
+                // Moonraker normally wraps the item in result; Snapmaker's compatible
+                // API returns item at the top level. Respect either server-provided path
+                // so collision renames are passed unchanged to print/start.
+                uploaded_path = MoonrakerStorage::uploaded_path(ptree, upload_filename.string());
+                if (!ptree.get_optional<std::string>("result.item.path") &&
+                    !ptree.get_optional<std::string>("item.path")) {
                     BOOST_LOG_TRIVIAL(warning) << boost::format(
-                        "%1%: upload response missing result.item.path, falling back to original filename `%2%`")
+                        "%1%: upload response missing an item path, falling back to original filename `%2%`")
                         % name % uploaded_path;
                 }
             } catch (const std::exception &ex) {

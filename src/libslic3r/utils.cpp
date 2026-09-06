@@ -5,6 +5,7 @@
 #include <locale>
 #include <ctime>
 #include <cstdarg>
+#include <cerrno>
 #include <stdio.h>
 #include <filesystem>
 
@@ -654,9 +655,49 @@ std::error_code rename_file(const std::string &from, const std::string &to)
 #ifdef _WIN32
 	return WindowsSupport::rename(from, to);
 #else
-	boost::nowide::remove(to.c_str());
-	return std::make_error_code(static_cast<std::errc>(boost::nowide::rename(from.c_str(), to.c_str())));
+    // POSIX rename replaces an existing destination atomically. Removing it
+    // first loses that guarantee and destroys the saved file if rename fails.
+    if (boost::nowide::rename(from.c_str(), to.c_str()) == 0)
+        return {};
+    return std::error_code(errno, std::generic_category());
 #endif
+}
+
+void write_file_with_replace(const std::string &file, const std::string &contents)
+{
+    namespace fs = boost::filesystem;
+    const fs::path target(file);
+    const fs::file_status previous = fs::symlink_status(target);
+    if (fs::exists(previous) && !fs::is_regular_file(previous))
+        throw std::runtime_error("Cannot replace a non-regular configuration file: " + file);
+
+    const std::string temporary = (target.parent_path() /
+        fs::unique_path(".tinman-save-%%%%-%%%%-%%%%-%%%%.tmp")).string();
+    FILE *stream = boost::nowide::fopen(temporary.c_str(), "wbx");
+    if (!stream)
+        throw std::system_error(errno, std::generic_category(), "Cannot create temporary configuration for " + file);
+
+    try {
+        // No configuration data is written until the temporary is private.
+        fs::permissions(temporary, fs::owner_read | fs::owner_write);
+        errno = 0;
+        if (std::fwrite(contents.data(), 1, contents.size(), stream) != contents.size() || std::ferror(stream))
+            throw std::system_error(errno ? errno : EIO, std::generic_category(), "Cannot write configuration " + file);
+        errno = 0;
+        const int close_result = std::fclose(stream);
+        stream = nullptr;
+        if (close_result != 0)
+            throw std::system_error(errno ? errno : EIO, std::generic_category(), "Cannot close configuration " + file);
+        if (fs::exists(previous))
+            fs::permissions(temporary, previous.permissions() & fs::all_all);
+        if (const std::error_code error = rename_file(temporary, file))
+            throw std::system_error(error, "Cannot replace configuration " + file);
+    } catch (...) {
+        if (stream)
+            std::fclose(stream);
+        boost::nowide::remove(temporary.c_str());
+        throw;
+    }
 }
 
 #ifdef __linux__

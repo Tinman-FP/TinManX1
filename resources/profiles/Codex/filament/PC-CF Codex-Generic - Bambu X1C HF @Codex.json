@@ -213,5 +213,8 @@
     "version": "2.3.1.10",
     "filament_price_source": [
         "Generic 1 kg retail average"
+    ],
+    "filament_extruder_variant": [
+        "Direct Drive High Flow"
     ]
 }

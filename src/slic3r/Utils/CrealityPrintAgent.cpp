@@ -1,5 +1,6 @@
 #include "CrealityPrintAgent.hpp"
 #include "CrealityPrint.hpp"
+#include "Http.hpp"
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
@@ -8,6 +9,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <map>
 
 namespace Slic3r {
@@ -132,15 +134,57 @@ AgentInfo CrealityPrintAgent::get_agent_info_static()
     };
 }
 
+bool CrealityPrintAgent::init_device_info(std::string dev_id,
+                                          std::string dev_ip,
+                                          std::string username,
+                                          std::string password,
+                                          bool        use_ssl)
+{
+    if (!MoonrakerPrinterAgent::init_device_info(
+            std::move(dev_id), dev_ip, std::move(username), std::move(password), use_ssl))
+        return false;
+
+    // Port 80 is Creality's upload/control API and intentionally has no
+    // Moonraker root. Port 4408 is the K-series web/Moonraker reverse proxy.
+    device_info.base_url = CrealityPrint::get_device_webui_url(std::move(dev_ip));
+    return !device_info.base_url.empty();
+}
+
 std::string CrealityPrintAgent::normalize_filament_type(const std::string& filament_type)
 {
+    auto first = std::find_if_not(filament_type.begin(), filament_type.end(),
+                                  [](unsigned char c) { return std::isspace(c) != 0; });
+    auto last = std::find_if_not(filament_type.rbegin(), filament_type.rend(),
+                                 [](unsigned char c) { return std::isspace(c) != 0; }).base();
+    if (first >= last)
+        return {};
+
+    const std::string trimmed(first, last);
+    std::string       upper = trimmed;
+    std::transform(upper.begin(), upper.end(), upper.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+
+    // Keep longer names before their prefixes and require a real token boundary.
+    // In particular, PCTG must never be reduced to PC merely because it starts
+    // with the same two letters.
     static const std::vector<std::string> bases = {
-        "PETG", "PET", "PLA", "ABS", "ASA", "TPU", "PC", "PA", "PVA", "HIPS"
+        "PCTG", "PETG", "HIPS", "PEBA", "PVA", "PPS", "PPA",
+        "PET", "PLA", "ABS", "ASA", "TPU", "PC", "PA", "PP"
     };
     for (const auto& base : bases) {
-        if (filament_type.rfind(base, 0) == 0) return base;
+        if (upper.rfind(base, 0) != 0)
+            continue;
+
+        if (upper.size() == base.size()
+            || !std::isalnum(static_cast<unsigned char>(upper[base.size()])))
+            return base;
     }
-    return filament_type;
+    return trimmed;
+}
+
+std::string CrealityPrintAgent::direct_api_host(const std::string& device_address)
+{
+    return Http::get_host_from_url(device_address);
 }
 
 // Parse the boxsInfo JSON returned by CrealityPrint::query_boxes_info().
@@ -243,8 +287,16 @@ bool CrealityPrintAgent::fetch_filament_info(std::string dev_id)
 
     // Build a CrealityPrint helper so we can use its model detection + WS helpers
     // (added in upstream PR #13291).
+    const std::string api_host = direct_api_host(device_info.dev_ip);
+    if (api_host.empty()) {
+        BOOST_LOG_TRIVIAL(warning)
+            << "CrealityPrintAgent::fetch_filament_info: invalid device address '"
+            << device_info.dev_ip << "', falling back to base agent";
+        return MoonrakerPrinterAgent::fetch_filament_info(std::move(dev_id));
+    }
+
     DynamicPrintConfig cfg;
-    cfg.set_key_value("print_host",                  new ConfigOptionString("http://" + device_info.dev_ip));
+    cfg.set_key_value("print_host",                  new ConfigOptionString("http://" + api_host));
     cfg.set_key_value("print_host_webui",            new ConfigOptionString(""));
     cfg.set_key_value("printhost_cafile",            new ConfigOptionString(""));
     cfg.set_key_value("printhost_port",              new ConfigOptionString(""));

@@ -16,6 +16,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+from codex_filament_contracts import (
+    apply_contract as apply_codex_contract,
+    load_contract as load_codex_contract,
+)
+
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PROFILE_ROOT = ROOT / "resources/profiles"
@@ -61,6 +66,30 @@ FIBERON_NOTE = (
     "volumetric 3.2 mm3/s, limited overhang cooling, and pressure advance "
     "0.028. Fiberon permits room-temperature chambers; the controlled 50C "
     "target is the TinMan field-quality setting. Dry at 100C for 10h."
+)
+
+X1C_HF_CONTRACT = {
+    "filament_max_volumetric_speed": "6",
+    "eng_plate_temp": "80",
+    "eng_plate_temp_initial_layer": "80",
+    "hot_plate_temp": "80",
+    "hot_plate_temp_initial_layer": "80",
+    "textured_plate_temp": "80",
+    "textured_plate_temp_initial_layer": "80",
+    "fan_max_speed": "40",
+    "overhang_fan_speed": "70",
+    "overhang_fan_threshold": "10%",
+    "slow_down_layer_time": "35",
+}
+
+X1C_HF_NOTE = (
+    "TinManX1 X1C HF PET-CF refinement 2026-08-18: based on the 0.6 mm "
+    "Built Plate Alignment Blocks print, retain 285C first layer / 280C "
+    "print, 80C bed, flow 1.00, and pressure advance 0.028; use a 6 mm3/s "
+    "HF ceiling, 40% normal fan after layer 3, 70% overhang fan from 10% "
+    "overlap, and a 35 s small-layer target. This targets curled upper posts "
+    "and nozzle pickup without weakening the proven bulk-wall tune. Dry at "
+    "100C for 10h and print from a dry box."
 )
 
 QIDI_NOTE = (
@@ -114,7 +143,23 @@ def apply_contract(
     set_vector(profile, "filament_notes", note)
 
 
+def is_x1c_profile(name: str) -> bool:
+    return (
+        " - Bambu X1C HF" in name
+        or name.endswith("@BBL X1C")
+        or name.endswith("@BBL X1")
+    )
+
+
+def apply_x1c_hf_contract(profile: dict[str, Any]) -> None:
+    for key, value in X1C_HF_CONTRACT.items():
+        set_vector(profile, key, value)
+    set_vector(profile, "filament_notes", X1C_HF_NOTE)
+
+
 def supports_active_chamber(name: str, family: str) -> bool:
+    if is_x1c_profile(name):
+        return False
     if family == "qidi":
         return True
     if family == "bambu":
@@ -175,16 +220,32 @@ def candidate_paths(profile_root: Path) -> list[tuple[Path, str]]:
     return sorted(candidates.items())
 
 
-def repair_root(profile_root: Path, dry_run: bool) -> tuple[int, int]:
+def repair_root(
+    profile_root: Path,
+    dry_run: bool,
+    *,
+    x1c_only: bool = False,
+    codex_contract: dict[str, Any] | None = None,
+) -> tuple[int, int]:
     found = 0
     changed = 0
     for path, family in candidate_paths(profile_root):
-        found += 1
         profile = load_json(path)
         before = json.dumps(profile, sort_keys=True)
         name = str(profile.get("name") or path.stem)
+        if x1c_only and not (family == "fiberon" and is_x1c_profile(name)):
+            continue
+        found += 1
         chamber_control = supports_active_chamber(name, family)
-        if family == "bambu":
+        if family == "fiberon" and "Codex/filament" in path.as_posix():
+            profile = apply_codex_contract(
+                profile,
+                "PET-CF",
+                "Fiberon",
+                name.split(" - ", 1)[1].rsplit(" @Codex", 1)[0],
+                codex_contract or load_codex_contract(),
+            )
+        elif family == "bambu":
             apply_contract(
                 profile,
                 pressure_advance=BAMBU_PRESSURE_ADVANCE,
@@ -198,6 +259,8 @@ def repair_root(profile_root: Path, dry_run: bool) -> tuple[int, int]:
                 note=FIBERON_NOTE,
                 chamber_control=chamber_control,
             )
+            if is_x1c_profile(name):
+                apply_x1c_hf_contract(profile)
         else:
             apply_contract(
                 profile,
@@ -218,13 +281,24 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile-root", type=Path, action="append", default=[])
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--x1c-only",
+        action="store_true",
+        help="limit changes to Fiberon PET-CF profiles for the Bambu X1/X1C",
+    )
     args = parser.parse_args()
 
     roots = args.profile_root or [DEFAULT_PROFILE_ROOT]
     total_found = 0
     total_changed = 0
+    codex_contract = load_codex_contract()
     for root in roots:
-        found, changed = repair_root(root, args.dry_run)
+        found, changed = repair_root(
+            root,
+            args.dry_run,
+            x1c_only=args.x1c_only,
+            codex_contract=codex_contract,
+        )
         total_found += found
         total_changed += changed
     print(f"PET-CF profiles matched: {total_found}")

@@ -2065,9 +2065,6 @@ void MoonrakerPrinterAgent::run_status_stream(std::string dev_id, std::string ba
                 for (const auto& name : this->available_objects) {
                     if (name == "extruder" || name.rfind("extruder", 0) == 0) {
                         subscribe_objects.insert(name);
-                        if (name == "extruder") {
-                            break;
-                        }
                     }
                 }
             } else {
@@ -2531,8 +2528,12 @@ nlohmann::json MoonrakerPrinterAgent::build_print_payload_locked() const
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     payload["t_utc"] = now_ms;
 
+    augment_print_payload_locked(payload, status_cache);
+
     return payload;
 }
+
+void MoonrakerPrinterAgent::augment_print_payload_locked(nlohmann::json&, const nlohmann::json&) const {}
 
 void MoonrakerPrinterAgent::dispatch_message(const std::string& dev_id, const std::string& payload)
 {

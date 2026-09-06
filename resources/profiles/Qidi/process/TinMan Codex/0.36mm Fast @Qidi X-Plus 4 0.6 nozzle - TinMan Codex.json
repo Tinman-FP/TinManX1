@@ -34,13 +34,13 @@
     "bridge_speed": "37",
     "support_speed": "74",
     "initial_layer_speed": "37",
-    "default_acceleration": "7750",
-    "outer_wall_acceleration": "3100",
-    "inner_wall_acceleration": "6200",
-    "top_surface_acceleration": "2325",
-    "internal_solid_infill_acceleration": "6200",
-    "sparse_infill_acceleration": "9300",
-    "bridge_acceleration": "2790",
-    "initial_layer_acceleration": "1860",
-    "travel_acceleration": "12400"
+    "default_acceleration": "8000",
+    "outer_wall_acceleration": "3200",
+    "inner_wall_acceleration": "6500",
+    "top_surface_acceleration": "2400",
+    "internal_solid_infill_acceleration": "6500",
+    "sparse_infill_acceleration": "9000",
+    "bridge_acceleration": "2500",
+    "initial_layer_acceleration": "1000",
+    "travel_acceleration": "10000"
 }

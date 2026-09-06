@@ -254,10 +254,9 @@ int Http::priv::xfercb(void *userp, curl_off_t dltotal, curl_off_t dlnow, curl_o
 	bool cb_cancel = false;
 
 	if (self->progressfn) {
-		double speed;
-        curl_easy_getinfo(self->curl, CURLINFO_SPEED_UPLOAD, &speed);
-		if (speed > 0.01)
-			speed = speed;
+		double speed = 0.0;
+		if (curl_easy_getinfo(self->curl, CURLINFO_SPEED_UPLOAD, &speed) != CURLE_OK)
+			speed = 0.0;
 		Progress progress(dltotal, dlnow, ultotal, ulnow, self->buffer, speed);
 		self->progressfn(progress, cb_cancel);
 	}

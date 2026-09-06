@@ -258,7 +258,15 @@ bool CalibrationWizard::save_preset(const std::string &old_preset_name, const st
     }
 
     // Save the preset into Slic3r::data_dir / presets / section_name / preset_name.ini
-    filament_presets->save_current_preset(new_name, false, false, new_preset);
+    try {
+        if (!filament_presets->save_current_preset(new_name, false, false, new_preset)) {
+            message = _L("This preset cannot be overwritten. Save it under a different name.");
+            return false;
+        }
+    } catch (const std::exception &error) {
+        message = _L("Could not save the calibrated preset.") + "\n\n" + wxString::FromUTF8(error.what());
+        return false;
+    }
 
     // BBS create new settings
     new_preset = filament_presets->find_preset(new_name, false, true);
@@ -342,7 +350,15 @@ bool CalibrationWizard::save_preset_with_index(const std::string &old_preset_nam
     }
 
     // Save the preset into Slic3r::data_dir / presets / section_name / preset_name.ini
-    filament_presets->save_current_preset(new_name, false, false, new_preset);
+    try {
+        if (!filament_presets->save_current_preset(new_name, false, false, new_preset)) {
+            message = _L("This preset cannot be overwritten. Save it under a different name.");
+            return false;
+        }
+    } catch (const std::exception &error) {
+        message = _L("Could not save the calibrated preset.") + "\n\n" + wxString::FromUTF8(error.what());
+        return false;
+    }
 
     // BBS create new settings
     new_preset = filament_presets->find_preset(new_name, false, true);

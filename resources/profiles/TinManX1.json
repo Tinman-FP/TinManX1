@@ -453,6 +453,30 @@
       "sub_path": "filament/CFC Push Plastic PC-PBT + CBF @FibreSeek Seeker 3.json"
     },
     {
+      "name": "TinManX1 Push Plastic PC-PBT-CF base",
+      "sub_path": "filament/TinManX1 Push Plastic PC-PBT-CF base.json"
+    },
+    {
+      "name": "TinManX1 Push Plastic PC-PBT-CF @FibreSeek Seeker 3",
+      "sub_path": "filament/TinManX1 Push Plastic PC-PBT-CF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC Push Plastic PC-PBT-CF + X-CCF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC Push Plastic PC-PBT-CF + X-CCF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC Push Plastic PC-PBT-CF + CGF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC Push Plastic PC-PBT-CF + CGF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC Push Plastic PC-PBT-CF + CKF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC Push Plastic PC-PBT-CF + CKF @FibreSeek Seeker 3.json"
+    },
+    {
+      "name": "CFC Push Plastic PC-PBT-CF + CBF @FibreSeek Seeker 3",
+      "sub_path": "filament/CFC Push Plastic PC-PBT-CF + CBF @FibreSeek Seeker 3.json"
+    },
+    {
       "name": "TinManX1 PA-CF base",
       "sub_path": "filament/TinManX1 PA-CF base.json"
     },
@@ -511,5 +535,5 @@
       "sub_path": "machine/TinMan Codex/FibreSeek Seeker 3 1.0 nozzle - TinMan Codex.json"
     }
   ],
-  "tinman_codex_machine_contract": "2"
+  "tinman_codex_machine_contract": "6"
 }

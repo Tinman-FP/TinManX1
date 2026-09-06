@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -40,7 +42,11 @@ REQUIRED_FILES = [
     "resources/profiles/TinManX1/process/0.20mm Plastic + Continuous Fiber Heavy @FibreSeek Seeker 3 0.4+0.7 nozzle.json",
     "resources/profiles/TinManX1/filament/TinManX1 PETG @FibreSeek Seeker 3.json",
     "resources/profiles/TinManX1/filament/CFC PETG + X-CCF @FibreSeek Seeker 3.json",
+    "resources/orcaslicer_codex/motion_envelope/README.md",
+    "resources/orcaslicer_codex/motion_envelope/motion_envelope.py",
+    "resources/orcaslicer_codex/motion_envelope/registry.json",
     "scripts/source-helpers/audit_fiberseek_gcode_contract.py",
+    "scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py",
     "scripts/source-helpers/orcaslicer_codex_arc_support_inplace_adapter.py",
     "scripts/source-helpers/orcaslicer_codex_arc_support_transform.py",
     "scripts/source-helpers/orcaslicer_codex_fiber_metadata_sidecar.py",
@@ -52,9 +58,23 @@ REQUIRED_FILES = [
     "scripts/source-helpers/generate_tinmanx1_fiberseek_profiles.py",
     "scripts/source-helpers/lint_tinmanx1_fiberseek_profiles.py",
     "scripts/source-helpers/normalize_tinman_machine_catalog.py",
+    "scripts/test_tinman_motion_envelope.py",
     "scripts/source-helpers/tinman_profile_manifest.py",
     "src/libslic3r/TinManMachineProfileContract.cpp",
     "src/libslic3r/TinManMachineProfileContract.hpp",
+    "resources/orcaslicer_codex/hardware/catalog.json",
+    "src/libslic3r/TinManHardwareCatalog.cpp",
+    "src/libslic3r/TinManHardwareCatalog.hpp",
+    "src/libslic3r/TinManHardwareCatalogData.hpp.in",
+    "src/libslic3r/ConfigResolutionTrace.hpp",
+    "src/libslic3r/ConfigResolutionTrace.cpp",
+    "src/libslic3r/FilamentSelection.hpp",
+    "src/libslic3r/FilamentSelection.cpp",
+    "tests/libslic3r/test_filament_selection.cpp",
+    "src/libslic3r/PrinterConnectionUpdate.hpp",
+    "src/libslic3r/PrinterConnectionUpdate.cpp",
+    "tests/libslic3r/test_physical_printer_recovery.cpp",
+    "src/slic3r/Utils/RecentProjectThumbnailCache.hpp",
     "tests/libslic3r/test_tinman_machine_profile_contract.cpp",
     "scripts/source-helpers/orcaslicer_codex_native_fiber_planner.py",
     "scripts/source-helpers/smoke_orcaslicer_codex_native_fiber_planner.py",
@@ -102,6 +122,9 @@ ATTRIBUTION_MARKERS = [
     "Moonraker",
     "CNC Kitchen",
     "ModBot",
+    "Anonoei",
+    "Andrew Ellis",
+    "Frix-x",
     "MechaniCalc",
     "FibreSeek",
 ]
@@ -176,6 +199,127 @@ def iter_files() -> list[Path]:
 def main() -> int:
     errors: list[str] = []
 
+    release_checks = (
+        ([sys.executable, "scripts/orca_extra_profile_check.py"], "profile contract validation"),
+        ([sys.executable, "scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py"], "CORE One L HF catalog audit"),
+        ([sys.executable, "scripts/source-helpers/tinman_profile_manifest.py"], "profile checksum manifest"),
+        ([sys.executable, "scripts/test_tinman_motion_envelope.py"], "motion-envelope contract"),
+    )
+    for command, label in release_checks:
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip()
+            errors.append(f"{label} failed: {detail}")
+
+    k2_profile_dir = ROOT / "resources/profiles/Creality/machine/TinMan Codex"
+    forbidden_k2_startup = (
+        "BOX_ENABLE_CFS_PRINT",
+        "CFS_SLOT",
+        "CODEX_CFS_SELECT",
+        "CODEX_REQUIRE_FILAMENT",
+    )
+    for nozzle in ("0.4", "0.6", "0.8", "1.0"):
+        k2_profile = k2_profile_dir / f"Creality K2 Plus {nozzle} nozzle - TinMan Codex.json"
+        if not k2_profile.is_file():
+            errors.append(f"missing TinMan K2 profile: {k2_profile.relative_to(ROOT)}")
+            continue
+        k2_data = json.loads(k2_profile.read_text())
+        if "machine_start_gcode" in k2_data:
+            errors.append(f"{k2_profile.name} must inherit Creality's native startup sequence")
+        profile_text = k2_profile.read_text()
+        for token in forbidden_k2_startup:
+            if token in profile_text:
+                errors.append(f"{k2_profile.name} contains obsolete K2 startup token {token}")
+
+    k2_gcode_source = (ROOT / "src/libslic3r/GCode.cpp").read_text()
+    for marker in (
+        "is_creality_k2_printer",
+        "sanitize_legacy_k2_cfs_start_gcode",
+        "is_bbl_printers || is_creality_k2_printer",
+    ):
+        if marker not in k2_gcode_source:
+            errors.append(f"K2 G-code export contract is missing {marker}")
+
+    k2_transport_source = (ROOT / "src/slic3r/Utils/CrealityPrint.cpp").read_text()
+    start_print_pos = k2_transport_source.find("bool CrealityPrint::start_print")
+    k2_handoff_source = k2_transport_source[start_print_pos:] if start_print_pos >= 0 else ""
+    transport_markers = ("colorMatch", "retGcodeFileInfo2", "multiColorPrint")
+    positions = [k2_handoff_source.find(marker) for marker in transport_markers]
+    if any(position < 0 for position in positions) or positions != sorted(positions):
+        errors.append("K2 native CFS handoff must validate colorMatch metadata before multiColorPrint")
+
+    prusa_filament = ROOT / (
+        "resources/profiles/Codex/filament/"
+        "PC-PBT-CF Codex-Push Plastic - Prusa CORE One L @Codex.json"
+    )
+    prusa_machine = ROOT / (
+        "resources/profiles/Prusa/machine/Prusa CORE One L HF 0.4 nozzle.json"
+    )
+    if prusa_filament.is_file():
+        filament_data = json.loads(prusa_filament.read_text())
+        if filament_data.get("filament_type") != ["PCPBTCF"]:
+            errors.append("CORE One L PC-PBT-CF must emit the native PCPBTCF token")
+    if prusa_machine.is_file():
+        machine_data = json.loads(prusa_machine.read_text())
+        start_gcode = machine_data.get("machine_start_gcode", "")
+        if isinstance(start_gcode, list):
+            start_gcode = start_gcode[0] if start_gcode else ""
+        pc_class_check = (
+            'filament_type[0] == "PC" or filament_type[0] == "PCPBTCF" '
+            'or filament_type[0] == "PA"'
+        )
+        if start_gcode.count(pc_class_check) != 3:
+            errors.append(
+                "CORE One L startup must classify PCPBTCF as PC for all three MBL temperature checks"
+            )
+
+    qidi_common = ROOT / "resources/profiles/Qidi/machine/fdm_qidi_x3_common.json"
+    if qidi_common.is_file():
+        qidi_data = json.loads(qidi_common.read_text())
+        if qidi_data.get("host_type") != "moonraker":
+            errors.append("Qidi Klipper profiles must use Moonraker instead of OctoPrint")
+
+    connection_contract = (ROOT / "src/libslic3r/TinManMachineProfileContract.cpp").read_text(
+        errors="replace"
+    )
+    for marker in (
+        'definition->connection_mode == TinManConnectionMode::QidiMoonraker',
+        'value = "moonraker";',
+    ):
+        if marker not in connection_contract:
+            errors.append(f"Qidi connection contract is missing marker: {marker}")
+
+    hardware = json.loads((ROOT / "resources/orcaslicer_codex/hardware/catalog.json").read_text())
+    for model in ("Qidi X-Plus 4", "QidiMaxEz"):
+        definition = next((item for item in hardware["machines"] if item["model"] == model), {})
+        if definition.get("printer_agent") != "qidi" or definition.get("connection_mode") != "qidi_moonraker":
+            errors.append(f"{model}: hardware catalog must preserve Qidi Moonraker transport")
+
+    gui_app = (ROOT / "src/slic3r/GUI/GUI_App.cpp").read_text(errors="replace")
+    main_frame = (ROOT / "src/slic3r/GUI/MainFrame.cpp").read_text(errors="replace")
+    thumbnail_loader = main_frame.split("void MainFrame::FileHistory::LoadThumbnails()", 1)[1].split(
+        "inline void MainFrame::FileHistory::SetMaxFiles", 1
+    )[0]
+    if "cache.read(" not in thumbnail_loader or any(
+        marker in thumbnail_loader for marker in ("bbs_3mf_get_thumbnail", "wxFileExists", "last_write_time")
+    ):
+        errors.append("recent thumbnail startup must use local cache, not inspect project files")
+    shutdown_body = gui_app[gui_app.find("void GUI_App::shutdown()") : gui_app.find("GUI_App::~GUI_App()")]
+    for marker in (
+        "NetworkAgentFactory::clear_printer_agent_cache();",
+        "BBLNetworkPlugin::shutdown();",
+    ):
+        if marker not in shutdown_body:
+            errors.append(f"early network shutdown is missing marker: {marker}")
+
+    gui_app_header = (ROOT / "src/slic3r/GUI/GUI_App.hpp").read_text(errors="replace")
+    if "m_shutdown_started" not in gui_app_header:
+        errors.append("GUI shutdown must use state separate from the close-request flag")
+    if "m_shutdown_started.compare_exchange_strong" not in shutdown_body:
+        errors.append("GUI shutdown is missing its one-time execution guard")
+    if "m_is_closing.compare_exchange_strong" in shutdown_body:
+        errors.append("GUI shutdown must not use the pre-set close-request flag as its execution guard")
+
     for rel in REQUIRED_FILES:
         path = ROOT / rel
         if not path.is_file():
@@ -215,6 +359,18 @@ def main() -> int:
                 errors.append(f"missing versioned artwork: {rel}")
             elif f"TinManX1 Revision {revision}" not in artwork.read_text(errors="replace"):
                 errors.append(f"{rel} does not match TINMANX1_REVISION {revision}")
+            elif "PrusaSlicer 3.0.0-alpha11" not in artwork.read_text(errors="replace"):
+                errors.append(f"{rel} is missing the PrusaSlicer 3 adoption credit")
+        for rel in ("src/slic3r/GUI/GUI_App.cpp", "src/slic3r/GUI/AboutDialog.cpp"):
+            source = (ROOT / rel).read_text(errors="replace")
+            if "wxString::FromUTF8(TINMANX1_REVISION)" not in source:
+                errors.append(f"{rel} does not display the native TinManX1 revision")
+            if "PrusaSlicer 3.0.0-alpha11" not in source:
+                errors.append(f"{rel} does not display the native PrusaSlicer 3 adoption credit")
+        app_source = (ROOT / "src/slic3r/GUI/GUI_App.cpp").read_text(errors="replace")
+        for call in ("SetAppName(SLIC3R_APP_KEY);", "SetAppDisplayName(SLIC3R_APP_NAME);"):
+            if re.search(r"^\s*" + re.escape(call) + r"\s*$", app_source, re.MULTILINE) is None:
+                errors.append(f"GUI application must preserve storage identity and native branding: {call}")
 
     package_match = re.search(
         r'set\(TINMANX1_PACKAGE_VERSION\s+"(\d+)\.(\d+)\.(\d+)\.(\d+)"\)',

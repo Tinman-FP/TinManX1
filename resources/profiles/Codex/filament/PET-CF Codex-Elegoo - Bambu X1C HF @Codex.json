@@ -62,7 +62,6 @@
         "; filament end gcode \n"
     ],
     "filament_extruder_variant": [
-        "Direct Drive Standard",
         "Direct Drive High Flow"
     ],
     "filament_flow_ratio": [

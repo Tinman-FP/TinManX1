@@ -10,10 +10,12 @@
 #include "Model.hpp"
 #include "libslic3r_version.h"
 #include "TinManMachineProfileContract.hpp"
+#include "ConfigResolutionTrace.hpp"
 
 #include <algorithm>
 #include <mutex>
 #include <set>
+#include <stdexcept>
 #include <fstream>
 #include <unordered_set>
 #include <boost/filesystem.hpp>
@@ -74,6 +76,9 @@ DynamicPrintConfig PresetBundle::construct_full_config(
     bool apply_extruder,
     std::optional<std::vector<int>> filament_maps_new)
 {
+    if (in_filament_presets.empty())
+        throw std::invalid_argument("Cannot construct a print configuration without a filament preset");
+
     DynamicPrintConfig &printer_config = in_printer_preset.config;
     DynamicPrintConfig &print_config   = in_print_preset.config;
 
@@ -240,6 +245,8 @@ DynamicPrintConfig PresetBundle::construct_full_config(
     add_if_some_non_empty(std::move(print_compatible_printers), "print_compatible_printers");
 
     out.option<ConfigOptionEnumGeneric>("printer_technology", true)->value = ptFFF;
+    tinmanx_apply_nozzle_volume_contract(in_printer_preset.name, printer_config, out);
+    tinmanx_normalize_multitool_config(out, num_filaments);
     return out;
 }
 
@@ -326,7 +333,7 @@ PresetBundle::PresetBundle()
     , sla_materials(Preset::TYPE_SLA_MATERIAL, Preset::sla_material_options(), static_cast<const SLAMaterialConfig &>(SLAFullPrintConfig::defaults()))
     , sla_prints(Preset::TYPE_SLA_PRINT, Preset::sla_print_options(), static_cast<const SLAPrintObjectConfig &>(SLAFullPrintConfig::defaults()))
     , printers(Preset::TYPE_PRINTER, Preset::printer_options(), static_print_config_ref(static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults())), "Default Printer")
-    , physical_printers(PhysicalPrinter::printer_options())
+    , physical_printers(PhysicalPrinter::printer_options(), this)
 {
     // The following keys are handled by the UI, they do not have a counterpart in any StaticPrintConfig derived classes,
     // therefore they need to be handled differently. As they have no counterpart in StaticPrintConfig, they are not being
@@ -405,6 +412,7 @@ PresetBundle& PresetBundle::operator=(const PresetBundle &rhs)
     sla_materials       = rhs.sla_materials;
     printers            = rhs.printers;
     physical_printers   = rhs.physical_printers;
+    physical_printers.m_preset_bundle_owner = this;
 
     filament_presets    = rhs.filament_presets;
     project_config      = rhs.project_config;
@@ -2088,8 +2096,15 @@ int PresetBundle::validate_presets(const std::string &file_name, DynamicPrintCon
 
 void PresetBundle::remove_users_preset(AppConfig &config, std::map<std::string, std::map<std::string, std::string>> *my_presets)
 {
-    auto check_removed = [my_presets, this](Preset &preset) -> bool {
+    if (my_presets != nullptr) {
+        PresetCollection *collections[] = {&prints, &filaments, &printers};
+        for (PresetCollection *collection : collections)
+            if (collection->get_selected_idx() < collection->size())
+                collection->update_dirty();
+    }
+    auto check_removed = [my_presets](Preset &preset) -> bool {
         if (my_presets == nullptr) return true;
+        if (preset.is_external) return false;
         if (my_presets->find(preset.name) != my_presets->end()) return false;
         if (!preset.sync_info.empty()) return false; // syncing, not remove
         if (preset.setting_id.empty()) return false; // no id, not remove
@@ -2525,16 +2540,17 @@ void PresetBundle::save_changes_for_preset(const std::string& new_name, Preset::
                                 type == Preset::TYPE_FILAMENT       ? filaments :
                                 type == Preset::TYPE_SLA_MATERIAL   ? sla_materials : printers;
 
-    // if we want to save just some from selected options
+    Preset candidate = presets.get_edited_preset();
+    // Apply the user's selection only to the candidate, not the live draft.
     if (!unselected_options.empty()) {
-        // revert unselected options to the old values
-        presets.get_edited_preset().config.apply_only(presets.get_selected_preset().config, unselected_options);
+        candidate.config.apply_only(presets.get_selected_preset().config, unselected_options);
     }
 
     // Save the preset into Slic3r::data_dir / presets / section_name / preset_name.ini
     //BBS: add project embedded preset logic
     //presets.save_current_preset(new_name);
-    presets.save_current_preset(new_name, false, save_to_project);
+    if (!presets.save_current_preset(new_name, false, save_to_project, &candidate))
+        throw std::runtime_error("The selected preset cannot be overwritten: " + new_name);
     // Mark the print & filament enabled if they are compatible with the currently selected preset.
     // If saving the preset changes compatibility with other presets, keep the now incompatible dependent presets selected, however with a "red flag" icon showing that they are no more compatible.
     update_compatible(PresetSelectCompatibleType::Never);
@@ -2718,10 +2734,14 @@ void PresetBundle::update_selections(AppConfig &config)
         // stays true and the not-found/visible/compatible predicate alone would miss it.
         if (auto it = filaments.find_preset_internal(fp); fp == ORCA_DEFAULT_FILAMENT_PLACEHOLDER || it == filaments.end() || !it->is_visible || !it->is_compatible) {
             if (first_visible_filament_name.empty())
-                first_visible_filament_name = filaments.first_compatible().name;
+                first_visible_filament_name = filaments.first_compatible([](const Preset &preset) {
+                    return preset.name == PresetBundle::ORCA_DEFAULT_FILAMENT_PLACEHOLDER ? 0 : 1;
+                }).name;
             fp = first_visible_filament_name;
         }
     }
+    if (!filament_presets.empty() && filament_presets.front() != ORCA_DEFAULT_FILAMENT_PLACEHOLDER)
+        filaments.select_preset_by_name_strict(filament_presets.front());
 
 }
 
@@ -2741,6 +2761,7 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     // std::string initial_sla_print_profile_name    = remove_ini_suffix(config.get("presets", PRESET_SLA_PRINT_NAME));
     // std::string initial_sla_material_profile_name = remove_ini_suffix(config.get("presets", PRESET_SLA_MATERIALS_NAME));
 	std::string initial_printer_profile_name      = remove_ini_suffix(config.get("presets", PRESET_PRINTER_NAME));
+    const std::string persisted_printer_profile_name = initial_printer_profile_name;
 
     // Activate print / filament / printer profiles from either the config,
     // or from the preferred_model_id suggestion passed in by ConfigWizard.
@@ -2749,15 +2770,67 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     // will be selected by the following call of this->update_compatible(PresetSelectCompatibleType::Always).
 
     const Preset *initial_printer = printers.find_preset(initial_printer_profile_name);
+    if (initial_printer != nullptr) {
+        // Import missing legacy settings without allowing an inherited cached
+        // system preset to replace a newer family-level connection.
+        tinmanx_remember_machine_connection(config, initial_printer->name, initial_printer->config, false);
+    }
+    if (initial_printer == nullptr) {
+        const std::string canonical_name = tinmanx_canonical_machine_preset_name(initial_printer_profile_name);
+        if (const Preset *canonical = printers.find_preset(canonical_name); canonical != nullptr) {
+            initial_printer_profile_name = canonical_name;
+            initial_printer = canonical;
+        }
+    }
+    if (initial_printer != nullptr &&
+        !tinmanx_machine_preset_allowed(initial_printer->name, initial_printer->config.opt_string("printer_model"))) {
+        const std::string canonical_name = tinmanx_canonical_machine_preset_name(
+            initial_printer->name,
+            initial_printer->config.opt_string("printer_model"),
+            initial_printer->config.opt_string("printer_variant"));
+        if (const Preset *canonical = printers.find_preset(canonical_name); canonical != nullptr) {
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": migrated hidden printer preset "
+                                    << initial_printer_profile_name << " to " << canonical_name;
+            initial_printer_profile_name = canonical_name;
+            initial_printer = canonical;
+        }
+    }
     // If executed due to a Config Wizard update, preferred_printer contains the first newly installed printer, otherwise nullptr.
     const Preset *preferred_printer = printers.find_system_preset_by_model_and_variant(preferred_selection.printer_model_id, preferred_selection.printer_variant);
+    if (preferred_printer != nullptr &&
+        !tinmanx_machine_preset_allowed(preferred_printer->name, preferred_printer->config.opt_string("printer_model"))) {
+        const std::string canonical_name = tinmanx_canonical_machine_preset_name(
+            preferred_printer->name,
+            preferred_printer->config.opt_string("printer_model"),
+            preferred_printer->config.opt_string("printer_variant"));
+        preferred_printer = printers.find_preset(canonical_name);
+    }
     printers.select_preset_by_name(preferred_printer ? preferred_printer->name : initial_printer_profile_name, true);
+    {
+        Preset &edited_printer = printers.get_edited_preset();
+        tinmanx_restore_machine_connection(config, edited_printer.name, edited_printer.config);
+    }
     CNumericLocalesSetter locales_setter;
 
     // Orca: load from orca_presets
     // const auto os_presets = config.get_machine_settings(initial_printer_profile_name);
-    std::string initial_print_profile_name        = config.get_printer_setting(initial_printer_profile_name, PRESET_PRINT_NAME);
-    std::string initial_filament_profile_name     = config.get_printer_setting(initial_printer_profile_name, PRESET_FILAMENT_NAME);
+    const std::string settings_printer_profile_name =
+        config.has_printer_setting(initial_printer_profile_name, PRESET_PRINTER_NAME) ?
+            initial_printer_profile_name : persisted_printer_profile_name;
+    std::string initial_print_profile_name        = config.get_printer_setting(settings_printer_profile_name, PRESET_PRINT_NAME);
+    std::string initial_filament_profile_name     = config.get_printer_setting(settings_printer_profile_name, PRESET_FILAMENT_NAME);
+
+    const Preset &selected_printer = printers.get_selected_preset();
+    const std::string &default_print_profile = selected_printer.config.opt_string("default_print_profile");
+    if (initial_print_profile_name.empty() || initial_print_profile_name == "Default Setting" ||
+        !tinmanx_process_preset_allowed(initial_print_profile_name, selected_printer.name))
+        initial_print_profile_name = default_print_profile;
+
+    const std::vector<std::string> &default_filament_profiles =
+        selected_printer.config.option<ConfigOptionStrings>("default_filament_profile")->values;
+    if ((initial_filament_profile_name.empty() || initial_filament_profile_name == ORCA_DEFAULT_FILAMENT_PLACEHOLDER) &&
+        !default_filament_profiles.empty())
+        initial_filament_profile_name = default_filament_profiles.front();
 
     //BBS: set default print/filament profiles to BBL's default setting
     if (preferred_printer)
@@ -2791,7 +2864,7 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     for (unsigned int i = 1; i < 1000; ++ i) {
         char name[64];
         sprintf(name, "filament_%02u", i);
-        auto f_name = config.get_printer_setting(initial_printer_profile_name, name);
+        auto f_name = config.get_printer_setting(settings_printer_profile_name, name);
         if (f_name.empty())
             break;
         this->filament_presets.emplace_back(remove_ini_suffix(f_name));
@@ -2801,7 +2874,7 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
 
     // Load data from AppConfig to ProjectConfig when Studio is initialized.
     std::vector<std::string> filament_colors;
-    auto f_colors = config.get_printer_setting(initial_printer_profile_name, "filament_colors");
+    auto f_colors = config.get_printer_setting(settings_printer_profile_name, "filament_colors");
     if (!f_colors.empty()) {
         boost::algorithm::split(filament_colors, f_colors, boost::algorithm::is_any_of(","));
     }
@@ -2809,15 +2882,15 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     project_config.option<ConfigOptionStrings>("filament_colour")->values = filament_colors;
 
     std::vector<std::string> multi_filament_colors;
-    if (config.has_printer_setting(initial_printer_profile_name, "filament_multi_colors")) {
-        boost::algorithm::split(multi_filament_colors, config.get_printer_setting(initial_printer_profile_name, "filament_multi_colors"), boost::algorithm::is_any_of(","));
+    if (config.has_printer_setting(settings_printer_profile_name, "filament_multi_colors")) {
+        boost::algorithm::split(multi_filament_colors, config.get_printer_setting(settings_printer_profile_name, "filament_multi_colors"), boost::algorithm::is_any_of(","));
     }
     if (multi_filament_colors.size() == 0) project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = filament_colors;
     else project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = multi_filament_colors;
 
     std::vector<std::string> filament_color_types;
-    if (config.has_printer_setting(initial_printer_profile_name, "filament_color_types")) {
-        boost::algorithm::split(filament_color_types, config.get_printer_setting(initial_printer_profile_name, "filament_color_types"), boost::algorithm::is_any_of(","));
+    if (config.has_printer_setting(settings_printer_profile_name, "filament_color_types")) {
+        boost::algorithm::split(filament_color_types, config.get_printer_setting(settings_printer_profile_name, "filament_color_types"), boost::algorithm::is_any_of(","));
     }
     filament_color_types.resize(filament_presets.size(), "1");
     project_config.option<ConfigOptionStrings>("filament_colour_type")->values = filament_color_types;
@@ -2826,24 +2899,24 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     project_config.option<ConfigOptionInts>("filament_map")->values = filament_maps;
 
     std::vector<std::string> extruder_ams_count_str;
-    if (config.has_printer_setting(initial_printer_profile_name, "extruder_ams_count")) {
-        boost::algorithm::split(extruder_ams_count_str, config.get_printer_setting(initial_printer_profile_name, "extruder_ams_count"), boost::algorithm::is_any_of(","));
+    if (config.has_printer_setting(settings_printer_profile_name, "extruder_ams_count")) {
+        boost::algorithm::split(extruder_ams_count_str, config.get_printer_setting(settings_printer_profile_name, "extruder_ams_count"), boost::algorithm::is_any_of(","));
     }
     this->extruder_ams_counts = get_extruder_ams_count(extruder_ams_count_str);
 
     std::vector<std::string> matrix;
-    if (config.has_printer_setting(initial_printer_profile_name, "flush_volumes_matrix")) {
-        boost::algorithm::split(matrix, config.get_printer_setting(initial_printer_profile_name, "flush_volumes_matrix"), boost::algorithm::is_any_of("|"));
+    if (config.has_printer_setting(settings_printer_profile_name, "flush_volumes_matrix")) {
+        boost::algorithm::split(matrix, config.get_printer_setting(settings_printer_profile_name, "flush_volumes_matrix"), boost::algorithm::is_any_of("|"));
         auto flush_volumes_matrix = matrix | boost::adaptors::transformed(boost::lexical_cast<double, std::string>);
         project_config.option<ConfigOptionFloats>("flush_volumes_matrix")->values = std::vector<double>(flush_volumes_matrix.begin(), flush_volumes_matrix.end());
     }
-    if (config.has_printer_setting(initial_printer_profile_name, "flush_volumes_vector")) {
-        boost::algorithm::split(matrix, config.get_printer_setting(initial_printer_profile_name, "flush_volumes_vector"), boost::algorithm::is_any_of("|"));
+    if (config.has_printer_setting(settings_printer_profile_name, "flush_volumes_vector")) {
+        boost::algorithm::split(matrix, config.get_printer_setting(settings_printer_profile_name, "flush_volumes_vector"), boost::algorithm::is_any_of("|"));
         auto flush_volumes_vector = matrix | boost::adaptors::transformed(boost::lexical_cast<double, std::string>);
         project_config.option<ConfigOptionFloats>("flush_volumes_vector")->values = std::vector<double>(flush_volumes_vector.begin(), flush_volumes_vector.end());
     }
-    if (config.has_printer_setting(initial_printer_profile_name, "flush_multiplier")) {
-        boost::algorithm::split(matrix, config.get_printer_setting(initial_printer_profile_name, "flush_multiplier"), boost::algorithm::is_any_of("|"));
+    if (config.has_printer_setting(settings_printer_profile_name, "flush_multiplier")) {
+        boost::algorithm::split(matrix, config.get_printer_setting(settings_printer_profile_name, "flush_multiplier"), boost::algorithm::is_any_of("|"));
         auto flush_multipliers = matrix | boost::adaptors::transformed(boost::lexical_cast<double, std::string>);
         project_config.option<ConfigOptionFloats>("flush_multiplier")->values = std::vector<double>(flush_multipliers.begin(), flush_multipliers.end());
     }
@@ -2879,15 +2952,21 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
         // Orca: also match the ORCA_DEFAULT_FILAMENT_PLACEHOLDER placeholder — see update_selections.
         if (auto it = filaments.find_preset_internal(fp); fp == ORCA_DEFAULT_FILAMENT_PLACEHOLDER || it == filaments.end() || !it->is_visible || !it->is_compatible) {
             if (first_visible_filament_name.empty())
-                first_visible_filament_name = filaments.first_compatible().name;
+                first_visible_filament_name = filaments.first_compatible([](const Preset &preset) {
+                    return preset.name == PresetBundle::ORCA_DEFAULT_FILAMENT_PLACEHOLDER ? 0 : 1;
+                }).name;
             fp = first_visible_filament_name;
         }
     }
+    if (!filament_presets.empty() && filament_presets.front() != ORCA_DEFAULT_FILAMENT_PLACEHOLDER)
+        filaments.select_preset_by_name_strict(filament_presets.front());
 
     const Preset& current_printer = printers.get_selected_preset();
     const Preset* base_printer = printers.get_preset_base(current_printer);
-    bool use_default_nozzle_volume_type = true;
-    if (base_printer) {
+    const bool fixed_nozzle_volume_type = tinmanx_apply_nozzle_volume_contract(
+        current_printer.name, current_printer.config, project_config);
+    bool use_default_nozzle_volume_type = !fixed_nozzle_volume_type;
+    if (!fixed_nozzle_volume_type && base_printer) {
         std::string prev_nozzle_volume_type = config.get_nozzle_volume_types_from_config(base_printer->name);
         if (!prev_nozzle_volume_type.empty()) {
             ConfigOptionEnumsGeneric* nozzle_volume_type_option = project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type");
@@ -2897,9 +2976,9 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
         }
     }
 
-    if (use_default_nozzle_volume_type) {
+    if (!fixed_nozzle_volume_type && use_default_nozzle_volume_type) {
         project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values = current_printer.config.option<ConfigOptionEnumsGeneric>("default_nozzle_volume_type")->values;
-    } else {
+    } else if (!fixed_nozzle_volume_type) {
         // Orca: make sure `nozzle_volume_type` not shorter than `default_nozzle_volume_type`, otherwise we got array out of bound access
         // later in `Tab::switch_excluder`
         auto& opt = project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values;
@@ -2995,84 +3074,40 @@ void PresetBundle::export_selections(AppConfig &config)
 }
 
 // BBS
-void PresetBundle::set_num_filaments(unsigned int n, std::vector<std::string> new_colors) {
-    int old_filament_count = this->filament_presets.size();
-    if (n > old_filament_count && old_filament_count != 0)
-        filament_presets.resize(n, filament_presets.back());
-    else {
-        filament_presets.resize(n);
-    }
-    ConfigOptionStrings* filament_color = project_config.option<ConfigOptionStrings>("filament_colour");
-    ConfigOptionStrings *filament_multi_color = project_config.option<ConfigOptionStrings>("filament_multi_colour");
-    ConfigOptionStrings* filament_color_type = project_config.option<ConfigOptionStrings>("filament_colour_type");
-    ConfigOptionInts* filament_map = project_config.option<ConfigOptionInts>("filament_map");
+void PresetBundle::set_num_filaments(unsigned int n, std::vector<std::string> new_colors)
+{
+    if (printers.get_edited_preset().printer_technology() != ptFFF)
+        return;
+    n = std::max(n, static_cast<unsigned int>(get_printer_extruder_count()));
+    const size_t old_count = filament_presets.size();
+    filament_presets.resize(n, filament_presets.empty() ? filaments.get_edited_preset().name : filament_presets.back());
+    update_multi_material_filament_presets();
 
-
-    filament_color->resize(n);
-    // Sync filament multi colour
-    filament_multi_color->values.resize(n);
-    for (size_t i = 0; i < n; i++) {
-        filament_multi_color->values[i] = filament_color->values[i];
-    }
-    filament_color_type->resize(n);
-    filament_map->values.resize(n, 1);
-    ams_multi_color_filment.resize(n);
-
-    // BBS set new filament color to new_color
-    if (old_filament_count < n) {
-        if (!new_colors.empty()) {
-            for (int i = old_filament_count; i < n; i++) {
-                filament_color->values[i] = new_colors[i - old_filament_count];
-                filament_multi_color->values[i] = new_colors[i - old_filament_count];
-                filament_color_type->values[i]  = "1";  // default color type
-            }
+    auto &colors = project_config.option<ConfigOptionStrings>("filament_colour")->values;
+    auto &multi_colors = project_config.option<ConfigOptionStrings>("filament_multi_colour")->values;
+    auto &color_types = project_config.option<ConfigOptionStrings>("filament_colour_type")->values;
+    for (size_t i = old_count; i < n && i - old_count < new_colors.size(); ++i) {
+        if (!new_colors[i - old_count].empty()) {
+            colors[i] = new_colors[i - old_count];
+            multi_colors[i] = new_colors[i - old_count];
+            color_types[i] = "1";
         }
     }
-
-    update_multi_material_filament_presets();
 }
+
 void PresetBundle::set_num_filaments(unsigned int n, std::string new_color)
 {
-    unsigned old_filament_count = this->filament_presets.size();
-    if (n > old_filament_count && old_filament_count != 0)
-        filament_presets.resize(n, filament_presets.back());
-    else {
-        filament_presets.resize(n);
-    }
-    ConfigOptionStrings* filament_color = project_config.option<ConfigOptionStrings>("filament_colour");
-    ConfigOptionStrings *filament_multi_color = project_config.option<ConfigOptionStrings>("filament_multi_colour");
-    ConfigOptionStrings* filament_color_type = project_config.option<ConfigOptionStrings>("filament_colour_type");
-    ConfigOptionInts* filament_map = project_config.option<ConfigOptionInts>("filament_map");
-
-
-    filament_color->resize(n);
-    // Sync filament multi colour
-    filament_multi_color->values.resize(n);
-    for (size_t i = 0; i < n; i++) {
-        filament_multi_color->values[i] = filament_color->values[i];
-    }
-    filament_color_type->resize(n);
-    filament_map->values.resize(n, 1);
-    ams_multi_color_filment.resize(n);
-
-    //BBS set new filament color to new_color
-    if (old_filament_count < n) {
-        if (!new_color.empty()) {
-            for (unsigned i = old_filament_count; i < n; i++) {
-                filament_color->values[i] = new_color;
-                filament_multi_color->values[i] = new_color;
-                filament_color_type->values[i]  = "1";  // default color type
-            }
-        }
-    }
-
-    update_multi_material_filament_presets();
+    n = std::max(n, static_cast<unsigned int>(get_printer_extruder_count()));
+    set_num_filaments(n, std::vector<std::string>(n > filament_presets.size() ? n - filament_presets.size() : 0, new_color));
 }
 
 void PresetBundle::update_num_filaments(unsigned int to_del_flament_id)
 {
-    unsigned old_filament_count = this->filament_presets.size();
-    assert(to_del_flament_id < old_filament_count);
+    const size_t old_filament_count = filament_presets.size();
+    if (old_filament_count <= 1 || to_del_flament_id >= old_filament_count) {
+        BOOST_LOG_TRIVIAL(warning) << "Ignoring unavailable or last material slot deletion.";
+        return;
+    }
     filament_presets.erase(filament_presets.begin() + to_del_flament_id);
 
     // update edited_preset
@@ -3093,29 +3128,16 @@ void PresetBundle::update_num_filaments(unsigned int to_del_flament_id)
     ConfigOptionStrings *filament_multi_color = project_config.option<ConfigOptionStrings>("filament_multi_colour");
     ConfigOptionStrings *filament_color_type  = project_config.option<ConfigOptionStrings>("filament_colour_type");
     ConfigOptionInts* filament_map = project_config.option<ConfigOptionInts>("filament_map");
-    if (filament_color->values.size() > to_del_flament_id) {
-        filament_color->values.erase(filament_color->values.begin() + to_del_flament_id);
-        if (filament_map->values.size() > to_del_flament_id) {
-            filament_map->values.erase(filament_map->values.begin() + to_del_flament_id);
-        }
-    }
-    else {
-        filament_color->values.resize(to_del_flament_id);
-        filament_map->values.resize(to_del_flament_id, 1);
-    }
-
-    // lambda function to erase or resize the container
-    auto erase_or_resize = [to_del_flament_id](auto& container) {
-        if (container.size() > to_del_flament_id) {
+    // Incomplete saved palettes must not truncate an independent tool map.
+    auto erase_slot = [to_del_flament_id](auto& container) {
+        if (container.size() > to_del_flament_id)
             container.erase(container.begin() + to_del_flament_id);
-        } else {
-            container.resize(to_del_flament_id);
-        }
     };
-
-    erase_or_resize(filament_multi_color->values);
-    erase_or_resize(filament_color_type->values);
-    erase_or_resize(ams_multi_color_filment);
+    erase_slot(filament_color->values);
+    erase_slot(filament_map->values);
+    erase_slot(filament_multi_color->values);
+    erase_slot(filament_color_type->values);
+    erase_slot(ams_multi_color_filment);
 
     update_multi_material_filament_presets(to_del_flament_id);
 }
@@ -3825,6 +3847,8 @@ Preset *PresetBundle::get_similar_printer_preset(std::string printer_model, std:
     auto printer_variant_old = printers.get_selected_preset().config.opt_string("printer_variant");
     std::map<std::string, Preset*> printer_presets;
     for (auto &preset : printers.m_presets) {
+        if (!tinmanx_machine_preset_allowed(preset.name, printer_model))
+            continue;
         if (printer_variant.empty() && !preset.is_system)
             continue;
         if (preset.config.opt_string("printer_model") == printer_model)
@@ -3924,11 +3948,13 @@ bool PresetBundle::support_different_extruders()
     return supported;
 }
 
-DynamicPrintConfig PresetBundle::full_config(bool apply_extruder, std::optional<std::vector<int>>filament_maps) const
+DynamicPrintConfig PresetBundle::full_config(bool apply_extruder, std::optional<std::vector<int>>filament_maps,
+                                            ConfigResolutionTrace *trace) const
 {
+    if (trace) trace->clear();
     return (this->printers.get_edited_preset().printer_technology() == ptFFF) ?
-        this->full_fff_config(apply_extruder, filament_maps) :
-        this->full_sla_config();
+        this->full_fff_config(apply_extruder, filament_maps, trace) :
+        this->full_sla_config(trace);
 }
 
 DynamicPrintConfig PresetBundle::full_config_secure(std::optional<std::vector<int>>filament_maps) const
@@ -3950,18 +3976,49 @@ const std::set<std::string> ignore_settings_list ={
     "print_settings_id", "filament_settings_id", "printer_settings_id"
 };
 
-DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optional<std::vector<int>> filament_maps_new) const
+DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optional<std::vector<int>> filament_maps_new,
+                                                ConfigResolutionTrace *trace) const
 {
     DynamicPrintConfig out;
     out.apply(static_print_config_ref(FullPrintConfig::defaults()));
+    if (trace) trace->applied(out, {ConfigOriginKind::Defaults});
     out.apply(this->prints.get_edited_preset().config);
+    if (trace) trace->applied_preset(prints.get_edited_preset().config, prints.get_edited_preset(), prints);
     // Add the default filament preset to have the "filament_preset_id" defined.
-	out.apply(this->filaments.default_preset().config);
-	out.apply(this->printers.get_edited_preset().config);
-    out.apply(this->project_config);
+    out.apply(this->filaments.default_preset().config);
 
-    // BBS
-    size_t  num_filaments = this->filament_presets.size();
+    if (trace) trace->applied_preset(filaments.default_preset().config, filaments.default_preset(), filaments);
+	out.apply(this->printers.get_edited_preset().config);
+    if (trace) trace->applied_preset(printers.get_edited_preset().config, printers.get_edited_preset(), printers);
+    out.apply(this->project_config);
+    if (trace) trace->applied(project_config, {ConfigOriginKind::Project});
+    const Preset &active_printer = this->printers.get_edited_preset();
+
+    // Resolve persisted filament names before assembling the full configuration.
+    // Cloud/profile cleanup may leave a project referring to a renamed or removed
+    // filament; slicing must fall back deterministically instead of dereferencing
+    // a null preset.
+    std::vector<const Preset *> active_filament_presets;
+    active_filament_presets.reserve(std::max<size_t>(this->filament_presets.size(), 1));
+    const Preset *fallback_filament = &this->filaments.get_edited_preset();
+    for (const std::string &name : this->filament_presets) {
+        const Preset *preset = this->filaments.find_preset(name, false);
+        if (preset == nullptr) {
+            BOOST_LOG_TRIVIAL(warning) << "Filament preset '" << name
+                                       << "' is unavailable; using '"
+                                       << fallback_filament->name << "'";
+            preset = fallback_filament;
+            if (trace) trace->warn("Material " + std::to_string(active_filament_presets.size() + 1) +
+                                   ": missing preset '" + name + "'; using '" + preset->name + "'.");
+        }
+        active_filament_presets.emplace_back(preset);
+    }
+    if (active_filament_presets.empty()) {
+        active_filament_presets.emplace_back(fallback_filament);
+        if (trace) trace->warn("No material selected; using '" + fallback_filament->name + "'.");
+    }
+
+    const size_t num_filaments = active_filament_presets.size();
 
     std::vector<int> filament_maps = out.option<ConfigOptionInts>("filament_map")->values;
     if (filament_maps_new.has_value())
@@ -3969,6 +4026,7 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
     //in some middle state, they may be different
     if (filament_maps.size() != num_filaments) {
         filament_maps.resize(num_filaments, 1);
+        if (trace) trace->warn("Material-to-tool map length was repaired to match the material count.");
     }
     else {
         assert(filament_maps.size() == num_filaments);
@@ -4007,23 +4065,24 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
         out.update_values_to_printer_extruders(out, printer_options_with_variant_2, "printer_extruder_id", "printer_extruder_variant", 2);
         //update print config related with variants
         out.update_values_to_printer_extruders(out, print_options_with_variant, "print_extruder_id", "print_extruder_variant");
+        if (trace) trace->checkpoint(out, {ConfigOriginKind::ToolVariant});
     }
 
     if (num_filaments <= 1) {
         //BBS: update filament config related with variants
-        DynamicPrintConfig filament_config = this->filaments.get_edited_preset().config;
+        const Preset *preset = active_filament_presets.front();
+        DynamicPrintConfig filament_config = preset->config;
         if (apply_extruder)
             filament_config.update_values_to_printer_extruders(out, filament_options_with_variant, "", "filament_extruder_variant", 1, filament_maps[0]);
         out.apply(filament_config);
-        compatible_printers_condition.emplace_back(this->filaments.get_edited_preset().compatible_printers_condition());
-        compatible_prints_condition  .emplace_back(this->filaments.get_edited_preset().compatible_prints_condition());
+        if (trace) trace->applied_preset(filament_config, *preset, filaments, 1, apply_extruder);
+        compatible_printers_condition.emplace_back(preset->compatible_printers_condition());
+        compatible_prints_condition  .emplace_back(preset->compatible_prints_condition());
         //BBS: add logic for settings check between different system presets
         //std::string filament_inherits = this->filaments.get_edited_preset().inherits();
-        std::string current_preset_name = this->filament_presets[0];
-        const Preset* preset = this->filaments.find_preset(current_preset_name, true);
         std::string filament_inherits = preset->inherits();
         inherits                     .emplace_back(filament_inherits);
-        filament_ids.emplace_back(this->filaments.get_edited_preset().filament_id);
+        filament_ids.emplace_back(preset->filament_id);
 
         std::string different_filament_settings;
         const Preset* filament_parent_preset =  this->filaments.get_selected_preset_parent();
@@ -4045,8 +4104,7 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
         // Here this->filaments.find_preset() and this->filaments.first_visible() return the edited copy of the preset if active.
         std::vector<const DynamicPrintConfig*> filament_configs;
         std::vector<const Preset*> filament_presets;
-        for (const std::string& filament_preset_name : this->filament_presets) {
-            const Preset* preset = this->filaments.find_preset(filament_preset_name, true);
+        for (const Preset *preset : active_filament_presets) {
             filament_presets.emplace_back(preset);
             filament_configs.emplace_back(&(preset->config));
         }
@@ -4058,13 +4116,11 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
         for (int index = 0; index < num_filaments; index++) {
             const DynamicPrintConfig *cfg = filament_configs[index];
             const Preset *preset = filament_presets[index];
-            // The compatible_prints/printers_condition() returns a reference to configuration key, which may not yet exist.
-            DynamicPrintConfig &cfg_rw = *const_cast<DynamicPrintConfig*>(cfg);
-            compatible_printers_condition.emplace_back(Preset::compatible_printers_condition(cfg_rw));
-            compatible_prints_condition  .emplace_back(Preset::compatible_prints_condition(cfg_rw));
+            compatible_printers_condition.emplace_back(preset->compatible_printers_condition());
+            compatible_prints_condition  .emplace_back(preset->compatible_prints_condition());
 
             //BBS: add logic for settings check between different system presets
-            std::string filament_inherits = Preset::inherits(cfg_rw);
+            std::string filament_inherits = preset->inherits();
             inherits                     .emplace_back(filament_inherits);
             filament_ids.emplace_back(preset->filament_id);
             std::string different_filament_settings;
@@ -4084,7 +4140,7 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
                 filament_parent_preset =  const_cast<PresetBundle*>(this)->filaments.find_preset(filament_inherits, false, true);
 
             if (filament_parent_preset) {
-                std::vector<std::string> dirty_options = cfg_rw.diff(filament_parent_preset->config);
+                std::vector<std::string> dirty_options = cfg->diff(filament_parent_preset->config);
                 if (!dirty_options.empty()) {
                     auto iter = dirty_options.begin();
                     while (iter != dirty_options.end()) {
@@ -4149,6 +4205,19 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
             }
         }
 
+        if (trace) {
+            for (const auto &key : this->filaments.default_preset().config.keys()) {
+                if (key == "compatible_prints" || key == "compatible_printers") continue;
+                const auto *option = out.option(key);
+                std::vector<ConfigValueOrigin> origins;
+                const size_t source_count = option->is_scalar() ? 1 : num_filaments;
+                for (size_t i = 0; i < source_count; ++i)
+                    origins.emplace_back(ConfigResolutionTrace::preset_origin(
+                        key, *active_filament_presets[i], filaments, i + 1, apply_extruder));
+                trace->record(key, *option, std::move(origins));
+            }
+        }
+
         if (!apply_extruder) {
             //append filament_self_index
             std::vector<int>& filament_self_indice = out.option<ConfigOptionInts>("filament_self_index", true)->values;
@@ -4205,7 +4274,11 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
             opt->value = 0;
     }
     out.option<ConfigOptionString >("print_settings_id",    true)->value  = this->prints.get_selected_preset_name();
-    out.option<ConfigOptionStrings>("filament_settings_id", true)->values = this->filament_presets;
+    std::vector<std::string> active_filament_names;
+    active_filament_names.reserve(active_filament_presets.size());
+    for (const Preset *preset : active_filament_presets)
+        active_filament_names.emplace_back(preset->name);
+    out.option<ConfigOptionStrings>("filament_settings_id", true)->values = std::move(active_filament_names);
     out.option<ConfigOptionString >("printer_settings_id",  true)->value  = this->printers.get_selected_preset_name();
     out.option<ConfigOptionStrings>("filament_ids", true)->values = filament_ids;
     out.option<ConfigOptionInts>("filament_map", true)->values = filament_maps;
@@ -4231,16 +4304,32 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
     out.option<ConfigOptionStrings>("extruder_ams_count", true)->values   = save_extruder_ams_count_to_string(this->extruder_ams_counts);
 
 	out.option<ConfigOptionEnumGeneric>("printer_technology", true)->value = ptFFF;
+    if (trace) trace->checkpoint(out, {ConfigOriginKind::Generated});
+    // Filament aggregation copies every filament default into the full config, including
+    // nozzle_volume_type. Apply the fixed hardware contract after that final merge.
+    const bool hardware_applied = tinmanx_apply_nozzle_volume_contract(active_printer.name, active_printer.config, out);
+    if (trace && hardware_applied)
+        trace->record("nozzle_volume_type", *out.option("nozzle_volume_type"),
+                      {{ConfigOriginKind::HardwareContract, active_printer.name}});
+    const bool normalized = tinmanx_normalize_multitool_config(out, num_filaments);
+    if (trace) {
+        trace->checkpoint(out, {ConfigOriginKind::Normalization});
+        if (normalized) trace->warn("Tool/material dimensions or invalid routes required normalization.");
+    }
     return out;
 }
 
-DynamicPrintConfig PresetBundle::full_sla_config() const
+DynamicPrintConfig PresetBundle::full_sla_config(ConfigResolutionTrace *trace) const
 {
     DynamicPrintConfig out;
     out.apply(static_print_config_ref(SLAFullPrintConfig::defaults()));
+    if (trace) trace->applied(out, {ConfigOriginKind::Defaults});
     out.apply(this->sla_prints.get_edited_preset().config);
+    if (trace) trace->applied_preset(sla_prints.get_edited_preset().config, sla_prints.get_edited_preset(), sla_prints);
     out.apply(this->sla_materials.get_edited_preset().config);
+    if (trace) trace->applied_preset(sla_materials.get_edited_preset().config, sla_materials.get_edited_preset(), sla_materials, 1);
     out.apply(this->printers.get_edited_preset().config);
+    if (trace) trace->applied_preset(printers.get_edited_preset().config, printers.get_edited_preset(), printers);
     // There are no project configuration values as of now, the project_config is reserved for FFF printers.
 //    out.apply(this->project_config);
 
@@ -4282,6 +4371,7 @@ DynamicPrintConfig PresetBundle::full_sla_config() const
     add_if_some_non_empty(std::move(inherits),                      "inherits_group");
 
 	out.option<ConfigOptionEnumGeneric>("printer_technology", true)->value = ptSLA;
+    if (trace) trace->checkpoint(out, {ConfigOriginKind::Generated});
 	return out;
 }
 
@@ -4632,6 +4722,9 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
 
         // 4) Load the project config values (the per extruder wipe matrix etc).
         this->project_config.apply_only(config, s_project_options);
+        const Preset &active_printer = this->printers.get_edited_preset();
+        tinmanx_apply_nozzle_volume_contract(
+            active_printer.name, active_printer.config, this->project_config);
 
         break;
     }
@@ -5258,69 +5351,104 @@ void PresetBundle::update_multi_material_filament_presets(size_t to_delete_filam
     // same value as the last existing one.
     //
     // Verify and select the filament presets.
-    size_t num_filaments = this->filament_presets.size();
+    const Preset *fallback_filament = &this->filaments.get_edited_preset();
+    if (this->filament_presets.empty())
+        this->filament_presets.emplace_back(fallback_filament->name);
 
-    auto* nozzle_diameter = static_cast<const ConfigOptionFloats*>(printers.get_edited_preset().config.option("nozzle_diameter"));
-    size_t num_extruders  = nozzle_diameter->values.size();
-    if (num_extruders > num_filaments) { // Verify validity of the current filament presets.
-        for (size_t i = 0; i < std::min(this->filament_presets.size(), num_extruders); ++i)
-            this->filament_presets[i] = this->filaments.find_preset(this->filament_presets[i], true)->name;
+    // Validate every logical material slot even when there are more materials
+    // than physical tools. Orca intentionally supports that layout; stale names
+    // must not survive merely because the vector is already large enough.
+    for (std::string &name : this->filament_presets) {
+        const Preset *resolved = this->filaments.find_preset(name, false);
+        if (resolved == nullptr) {
+            BOOST_LOG_TRIVIAL(warning) << "Filament preset '" << name
+                                       << "' is unavailable; using '"
+                                       << fallback_filament->name << "'";
+            resolved = fallback_filament;
+        }
+        name = resolved->name;
+    }
+
+    size_t num_filaments = this->filament_presets.size();
+    const size_t num_extruders = get_printer_extruder_count();
+    if (num_extruders > num_filaments) {
         // Append the rest of filament presets.
         this->filament_presets.resize(num_extruders, this->filament_presets.empty() ? this->filaments.first_visible().name :
                                                                                       this->filament_presets.back());
         num_filaments = this->filament_presets.size();
     }
-    if (to_delete_filament_id == -1)
-        to_delete_filament_id = num_filaments;
+    auto &matrix = project_config.option<ConfigOptionFloats>("flush_volumes_matrix")->values;
+    auto &volumes = project_config.option<ConfigOptionFloats>("flush_volumes_vector")->values;
+    auto &multipliers = project_config.option<ConfigOptionFloats>("flush_multiplier")->values;
+    const size_t old_tools = std::max<size_t>(multipliers.size(), 1);
+    const size_t old_materials = size_t(std::sqrt(matrix.size() / old_tools));
+    const size_t old_plane_size = old_materials * old_materials;
+    const bool valid_old_layout = old_materials > 0 &&
+        matrix.size() % old_tools == 0 && matrix.size() / old_tools == old_plane_size;
+    const bool deleting = to_delete_filament_id != size_t(-1);
+    const auto old_index = [=](size_t index) {
+        return deleting && index >= to_delete_filament_id ? index + 1 : index;
+    };
 
-    // Now verify if flush_volumes_matrix has proper size (it is used to deduce number of extruders in wipe tower generator):
-    std::vector<double> old_matrix = this->project_config.option<ConfigOptionFloats>("flush_volumes_matrix")->values;
-    size_t old_nozzle_nums = this->project_config.option<ConfigOptionFloats>("flush_multiplier")->values.size();
-    size_t old_number_of_filaments = size_t(sqrt(old_matrix.size() / old_nozzle_nums) + EPSILON);
-    size_t nozzle_nums = get_printer_extruder_count();
-    if (old_nozzle_nums != nozzle_nums) {
-        std::vector<double>& f_multiplier = this->project_config.option<ConfigOptionFloats>("flush_multiplier")->values;
-        f_multiplier.resize(nozzle_nums, 1.f);
+    // Material pairs/rows and physical-tool planes have different dimensions.
+    // Stage all three arrays before publishing; preserve existing manual values.
+    std::vector<double> new_volumes(2 * num_filaments);
+    for (size_t i = 0; i < num_filaments; ++i) {
+        const size_t source = 2 * old_index(i);
+        for (size_t part = 0; part < 2; ++part)
+            new_volumes[2 * i + part] = source + 1 < volumes.size() ? volumes[source + part] :
+                volumes.size() >= 2 ? volumes[part] : 140.;
     }
+    auto new_multipliers = multipliers;
+    new_multipliers.resize(num_extruders, 1.);
 
-    if ( (num_filaments * num_filaments) != size_t(old_matrix.size() / old_nozzle_nums) ) {
-        // First verify if purging volumes presets for each extruder matches number of extruders
-        std::vector<double>& filaments = this->project_config.option<ConfigOptionFloats>("flush_volumes_vector")->values;
-        while (filaments.size() < 2* num_filaments) {
-            filaments.push_back(filaments.size()>1 ? filaments[0] : 140.);  // copy the values from the first extruder
-            filaments.push_back(filaments.size()>1 ? filaments[1] : 140.);
-        }
-        while (filaments.size() > 2* num_filaments) {
-            filaments.pop_back();
-            filaments.pop_back();
-        }
-
-        size_t old_matrix_size = old_number_of_filaments * old_number_of_filaments;
-        size_t new_matrix_size = num_filaments * num_filaments;
-        std::vector<double> new_matrix(new_matrix_size * nozzle_nums, 0);
-        for (unsigned int i = 0; i < num_filaments; ++i)
-            for (unsigned int j = 0; j < num_filaments; ++j) {
-                if (i < old_number_of_filaments && j < old_number_of_filaments) {
-                    unsigned int old_i = i >= to_delete_filament_id ? i + 1 : i;
-                    unsigned int old_j = j >= to_delete_filament_id ? j + 1 : j;
-                    for (size_t nozzle_id = 0; nozzle_id < nozzle_nums; ++nozzle_id) {
-                        // Orca: only copy from old_matrix when the old layout actually has data
-                        // for this nozzle slot; otherwise initialize from the per-filament
-                        // flush volumes the same way the (i,j) out-of-range branch does.
-                        if (nozzle_id < old_nozzle_nums) {
-                            new_matrix[i * num_filaments + j + new_matrix_size * nozzle_id] = old_matrix[old_i * old_number_of_filaments + old_j + old_matrix_size * nozzle_id];
-                        } else {
-                            new_matrix[i * num_filaments + j + new_matrix_size * nozzle_id] = (i == j ? 0. : filaments[2 * i] + filaments[2 * j + 1]);
-                        }
-                    }
-                } else {
-                    for (size_t nozzle_id = 0; nozzle_id < nozzle_nums; ++nozzle_id) {
-                        new_matrix[i * num_filaments + j + new_matrix_size * nozzle_id] = (i == j ? 0. : filaments[2 * i] + filaments[2 * j + 1]);
-                    }
+    std::vector<double> new_matrix;
+    const bool rebuild_matrix = deleting || !valid_old_layout ||
+        old_tools != num_extruders || old_materials != num_filaments;
+    if (rebuild_matrix) {
+        if (!valid_old_layout && !matrix.empty())
+            BOOST_LOG_TRIVIAL(warning) << "Invalid purge matrix layout; rebuilding from material purge volumes.";
+        const size_t plane_size = num_filaments * num_filaments;
+        new_matrix.resize(plane_size * num_extruders);
+        for (size_t tool = 0; tool < num_extruders; ++tool)
+            for (size_t from = 0; from < num_filaments; ++from)
+                for (size_t to = 0; to < num_filaments; ++to) {
+                    const size_t old_from = old_index(from), old_to = old_index(to);
+                    new_matrix[tool * plane_size + from * num_filaments + to] =
+                        valid_old_layout && tool < old_tools && old_from < old_materials && old_to < old_materials
+                        ? matrix[tool * old_plane_size + old_from * old_materials + old_to]
+                        : from == to ? 0. : new_volumes[2 * from] + new_volumes[2 * to + 1];
                 }
-            }
-        this->project_config.option<ConfigOptionFloats>("flush_volumes_matrix")->values = new_matrix;
     }
+    // Normalize slot data only after the final material count is known. Retain
+    // existing multi-color entries; initialize just the missing tail.
+    auto *colors = project_config.option<ConfigOptionStrings>("filament_colour");
+    auto *multi_colors = project_config.option<ConfigOptionStrings>("filament_multi_colour");
+    auto *color_types = project_config.option<ConfigOptionStrings>("filament_colour_type");
+    auto *tool_map = project_config.option<ConfigOptionInts>("filament_map");
+    auto new_colors = *colors;
+    new_colors.resize(num_filaments, FullPrintConfig::defaults().option("filament_colour"));
+    auto new_multi_colors = multi_colors->values;
+    const size_t old_color_count = new_multi_colors.size();
+    new_multi_colors.resize(num_filaments);
+    for (size_t i = old_color_count; i < num_filaments; ++i)
+        new_multi_colors[i] = new_colors.values[i];
+    auto new_color_types = color_types->values;
+    new_color_types.resize(num_filaments, "1");
+    auto new_map = tool_map->values;
+    new_map.resize(num_filaments, 1);
+    auto new_ams_colors = ams_multi_color_filment;
+    new_ams_colors.resize(num_filaments);
+
+    colors->values.swap(new_colors.values);
+    multi_colors->values.swap(new_multi_colors);
+    color_types->values.swap(new_color_types);
+    tool_map->values.swap(new_map);
+    ams_multi_color_filment.swap(new_ams_colors);
+    volumes.swap(new_volumes);
+    multipliers.swap(new_multipliers);
+    if (rebuild_matrix)
+        matrix.swap(new_matrix);
 }
 
 // Rewrite a preset-name-list field (compatible_printers / compatible_prints) so references to a

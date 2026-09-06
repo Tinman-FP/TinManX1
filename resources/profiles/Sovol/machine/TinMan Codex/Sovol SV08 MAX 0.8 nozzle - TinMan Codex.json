@@ -10,6 +10,9 @@
     "nozzle_diameter": [
         "0.8"
     ],
+    "default_nozzle_volume_type": [
+        "Standard"
+    ],
     "min_layer_height": [
         "0.16"
     ],
@@ -17,5 +20,8 @@
         "0.56"
     ],
     "default_print_profile": "0.40mm Quality @Sovol SV08 MAX 0.8 nozzle - TinMan Codex",
-    "setting_id": "pDbk7NqmbN0x3J8B"
+    "setting_id": "pDbk7NqmbN0x3J8B",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Sovol SV08 MAX @Codex"
+    ]
 }

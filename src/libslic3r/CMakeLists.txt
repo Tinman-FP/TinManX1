@@ -8,6 +8,13 @@ if(NOT DEFINED ORCA_CHECK_GCODE_PLACEHOLDERS)
 endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libslic3r_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h @ONLY)
+include("${CMAKE_SOURCE_DIR}/cmake/modules/TinManBuildInfo.cmake")
+tinman_configure_build_info("${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/TinManBuildInfo.hpp")
+
+set(TINMAN_HARDWARE_CATALOG "${CMAKE_SOURCE_DIR}/resources/orcaslicer_codex/hardware/catalog.json")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${TINMAN_HARDWARE_CATALOG}")
+file(READ "${TINMAN_HARDWARE_CATALOG}" TINMAN_HARDWARE_CATALOG_JSON)
+configure_file(TinManHardwareCatalogData.hpp.in TinManHardwareCatalogData.hpp @ONLY)
 
 if (MINGW)
     add_compile_options(-Wa,-mbig-obj)
@@ -132,8 +139,6 @@ set(lisbslic3r_sources
     WaveOverhangs/IGenerator.hpp
     WaveOverhangs/AndersonsGenerator.cpp
     WaveOverhangs/AndersonsGenerator.hpp
-    WaveOverhangs/KaiserGenerator.cpp
-    WaveOverhangs/KaiserGenerator.hpp
     ExtrusionSimulator.cpp
     ExtrusionSimulator.hpp
     FaceDetector.cpp
@@ -357,6 +362,18 @@ set(lisbslic3r_sources
     Preset.hpp
     TinManMachineProfileContract.cpp
     TinManMachineProfileContract.hpp
+    TinManHardwareCatalog.cpp
+    TinManHardwareCatalog.hpp
+    ConfigResolutionTrace.cpp
+    ConfigResolutionTrace.hpp
+    CloudProfileSnapshot.cpp
+    CloudProfileSnapshot.hpp
+    FilamentSelection.cpp
+    FilamentSelection.hpp
+    PrinterConnectionUpdate.cpp
+    PrinterConnectionUpdate.hpp
+    PresetTransfer.cpp
+    PresetTransfer.hpp
     PrincipalComponents2D.cpp
     PrincipalComponents2D.hpp
     PrintApply.cpp
@@ -497,6 +514,7 @@ endif ()
 
 add_library(libslic3r STATIC ${lisbslic3r_sources}
     "${CMAKE_CURRENT_BINARY_DIR}/libslic3r_version.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/TinManBuildInfo.hpp"
     ${OpenVDBUtils_SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${lisbslic3r_sources})
 

@@ -66,6 +66,7 @@ using namespace nlohmann;
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Time.hpp"
 #include "libslic3r/Thread.hpp"
+#include "libslic3r/TinManMachineProfileContract.hpp"
 #include "libslic3r/BlacklistedLibraryCheck.hpp"
 #include "libslic3r/FlushVolCalc.hpp"
 
@@ -3019,8 +3020,15 @@ int CLI::run(int argc, char **argv)
         }
     }
 
+    const std::string active_printer_id = !new_printer_name.empty() ? new_printer_name :
+        (!current_printer_name.empty() ? current_printer_name :
+         (m_print_config.has("printer_settings_id") ?
+              m_print_config.opt_string("printer_settings_id") : std::string()));
+    const bool fixed_nozzle_volume_type = tinmanx_apply_nozzle_volume_contract(
+        active_printer_id, m_print_config, m_print_config);
+
     //get nozzle_volume_type
-    if(m_extra_config.has("nozzle_volume_type")) {
+    if (!fixed_nozzle_volume_type && m_extra_config.has("nozzle_volume_type")) {
         auto opt_nozzle_volume_type = dynamic_cast<const ConfigOptionEnumsGeneric*>(m_extra_config.option("nozzle_volume_type"));
         if (opt_nozzle_volume_type) {
             int nozzle_volume_type_size = opt_nozzle_volume_type->values.size();
@@ -3031,7 +3039,13 @@ int CLI::run(int argc, char **argv)
             }
         }
     }
-    else {
+    else if (const auto *opt_nozzle_volume_type =
+                 m_print_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")) {
+        new_nozzle_volume_type.resize(new_extruder_count, nvtStandard);
+        for (size_t index = 0; index < new_nozzle_volume_type.size(); ++index)
+            new_nozzle_volume_type[index] = static_cast<NozzleVolumeType>(
+                opt_nozzle_volume_type->get_at(index));
+    } else {
         new_nozzle_volume_type.resize(new_extruder_count, nvtStandard);
     }
     new_extruder_variants.resize(new_extruder_count, "");
@@ -3335,6 +3349,10 @@ int CLI::run(int argc, char **argv)
             }
         }
     }
+
+    // Filament loading can reapply the default Standard vector. Reassert the fixed
+    // machine hardware before slicing and package export.
+    tinmanx_apply_nozzle_volume_contract(active_printer_id, m_print_config, m_print_config);
 
     //compute the flush volume
     ConfigOptionStrings *selected_filament_colors_option = m_extra_config.option<ConfigOptionStrings>("filament_colour");

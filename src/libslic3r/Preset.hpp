@@ -2,12 +2,14 @@
 #define slic3r_Preset_hpp_
 
 #include <deque>
+#include <algorithm>
 #include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <functional>
 #include <mutex>
+#include <memory>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -242,7 +244,8 @@ public:
 
     //BBS: add type for project-embedded
     bool                is_project_embedded = false;
-    ConfigSubstitutions *loading_substitutions{nullptr};
+    // Immutable import diagnostics may outlive or be copied with an imported preset.
+    std::shared_ptr<const ConfigSubstitutions> loading_substitutions;
     bool                is_user() const { return ! this->is_default && ! this->is_system && ! this->is_project_embedded && ! this->is_from_bundle(); }
     bool                can_overwrite() const { return ! this->is_default && ! this->is_system && ! this->is_from_bundle(); }
     //bool                is_user() const { return ! this->is_default && ! this->is_system; }
@@ -299,7 +302,7 @@ public:
     static std::string  get_iot_type_string(Preset::Type type);
     static Preset::Type get_type_from_string(std::string type_str);
     void                load_info(const std::string& file);
-    void                save_info(std::string file = "");
+    bool                save_info(std::string file = "");
     void                remove_files(bool cloud_already_deleted = false);
 
     //BBS: add logic for only difference save
@@ -318,7 +321,11 @@ public:
     // Returns the name of the preset, from which this preset inherits.
     static std::string& inherits(DynamicPrintConfig &cfg) { return cfg.option<ConfigOptionString>("inherits", true)->value; }
     std::string&        inherits() { return Preset::inherits(this->config); }
-    const std::string&  inherits() const { return Preset::inherits(const_cast<Preset*>(this)->config); }
+    const std::string&  inherits() const {
+        static const std::string empty;
+        const auto *value = config.option<ConfigOptionString>("inherits");
+        return value ? value->value : empty;
+    }
 
     // Rewrite cfg's "inherits" to the resolved parent's canonical name. find_preset2 may
     // resolve a renamed parent, or a removed vendor profile auto-matched to the
@@ -340,7 +347,11 @@ public:
 		assert(this->type == TYPE_FILAMENT || this->type == TYPE_SLA_MATERIAL);
         return Preset::compatible_prints_condition(this->config);
     }
-    const std::string&  compatible_prints_condition() const { return const_cast<Preset*>(this)->compatible_prints_condition(); }
+    const std::string&  compatible_prints_condition() const {
+        static const std::string empty;
+        const auto *value = config.option<ConfigOptionString>("compatible_prints_condition");
+        return value ? value->value : empty;
+    }
 
     // Returns the "compatible_printers_condition".
     static std::string& compatible_printers_condition(DynamicPrintConfig &cfg) { return cfg.option<ConfigOptionString>("compatible_printers_condition", true)->value; }
@@ -348,7 +359,11 @@ public:
 		assert(this->type == TYPE_PRINT || this->type == TYPE_SLA_PRINT || this->type == TYPE_FILAMENT || this->type == TYPE_SLA_MATERIAL);
         return Preset::compatible_printers_condition(this->config);
     }
-    const std::string&  compatible_printers_condition() const { return const_cast<Preset*>(this)->compatible_printers_condition(); }
+    const std::string&  compatible_printers_condition() const {
+        static const std::string empty;
+        const auto *value = config.option<ConfigOptionString>("compatible_printers_condition");
+        return value ? value->value : empty;
+    }
 
     // Return a printer technology, return ptFFF if the printer technology is not set.
     static PrinterTechnology printer_technology(const DynamicPrintConfig &cfg) {
@@ -508,7 +523,7 @@ public:
     ConstIterator   cend() const { return m_presets.cend(); }
 
     //BBS
-    Iterator        erase(Iterator it) { return m_presets.erase(it); }
+    Iterator        erase(Iterator it);
     SyncFunc        sync_func{ nullptr };
     void            set_sync_func(SyncFunc func) { sync_func = func; }
     //BBS: mutex
@@ -600,7 +615,7 @@ public:
     // a new preset is stored into the list of presets.
     // All presets are marked as not modified and the new preset is activated.
     //BBS: add project embedded preset logic
-    void            save_current_preset(const std::string &new_name, bool detach = false, bool save_to_project = false, Preset* _curr_preset = nullptr);
+    bool            save_current_preset(const std::string &new_name, bool detach = false, bool save_to_project = false, Preset* _curr_preset = nullptr);
 
     // Delete the current preset, activate the first visible preset.
     // returns true if the preset was deleted successfully.
@@ -849,10 +864,17 @@ private:
 
     // Sort presets: filament presets use generic-first ordering, others sort alphabetically.
     void sort_presets() {
+        const bool had_selection = m_idx_selected < m_presets.size();
+        const std::string selected_name = had_selection ? m_presets[m_idx_selected].name : std::string();
         if (m_type == Preset::TYPE_FILAMENT)
             std::sort(m_presets.begin() + m_num_default_presets, m_presets.end(), filament_preset_less);
         else
             std::sort(m_presets.begin() + m_num_default_presets, m_presets.end());
+        if (had_selection) {
+            const auto selected = std::find_if(m_presets.begin(), m_presets.end(),
+                [&selected_name](const Preset &preset) { return preset.name == selected_name; });
+            m_idx_selected = selected == m_presets.end() ? size_t(-1) : size_t(selected - m_presets.begin());
+        }
     }
 
     // Find a preset position in the sorted list of presets.
@@ -1045,7 +1067,7 @@ protected:
 class PhysicalPrinterCollection
 {
 public:
-    PhysicalPrinterCollection(const std::vector<std::string>& keys);
+    PhysicalPrinterCollection(const std::vector<std::string>& keys, PresetBundle *preset_bundle);
 
     typedef std::deque<PhysicalPrinter>::iterator Iterator;
     typedef std::deque<PhysicalPrinter>::const_iterator ConstIterator;
@@ -1083,6 +1105,7 @@ public:
     // If there is last preset for the printer and first_check== false, then delete this printer
     // returns true if all presets were deleted successfully.
     bool            delete_preset_from_printers(const std::string& preset_name);
+    void            rename_preset_in_printers(const std::string& old_name, const std::string& new_name);
 
     // Get list of printers which have more than one preset and "preset_names" preset is one of them
     std::vector<std::string> get_printers_with_preset( const std::string &preset_name);
@@ -1095,18 +1118,18 @@ public:
 
     size_t                  get_selected_idx()    const { return m_idx_selected; }
     // Returns the name of the selected preset, or an empty string if no preset is selected.
-    std::string             get_selected_printer_name() const { return (m_idx_selected == size_t(-1)) ? std::string() : this->get_selected_printer().name; }
+    std::string             get_selected_printer_name() const { return has_selection() ? this->get_selected_printer().name : std::string(); }
     // Returns the config of the selected printer, or nullptr if no printer is selected.
-    DynamicPrintConfig*     get_selected_printer_config() { return (m_idx_selected == size_t(-1)) ? nullptr : &(this->get_selected_printer().config); }
+    DynamicPrintConfig*     get_selected_printer_config() { return has_selection() ? &(this->get_selected_printer().config) : nullptr; }
     // Returns the config of the selected printer, or nullptr if no printer is selected.
-    PrinterTechnology       get_selected_printer_technology() { return (m_idx_selected == size_t(-1)) ? PrinterTechnology::ptAny : this->get_selected_printer().printer_technology(); }
+    PrinterTechnology       get_selected_printer_technology() { return has_selection() ? this->get_selected_printer().printer_technology() : PrinterTechnology::ptAny; }
 
     // Each physical printer can have a several related preset,
     // so, use the next functions to get an exact names of selections in the list:
     // Returns the full name of the selected printer, or an empty string if no preset is selected.
     std::string     get_selected_full_printer_name() const;
     // Returns the printer model of the selected preset, or an empty string if no preset is selected.
-    std::string     get_selected_printer_preset_name() const { return (m_idx_selected == size_t(-1)) ? std::string() : m_selected_preset; }
+    std::string     get_selected_printer_preset_name() const { return has_selection() ? m_selected_preset : std::string(); }
 
     // Select printer by the full printer name, which contains name of printer, separator and name of selected preset
     // If full_name doesn't contain name of selected preset, then select first preset in the list for this printer
@@ -1146,7 +1169,7 @@ private:
     std::deque<PhysicalPrinter>::iterator find_printer_internal(const std::string& name, bool case_sensitive_search = true);
     std::deque<PhysicalPrinter>::const_iterator find_printer_internal(const std::string& name, bool case_sensitive_search = true) const
     {
-        return const_cast<PhysicalPrinterCollection*>(this)->find_printer_internal(name);
+        return const_cast<PhysicalPrinterCollection*>(this)->find_printer_internal(name, case_sensitive_search);
     }
 
     // List of printers
@@ -1164,6 +1187,9 @@ private:
 
     // Path to the directory to store the config files into.
     std::string                 m_dir_path;
+
+    // Used to resolve printer presets renamed by vendor/profile updates.
+    const PresetBundle         *m_preset_bundle_owner {nullptr};
 };
 
 

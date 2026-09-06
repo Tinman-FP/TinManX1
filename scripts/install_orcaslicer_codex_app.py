@@ -29,6 +29,7 @@ DEFAULT_APP_SUPPORT = Path.home() / "Library" / "Application Support" / "OrcaSli
 AUTO_PA_WRAPPER_REL = Path("Contents/Resources/orcaslicer_codex/auto_pa/tinman_auto_pa_postprocess.py")
 LEGACY_PREFLIGHT_REL = Path("tools/orca_codex_launch_preflight.py")
 GENERATED_RESOURCE_PATTERNS = ("__pycache__", "*.pyc", "*-venv", ".venv", "venv")
+BUILD_CONFIGURATIONS = ("Debug", "RelWithDebInfo", "Release")
 
 
 def repo_defaults() -> tuple[Path, Path]:
@@ -46,6 +47,12 @@ def repo_defaults() -> tuple[Path, Path]:
         built_apps[-1],
     )
     return source_root, built_app
+
+
+def source_build_configuration(source_app: Path) -> str | None:
+    """Return a conventional CMake configuration embedded in the app path."""
+    path_parts = source_app.resolve(strict=False).parts
+    return next((config for config in BUILD_CONFIGURATIONS if config in path_parts), None)
 
 
 def run(args: list[str]) -> None:
@@ -125,9 +132,28 @@ def install_feature_resources(source_root: Path, app: Path) -> None:
     copy_first_available(
         [
             source_root / "scripts" / "repair_tinmanx1_bambu_lan_bindings.py",
+            source_root / "scripts" / "source-helpers" / "repair_tinmanx1_bambu_lan_bindings.py",
             release_root / "scripts" / "source-helpers" / "repair_tinmanx1_bambu_lan_bindings.py",
         ],
         resources / "tools" / "repair_bambu_lan_bindings.py",
+        executable=True,
+    )
+    copy_first_available(
+        [
+            source_root / "scripts" / "repair_tinmanx1_prusalink_bindings.py",
+            source_root / "scripts" / "source-helpers" / "repair_tinmanx1_prusalink_bindings.py",
+            release_root / "scripts" / "source-helpers" / "repair_tinmanx1_prusalink_bindings.py",
+        ],
+        resources / "tools" / "repair_prusalink_bindings.py",
+        executable=True,
+    )
+    copy_first_available(
+        [
+            source_root / "scripts" / "sync_tinmanx1_bambu_network_plugin.py",
+            source_root / "scripts" / "source-helpers" / "sync_tinmanx1_bambu_network_plugin.py",
+            release_root / "scripts" / "source-helpers" / "sync_tinmanx1_bambu_network_plugin.py",
+        ],
+        resources / "tools" / "sync_bambu_network_plugin.py",
         executable=True,
     )
 
@@ -218,6 +244,8 @@ def write_native_launcher(launcher: Path, real: Path, default_datadir: str) -> N
             static const char *DEFAULT_DATADIR = {c_string(default_datadir)};
             static const char *BAMBU_POLICY_ENV = "ORCASLICER_CODEX_BAMBU_PLUGIN_POLICY=allow";
             static const char *BAMBU_REPAIR_MARKER = "repair_bambu_lan_bindings.py";
+            static const char *BAMBU_PLUGIN_SYNC_MARKER = "sync_bambu_network_plugin.py";
+            static const char *PRUSALINK_REPAIR_MARKER = "repair_prusalink_bindings.py";
 
             static void copy_string(char *dst, size_t dst_size, const char *src) {{
                 if (dst_size == 0) return;
@@ -331,6 +359,16 @@ def write_native_launcher(launcher: Path, real: Path, default_datadir: str) -> N
                 unsetenv("PYTHONHOME");
                 unsetenv("PYTHONPATH");
 
+                if (!getenv("TINMANX1_SKIP_BAMBU_PLUGIN_SYNC")) {{
+                    char helper[PATH_MAX], out[PATH_MAX], err[PATH_MAX];
+                    join_path(helper, sizeof(helper), macos_dir, "../Resources/orcaslicer_codex/tools/sync_bambu_network_plugin.py");
+                    join_path(out, sizeof(out), datadir, "_tinmanx1_bambu_plugin_sync_last.out");
+                    join_path(err, sizeof(err), datadir, "_tinmanx1_bambu_plugin_sync_last.err");
+                    char *sync_argv[] = {{"/usr/bin/python3", helper, "--datadir", datadir, NULL}};
+                    (void)BAMBU_PLUGIN_SYNC_MARKER;
+                    run_python_helper(helper, sync_argv, out, err);
+                }}
+
                 if (!getenv("TINMANX1_SKIP_BAMBU_LAN_REPAIR")) {{
                     char helper[PATH_MAX], out[PATH_MAX], err[PATH_MAX];
                     join_path(helper, sizeof(helper), macos_dir, "../Resources/orcaslicer_codex/tools/repair_bambu_lan_bindings.py");
@@ -338,6 +376,16 @@ def write_native_launcher(launcher: Path, real: Path, default_datadir: str) -> N
                     join_path(err, sizeof(err), datadir, "_tinmanx1_bambu_lan_repair_last.err");
                     char *repair_argv[] = {{"/usr/bin/python3", helper, "--datadir", datadir, NULL}};
                     (void)BAMBU_REPAIR_MARKER;
+                    run_python_helper(helper, repair_argv, out, err);
+                }}
+
+                if (!getenv("TINMANX1_SKIP_PRUSALINK_REPAIR")) {{
+                    char helper[PATH_MAX], out[PATH_MAX], err[PATH_MAX];
+                    join_path(helper, sizeof(helper), macos_dir, "../Resources/orcaslicer_codex/tools/repair_prusalink_bindings.py");
+                    join_path(out, sizeof(out), datadir, "_tinmanx1_prusalink_repair_last.out");
+                    join_path(err, sizeof(err), datadir, "_tinmanx1_prusalink_repair_last.err");
+                    char *repair_argv[] = {{"/usr/bin/python3", helper, "--datadir", datadir, NULL}};
+                    (void)PRUSALINK_REPAIR_MARKER;
                     run_python_helper(helper, repair_argv, out, err);
                 }}
 
@@ -410,12 +458,19 @@ def main() -> int:
     parser.add_argument("--app-support", type=Path, default=DEFAULT_APP_SUPPORT)
     parser.add_argument("--stage-dir", type=Path, default=Path("/tmp/TinManX1-install-stage"))
     parser.add_argument("--portable-launcher", action="store_true")
+    parser.add_argument("--allow-debug-source", action="store_true")
     parser.add_argument("--skip-auto-pa-profile-hook", action="store_true")
     parser.add_argument("--skip-codesign", action="store_true")
     args = parser.parse_args()
 
     if not args.source_app.exists():
         raise SystemExit(f"source app not found: {args.source_app}")
+    source_config = source_build_configuration(args.source_app)
+    if source_config == "Debug" and not args.allow_debug_source:
+        raise SystemExit(
+            "refusing to install a Debug app bundle; use a Release or RelWithDebInfo build "
+            "(pass --allow-debug-source only for an intentional local diagnostic install)"
+        )
     if args.target_app.name != f"{EXPECTED_TARGET_NAME}.app":
         raise SystemExit(f"refusing unexpected target app path: {args.target_app}")
 

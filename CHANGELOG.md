@@ -1,11 +1,232 @@
 # Changelog
 
+## v2026.09.05-settings-resilience.1
+
+- fixed a macOS settings-panel crash when inherited user profiles omit optional Wave Overhang fields introduced by a newer schema
+- treat missing Wave Overhang corner-taper and Hilbert-floor controls as disabled defaults while preserving inherited profile values
+- aligned the runtime machine catalog with the installed Micro Swiss hardware map so only the Bambu X1C, Bambu H2D, and Creality K2 Plus use high-flow nozzle metadata
+- stopped routine multi-tool vector normalization from flooding the log while retaining warnings for invalid filament-to-tool routes
+- normalized stale macOS SDK paths in imported wxWidgets targets so production builds use one consistent Xcode toolchain
+- added native regressions for the standard-CM2 Prusa, Qidi, and RatRig runtime contracts plus a source guard for sparse Wave Overhang profiles
+
+## v2026.08.30-cm2-capability.1
+
+- separated Micro Swiss CM2 construction from CHT high-flow melt-zone capability throughout the machine, process, and filament generators
+- classified only the Bambu X1C and Creality K2 Plus as installed FlowTech CHT machines; standard CM2 printers no longer inherit high-flow metadata or Bambu high-flow material vectors
+- applied guarded CHT process headroom mainly to hidden paths while preserving material MVS, machine acceleration, motion-envelope, pressure-advance, and field-tuned profile authority
+- added capability regressions, corrected the Prusa standard-CM2 audit, and made the passive Prusa PC-PBT-CF chamber target safe from generic audit rewrites
+- documented the Micro Swiss flow evidence, Orca calibration sequence, installed hardware map, and production safety margin
+
+## v2026.08.29-motion-envelope.1
+
+- added fail-closed, nozzle-specific machine capability envelopes for validated Klipper CoreXY printers
+- require coupled velocity/acceleration validation, zero minimum cruise ratio, heat soak, 50 passing iterations, and an independent quality limit before an envelope can become active
+- apply calibrated values only as conservative ceilings, preserving lower Tank, Quality, Fast, and Draft feature settings and existing filament volumetric-flow limits
+- reject unsupported firmware, unsupported kinematics, independent maxima, duplicate active matches, and incomplete hardware fingerprints
+- repaired the machine-catalog generator so rerunning it preserves Snapmaker U1 mixed-nozzle machine and process profiles byte for byte
+- added motion-envelope unit, generator-integration, and CI profile-contract coverage
+
+## v2026.08.29-prusa-multitool-hardening.2
+
+- restored Linux GUI-test compilation by propagating the wxWidgets GTK port contract and removing an unnecessary dialog-header dependency from DeviceManager
+- separated physical toolhead vectors from logical material-slot vectors when normalizing mixed-nozzle and multi-material configurations
+- validated every filament-to-tool route against the selected printer's physical nozzle count and repaired stale routes deterministically
+- made full preset projection tolerate renamed or unavailable filament presets without dereferencing missing catalog entries
+- hardened physical-printer loading, selection, fallback, deletion, and case-insensitive reload behavior against empty or stale saved bindings
+- added native regression coverage for Snapmaker U1-style mixed tooling and physical-printer lifecycle edge cases
+- fixed mixed-nozzle bridge-width validation so percentage widths are checked against the smallest eligible nozzle
+
+## v2026.08.29-wave-overhangs.1
+
+- updated TinManX1's native Wave Overhangs engine to the current upstream `v0.4.0` wavefront contract and retired the removed Kaiser/LaSO selector
+- added authoritative solid backing floors above angled waves, optional Hilbert floor paths, gradual floor and wall speed recovery, and distinct wave/floor/perimeter path roles
+- connected main and auxiliary cooling, nozzle-temperature restoration, wave travel speed, minimum wave/layer dwell, and end retraction to emitted G-code
+- moved Wave Overhang diagnostics outside firmware-parsed header blocks and retained TinManX1's hybrid-support, fringe-reinforcement, fallback-seeding, and route-diagnostic extensions
+- added a source regression contract that rejects retired algorithm fields and verifies the complete geometry-to-G-code control path
+
+## v2026.08.23-snapmaker-tooling.5
+
+- preserves the four-tool Snapmaker U1 tooling preset as a child of the bundled mixed-nozzle profile, keeping its mixed Tank, Quality, Fast, and Draft processes compatible after nozzle edits and restarts
+
+## v2026.08.23-snapmaker-tooling.4
+
+- Keeps the Snapmaker U1 mixed-tool preset selected across application startup instead of migrating it to the single 0.6 mm profile.
+- Exposes the mixed-nozzle Tank, Quality, Fast, and Draft process set for both the bundled and user-saved U1 tooling profiles.
+- Adds regression coverage for mixed U1 machine and process visibility while retaining the curated single-nozzle profile catalog.
+
+## v2026.08.23-snapmaker-tooling.3
+
+- Replaces the ambiguous single U1 nozzle selector in Prepare with independent T0, T1, T2, and T3 nozzle controls.
+- Persists the selected four-tool arrangement in one managed U1 tooling preset without unsaved-profile prompts.
+- Updates per-tool layer-height limits with each nozzle change and keeps mixed-tool Quality, Fast, Draft, and Tank processes compatible.
+
+## v2026.08.23-snapmaker-tooling.2
+
+- Adds a Snapmaker U1 Live Mixed machine preset matching the installed T0/T3 0.6 mm and T1/T2 0.4 mm nozzles.
+- Adds Quality, Fast, Draft, and Tank processes that use percentage-based line widths so each U1 tool slices from its own nozzle diameter.
+- Keeps nozzle choice tied to the selected U1 filament/tool slot, eliminating a separate and potentially contradictory nozzle selector.
+
+## v2026.08.23-snapmaker-tooling.1
+
+- read the Snapmaker U1's authoritative four-tool nozzle inventory from firmware product metadata, with validated saved-variable fallback for older firmware
+- subscribe to every live Klipper extruder object and carry the U1 tool IDs, diameters, materials, flow classes, and temperatures through the native device payload
+- display mixed U1 tooling by physical tool ID and validate sliced nozzle diameter/flow against the correct tool without rewriting or dirtying the selected preset
+- keep the U1 out of the legacy two-head nozzle selector, preserving the physical T0 0.6, T1 0.4, T2 0.4, and T3 0.6 arrangement
+
+## v2026.08.20-hardening.1
+
+- made multi-extruder and multi-filament preset projection tolerate empty, incomplete, and out-of-range transient UI state instead of aborting during printer changes or slicing
+- centralized generated filament setting IDs and material contracts so maintenance scripts cannot silently replace valid catalog identities or overwrite tuned PET-CF settings
+- normalized the managed Qidi and Prusa machine/process catalogs, including canonical 0.4, 0.6, 0.8, and 1.0 mm high-flow selections and Quality, Fast, Draft, and Tank processes
+- expanded profile validation to cover the manifest, CORE One L high-flow catalog, chamber/material contracts, and all 66 vendor bundles in both local and CI release checks
+- fixed Apple Silicon CI packaging under macOS Bash 3.2 and corrected an allocation-size precedence error in line splitting
+- hardened pending cloud-preset import and HTTP upload telemetry against incomplete metadata and failed transfer-speed queries
+- added regression and AddressSanitizer coverage for crash-prone preset projection, then passed the complete 245-test native suite
+
+## v2026.08.20-bambu-lifecycle.1
+
+- replaced the destructible Bambu plug-in singleton with a process-lifetime manager so late wxWidgets destructors cannot dereference a deleted instance
+- introduced one synchronized owner for the Bambu source ABI and immutable per-session function tables, removing the duplicate cross-translation-unit definitions and reload races
+- stop and join Bambu file-system, print scheduler, and print-send workers before destroying the network wrapper or proprietary agent
+- keep proprietary networking and media modules mapped until process exit after their public agents and sessions are stopped, avoiding unsafe `dlclose` finalization
+- made GUI shutdown ordered and idempotent across MainFrame close, `OnExit`, partial initialization, and destructor fallback paths
+- register the macOS process-exit guard after plug-in and agent initialization so an early quit cannot reach Bambu's faulty global finalizer unguarded
+- added regression coverage for repeatable plug-in finalization and print scheduler shutdown, plus an ownership and teardown audit document
+
+## v2026.08.20-bambu-network-stability.1
+
+- fixed an intermittent macOS crash in the Bambu networking plug-in when a failed or lost LAN connection was disconnected a second time from its own callback
+- preserve the selected Bambu printer after a connection failure so the Device UI remains stable and an explicit retry can reconnect it
+- make repeated selection of an active Bambu LAN printer idempotent instead of tearing down and recreating its MQTT session
+- allow the Intel macOS RTSP bridge package to build on GitHub runners where `nasm` is unavailable
+
+## v2026.08.19-x1c-high-flow-nozzle.1
+
+- fixed Bambu X1C jobs being packaged as standard-flow hardened (`HX01`) when the installed nozzle is high-flow hardened (`HE01`)
+- prevent stale app or imported 3MF project state from overriding the physical nozzle-flow contract of curated TinMan machine profiles
+- enforce the machine nozzle-flow contract again when constructing the final sliced/exported configuration
+- added regression coverage for X1C high-flow and Snapmaker U1 standard-flow hardware
+
+## v2026.08.18-macos-webview-lifecycle.1
+
+- ported OrcaSlicer upstream fix `857adad293` for the macOS startup crash when a saved printer host initializes its authenticated WebView
+- track script-message handler registration so the deferred initializer cannot register the same WKWebView handler twice
+- keep TinManX1 printer API-key injection synchronized with the shared WebView lifecycle state
+
+## v2026.08.18-qidi-moonraker-routing.4
+
+- corrected Qidi Plus 4 and Max EZ host routing from Orca's inherited OctoPrint default to their native Moonraker service
+- automatically repair stale OctoPrint host types in copied profiles and saved machine connection overlays
+- added release and unit-test coverage so the misleading OctoPrint version warning cannot return for managed Qidi printers
+- stop network callbacks, printer agents, and the Bambu plug-in before frame destruction to prevent the observed macOS close-time crash
+- propagate wxWidgets' public GUI headers to test consumers on every Linux architecture and split the K2 camera injection payload below MSVC's string-literal limit
+
+## v2026.08.18-k2-native-cfs-handoff.1
+
+- moved the complete Orca configuration block into the K2's early G-code scan window so large files retain filament, color, printer, and CFS matching metadata
+- replaced the duplicate TinMan CFS startup commands with the K2 firmware's native `colorMatch` and `multiColorPrint` transaction
+- automatically migrate obsolete CFS startup commands embedded in previously saved K2 3MF projects during G-code export
+- block a CFS print before preflight unless the K2 has indexed the uploaded file and confirmed usable filament metadata and tool mapping
+- send source G-code filament types in the CFS mapping, matching Creality Print, and retry briefly while the printer finishes indexing
+- bumped the Creality profile catalog so installed and cached K2 profiles actually receive the corrected inherited startup sequence
+
+## v2026.08.18-k2-camera-recovery.1
+
+- replaced the retired K2 Plus port-8000 camera page with the current token-protected WebRTC protocol, including Creality-compatible H.264 SDP negotiation and numeric ICE candidates
+- made camera discovery, stream monitoring, and one-click refresh recover independently without interrupting a healthy feed or the rest of the Fluidd Device dashboard
+- suppress the obsolete Fluidd camera card so it cannot tear down the authenticated stream during dashboard rerenders
+- credit GecKoTDF's GPL-3.0 `Creality-K2-Camera-Fix` research for documenting the current firmware handshake
+
+## v2026.08.17-k2-print-routing.1
+
+- separated the K2 Plus direct print API from its Moonraker status service so connection tests, model detection, upload, and print start use port 80 while Device/status uses the port-4408 Moonraker proxy
+- migrated stale K2 profiles and connection overlays that stored port 7125 as the CrealityPrint host, including user-created profile copies and all canonical nozzle selections
+- added a runtime direct-host guard so an old saved K2 address cannot send Creality `/info` or `/upload` requests to Moonraker again
+- validated the direct upload route against the live K2 Plus with a non-starting G-code probe and removed the probe after Moonraker confirmed receipt
+
+## v2026.08.17-connection-routing.1
+
+- restored each non-Bambu printer's saved connection before the Prepare sidebar decides whether Print is available, removing the connection-test and reslice workaround
+- protected curated printer profiles from being silently downgraded to the generic Moonraker agent when connection settings are saved or restored
+- split K2 Plus communication correctly between Moonraker status on port 7125 and Creality model, upload, and CFS services on the printer's direct host
+- added regression coverage for specialized printer-agent routing and K2 direct-host normalization
+
+## v2026.08.17-prusa-pcpbtcf.1
+
+- fixed CORE One L handoff for Push Plastic PC-PBT-CF by emitting the printer's native seven-character `PCPBTCF` custom-material token instead of the stock `PC` token
+- preserved PC-class high-temperature mesh-leveling behavior for `PCPBTCF` in the inherited CORE One L startup sequence
+- added a release contract that rejects future drift between the filament metadata and Prusa startup logic
+
+## v2026.08.17-pc-pbt-cf-profiles.1
+
+- added printer-specific Push Plastic Carbon Fiber PC+PBT profiles for every TinManX1 printer family and FibreSeek 3
+- aligned the material contract to Push Plastic's published 250-260 C nozzle, 90-100 C bed, hardened-nozzle, and 0.6 mm preferred-nozzle guidance
+- added exact Prusa CORE One L compatibility naming; the follow-up `v2026.08.17-prusa-pcpbtcf.1` release corrects the handoff token to the printer's custom `PCPBTCF` name
+- normalized the current 500 g retail price to a 1 kg filament-cost value and added profile source metadata
+
 ## Unreleased
 
 TinManX1 FibreSeek nice-to-have controls and release hardening.
 
 Included:
 
+- fixed Creality CFS synchronization so `PCTG` remains PCTG instead of being captured by the shorter `PC` prefix, with boundary-aware material normalization and regression coverage
+- validated the fix against the live K2 Plus CFS payload for slots 1 and 2 and updated the visible revision to `v2026.08.17-creality-cfs-pctg.1`
+- restored the K2 Plus camera in the Device dashboard with a Creality-specific Fluidd camera card backed by the printer's native WebRTC feed, including refresh and full-screen controls
+- updated the visible revision to `v2026.08.16-creality-camera.1`
+- routed Creality K-series Device views and Moonraker status traffic through the printer's port-4408 reverse proxy while retaining port 80 for Creality upload/control requests
+- normalized persisted Creality web-interface addresses so a printer IP migration cannot restore the API-only root and show a false 404
+- updated the visible revision to `v2026.08.16-creality-device.1`
+- marked the start of intentional GUI process teardown before macOS finalizes the proprietary Bambu networking library, preventing its exit-only C++ exception from becoming a user-visible crash report while preserving normal runtime failure reporting
+- updated the visible revision to `v2026.08.14-bambu-clean-exit.1`
+- selected the Bambu printer agent in the central machine-selection path before opening a LAN connection, preventing a previous Qidi or Moonraker agent from queuing a failure that disconnects the H2D replacement session
+- preserved access-code MQTT mode in the packaged Bambu LAN repair helper so H2D connectivity survives preference regeneration and application upgrades
+- updated the visible revision to `v2026.08.13-bambu-routing.1`
+- canonicalized official Bambu discovery names to firmware model identifiers before compatibility checks, preventing an H2D from intermittently appearing as an unknown printer during startup
+- preserved owner-assigned Bambu LAN printer names when discovery temporarily reports only the generic model name, and migrated stale saved model labels during launch repair
+- updated the visible revision to `v2026.08.13-bambu-identity.1`
+- added authenticated CORE One L PrusaLink rediscovery at launch so DHCP address changes are repaired across every nozzle profile, the persistent connection overlay, and the local-device cache as one backed-up transaction
+- made PrusaLink recovery preserve the last known host when the printer is offline and require the same `/api/version` identity contract as TinManX1 before rebinding, preventing another LAN service from being selected
+- updated the visible revision to `v2026.08.13-prusalink-recovery.1`
+- fixed the immediate macOS startup shutdown by restoring Release packaging and preventing accidental Debug-bundle installation, where Orca's diagnostic OpenGL assertion aborts during the first rendered frame
+- updated the visible revision to `v2026.08.12-bambu-lan-send.2`
+- fixed Bambu LAN print sends that stalled at 70% or failed with `-4030` by eliminating the asynchronous reconnect race, verifying MQTT before upload, and performing one bounded reconnect/retry only when the start command was never published
+- aligned TinManX1's `PrintParams` binary layout with Bambu Studio 2.7.1 so the current official networking plug-in receives deterministic H2D print options
+- updated the visible revision to `v2026.08.12-bambu-lan-send.1`
+- fixed Bambu LAN startup ordering so a saved H2D is reconnected after TinManX1 switches from the previous printer agent to the Bambu agent
+- treated TinMan's private per-machine connection overlay as runtime state, preventing IP, credential, and host-agent restoration from producing false unsaved-profile warnings
+- added a guarded macOS launch helper that adopts a newer official Bambu networking plug-in from an installed Bambu Studio, with rollback backups and no redistribution of proprietary binaries
+- prevented stale temporary CAD projects and concurrent 3MF thumbnail extraction from blocking the main window during startup
+- updated the visible revision to `v2026.08.12-bambu-lan-runtime.1`
+- preserved a newer per-machine connection during startup migration so stale cached system profiles cannot replace a working PrusaLink hostname or IP address
+- repaired the local CORE One L connection to use its stable `prusa-core-one-l.local` hostname across every TinMan nozzle profile
+- added native regression coverage for stale-profile connection precedence and updated the visible revision to `v2026.08.11-prusalink-persistence.1`
+- marked every curated TinMan machine except the Snapmaker U1 as High Flow at the machine-profile level, including correctly sized dual-nozzle vectors for the H2D, RatRig IDEX, and FibreSeek families
+- migrated persisted nozzle-flow selections at startup and during live catalog deployment so stale Standard entries cannot override the machine profile and trigger Bambu nozzle-mismatch warnings; the U1 remains explicitly Standard
+- updated the visible TinManX1 revision to `v2026.08.10-high-flow-nozzles.1`
+- corrected the Bambu X1C PCTG preset after a plate-sized 0.6 mm field print: removed the fixed `K=0.08` override so X1C flow-dynamics calibration remains authoritative, lowered the post-first-layer nozzle target to `250 C`, and introduced 20% cooling from layer three while retaining the Bambu-validated `0.95` flow and `6 mm3/s` volumetric limit
+- imported Bambu Studio's current generic-PCTG density, glass-transition, and AMS drying metadata, including the `65 C`/12 h drying baseline
+- updated the visible TinManX1 revision to `v2026.08.10-x1c-pctg.1`
+- moved private LAN connection settings out of generated printer copies into a persistent per-machine overlay shared by every canonical nozzle profile
+- migrated saved printer-copy addresses, legacy address aliases, and locally discovered Bambu bindings into the canonical four-nozzle catalog without publishing private network data
+- made startup profile cleanup restore the selected printer's connection before device-agent selection, preventing addresses from disappearing after relaunch
+- confined macOS translation lookup to the packaged app resources, removing a build-tree locale scan that could delay startup by more than a minute
+- added native regression coverage for cross-nozzle connection persistence and legacy-address migration
+- updated the visible TinManX1 revision to `v2026.08.10-printer-connections.1`
+- restored every CORE One L TinMan process to Prusa's standard-nozzle lineage instead of mixing standard machine presets with high-flow process inheritance
+- restored Prusa's common `0.20 mm`, `500 mm/s^2` first-layer contract, stock line widths, and stock first-layer speeds for the 0.4, 0.6, and 0.8 mm CORE One L nozzles; the 1.0 mm profile conservatively extends those ratios because Prusa does not publish a stock 1.0 mm profile
+- capped CORE One L process accelerations to Prusa's validated standard-profile envelope while preserving distinct Tank, Quality, Fast, and Draft behavior above the first layer
+- added generated-profile regression checks for CORE One L first-layer values and standard Prusa inheritance
+- updated the visible TinManX1 revision to `v2026.08.10-core-one-l-adhesion.1`
+- fixed Snapmaker U1 print uploads being sent to Moonraker's writable but non-printable `config` root; TinManX1 now exposes and uses only the U1's `gcodes` root, including when an older saved storage preference points elsewhere
+- fixed Snapmaker connection presets so saving a LAN address keeps the Prepare selector and printer thumbnail on Snapmaker instead of visually falling back to Bambu H2D
+- declared the Snapmaker U1 as a Moonraker host, mirrors a missing web UI address from its printer address, and refreshes the selected device immediately after connection settings are saved
+- updated the visible TinManX1 revision to `v2026.08.09-snapmaker-print.1`
+- fixed Snapmaker U1 filament synchronization so the live machine slot material outranks stale saved metadata, while retaining saved metadata as a fallback when firmware reports no usable live material
+- added regression coverage for ASA-CF versus stale PET-CF metadata, HT-PLA-GF subtype resolution, PEBA, and PCTG-CF fallback handling
+- fixed curated printer selection so the displayed printer, bed, nozzle, process, and saved profile always resolve to the same TinMan Codex preset
+- migrated hidden stock-machine selections at startup and replaced `Default Filament` with each machine's explicit compatible Codex PLA default
+- updated the visible TinManX1 revision to `v2026.08.09-preset-sync.1`
 - consolidated TinManX1 helper authoring under `scripts/source-helpers`, removed 16,000 lines of duplicate script copies, and added release-time byte-for-byte checks against packaged runtime helpers
 - aligned the FibreSeek profile generator with the canonical four-nozzle catalog and added an idempotence gate so regeneration cannot silently restore retired profile variants
 - repaired dormant Arc Overhang, Wave Overhang, Strength Lens, and FibreSeek smoke paths so they execute the same code and resource locations shipped in the app

@@ -142,6 +142,7 @@ jobs:
         if: runner.os == 'macOS' && !inputs.macos-combine-only
         working-directory: ${{ github.workspace }}
         run: |
+          ./scripts/build_macos_rtsp_bridge.sh ${{ inputs.arch }}
           ./build_release_macos.sh -s -n -x ${{ !vars.SELF_HOSTED && '-1' || '' }} -a ${{ inputs.arch }} -t 10.15
 
       - name: Pack macOS app bundle ${{ inputs.arch }}

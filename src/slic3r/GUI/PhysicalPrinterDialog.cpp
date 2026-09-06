@@ -19,6 +19,7 @@
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/TinManMachineProfileContract.hpp"
 
 #include "Widgets/DialogButtons.hpp"
 
@@ -53,7 +54,9 @@ namespace GUI {
 //------------------------------------------
 
 PhysicalPrinterDialog::PhysicalPrinterDialog(wxWindow* parent) :
-    DPIDialog(parent, wxID_ANY, _L("Physical Printer"), wxDefaultPosition, wxSize(45 * wxGetApp().em_unit(), -1), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
+    DPIDialog(parent, wxID_ANY, _L("Physical Printer"), wxDefaultPosition, wxSize(45 * wxGetApp().em_unit(), -1), wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
+    m_original_preset(wxGetApp().preset_bundle->printers.get_edited_preset()),
+    m_draft_preset(m_original_preset)
 {
     SetFont(wxGetApp().normal_font());
     SetBackgroundColour(*wxWHITE);
@@ -96,10 +99,10 @@ PhysicalPrinterDialog::PhysicalPrinterDialog(wxWindow* parent) :
     input_sizer->Add(m_valid_label, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, BORDER_W);
 
 
-    m_config = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
-    m_optgroup = new ConfigOptionsGroup(this, _L("Print Host upload"), m_config);
+    m_config = &m_draft_preset.config;
+    m_optgroup = std::make_unique<ConfigOptionsGroup>(this, _L("Print Host upload"), m_config);
     check_host_key_valid();
-    build_printhost_settings(m_optgroup);
+    build_printhost_settings(m_optgroup.get());
 
     auto dlg_btns = new DialogButtons(this, {"OK"});
 
@@ -892,12 +895,44 @@ void PhysicalPrinterDialog::check_host_key_valid()
 
 void PhysicalPrinterDialog::OnOK(wxEvent& event)
 {
-    wxGetApp().get_tab(Preset::TYPE_PRINTER)->save_preset("", false, false, true, m_preset_name);
-    event.Skip();
+    update_preset_input();
+    if (m_valid_type == NoValid)
+        return;
+    const Preset &current = m_presets->get_edited_preset();
+    if (current.name != m_original_preset.name || current.config != m_original_preset.config) {
+        show_error(this, _L("The printer profile changed while this dialog was open. Close and reopen the connection dialog before saving."));
+        return;
+    }
+    tinmanx_enforce_machine_connection_contract(m_preset_name, *m_config);
 
-    // Defer printer agent switch to ensure preset save completes first
-    wxGetApp().CallAfter([] {
-        wxGetApp().switch_printer_agent();
+    const std::string printer_agent = m_config->opt_string("printer_agent");
+    if (printer_agent == "snapmaker" || printer_agent == "moonraker") {
+        m_config->set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htMoonraker));
+        const std::string print_host = m_config->opt_string("print_host");
+        if (!print_host.empty() && m_config->opt_string("print_host_webui").empty())
+            m_config->set_key_value("print_host_webui", new ConfigOptionString(print_host));
+    }
+
+    const Tab::SaveContext save_context{&m_draft_preset, {}};
+    if (!wxGetApp().get_tab(Preset::TYPE_PRINTER)->save_preset("", false, false, true, m_preset_name, &save_context))
+        return;
+    try {
+        if (wxGetApp().app_config != nullptr &&
+            tinmanx_remember_machine_connection(*wxGetApp().app_config, m_preset_name, *m_config)) {
+            wxGetApp().app_config->save();
+            if (wxGetApp().app_config->dirty())
+                show_error(this, _L("The printer profile was saved, but the application connection backup could not be saved. TinManX1 will retry saving the application settings."));
+        }
+    } catch (const std::exception &error) {
+        show_error(this, _L("The printer profile was saved, but its application connection backup could not be saved.") + "\n\n" + wxString::FromUTF8(error.what()));
+    }
+
+    // Defer the agent switch and connection refresh until the preset save completes.
+    const std::string saved_name = m_preset_name;
+    EndModal(wxID_OK);
+    wxGetApp().CallAfter([saved_name] {
+        if (wxGetApp().preset_bundle->printers.get_edited_preset().name == saved_name)
+            wxGetApp().switch_printer_agent(true);
     });
 }
 

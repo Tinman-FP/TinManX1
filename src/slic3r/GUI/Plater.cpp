@@ -69,6 +69,7 @@
 #include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/TinManMachineProfileContract.hpp"
 #include "slic3r/Utils/CrealityPrint.hpp"
 #include "libslic3r/ClipperUtils.hpp"
 #include "libslic3r/ObjColorUtils.hpp"
@@ -178,6 +179,7 @@
 #include "DeviceCore/DevManager.h"
 #include "DeviceCore/DevConfigUtil.h"
 #include "DeviceCore/DevDefs.h"
+#include "DeviceCore/DevNozzleSystem.h"
 
 using boost::optional;
 namespace fs = boost::filesystem;
@@ -577,6 +579,12 @@ std::string sidebar_agent_id_for_machine(MachineObject* obj)
     if (sidebar_is_bambu_monitor_device(obj))
         return BBL_PRINTER_AGENT_ID;
 
+    if (obj != nullptr) {
+        const std::string key = obj->get_dev_name() + " " + obj->get_dev_id() + " " + obj->get_dev_ip();
+        if (std::string expected = tinmanx_expected_printer_agent(key, obj->printer_type); !expected.empty())
+            return expected;
+    }
+
     if (std::string agent_id = sidebar_configured_agent_for_machine(obj); !agent_id.empty())
         return agent_id;
 
@@ -717,6 +725,12 @@ struct Sidebar::priv
     ComboBox *      combo_nozzle_dia  = nullptr;
     Label *         label_nozzle_type = nullptr;
 
+    // Snapmaker U1 tool changer nozzle controls.
+    StaticBox *panel_tool_nozzles = nullptr;
+    Label *label_tool_nozzles = nullptr;
+    ComboBox *combo_tool_nozzles[4] = {nullptr, nullptr, nullptr, nullptr};
+    bool updating_tool_nozzles = false;
+
     // Printer - bed
     StaticBox *     panel_printer_bed = nullptr;
     wxStaticBitmap *image_printer_bed = nullptr;
@@ -805,6 +819,9 @@ struct Sidebar::priv
 
     bool sync_extruder_list(bool &only_external_material);
     bool switch_diameter(bool single);
+    bool is_snapmaker_u1_tooling() const;
+    void update_tool_nozzle_controls();
+    void apply_tool_nozzle_diameter(size_t tool_index, double diameter);
     void update_sync_status(const MachineObject* obj);
 
 #ifdef _WIN32
@@ -846,6 +863,8 @@ void Sidebar::priv::layout_printer(bool isBBL, bool isDual)
         //hsizer_printer->Add(btn_sync_printer , 0, wxLEFT, FromDIP(4));
         vsizer_printer->AddSpacer(FromDIP(SidebarProps::ContentMarginV()));
         vsizer_printer->Add(hsizer_printer, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(SidebarProps::ContentMargin()));
+        vsizer_printer->Add(panel_tool_nozzles, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP,
+                            FromDIP(SidebarProps::ContentMargin()));
 
         // Printer - extruder
 
@@ -883,9 +902,11 @@ void Sidebar::priv::layout_printer(bool isBBL, bool isDual)
     // NEEDFIX requires AMS check or any type of ???
     // Single nozzle & non ams
     // A multi-extruder printer may still use one common nozzle diameter for
-    // the selected machine preset. Only Bambu's true split-nozzle UI hides
-    // this selector; RatRig IDEX and Snapmaker U1 switch the whole preset.
-    panel_nozzle_dia->Show(!isDual);
+    // the selected machine preset. Bambu split nozzles and the U1 tool changer
+    // have dedicated controls.
+    const bool show_tool_nozzles = is_snapmaker_u1_tooling();
+    panel_nozzle_dia->Show(!isDual && !show_tool_nozzles);
+    panel_tool_nozzles->Show(show_tool_nozzles);
     extruder_single_sizer->Show(false);
 
     // ORCA ensure printer section is visible after changing printer from printer selection dialog
@@ -897,6 +918,96 @@ void Sidebar::priv::layout_printer(bool isBBL, bool isDual)
             m_panel_printer_content->Show();
         }
     }
+}
+
+bool Sidebar::priv::is_snapmaker_u1_tooling() const
+{
+    PresetBundle *preset_bundle = wxGetApp().preset_bundle;
+    if (preset_bundle == nullptr)
+        return false;
+
+    const DynamicPrintConfig& config = preset_bundle->printers.get_edited_preset().config;
+    const ConfigOptionFloats *nozzles = config.option<ConfigOptionFloats>("nozzle_diameter");
+    return config.has("printer_model") &&
+           boost::algorithm::iequals(config.opt_string("printer_model"), "Snapmaker U1") &&
+           nozzles != nullptr && nozzles->size() == 4;
+}
+
+void Sidebar::priv::update_tool_nozzle_controls()
+{
+    if (panel_tool_nozzles == nullptr)
+        return;
+
+    const bool show = is_snapmaker_u1_tooling();
+    panel_tool_nozzles->Show(show);
+    if (!show)
+        return;
+
+    const ConfigOptionFloats *nozzles = wxGetApp().preset_bundle->printers.get_edited_preset().config.option<ConfigOptionFloats>("nozzle_diameter");
+    if (nozzles == nullptr || nozzles->size() != 4)
+        return;
+
+    static constexpr double supported_diameters[] = {0.4, 0.6, 0.8, 1.0};
+    updating_tool_nozzles = true;
+    for (size_t tool_index = 0; tool_index < 4; ++tool_index) {
+        int selection = wxNOT_FOUND;
+        for (size_t diameter_index = 0; diameter_index < 4; ++diameter_index) {
+            if (std::fabs(nozzles->get_at(tool_index) - supported_diameters[diameter_index]) < EPSILON) {
+                selection = int(diameter_index);
+                break;
+            }
+        }
+        combo_tool_nozzles[tool_index]->SetSelection(selection);
+    }
+    updating_tool_nozzles = false;
+    panel_tool_nozzles->Layout();
+}
+
+void Sidebar::priv::apply_tool_nozzle_diameter(size_t tool_index, double diameter)
+{
+    if (updating_tool_nozzles || tool_index >= 4 || !is_snapmaker_u1_tooling())
+        return;
+
+    PresetBundle *preset_bundle = wxGetApp().preset_bundle;
+    Tab *printer_tab = wxGetApp().get_tab(Preset::TYPE_PRINTER);
+    if (preset_bundle == nullptr || printer_tab == nullptr)
+        return;
+
+    Preset& edited = preset_bundle->printers.get_edited_preset();
+    const ConfigOptionFloats *current_nozzles = edited.config.option<ConfigOptionFloats>("nozzle_diameter");
+    if (current_nozzles == nullptr || current_nozzles->size() != 4 ||
+        std::fabs(current_nozzles->get_at(tool_index) - diameter) < EPSILON)
+        return;
+
+    std::vector<double> nozzle_diameters = current_nozzles->values;
+    nozzle_diameters[tool_index] = diameter;
+
+    std::vector<double> min_layer_heights;
+    std::vector<double> max_layer_heights;
+    min_layer_heights.reserve(nozzle_diameters.size());
+    max_layer_heights.reserve(nozzle_diameters.size());
+    for (double nozzle : nozzle_diameters) {
+        min_layer_heights.emplace_back(nozzle * 0.20);
+        max_layer_heights.emplace_back(nozzle * 0.70);
+    }
+
+    edited.config.set_key_value("nozzle_diameter", new ConfigOptionFloats(nozzle_diameters));
+    edited.config.set_key_value("min_layer_height", new ConfigOptionFloats(min_layer_heights));
+    edited.config.set_key_value("max_layer_height", new ConfigOptionFloats(max_layer_heights));
+    edited.config.set_key_value("printer_variant", new ConfigOptionString(get_diameter_string(nozzle_diameters.front())));
+    static const std::string mixed_preset_name = "Snapmaker U1 Live Mixed - TinMan Codex";
+    static const std::string tooling_preset_name = "Snapmaker U1 Tooling - TinMan Codex";
+    edited.config.set_key_value("default_print_profile",
+                                new ConfigOptionString("0.20mm Quality @Snapmaker U1 Live Mixed - TinMan Codex"));
+    edited.inherits() = mixed_preset_name;
+    preset_bundle->printers.update_dirty();
+    printer_tab->save_preset(tooling_preset_name, false, false);
+    preset_bundle->export_selections(*wxGetApp().app_config);
+    plater->on_config_change(preset_bundle->full_config());
+    update_tool_nozzle_controls();
+
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": set T" << tool_index << " to " << diameter
+                            << " mm in " << tooling_preset_name;
 }
 
 void Sidebar::priv::flush_printer_sync(bool restart)
@@ -1919,6 +2030,22 @@ bool Sidebar::priv::sync_extruder_list(bool &only_external_material)
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " go on sync_extruder_list";
     const Preset &cur_preset  = preset_bundle->printers.get_selected_preset();
     int extruder_nums = preset_bundle->get_printer_extruder_count();
+    const auto& tool_nozzles = obj->GetNozzleSystem()->GetNozzles();
+    if (tool_nozzles.size() > 2) {
+        only_external_material = !obj->GetFilaSystem()->HasAms();
+        if (tool_nozzles.size() != static_cast<size_t>(extruder_nums)) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": printer reports " << tool_nozzles.size()
+                                       << " tools but the selected preset has " << extruder_nums;
+            return false;
+        }
+
+        // The U1 is a four-tool changer, not a Bambu-style left/right system.
+        // Its live inventory is displayed and validated by tool ID; the normal
+        // two-head diameter selector must not collapse or reorder it.
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": accepted " << tool_nozzles.size()
+                                << " live tool nozzles without entering the two-head selector";
+        return true;
+    }
     std::vector<int> extruder_map(extruder_nums);
     std::iota(extruder_map.begin(), extruder_map.end(), 0);
     const ConfigOptionInts *physical_extruder_map = cur_preset.config.option<ConfigOptionInts>("physical_extruder_map");
@@ -2035,6 +2162,25 @@ void Sidebar::priv::update_sync_status(const MachineObject *obj)
         clear_all_sync_status();
 
         wxGetApp().plater()->sidebar().clear_combos_filament_badge();
+        return;
+    }
+
+    const auto& tool_nozzles = obj->GetNozzleSystem()->GetNozzles();
+    if (tool_nozzles.size() > 2) {
+        const auto* preset_nozzles = cur_preset.config.option<ConfigOptionFloats>("nozzle_diameter");
+        bool tooling_synced = preset_nozzles != nullptr && preset_nozzles->size() == tool_nozzles.size();
+        if (tooling_synced) {
+            for (const auto& [tool_id, nozzle] : tool_nozzles) {
+                if (tool_id < 0 || tool_id >= preset_nozzles->size() ||
+                    std::fabs(preset_nozzles->get_at(tool_id) - nozzle.m_diameter) >= EPSILON) {
+                    tooling_synced = false;
+                    break;
+                }
+            }
+        }
+
+        panel_nozzle_dia->ShowBadge(tooling_synced);
+        m_printer_bbl_sync->SetBitmap_(printer_synced && tooling_synced ? "printer_sync_ok" : "printer_sync_not");
         return;
     }
 
@@ -2493,6 +2639,50 @@ Sidebar::Sidebar(Plater *parent)
         nozzle_dia_sizer->Add(p->label_nozzle_type , 0, wxALIGN_CENTER);
 
         p->panel_nozzle_dia->SetSizer(nozzle_dia_sizer);
+
+        p->panel_tool_nozzles = new StaticBox(p->m_panel_printer_content);
+        p->panel_tool_nozzles->SetCornerRadius(FromDIP(PRINTER_PANEL_RADIUS));
+        p->panel_tool_nozzles->SetBorderColor(panel_color.bd_normal);
+        p->panel_tool_nozzles->SetToolTip(_L("Nozzle diameter for each Snapmaker U1 tool"));
+
+        p->label_tool_nozzles = new Label(p->panel_tool_nozzles, _L("Tool nozzles"), LB_PROPAGATE_MOUSE_EVENT);
+        p->label_tool_nozzles->SetFont(Label::Body_10);
+
+        auto *tool_nozzle_sizer = new wxBoxSizer(wxHORIZONTAL);
+        tool_nozzle_sizer->Add(p->label_tool_nozzles, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(8));
+        tool_nozzle_sizer->AddStretchSpacer();
+
+        static constexpr double supported_diameters[] = {0.4, 0.6, 0.8, 1.0};
+        for (size_t tool_index = 0; tool_index < 4; ++tool_index) {
+            auto *tool_sizer = new wxBoxSizer(wxVERTICAL);
+            auto *tool_label = new Label(p->panel_tool_nozzles, wxString::Format("T%zu", tool_index), LB_PROPAGATE_MOUSE_EVENT);
+            tool_label->SetFont(Label::Body_10);
+            tool_label->SetToolTip(wxString::Format(_L("Snapmaker U1 tool T%zu"), tool_index));
+
+            ComboBox *combo = new ComboBox(p->panel_tool_nozzles, wxID_ANY, wxString(""), wxDefaultPosition,
+                                           wxDefaultSize, 0, nullptr, wxCB_READONLY);
+            combo->SetBorderWidth(0);
+            combo->GetDropDown().SetUseContentWidth(true);
+            combo->SetMinSize(FromDIP(wxSize(56, 26)));
+            combo->SetMaxSize(FromDIP(wxSize(64, 26)));
+            for (double diameter : supported_diameters)
+                combo->Append(wxString::Format("%.1f", diameter), {});
+            combo->SetToolTip(wxString::Format(_L("Nozzle diameter for tool T%zu"), tool_index));
+            combo->Bind(wxEVT_COMBOBOX, [this, tool_index](wxCommandEvent& event) {
+                static constexpr double diameters[] = {0.4, 0.6, 0.8, 1.0};
+                const int selection = event.GetSelection();
+                if (selection >= 0 && selection < 4)
+                    p->apply_tool_nozzle_diameter(tool_index, diameters[selection]);
+            });
+
+            p->combo_tool_nozzles[tool_index] = combo;
+            tool_sizer->Add(tool_label, 0, wxALIGN_CENTER_HORIZONTAL | wxBOTTOM, FromDIP(1));
+            tool_sizer->Add(combo, 0, wxALIGN_CENTER_HORIZONTAL);
+            tool_nozzle_sizer->Add(tool_sizer, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(5));
+        }
+
+        p->panel_tool_nozzles->SetSizer(tool_nozzle_sizer);
+        p->panel_tool_nozzles->Hide();
 
         // Bed type selection
         p->panel_printer_bed = new StaticBox(p->m_panel_printer_content);
@@ -3514,6 +3704,8 @@ void Sidebar::update_presets(Preset::Type preset_type)
             p->image_printer_bed->SetBitmap(create_scaled_bitmap(image_path, this, PRINTER_THUMBNAIL_SIZE.GetHeight()));
         }
 
+        p->update_tool_nozzle_controls();
+
         if (GUI::wxGetApp().plater())
             GUI::wxGetApp().plater()->update_machine_sync_status();
 
@@ -3711,6 +3903,10 @@ void Sidebar::msw_rescale()
     p->panel_nozzle_dia->SetMinSize(FromDIP(PRINTER_PANEL_SIZE));
     p->panel_nozzle_dia->SetCornerRadius(FromDIP(PRINTER_PANEL_RADIUS));
     p->combo_nozzle_dia->Rescale();
+
+    p->panel_tool_nozzles->SetCornerRadius(FromDIP(PRINTER_PANEL_RADIUS));
+    for (ComboBox *combo : p->combo_tool_nozzles)
+        combo->Rescale();
 
     p->panel_printer_bed->SetMinSize(FromDIP(PRINTER_PANEL_SIZE));
     p->panel_printer_bed->SetCornerRadius(FromDIP(PRINTER_PANEL_RADIUS));
@@ -7925,16 +8121,16 @@ bool tinman_auto_pa_env_disables_auto_add()
 
 TinManAutoPALaneChoice tinman_auto_pa_lane_choice_from_printer_haystack(const std::string &haystack)
 {
-    if (tinman_auto_pa_contains_any(haystack, {"qidi_max_ez", "max_ez"}))
-        return {"Qidi Max EZ", "TINMAN_AUTO_PA_LANE_300_REAR.3mf"};
-
-    if (tinman_auto_pa_contains_any(haystack, {"qidi_x_plus_4", "qidi_plus_4", "qidi_plus4", "x_plus_4", "xplus4"}))
-        return {"Qidi Plus 4", "TINMAN_AUTO_PA_LANE_300_FRONT.3mf"};
-
     if (tinman_auto_pa_contains_any(haystack, {"rat_rig", "ratrig", "v_core"}))
         return {"RatRig", "TINMAN_AUTO_PA_LANE_500_REAR.3mf"};
 
     return {};
+}
+
+bool tinman_auto_pa_is_disabled_qidi_printer(const std::string &haystack)
+{
+    return tinman_auto_pa_contains_any(haystack,
+        {"qidi_max_ez", "max_ez", "qidi_x_plus_4", "qidi_plus_4", "qidi_plus4", "x_plus_4", "xplus4"});
 }
 
 bool tinman_auto_pa_lane_displacement(const std::string &name, const BoundingBoxf &bed_bb, double z_offset, Vec3d &displacement)
@@ -8030,12 +8226,42 @@ bool Plater::priv::ensure_tinman_auto_pa_visible_lane_for_current_plate()
     append_config_string(edited_printer.config, "printer_model");
     append_config_string(edited_printer.config, "printer_settings_id");
 
-    const TinManAutoPALaneChoice choice = tinman_auto_pa_lane_choice_from_printer_haystack(printer_haystack);
-    if (choice.filename.empty())
-        return false;
-
     PartPlate *plate = partplate_list.get_curr_plate();
     if (plate == nullptr)
+        return false;
+
+    // Automatic PA is intentionally disabled for the Qidi Plus 4 and Max EZ.
+    // Remove lanes that an older build may already have inserted into the active plate.
+    if (tinman_auto_pa_is_disabled_qidi_printer(printer_haystack)) {
+        std::vector<size_t> lane_object_indices;
+        for (ModelObject *object : plate->get_objects_on_this_plate()) {
+            if (object == nullptr)
+                continue;
+
+            const std::string object_name = object->name.empty() ? fs::path(object->input_file).filename().string() : object->name;
+            if (!tinman_auto_pa_is_lane_name(object_name))
+                continue;
+
+            const auto object_it = std::find(model.objects.begin(), model.objects.end(), object);
+            if (object_it != model.objects.end())
+                lane_object_indices.emplace_back(std::distance(model.objects.begin(), object_it));
+        }
+
+        if (lane_object_indices.empty())
+            return false;
+
+        std::sort(lane_object_indices.rbegin(), lane_object_indices.rend());
+        Plater::TakeSnapshot snapshot(q, "Remove disabled TinMan auto PA lane");
+        for (size_t object_idx : lane_object_indices)
+            remove(object_idx);
+
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": removed %1% disabled Qidi auto PA lane object(s) from plate %2%")
+                                       % lane_object_indices.size() % partplate_list.get_curr_plate_index();
+        return true;
+    }
+
+    const TinManAutoPALaneChoice choice = tinman_auto_pa_lane_choice_from_printer_haystack(printer_haystack);
+    if (choice.filename.empty())
         return false;
 
     const std::string expected_stem = tinman_auto_pa_normalized_name(fs::path(choice.filename).stem().string());
@@ -10559,6 +10785,9 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
     // So, use GetSelection() from event parameter
     int selection = evt.GetSelection();
 
+    if (selection < 0 || static_cast<unsigned>(selection) >= combo->GetCount())
+        return;
+
     auto marker = reinterpret_cast<size_t>(combo->GetClientData(selection));
     if (PresetComboBox::LabelItemType::LABEL_ITEM_WIZARD_ADD_PRINTERS == marker) {
         sidebar->create_printer_preset();
@@ -10605,32 +10834,27 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
             Preset::remove_suffix_modified(wx_name.ToUTF8().data()));
     }
 
+    std::optional<FilamentSlotSelection> filament_selection;
+    const int selection_flag = combo->GetFlag(selection);
     if (preset_type == Preset::TYPE_FILAMENT) {
-        if (idx >= 0)
-            sidebar_ensure_filament_preset_slot(wxGetApp().preset_bundle, static_cast<size_t>(idx));
-        wxGetApp().preset_bundle->set_filament_preset(idx, preset_name);
-        if (idx == 1)
-            sidebar->sync_continuous_fiber_selector_from_filament_preset(preset_name, false);
-        wxGetApp().plater()->update_project_dirty_from_presets();
-        wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
-        sidebar->update_dynamic_filament_list();
-        bool flag_is_change = is_support_filament(idx);
-        if (flag != flag_is_change && wxGetApp().app_config->get("auto_calculate_flush") == "all") {
-            sidebar->auto_calc_flushing_volumes(idx);
+        const auto *preset = wxGetApp().preset_bundle->filaments.find_preset(preset_name, false, true);
+        if (idx < 0 || static_cast<size_t>(idx) >= wxGetApp().preset_bundle->filament_presets.size() || !preset || !preset->is_visible) {
+            combo->update();
+            show_error(this->sidebar, _L("The selected filament slot or preset is no longer available."));
+            return;
         }
-        auto select_flag = combo->GetFlag(selection);
-        combo->ShowBadge(select_flag == (int)PresetComboBox::FilamentAMSType::FROM_AMS);
-        q->on_filament_change(idx);
+        filament_selection = FilamentSlotSelection{static_cast<size_t>(idx), preset->name,
+            wxGetApp().preset_bundle->printers.get_edited_preset().name, combo->pending_filament_color()};
     }
-    bool select_preset = !combo->selection_is_changed_according_to_physical_printers();
-    // TODO: ?
-    if (preset_type == Preset::TYPE_FILAMENT && sidebar->is_multifilament()) {
-        // Only update the plater UI for the 2nd and other filaments.
-        combo->update();
-    }
-    else if (select_preset) {
+    const auto physical_result = combo->selection_is_changed_according_to_physical_printers();
+    if (physical_result == PresetComboBox::PhysicalSelectionResult::Canceled)
+        return;
+    const bool select_preset = physical_result == PresetComboBox::PhysicalSelectionResult::NotApplicable;
+    // Multi-material choices change a logical slot without replacing the editor.
+    if (select_preset && !(preset_type == Preset::TYPE_FILAMENT && sidebar->is_multifilament())) {
         if (preset_type == Preset::TYPE_PRINTER) {
             PhysicalPrinterCollection& physical_printers = wxGetApp().preset_bundle->physical_printers;
+            const std::string previous_physical_printer = physical_printers.get_selected_full_printer_name();
             if(combo->is_selected_physical_printer())
                 preset_name = physical_printers.get_selected_printer_preset_name();
             else
@@ -10639,17 +10863,23 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
             if (combo->is_selected_printer_model()) {
                 auto preset = wxGetApp().preset_bundle->get_similar_printer_preset(preset_name, {});
                 if (preset == nullptr) {
-                    MessageDialog dlg(this->sidebar, "", "");
-                    dlg.ShowModal();
+                    if (!previous_physical_printer.empty())
+                        physical_printers.select_printer(previous_physical_printer);
+                    combo->update();
+                    show_error(this->sidebar, _L("No printer preset is available for the selected model."));
+                    return;
                 }
                 preset->is_visible = true; // force visible
                 preset_name = preset->name;
             }
             std::string old_preset_name = wxGetApp().preset_bundle->printers.get_edited_preset().name;
 
-            update_objects_position_when_select_preset([this, &preset_type, &preset_name]() {
+            {
                 wxWindowUpdateLocker noUpdates2(sidebar->filament_panel());
-                wxGetApp().get_tab(preset_type)->select_preset(preset_name);
+                if (!wxGetApp().get_tab(preset_type)->select_preset(preset_name, false, previous_physical_printer))
+                    return;
+            }
+            update_objects_position_when_select_preset([this]() {
                 // update plater with new config
                 q->on_config_change(wxGetApp().preset_bundle->full_config());
             });
@@ -10683,15 +10913,30 @@ void Plater::priv::on_select_preset(wxCommandEvent &evt)
                 }
             }
         }
-        //BBS
-        //wxWindowUpdateLocker noUpdates1(sidebar->print_panel());
-        wxWindowUpdateLocker noUpdates2(sidebar->filament_panel());
-        wxGetApp().get_tab(preset_type)->select_preset(preset_name);
+        else {
+            wxWindowUpdateLocker noUpdates2(sidebar->filament_panel());
+            if (!wxGetApp().get_tab(preset_type)->select_preset(preset_name))
+                return;
+        }
     }
 
-    // ORCA: Always refresh the selected filament combo so its color swatch (clr_picker)
-    // matches the chosen preset. update_ams_color() (in OnSelect) updates the project
-    // filament color when the preset defines one; this repaints the swatch to match.
+    if (filament_selection) {
+        if (!combo->apply_filament_selection(*filament_selection)) {
+            combo->update();
+            return;
+        }
+        if (idx == 1)
+            sidebar->sync_continuous_fiber_selector_from_filament_preset(filament_selection->preset_name, false);
+        q->update_project_dirty_from_presets();
+        wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
+        sidebar->update_dynamic_filament_list();
+        if (flag != is_support_filament(idx) && wxGetApp().app_config->get("auto_calculate_flush") == "all")
+            sidebar->auto_calc_flushing_volumes(idx);
+        combo->ShowBadge(selection_flag == (int)PresetComboBox::FilamentAMSType::FROM_AMS);
+        q->on_filament_change(idx);
+    }
+
+    // Repaint only after the slot and its color have been committed together.
     if (preset_type == Preset::TYPE_FILAMENT)
         combo->update();
 

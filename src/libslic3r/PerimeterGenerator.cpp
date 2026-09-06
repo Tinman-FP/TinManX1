@@ -11,7 +11,6 @@
 #include "Arachne/WallToolPaths.hpp"
 #include "WaveOverhangs/WaveOverhangs.hpp"
 #include "WaveOverhangs/AndersonsGenerator.hpp"
-#include "WaveOverhangs/KaiserGenerator.hpp"
 #include "Geometry/ConvexHull.hpp"
 #include "ExPolygonCollection.hpp"
 #include "Geometry.hpp"
@@ -1131,15 +1130,8 @@ static std::tuple<std::vector<ExtrusionPaths>, Polygons, WaveOverhangs::Generati
     params.corner_taper_distance  = region_config.wave_overhang_corner_taper_distance.value;
     params.corner_angle_threshold = region_config.wave_overhang_corner_angle_threshold.value;
 
-    WaveOverhangs::GenerateResult result;
-    if (region_config.wave_overhang_algorithm == woaKaiser) {
-        WaveOverhangs::KaiserGenerator generator;
-        generator.overlap = region_config.wave_overhang_ring_overlap.value;
-        result = generator.generate(infill_area, lower_slices_polygons, params);
-    } else {
-        WaveOverhangs::AndersonsGenerator generator;
-        result = generator.generate(infill_area, lower_slices_polygons, params);
-    }
+    WaveOverhangs::AndersonsGenerator generator;
+    WaveOverhangs::GenerateResult result = generator.generate(infill_area, lower_slices_polygons, params);
 
     return { std::move(result.paths), std::move(result.residual), result.diagnostics };
 }
@@ -1209,7 +1201,7 @@ static std::string format_wave_overhang_diagnostic(
     ss << std::fixed << std::setprecision(3)
        << "; WAVE_OVERHANG_DIAG"
        << " layer=" << layer_id
-       << " algo=" << (region_config.wave_overhang_algorithm.value == woaKaiser ? "kaiser" : "andersons")
+       << " algorithm=wavefront"
        << " candidates=" << diagnostics.candidate_regions
        << " real_empty=" << diagnostics.real_overhang_empty
        << " bridge_skip=" << diagnostics.bridgeable_skipped
@@ -1451,6 +1443,8 @@ void PerimeterGenerator::apply_extra_perimeters(ExPolygons &infill_area, const E
                 this->fill_surfaces->append(new_surfaces, surface);
             }
 
+            if (use_wave_overhangs && !fill_carve.empty())
+                append(this->out_wave_overhang_floor_polygons, fill_carve);
             if (use_wave_overhangs && !wave_support_coverage.empty())
                 append(this->out_wave_overhang_covered_polygons, wave_support_coverage);
         }
