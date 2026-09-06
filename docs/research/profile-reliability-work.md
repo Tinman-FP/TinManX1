@@ -936,6 +936,62 @@ future fix must separate authentication invalidation from preservation of the
 open project's edits, handle failed saves, and test account switching and stale
 callbacks alongside actual dialogs.
 
+## User-Present Acceptance: Wave Profile Ownership
+
+After the overnight window, the user authorized installation and interactive
+acceptance. The archive-checks build was installed with the profile-adjustment
+hook disabled and a fresh private settings backup. Its native About dialog
+showed the expected revision and commit; macOS correctly displayed Quit TinManX1.
+Existing profile files remained unchanged. A runtime rewrite of the application
+settings file changed formatting, but its parsed values matched the backup.
+
+The GUI check exposed a gap that raw archive tests did not cover. Opening the
+previously audited reference project and saving a separate copy changed
+`wave_overhangs`, `wave_overhang_corner_taper_enable`, and
+`wave_overhang_floor_use_hilbert` from enabled to disabled. Model mesh data,
+resources, and build instances were preserved. Six connection-only settings
+were intentionally excluded from the portable copy.
+
+All 41 wave options existed in the global schema and GUI but were absent from
+`Preset::print_options()`. Reconstructing the editable process collection lost
+their project values; creating GUI defaults afterward could not recover them.
+The focused fix registers them as process-owned options before any GUI exists.
+It does not change wave algorithms, numeric defaults, material tuning, or printer
+connection settings. Previously saved projects that already lost their values
+cannot have those values inferred automatically; retain the original projects.
+
+Two new native tests cover ownership/defaults for every wave schema option and
+three successive `load_config_model()` / `full_config_secure()` generations with
+non-default values for every wave option. The actual production path failed
+287 of 543 assertions before the fix. After registration, both cases pass all
+707 assertions. This extends verification beyond raw 3MF preservation to the
+effective preset bundle used by the GUI.
+
+Local verification for `v2026.09.06-wave-profiles.1`, package `2026.9.6.8`:
+
+- Complete Release build passed.
+- Native: 291 cases / 262,306 assertions.
+- FFF: 48 / 870; utilities excluding HTTP: 20 / 211.
+- SLA: 21 / 13,246; nesting: 14 / 488.
+- Total: 394 standard offline cases / 277,121 assertions.
+- Release and FibreSeek checks passed; tracked profile resources are unchanged.
+- Existing user/system/profile/helper checksums still match the pre-install copy.
+- Reference CLI slice remains 167 layers and 3h 45m 38s; only two generation
+  timestamp comments differ from the prior verified output.
+
+GUI close cancellation preserved a deliberately unsaved layer-height edit in
+the separate acceptance project; the original value was restored afterward.
+Snapmaker/Sovol printer switching and independent Snapmaker nozzle selection
+responded, but a retained 0.30 mm process and popup lists that did not stay visible
+under computer automation still need user confirmation. These observations do
+not establish complete mixed-tool workflow acceptance. The temporary tooling
+preset created by this test was moved outside the live preset directory while
+the app was closed; no pre-existing profile was removed.
+
+At this source checkpoint, corrected-build GUI re-verification and publication
+are pending. See the pull request follow-up and local acceptance handoff for
+the final installation and CI result. Logs use `/tmp/tinman-wave-profile-*`.
+
 ## Review Conclusions
 
 The useful Prusa 3 ideas were explicit ownership and scope, private candidate

@@ -65,6 +65,80 @@ void load(PresetCollection &collection, Preset::Type type, std::vector<Preset *>
 
 } // namespace
 
+TEST_CASE("Wave settings belong to process profiles before GUI construction", "[Preset][ProjectRecovery][TinMan][WaveProfile]")
+{
+    PresetBundle bundle;
+    size_t count = 0;
+    for (const auto &[key, def] : print_config_def.options) {
+        if (key.find("wave_overhang") != 0 && key != "support_remaining_areas_after_wave_overhangs")
+            continue;
+        CAPTURE(key);
+        ++count;
+        const auto *option = bundle.prints.default_preset().config.option(key);
+        CHECK(option != nullptr);
+        if (option != nullptr)
+            CHECK(option->serialize() == def.default_value->serialize());
+        CHECK_FALSE(bundle.printers.default_preset().config.has(key));
+        CHECK_FALSE(bundle.filaments.default_preset().config.has(key));
+    }
+    CHECK(count >= 40);
+}
+
+TEST_CASE("Wave settings survive project loading into the effective preset bundle", "[Preset][ProjectRecovery][TinMan][WaveProfile]")
+{
+    PresetBundle source;
+    source.filament_presets = {source.filaments.default_preset().name};
+    source.project_config.set_key_value("filament_colour", new ConfigOptionStrings{"#112233"});
+    DynamicPrintConfig config = source.full_config();
+    DynamicPrintConfig tuned;
+    for (const auto &[key, def] : print_config_def.options) {
+        if (key.find("wave_overhang") != 0 && key != "support_remaining_areas_after_wave_overhangs")
+            continue;
+        CAPTURE(key);
+        std::unique_ptr<ConfigOption> option(def.create_default_option());
+        switch (def.type) {
+        case coBool:
+            static_cast<ConfigOptionBool *>(option.get())->value = !static_cast<ConfigOptionBool *>(option.get())->value;
+            break;
+        case coInt: {
+            auto &value = static_cast<ConfigOptionInt *>(option.get())->value;
+            value += value < def.max ? 1 : -1;
+            break;
+        }
+        case coFloat: {
+            auto &value = static_cast<ConfigOptionFloat *>(option.get())->value;
+            value += value + 0.01 <= def.max ? 0.01 : -0.01;
+            break;
+        }
+        case coEnum:
+            REQUIRE(def.enum_values.size() > 1);
+            REQUIRE(option->deserialize(option->serialize() == def.enum_values.front() ? def.enum_values.back() : def.enum_values.front()));
+            break;
+        default:
+            FAIL("Add a non-default fixture for this wave option type");
+        }
+        REQUIRE(option->serialize() != def.default_value->serialize());
+        tuned.set_key_value(key, option.release());
+    }
+    config.apply(tuned);
+    for (int generation = 0; generation < 3; ++generation) {
+        CAPTURE(generation);
+        PresetBundle loaded;
+        REQUIRE_NOTHROW(loaded.load_config_model("wave-project.3mf", config));
+        const auto effective = loaded.full_config_secure();
+        for (const auto &key : tuned.keys()) {
+            CAPTURE(key);
+            const auto *owned = loaded.prints.get_edited_preset().config.option(key);
+            CHECK(owned != nullptr);
+            if (owned != nullptr)
+                CHECK(owned->serialize() == tuned.option(key)->serialize());
+            REQUIRE(effective.has(key));
+            CHECK(effective.option(key)->serialize() == tuned.option(key)->serialize());
+        }
+        config = effective;
+    }
+}
+
 TEST_CASE("Standalone project profiles retain tuned values on export and reload", "[Preset][ProjectRecovery][TinMan]")
 {
     const auto type = GENERATE(Preset::TYPE_PRINT, Preset::TYPE_FILAMENT, Preset::TYPE_PRINTER);

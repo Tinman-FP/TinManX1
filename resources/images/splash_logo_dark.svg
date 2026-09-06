@@ -47,7 +47,7 @@
     </g>
     <text x="106" y="46" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#f5f7f8">TinManX1</text>
     <text x="107" y="72" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="#aab5bb">Based on Orca Slicer Version 2.4.2</text>
-    <text x="107" y="90" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#8e9aa0">TinManX1 Revision v2026.09.06-archive-checks.1</text>
+    <text x="107" y="90" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#8e9aa0">TinManX1 Revision v2026.09.06-wave-profiles.1</text>
     <text x="107" y="110" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#8e9aa0">Includes improvements inspired by</text>
     <text x="107" y="124" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#8e9aa0">PrusaSlicer 3.0.0-alpha11</text>
   </g>
