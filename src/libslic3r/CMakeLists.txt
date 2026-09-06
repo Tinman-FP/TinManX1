@@ -372,6 +372,8 @@ set(lisbslic3r_sources
     FilamentSelection.hpp
     PrinterConnectionUpdate.cpp
     PrinterConnectionUpdate.hpp
+    PresetTransfer.cpp
+    PresetTransfer.hpp
     PrincipalComponents2D.cpp
     PrincipalComponents2D.hpp
     PrintApply.cpp

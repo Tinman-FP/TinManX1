@@ -3,6 +3,7 @@
 #include "Tab.hpp"
 #include "PresetHints.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/PresetTransfer.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/TinManMachineProfileContract.hpp"
 #include "libslic3r/Utils.hpp"
@@ -6988,30 +6989,20 @@ void Tab::compare_preset()
     wxGetApp().mainframe->diff_dialog.show(m_type);
 }
 
-void Tab::transfer_options(const std::string &name_from, const std::string &name_to, std::vector<std::string> options)
+bool Tab::transfer_options(const std::string &name_from, const std::string &name_to, std::vector<std::string> options)
 {
     if (options.empty())
-        return;
-
-    Preset* preset_from = m_presets->find_preset(name_from);
-    Preset* preset_to = m_presets->find_preset(name_to);
-
-    if (m_type == Preset::TYPE_PRINTER) {
-         auto it = std::find(options.begin(), options.end(), "extruders_count");
-         if (it != options.end()) {
-             // erase "extruders_count" option from the list
-             options.erase(it);
-             // cache the extruders count
-             static_cast<TabPrinter*>(this)->cache_extruder_cnt(&preset_from->config);
-         }
+        return true;
+    std::string reason;
+    if (!transfer_preset_options(*m_presets, name_from, name_to, std::move(options),
+        [this](const std::string &name) { return select_preset(name); }, reason)) {
+        if (!reason.empty())
+            show_error(this, _L("Could not transfer the selected preset settings.") + "\n\n" + wxString::FromUTF8(reason));
+        return false;
     }
-    cache_config_diff(options, &preset_from->config);
-
-    if (name_to != m_presets->get_edited_preset().name )
-        select_preset(preset_to->name);
-
-    apply_config_from_cache();
+    update_dirty();
     load_current_preset();
+    return true;
 }
 
 // Save the current preset into file.

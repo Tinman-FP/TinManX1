@@ -695,6 +695,48 @@ GitHub's older branding-sync build run was cancelled when superseded by the new
 push, not reported as a compiler/test failure; matching latest-head CI must still
 be checked before claiming cross-platform success for the overnight work.
 
+## Overnight M3: Comparison Transfer Cancellation
+
+`Tab::transfer_options()` ignored the result of selecting the comparison's
+destination. If its unsaved-changes dialog was cancelled, the caller still
+applied cached options to the previously active editor. It also used fallback
+preset lookup for missing comparison entries, and the all-profile comparison
+loop continued with later types after cancellation.
+
+A headless extraction of that transfer control flow reproduced five failed
+assertions in two cases: cancellation and a callback returning success without
+actually selecting the requested destination. This was an offline reproduction,
+not an interactive GUI test. The new core `transfer_preset_options()` is used
+directly by the comparison UI. It resolves source/destination without fallback,
+captures source values before any selection dialog, validates requested option
+indices, honors cancellation, and rechecks the destination afterward. A candidate
+config receives all selected values before publication, so a bad later value
+cannot partially overwrite the editor. Selection exceptions are reported without
+applying the captured values. Comparison transfers no longer use the persistent
+tab transfer cache. The caller returns success/failure, and multi-profile
+comparison stops at the first cancelled or rejected transfer.
+
+Fourteen focused cases pass 93 assertions, including missing/hidden profiles,
+changed destinations, source changes during confirmation, unrelated destination
+edits, current-editor transfers, individual mixed-nozzle/material-variant entries,
+tool-count transfer/cancellation, malformed indices, invalid values, empty
+requests, missing handlers, and selection exceptions. The complete Mac build
+passed. All standard local suites passed: native 274 cases / 241,868 assertions;
+FFF 48 / 870; offline utilities 20 / 211; SLA 21 / 13,360; nesting 14 / 488.
+That is 377 cases / 256,797 assertions, excluding the separately documented
+pre-existing hidden legacy failure and network-dependent tests. Release/FibreSeek
+checks, the 936-profile manifest, and saved-profile checksums passed. The reference
+G-code differs only in its two timestamp comments.
+
+Revision `v2026.09.06-preset-transfer.1`, package `2026.9.6.3`, updates splash/About
+revision text. The local candidate remains staged rather than replacing the
+installed app. Important limits remain: earlier successful transfers or explicit
+saves are not rolled back when a later profile is cancelled; this is not a whole
+bundle transaction. The separate unsaved-changes transfer cache used during
+multi-dialog printer selection still needs its own lifetime/cancellation audit.
+Actual comparison-dialog and mixed-tool project UI acceptance remains pending
+until the user is present.
+
 ## Review Conclusions
 
 The useful Prusa 3 ideas were explicit ownership and scope, private candidate

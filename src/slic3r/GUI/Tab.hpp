@@ -349,7 +349,7 @@ public:
 	void		OnKeyDown(wxKeyEvent& event);
 
 	void		compare_preset();
-	void		transfer_options(const std::string&name_from, const std::string&name_to, std::vector<std::string> options);
+	bool		transfer_options(const std::string&name_from, const std::string&name_to, std::vector<std::string> options);
 	//BBS: add project embedded preset relate logic
     struct SaveContext {
         const Preset *candidate = nullptr;

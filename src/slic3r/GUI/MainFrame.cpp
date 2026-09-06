@@ -979,16 +979,18 @@ void MainFrame::bind_diff_dialog()
     };
 
     auto transfer = [this, get_tab](Preset::Type type) {
-        get_tab(type)->transfer_options(diff_dialog.get_left_preset_name(type),
-                                        diff_dialog.get_right_preset_name(type),
-                                        diff_dialog.get_selected_options(type));
+        Tab *tab = get_tab(type);
+        return tab && tab->transfer_options(diff_dialog.get_left_preset_name(type),
+                                           diff_dialog.get_right_preset_name(type),
+                                           diff_dialog.get_selected_options(type));
     };
 
-    auto process_options = [this](std::function<void(Preset::Type)> process) {
+    auto process_options = [this](std::function<bool(Preset::Type)> process) {
         const Preset::Type diff_dlg_type = diff_dialog.view_type();
         if (diff_dlg_type == Preset::TYPE_INVALID) {
             for (const Preset::Type& type : diff_dialog.types_list() )
-                process(type);
+                if (!process(type))
+                    break;
         }
         else
             process(diff_dlg_type);

@@ -1,0 +1,236 @@
+#include <catch2/catch_all.hpp>
+
+#include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/PresetTransfer.hpp"
+
+using namespace Slic3r;
+
+namespace {
+void configure_transfer(PresetCollection &presets)
+{
+    auto config = presets.default_preset().config;
+    presets.load_preset({}, "Current", config, true);
+    config.set_key_value("layer_height", new ConfigOptionFloat(0.24));
+    presets.load_preset({}, "Source", config, false);
+    config.set_key_value("layer_height", new ConfigOptionFloat(0.12));
+    presets.load_preset({}, "Destination", config, false);
+    presets.get_edited_preset().config.set_key_value("layer_height", new ConfigOptionFloat(0.18));
+}
+}
+
+TEST_CASE("Cancelling a comparison transfer leaves current editor settings intact", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    configure_transfer(bundle.prints);
+    const auto before = bundle.prints.get_edited_preset().config;
+    std::string reason;
+    bool asked = false;
+    CHECK_FALSE(transfer_preset_options(bundle.prints, "Source", "Destination", {"layer_height"},
+        [&](const std::string &name) { asked = true; CHECK(name == "Destination"); return false; }, reason));
+    CHECK(asked);
+    CHECK(reason.empty());
+    CHECK(bundle.prints.get_edited_preset().name == "Current");
+    CHECK(bundle.prints.get_edited_preset().config == before);
+}
+
+TEST_CASE("A transfer cannot apply to a different destination after selection", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    configure_transfer(bundle.prints);
+    const auto before = bundle.prints.get_edited_preset().config;
+    std::string reason;
+    CHECK_FALSE(transfer_preset_options(bundle.prints, "Source", "Destination", {"layer_height"},
+        [](const std::string &) { return true; }, reason));
+    CHECK_FALSE(reason.empty());
+    CHECK(bundle.prints.get_edited_preset().config == before);
+}
+
+TEST_CASE("Comparison transfer applies only selected values to the accepted destination", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    configure_transfer(bundle.prints);
+    const auto destination = bundle.prints.find_preset("Destination", false)->config;
+    std::string reason;
+    REQUIRE(transfer_preset_options(bundle.prints, "Source", "Destination", {"layer_height"},
+        [&](const std::string &name) { return bundle.prints.select_preset_by_name(name, false); }, reason));
+    CHECK(reason.empty());
+    CHECK(bundle.prints.get_edited_preset().name == "Destination");
+    CHECK(bundle.prints.get_edited_preset().config.opt_float("layer_height") == 0.24);
+    CHECK(bundle.prints.get_edited_preset().config.diff(destination) == std::vector<std::string>{"layer_height"});
+}
+
+TEST_CASE("Unavailable comparison profiles are rejected before selection", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    configure_transfer(bundle.prints);
+    std::string source = "Source", target = "Destination", reason;
+    SECTION("Missing source") { source = "Missing"; }
+    SECTION("Missing destination") { target = "Missing"; }
+    SECTION("Hidden destination") { bundle.prints.find_preset(target, false, true)->is_visible = false; }
+    const auto before = bundle.prints.get_edited_preset().config;
+    bool asked = false;
+    CHECK_FALSE(transfer_preset_options(bundle.prints, source, target, {"layer_height"},
+        [&](const std::string &) { asked = true; return true; }, reason));
+    CHECK_FALSE(asked);
+    CHECK_FALSE(reason.empty());
+    CHECK(bundle.prints.get_edited_preset().config == before);
+}
+
+TEST_CASE("Transfer rejects a destination made unavailable during confirmation", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    configure_transfer(bundle.prints);
+    std::string reason;
+    DynamicPrintConfig selected;
+    CHECK_FALSE(transfer_preset_options(bundle.prints, "Source", "Destination", {"layer_height"},
+        [&](const std::string &name) {
+            bundle.prints.select_preset_by_name(name, false);
+            selected = bundle.prints.get_edited_preset().config;
+            bundle.prints.find_preset(name, false, true)->is_visible = false;
+            return true;
+        }, reason));
+    CHECK_FALSE(reason.empty());
+    CHECK(bundle.prints.get_edited_preset().config == selected);
+}
+
+TEST_CASE("A comparison transfer captures its source and preserves unrelated destination edits", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    configure_transfer(bundle.prints);
+    std::string reason;
+    REQUIRE(transfer_preset_options(bundle.prints, "Source", "Destination", {"layer_height"},
+        [&](const std::string &name) {
+            bundle.prints.find_preset("Source", false, true)->config.set_key_value("layer_height", new ConfigOptionFloat(0.3));
+            bundle.prints.select_preset_by_name(name, false);
+            bundle.prints.get_edited_preset().config.set_key_value("outer_wall_speed", new ConfigOptionFloat(42));
+            return true;
+        }, reason));
+    CHECK(bundle.prints.get_edited_preset().config.opt_float("layer_height") == 0.24);
+    CHECK(bundle.prints.get_edited_preset().config.opt_float("outer_wall_speed") == 42);
+    CHECK(bundle.prints.find_preset("Source", false, true)->config.opt_float("layer_height") == 0.3);
+}
+
+TEST_CASE("Transfers into the current editor do not prompt or change selection", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    configure_transfer(bundle.prints);
+    std::string reason;
+    REQUIRE(transfer_preset_options(bundle.prints, "Source", "Current", {"layer_height"},
+        [&](const std::string &) { FAIL("The current destination does not need a selection dialog."); return false; }, reason));
+    CHECK(bundle.prints.get_edited_preset().name == "Current");
+    CHECK(bundle.prints.get_edited_preset().config.opt_float("layer_height") == 0.24);
+}
+
+TEST_CASE("Mixed nozzle and material variants transfer only the requested indices", "[TinMan][Preset][PresetTransfer][MultiTool]")
+{
+    PresetBundle bundle;
+    const bool printer = GENERATE(false, true);
+    auto &presets = printer ? bundle.printers : bundle.filaments;
+    const std::string key = printer ? "nozzle_diameter" : "filament_flow_ratio";
+    auto config = presets.default_preset().config;
+    const std::vector<double> source = printer ? std::vector<double>{0.6, 0.4, 0.4, 0.6}
+                                              : std::vector<double>{0.97, 0.94};
+    const std::vector<double> destination(source.size(), printer ? 0.8 : 1.0);
+    config.set_key_value(key, new ConfigOptionFloats(source));
+    presets.load_preset({}, "Source", config, false);
+    config.set_key_value(key, new ConfigOptionFloats(destination));
+    presets.load_preset({}, "Destination", config, true);
+    const auto before = presets.get_edited_preset().config;
+    const size_t index = GENERATE(0u, 1u);
+    std::string reason;
+    REQUIRE(transfer_preset_options(presets, "Source", "Destination", {key + "#" + std::to_string(index)}, {}, reason));
+    auto expected = destination;
+    expected[index] = source[index];
+    CHECK(presets.get_edited_preset().config.option<ConfigOptionFloats>(key)->values == expected);
+    CHECK(presets.get_edited_preset().config.diff(before) == std::vector<std::string>{key});
+}
+
+TEST_CASE("Printer tool count changes are local to an accepted transfer", "[TinMan][Preset][PresetTransfer][MultiTool]")
+{
+    PresetBundle bundle;
+    auto &presets = bundle.printers;
+    auto config = presets.default_preset().config;
+    config.set_key_value("nozzle_diameter", new ConfigOptionFloats{0.6, 0.4, 0.4, 0.6});
+    presets.load_preset({}, "Source", config, false);
+    config.set_key_value("nozzle_diameter", new ConfigOptionFloats{0.8});
+    presets.load_preset({}, "Destination", config, false);
+    const auto current = presets.get_edited_preset().config;
+    const bool accept = GENERATE(false, true);
+    std::string reason;
+    CHECK(transfer_preset_options(presets, "Source", "Destination", {"extruders_count", "nozzle_diameter"},
+        [&](const std::string &name) { return accept && presets.select_preset_by_name(name, false); }, reason) == accept);
+    CHECK(reason.empty());
+    if (accept)
+        CHECK(presets.get_edited_preset().config.option<ConfigOptionFloats>("nozzle_diameter")->values ==
+              std::vector<double>{0.6, 0.4, 0.4, 0.6});
+    else
+        CHECK(presets.get_edited_preset().config == current);
+}
+
+TEST_CASE("Malformed or stale indexed options cannot silently use another variant", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    auto &presets = bundle.filaments;
+    presets.load_preset({}, "Source", presets.default_preset().config, false);
+    presets.load_preset({}, "Destination", presets.default_preset().config, true);
+    const std::string key = GENERATE("filament_flow_ratio#", "filament_flow_ratio#-1", "filament_flow_ratio#1junk",
+        "filament_flow_ratio#999", "filament_flow_ratio#999999999999999999999999", "inherits#0", "absent_option");
+    CAPTURE(key);
+    const auto before = presets.get_edited_preset().config;
+    std::string reason;
+    CHECK_FALSE(transfer_preset_options(presets, "Source", "Destination", {key}, {}, reason));
+    CHECK_FALSE(reason.empty());
+    CHECK(presets.get_edited_preset().config == before);
+}
+
+TEST_CASE("An invalid transferred value cannot partially modify destination settings", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    configure_transfer(bundle.prints);
+    bundle.prints.select_preset_by_name("Destination", false);
+    bundle.prints.find_preset("Source", false, true)->config.set_key_value("outer_wall_speed", new ConfigOptionString("invalid"));
+    const auto before = bundle.prints.get_edited_preset().config;
+    std::string reason;
+    CHECK_FALSE(transfer_preset_options(bundle.prints, "Source", "Destination", {"layer_height", "outer_wall_speed"}, {}, reason));
+    CHECK_FALSE(reason.empty());
+    CHECK(bundle.prints.get_edited_preset().config == before);
+}
+
+TEST_CASE("Empty comparisons do not select a destination", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    const auto before = bundle.prints.get_edited_preset().config;
+    std::string reason;
+    CHECK(transfer_preset_options(bundle.prints, "Unavailable", "Unavailable", {}, {}, reason));
+    CHECK(reason.empty());
+    CHECK(bundle.prints.get_edited_preset().config == before);
+}
+
+TEST_CASE("Missing tool counts and missing selection handlers reject transfers", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    auto &presets = bundle.printers;
+    presets.load_preset({}, "Source", presets.default_preset().config, false);
+    presets.load_preset({}, "Destination", presets.default_preset().config, false);
+    auto &source = presets.find_preset("Source", false, true)->config;
+    SECTION("Empty source tool count") { source.set_key_value("nozzle_diameter", new ConfigOptionFloats()); }
+    SECTION("Missing source tool count") { source.erase("nozzle_diameter"); }
+    SECTION("No selection handler") {}
+    const auto before = presets.get_edited_preset().config;
+    std::string reason;
+    CHECK_FALSE(transfer_preset_options(presets, "Source", "Destination", {"extruders_count"}, {}, reason));
+    CHECK_FALSE(reason.empty());
+    CHECK(presets.get_edited_preset().config == before);
+}
+
+TEST_CASE("A selection error does not apply captured transfer values", "[TinMan][Preset][PresetTransfer]")
+{
+    PresetBundle bundle;
+    configure_transfer(bundle.prints);
+    const auto before = bundle.prints.get_edited_preset().config;
+    std::string reason;
+    CHECK_FALSE(transfer_preset_options(bundle.prints, "Source", "Destination", {"layer_height"},
+        [](const std::string &) -> bool { throw std::runtime_error("selection failed"); }, reason));
+    CHECK_FALSE(reason.empty());
+    CHECK(bundle.prints.get_edited_preset().config == before);
+}

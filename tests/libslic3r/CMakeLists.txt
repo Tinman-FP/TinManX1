@@ -17,6 +17,7 @@ add_executable(${_TEST_NAME}_tests
     test_tinman_hardware_catalog.cpp
     test_config_resolution_trace.cpp
     test_filament_selection.cpp
+    test_preset_transfer.cpp
     test_physical_printer_recovery.cpp
     test_project_preset_recovery.cpp
     test_cloud_preset_recovery.cpp
