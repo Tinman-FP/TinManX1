@@ -874,12 +874,67 @@ one publication after M4's run `34011615809` completes; check that run and publi
 the reviewed local commits to `tinman`, then record the matching CI and PR
 verification. No pending platform run is described as passed.
 
+Publication follow-up: M4's entire matrix completed successfully. M5/M6 were
+published together through `75b3946597`; PR #21 verification comment is
+`5557475078`. The matching M6 full build is `34016724153`, still in progress
+without failed jobs at the M7 checkpoint. The queue note above records the
+earlier local checkpoint, not the current branch state.
+
 Scope remains explicit: M6 guards the comparison helper, not the separate wizard
 cache-application path. A destination successfully selected by the callback is
 not switched back if its requested transfer is subsequently rejected. The
 whole selection workflow is still not transactional. Remaining work includes
 wizard failure cleanup, topology-aware application of postponed wizard changes,
 and interactive comparison/setup/project acceptance with the user present.
+
+## Overnight M7: Mixed-Tool Archive Verification
+
+The portable 3MF test now exercises three synthetic layout shapes: four mixed
+0.6/0.4/0.4/0.6 nozzles, two 0.6/0.8 IDEX-shaped tools, and 0.4/0.7 plastic/fiber
+tools. These are schema fixtures inspired by U1, Rat Rig, and Seeker layouts,
+not loaded production machine profiles or live printer tests. Each shape is
+combined with the four existing valid/empty embedded-profile identity cases.
+Each of those 12 scenarios writes, reloads, writes again, and reloads again:
+24 real archive save/reload cycles, with 23,304 assertions in the expanded case.
+
+The assertions cover geometry and instances, object material selection, physical
+nozzle arrays, material identities/palettes, logical-material-to-tool maps, per-tool
+purge matrices and multipliers, per-material purge pairs, and CCF settings. The
+plastic/fiber fields use the Seeker profile's separate plastic/composite nozzle
+schema, including shared-nozzle state and nondefault cut/restart values that
+would reveal accidental normalization. CCF values are checked in both full
+project config and embedded printer profiles. Embedded profile tuning is checked
+after both generations, and private connection fields remain excluded.
+
+No runtime defect was observed in this pass and no serializer/loader behavior
+was changed. The changes add regression coverage and update the visible build
+identity to `v2026.09.06-archive-checks.1`, package `2026.9.6.7`. Archive preservation
+does not by itself prove the GUI's final effective configuration after project
+selection, or prove that these synthetic fixtures are printable configurations.
+
+The complete Mac build passed. Standard offline suites passed: native 289 cases /
+261,599 assertions, FFF 48 / 870, offline utilities 20 / 211, SLA 21 / 13,478,
+nesting 14 / 488. Total: 392 cases / 276,646 assertions. Release/FibreSeek checks,
+the 936-profile manifest, and saved-profile checksums passed. Reference G-code
+still differs only in two timestamp comments, with 167 layers and an estimate
+of 3h 45m 38s. Logs are `/tmp/tinman-mixed-archive-*.log`; the slice is
+`/tmp/tinman-mixed-archive-slice/plate_1.gcode`.
+
+M7 remains staged, not installed, with publication queued after the active M6
+matrix (`34016724153`). Consult current Git branch/CI state and PR #21 for later
+publication updates rather than treating these timestamped checkpoint notes as
+permanent queue state.
+
+Further read-only audit confirmed the logout issue needs a deliberate design:
+`GUI_App::request_user_logout` currently signs out before checking modified
+profiles, ignores the confirmation result, and does not apply its postponed
+keep-changes flag before replacing the library. The same entry point serves
+manual logout, token expiry, and stealth-mode entry. Simply allowing Cancel to
+block all sign-outs would also change forced-authentication/privacy behavior.
+No logout code was changed overnight without testing those distinctions. A
+future fix must separate authentication invalidation from preservation of the
+open project's edits, handle failed saves, and test account switching and stale
+callbacks alongside actual dialogs.
 
 ## Review Conclusions
 

@@ -222,9 +222,15 @@ TEST_CASE("Invalid project inheritance does not consume inputs or prevent retry"
     REQUIRE(bundle.prints.find_preset(source.name, false) != nullptr);
 }
 
-TEST_CASE("Portable project archive preserves profiles without local credentials", "[Preset][ProjectRecovery][TinMan][3MF]")
+TEST_CASE("Portable project archives preserve mixed tools and profiles without local credentials", "[Preset][ProjectRecovery][TinMan][3MF][MultiTool]")
 {
     const int empty_identity = GENERATE(0, 1, 2, 3);
+    const int topology = GENERATE(0, 1, 2);
+    CAPTURE(empty_identity, topology);
+    const std::vector<double> nozzles = topology == 0 ? std::vector<double>{0.6, 0.4, 0.4, 0.6} :
+                                        topology == 1 ? std::vector<double>{0.6, 0.8} :
+                                                        std::vector<double>{0.4, 0.7};
+    const unsigned tools = static_cast<unsigned>(nozzles.size());
     namespace fs = boost::filesystem;
     struct Files {
         fs::path root = fs::temp_directory_path() / fs::unique_path("tinman-project-%%%%-%%%%");
@@ -240,6 +246,16 @@ TEST_CASE("Portable project archive preserves profiles without local credentials
     Preset process = embedded(bundle.prints, Preset::TYPE_PRINT, "Portable process");
     Preset material = embedded(bundle.filaments, Preset::TYPE_FILAMENT, "Portable material");
     Preset machine = embedded(bundle.printers, Preset::TYPE_PRINTER, "Portable machine");
+    machine.config.set_num_extruders(tools);
+    machine.config.set_key_value("nozzle_diameter", new ConfigOptionFloats(nozzles));
+    machine.config.set_key_value("fiber_enabled", new ConfigOptionBool(topology == 2));
+    machine.config.set_key_value("fiber_shared_nozzle", new ConfigOptionBool(topology == 2));
+    machine.config.set_key_value("plastic_nozzle_diameter", new ConfigOptionFloat(0.4));
+    machine.config.set_key_value("composite_nozzle_diameter", new ConfigOptionFloat(0.7));
+    machine.config.set_key_value("fiber_cut_distance", new ConfigOptionFloat(58.5));
+    machine.config.set_key_value("fiber_restart_length", new ConfigOptionFloat(54.5));
+    const std::vector<std::string> fiber_keys{"fiber_enabled", "fiber_shared_nozzle", "plastic_nozzle_diameter",
+                                             "composite_nozzle_diameter", "fiber_cut_distance", "fiber_restart_length"};
     if (empty_identity == 1)
         material.config.set_key_value("filament_settings_id", new ConfigOptionStrings());
     else if (empty_identity == 2)
@@ -250,11 +266,40 @@ TEST_CASE("Portable project archive preserves profiles without local credentials
     machine.config.set_key_value("print_host", new ConfigOptionString("192.0.2.99"));
     const auto machine_before = machine.config;
     DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_num_extruders(tools);
+    config.set_key_value("nozzle_diameter", new ConfigOptionFloats(nozzles));
+    const size_t materials = nozzles.size() + 1;
+    std::vector<std::string> colors{"#111111", "#EE2222", "#22CC44", "#2244EE", "#DDAA22"};
+    colors.resize(materials);
+    std::vector<int> map;
+    std::vector<double> matrix, volumes, multipliers;
+    for (size_t slot = 0; slot < materials; ++slot) {
+        map.push_back(static_cast<int>(slot % tools + 1));
+        volumes.push_back(100 + 10 * slot);
+        volumes.push_back(150 + 10 * slot);
+    }
+    for (size_t tool = 0; tool < nozzles.size(); ++tool) {
+        multipliers.push_back(0.5 + 0.1 * tool);
+        for (size_t from = 0; from < materials; ++from)
+            for (size_t to = 0; to < materials; ++to)
+                matrix.push_back(from == to ? 0 : 1000 * tool + 100 * from + to + 1);
+    }
+    config.set_key_value("filament_settings_id", new ConfigOptionStrings(std::vector<std::string>(materials, material.name)));
+    config.set_key_value("filament_colour", new ConfigOptionStrings(colors));
+    config.set_key_value("filament_multi_colour", new ConfigOptionStrings(colors));
+    config.set_key_value("filament_colour_type", new ConfigOptionStrings(std::vector<std::string>(materials, "1")));
+    config.set_key_value("filament_map", new ConfigOptionInts(map));
+    config.set_key_value("flush_volumes_matrix", new ConfigOptionFloats(matrix));
+    config.set_key_value("flush_volumes_vector", new ConfigOptionFloats(volumes));
+    config.set_key_value("flush_multiplier", new ConfigOptionFloats(multipliers));
+    config.apply_only(machine.config, fiber_keys);
     config.set_key_value("printhost_password", new ConfigOptionString("generated-private-password"));
     const auto config_before = config;
     Model model;
     model.set_backup_path((files.root / "export").string());
-    model.add_object("cube", "", make_cube(10, 10, 10))->add_instance();
+    auto *object = model.add_object("cube", "", make_cube(10, 10, 10));
+    object->add_instance();
+    object->config.set_key_value("extruder", new ConfigOptionInt(static_cast<int>(materials)));
     const std::string path = (files.root / "portable.3mf").string();
     StoreParams params;
     params.path = path.c_str();
@@ -283,6 +328,17 @@ TEST_CASE("Portable project archive preserves profiles without local credentials
     const auto &original_mesh = model.objects.front()->volumes.front()->mesh();
     CHECK(restored_mesh.facets_count() == original_mesh.facets_count());
     CHECK(restored_mesh.bounding_box().size().isApprox(original_mesh.bounding_box().size()));
+    CHECK(restored.objects.front()->config.opt_int("extruder") == int(materials));
+    std::vector<std::string> portable_keys{
+        "nozzle_diameter", "printer_extruder_variant", "filament_settings_id", "filament_colour",
+        "filament_multi_colour", "filament_colour_type", "filament_map", "flush_volumes_matrix",
+        "flush_volumes_vector", "flush_multiplier"};
+    portable_keys.insert(portable_keys.end(), fiber_keys.begin(), fiber_keys.end());
+    for (const auto &key : portable_keys) {
+        CAPTURE(key);
+        REQUIRE(restored_config.option(key) != nullptr);
+        CHECK(restored_config.option(key)->serialize() == config_before.option(key)->serialize());
+    }
     REQUIRE(imported.presets.size() == (empty_identity == 0 ? 3 : 2));
     for (const auto &key : restored_config.keys())
         CHECK_FALSE(tinmanx_runtime_connection_option(key));
@@ -291,14 +347,64 @@ TEST_CASE("Portable project archive preserves profiles without local credentials
               (preset->type == Preset::TYPE_PRINT ? process.config :
                preset->type == Preset::TYPE_FILAMENT ? material.config : machine.config)
               .option(tuning_key(preset->type))->serialize());
-        if (preset->type == Preset::TYPE_PRINTER)
+        if (preset->type == Preset::TYPE_PRINTER) {
             for (const auto &key : preset->config.keys())
                 CHECK_FALSE(tinmanx_runtime_connection_option(key));
+            for (const auto &key : fiber_keys) {
+                REQUIRE(preset->config.option(key) != nullptr);
+                CHECK(preset->config.option(key)->serialize() == machine_before.option(key)->serialize());
+            }
+        }
     }
     REQUIRE_NOTHROW(bundle.load_project_embedded_presets(imported.presets, ForwardCompatibilitySubstitutionRule::Enable));
     CHECK((bundle.prints.find_preset(process.name, false) != nullptr) == (empty_identity != 2));
     CHECK((bundle.filaments.find_preset(material.name, false) != nullptr) == (empty_identity != 1));
     CHECK((bundle.printers.find_preset(machine.name, false) != nullptr) == (empty_identity != 3));
+
+    const std::string second_path = (files.root / "portable-again.3mf").string();
+    StoreParams again;
+    again.path = second_path.c_str();
+    again.model = &restored;
+    again.config = &restored_config;
+    again.project_presets = imported.presets;
+    again.strategy = params.strategy;
+    REQUIRE(store_bbs_3mf(again));
+    Imported imported_again;
+    Model restored_again;
+    restored_again.set_backup_path((files.root / "import-again").string());
+    DynamicPrintConfig config_again;
+    REQUIRE(load_bbs_3mf(second_path.c_str(), &config_again, &substitutions, &restored_again,
+                        &imported_again.plates, &imported_again.presets, &is_bambu, &is_orca, &version, nullptr,
+                        LoadStrategy::LoadConfig | LoadStrategy::LoadModel | LoadStrategy::Silence));
+    REQUIRE(restored_again.objects.size() == 1);
+    REQUIRE(restored_again.objects.front()->volumes.size() == 1);
+    REQUIRE(restored_again.objects.front()->instances.size() == 1);
+    const auto &second_mesh = restored_again.objects.front()->volumes.front()->mesh();
+    CHECK(second_mesh.facets_count() == original_mesh.facets_count());
+    CHECK(second_mesh.bounding_box().size().isApprox(original_mesh.bounding_box().size()));
+    CHECK(restored_again.objects.front()->config.opt_int("extruder") == int(materials));
+    CHECK(imported_again.presets.size() == imported.presets.size());
+    for (const auto &key : portable_keys) {
+        CAPTURE(key);
+        REQUIRE(config_again.option(key) != nullptr);
+        CHECK(config_again.option(key)->serialize() == config_before.option(key)->serialize());
+    }
+    for (const auto &key : config_again.keys())
+        CHECK_FALSE(tinmanx_runtime_connection_option(key));
+    for (const auto *preset : imported_again.presets) {
+        const auto &original_config = preset->type == Preset::TYPE_PRINT ? process.config :
+                                      preset->type == Preset::TYPE_FILAMENT ? material.config : machine.config;
+        CHECK(preset->config.option(tuning_key(preset->type))->serialize() ==
+              original_config.option(tuning_key(preset->type))->serialize());
+        if (preset->type == Preset::TYPE_PRINTER) {
+            for (const auto &key : preset->config.keys())
+                CHECK_FALSE(tinmanx_runtime_connection_option(key));
+            for (const auto &key : fiber_keys) {
+                REQUIRE(preset->config.option(key) != nullptr);
+                CHECK(preset->config.option(key)->serialize() == machine_before.option(key)->serialize());
+            }
+        }
+    }
 }
 
 TEST_CASE("Adding saved profiles preserves current identity while sorting the catalog", "[Preset][ProjectRecovery][TinMan]")
