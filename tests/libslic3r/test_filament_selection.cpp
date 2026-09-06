@@ -117,6 +117,11 @@ void configure_purge_layout(PresetBundle &bundle, size_t tools, size_t materials
     bundle.project_config.set_key_value("flush_volumes_matrix", new ConfigOptionFloats(matrix));
     bundle.project_config.set_key_value("flush_volumes_vector", new ConfigOptionFloats(volumes));
     bundle.project_config.set_key_value("flush_multiplier", new ConfigOptionFloats(multipliers));
+    bundle.project_config.set_key_value("filament_colour", new ConfigOptionStrings(std::vector<std::string>(materials, "#111111")));
+    bundle.project_config.set_key_value("filament_multi_colour", new ConfigOptionStrings(std::vector<std::string>(materials, "#111111")));
+    bundle.project_config.set_key_value("filament_colour_type", new ConfigOptionStrings(std::vector<std::string>(materials, "1")));
+    bundle.project_config.set_key_value("filament_map", new ConfigOptionInts(std::vector<int>(materials, 1)));
+    bundle.ams_multi_color_filment.resize(materials);
 }
 }
 
@@ -278,5 +283,145 @@ TEST_CASE("Purge layout grows and shrinks logical materials independently of too
                     : from == to ? 0.0 : volumes[2 * from] + volumes[2 * to + 1]));
     const auto once = bundle.project_config;
     bundle.update_multi_material_filament_presets();
+    CHECK(bundle.project_config == once);
+}
+
+namespace {
+void configure_material_palette(PresetBundle &bundle, size_t tools)
+{
+    configure_purge_layout(bundle, tools, 4);
+    bundle.project_config.set_key_value("filament_colour", new ConfigOptionStrings{
+        "#111111", "#222222", "#333333", "#444444"});
+    bundle.project_config.set_key_value("filament_multi_colour", new ConfigOptionStrings{
+        "#111111 #AAAAAA", "#222222 #BBBBBB", "#333333 #CCCCCC", "#444444 #DDDDDD"});
+    bundle.project_config.set_key_value("filament_colour_type", new ConfigOptionStrings{"0", "1", "0", "1"});
+    bundle.project_config.set_key_value("filament_map", new ConfigOptionInts{1, int(tools), 1, int(tools)});
+    bundle.ams_multi_color_filment = {{"#111111", "#AAAAAA"}, {"#222222", "#BBBBBB"},
+        {"#333333", "#CCCCCC"}, {"#444444", "#DDDDDD"}};
+}
+}
+
+TEST_CASE("Material resizing preserves existing palette entries and tool assignments", "[TinMan][Preset][MaterialSlots]")
+{
+    PresetBundle bundle;
+    const unsigned tools = GENERATE(1u, 2u, 4u);
+    const unsigned requested = GENERATE(0u, 3u, 4u, 6u);
+    const bool vector_colors = GENERATE(false, true);
+    CAPTURE(tools, requested, vector_colors);
+    configure_material_palette(bundle, tools);
+    const auto before = bundle.project_config;
+    const auto ams_before = bundle.ams_multi_color_filment;
+    const size_t count = std::max(tools, requested);
+    if (vector_colors)
+        bundle.set_num_filaments(requested, std::vector<std::string>(requested > 4 ? requested - 4 : 0, "#AABBCC"));
+    else
+        bundle.set_num_filaments(requested, std::string("#AABBCC"));
+    REQUIRE(bundle.filament_presets.size() == count);
+    for (const char *key : {"filament_colour", "filament_multi_colour", "filament_colour_type", "filament_map"}) {
+        const auto *current = dynamic_cast<const ConfigOptionVectorBase *>(bundle.project_config.option(key));
+        REQUIRE(current != nullptr);
+        REQUIRE(current->size() == count);
+        const auto *old = dynamic_cast<const ConfigOptionVectorBase *>(before.option(key));
+        for (size_t i = 0; i < std::min<size_t>(4, count); ++i)
+            CHECK(current->vserialize()[i] == old->vserialize()[i]);
+    }
+    REQUIRE(bundle.ams_multi_color_filment.size() == count);
+    for (size_t i = 0; i < std::min<size_t>(4, count); ++i)
+        CHECK(bundle.ams_multi_color_filment[i] == ams_before[i]);
+    const auto &project = static_cast<const DynamicPrintConfig &>(bundle.project_config);
+    for (size_t i = 4; i < count; ++i) {
+        CHECK(project.opt_string("filament_colour", i) == "#AABBCC");
+        CHECK(project.opt_string("filament_multi_colour", i) == "#AABBCC");
+        CHECK(project.opt_string("filament_colour_type", i) == "1");
+        CHECK(project.option<ConfigOptionInts>("filament_map")->values[i] == 1);
+    }
+    if (count == 4)
+        CHECK(bundle.project_config == before);
+}
+
+TEST_CASE("Material deletion keeps each palette vector aligned independently", "[TinMan][Preset][MaterialSlots]")
+{
+    PresetBundle bundle;
+    const size_t tools = GENERATE(2u, 4u);
+    configure_material_palette(bundle, tools);
+    const size_t removed = GENERATE(0u, 1u, 3u);
+    SECTION("Complete palette") {}
+    SECTION("Primary color is shorter than the map") {
+        bundle.project_config.option<ConfigOptionStrings>("filament_colour")->values.resize(1);
+    }
+    const auto before = bundle.project_config;
+    bundle.update_num_filaments(removed);
+    const size_t count = std::max<size_t>(tools, 3);
+    REQUIRE(bundle.filament_presets.size() == count);
+    for (const char *key : {"filament_colour", "filament_multi_colour", "filament_colour_type", "filament_map"}) {
+        const auto *current = dynamic_cast<const ConfigOptionVectorBase *>(bundle.project_config.option(key));
+        REQUIRE(current->size() == count);
+        const auto old_values = dynamic_cast<const ConfigOptionVectorBase *>(before.option(key))->vserialize();
+        for (size_t i = 0; i < 3; ++i) {
+            const size_t source = i >= removed ? i + 1 : i;
+            if (source < old_values.size())
+                CHECK(current->vserialize()[i] == old_values[source]);
+        }
+    }
+    REQUIRE(bundle.ams_multi_color_filment.size() == count);
+}
+
+TEST_CASE("Partial color requests initialize only the available new slots", "[TinMan][Preset][MaterialSlots]")
+{
+    PresetBundle bundle;
+    configure_material_palette(bundle, 4);
+    const auto before = bundle.project_config;
+    SECTION("Short list") { bundle.set_num_filaments(6, std::vector<std::string>{"#AABBCC"}); }
+    SECTION("Empty entries") { bundle.set_num_filaments(6, std::vector<std::string>{"#AABBCC", ""}); }
+    const auto &project = static_cast<const DynamicPrintConfig &>(bundle.project_config);
+    CHECK(bundle.filament_presets.size() == 6);
+    CHECK(project.opt_string("filament_colour", 4) == "#AABBCC");
+    CHECK(project.opt_string("filament_multi_colour", 4) == "#AABBCC");
+    CHECK(project.opt_string("filament_colour", 5) == before.opt_string("filament_colour", 0));
+    CHECK(project.opt_string("filament_multi_colour", 5) == project.opt_string("filament_colour", 5));
+    for (size_t i = 0; i < 4; ++i)
+        CHECK(project.opt_string("filament_multi_colour", i) == before.opt_string("filament_multi_colour", i));
+}
+
+TEST_CASE("Unavailable material deletions are no-ops", "[TinMan][Preset][MaterialSlots]")
+{
+    PresetBundle bundle;
+    configure_material_palette(bundle, 1);
+    unsigned removed = 4;
+    SECTION("Stale index") {}
+    SECTION("Unsigned sentinel") { removed = unsigned(-1); }
+    SECTION("Last slot") { bundle.set_num_filaments(1); removed = 0; }
+    SECTION("Empty slot list") { bundle.filament_presets.clear(); removed = 0; }
+    const auto before = bundle.project_config;
+    const auto slots = bundle.filament_presets;
+    const auto ams = bundle.ams_multi_color_filment;
+    const auto editor = bundle.filaments.get_edited_preset().config;
+    REQUIRE_NOTHROW(bundle.update_num_filaments(removed));
+    CHECK(bundle.project_config == before);
+    CHECK(bundle.filament_presets == slots);
+    CHECK(bundle.ams_multi_color_filment == ams);
+    CHECK(bundle.filaments.get_edited_preset().config == editor);
+}
+
+TEST_CASE("Empty material palettes can be restored without changing hardware or tuning", "[TinMan][Preset][MaterialSlots]")
+{
+    PresetBundle bundle;
+    configure_material_palette(bundle, 4);
+    bundle.printers.get_edited_preset().config.set_key_value("nozzle_diameter", new ConfigOptionFloats{0.6, 0.4, 0.4, 0.6});
+    for (const char *key : {"filament_colour", "filament_multi_colour", "filament_colour_type", "filament_map"})
+        dynamic_cast<ConfigOptionVectorBase *>(bundle.project_config.option(key))->clear();
+    bundle.ams_multi_color_filment.clear();
+    const auto printer = bundle.printers.get_edited_preset().config;
+    const auto process = bundle.prints.get_edited_preset().config;
+    const auto material = bundle.filaments.get_edited_preset().config;
+    REQUIRE_NOTHROW(bundle.set_num_filaments(4));
+    CHECK(bundle.printers.get_edited_preset().config == printer);
+    CHECK(bundle.prints.get_edited_preset().config == process);
+    CHECK(bundle.filaments.get_edited_preset().config == material);
+    for (const char *key : {"filament_colour", "filament_multi_colour", "filament_colour_type", "filament_map"})
+        CHECK(dynamic_cast<const ConfigOptionVectorBase *>(bundle.project_config.option(key))->size() == 4);
+    CHECK(bundle.ams_multi_color_filment.size() == 4);
+    const auto once = bundle.project_config;
+    bundle.set_num_filaments(4);
     CHECK(bundle.project_config == once);
 }

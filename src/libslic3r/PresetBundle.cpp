@@ -3074,84 +3074,40 @@ void PresetBundle::export_selections(AppConfig &config)
 }
 
 // BBS
-void PresetBundle::set_num_filaments(unsigned int n, std::vector<std::string> new_colors) {
-    int old_filament_count = this->filament_presets.size();
-    if (n > old_filament_count && old_filament_count != 0)
-        filament_presets.resize(n, filament_presets.back());
-    else {
-        filament_presets.resize(n);
-    }
-    ConfigOptionStrings* filament_color = project_config.option<ConfigOptionStrings>("filament_colour");
-    ConfigOptionStrings *filament_multi_color = project_config.option<ConfigOptionStrings>("filament_multi_colour");
-    ConfigOptionStrings* filament_color_type = project_config.option<ConfigOptionStrings>("filament_colour_type");
-    ConfigOptionInts* filament_map = project_config.option<ConfigOptionInts>("filament_map");
+void PresetBundle::set_num_filaments(unsigned int n, std::vector<std::string> new_colors)
+{
+    if (printers.get_edited_preset().printer_technology() != ptFFF)
+        return;
+    n = std::max(n, static_cast<unsigned int>(get_printer_extruder_count()));
+    const size_t old_count = filament_presets.size();
+    filament_presets.resize(n, filament_presets.empty() ? filaments.get_edited_preset().name : filament_presets.back());
+    update_multi_material_filament_presets();
 
-
-    filament_color->resize(n);
-    // Sync filament multi colour
-    filament_multi_color->values.resize(n);
-    for (size_t i = 0; i < n; i++) {
-        filament_multi_color->values[i] = filament_color->values[i];
-    }
-    filament_color_type->resize(n);
-    filament_map->values.resize(n, 1);
-    ams_multi_color_filment.resize(n);
-
-    // BBS set new filament color to new_color
-    if (old_filament_count < n) {
-        if (!new_colors.empty()) {
-            for (int i = old_filament_count; i < n; i++) {
-                filament_color->values[i] = new_colors[i - old_filament_count];
-                filament_multi_color->values[i] = new_colors[i - old_filament_count];
-                filament_color_type->values[i]  = "1";  // default color type
-            }
+    auto &colors = project_config.option<ConfigOptionStrings>("filament_colour")->values;
+    auto &multi_colors = project_config.option<ConfigOptionStrings>("filament_multi_colour")->values;
+    auto &color_types = project_config.option<ConfigOptionStrings>("filament_colour_type")->values;
+    for (size_t i = old_count; i < n && i - old_count < new_colors.size(); ++i) {
+        if (!new_colors[i - old_count].empty()) {
+            colors[i] = new_colors[i - old_count];
+            multi_colors[i] = new_colors[i - old_count];
+            color_types[i] = "1";
         }
     }
-
-    update_multi_material_filament_presets();
 }
+
 void PresetBundle::set_num_filaments(unsigned int n, std::string new_color)
 {
-    unsigned old_filament_count = this->filament_presets.size();
-    if (n > old_filament_count && old_filament_count != 0)
-        filament_presets.resize(n, filament_presets.back());
-    else {
-        filament_presets.resize(n);
-    }
-    ConfigOptionStrings* filament_color = project_config.option<ConfigOptionStrings>("filament_colour");
-    ConfigOptionStrings *filament_multi_color = project_config.option<ConfigOptionStrings>("filament_multi_colour");
-    ConfigOptionStrings* filament_color_type = project_config.option<ConfigOptionStrings>("filament_colour_type");
-    ConfigOptionInts* filament_map = project_config.option<ConfigOptionInts>("filament_map");
-
-
-    filament_color->resize(n);
-    // Sync filament multi colour
-    filament_multi_color->values.resize(n);
-    for (size_t i = 0; i < n; i++) {
-        filament_multi_color->values[i] = filament_color->values[i];
-    }
-    filament_color_type->resize(n);
-    filament_map->values.resize(n, 1);
-    ams_multi_color_filment.resize(n);
-
-    //BBS set new filament color to new_color
-    if (old_filament_count < n) {
-        if (!new_color.empty()) {
-            for (unsigned i = old_filament_count; i < n; i++) {
-                filament_color->values[i] = new_color;
-                filament_multi_color->values[i] = new_color;
-                filament_color_type->values[i]  = "1";  // default color type
-            }
-        }
-    }
-
-    update_multi_material_filament_presets();
+    n = std::max(n, static_cast<unsigned int>(get_printer_extruder_count()));
+    set_num_filaments(n, std::vector<std::string>(n > filament_presets.size() ? n - filament_presets.size() : 0, new_color));
 }
 
 void PresetBundle::update_num_filaments(unsigned int to_del_flament_id)
 {
-    unsigned old_filament_count = this->filament_presets.size();
-    assert(to_del_flament_id < old_filament_count);
+    const size_t old_filament_count = filament_presets.size();
+    if (old_filament_count <= 1 || to_del_flament_id >= old_filament_count) {
+        BOOST_LOG_TRIVIAL(warning) << "Ignoring unavailable or last material slot deletion.";
+        return;
+    }
     filament_presets.erase(filament_presets.begin() + to_del_flament_id);
 
     // update edited_preset
@@ -3172,29 +3128,16 @@ void PresetBundle::update_num_filaments(unsigned int to_del_flament_id)
     ConfigOptionStrings *filament_multi_color = project_config.option<ConfigOptionStrings>("filament_multi_colour");
     ConfigOptionStrings *filament_color_type  = project_config.option<ConfigOptionStrings>("filament_colour_type");
     ConfigOptionInts* filament_map = project_config.option<ConfigOptionInts>("filament_map");
-    if (filament_color->values.size() > to_del_flament_id) {
-        filament_color->values.erase(filament_color->values.begin() + to_del_flament_id);
-        if (filament_map->values.size() > to_del_flament_id) {
-            filament_map->values.erase(filament_map->values.begin() + to_del_flament_id);
-        }
-    }
-    else {
-        filament_color->values.resize(to_del_flament_id);
-        filament_map->values.resize(to_del_flament_id, 1);
-    }
-
-    // lambda function to erase or resize the container
-    auto erase_or_resize = [to_del_flament_id](auto& container) {
-        if (container.size() > to_del_flament_id) {
+    // Incomplete saved palettes must not truncate an independent tool map.
+    auto erase_slot = [to_del_flament_id](auto& container) {
+        if (container.size() > to_del_flament_id)
             container.erase(container.begin() + to_del_flament_id);
-        } else {
-            container.resize(to_del_flament_id);
-        }
     };
-
-    erase_or_resize(filament_multi_color->values);
-    erase_or_resize(filament_color_type->values);
-    erase_or_resize(ams_multi_color_filment);
+    erase_slot(filament_color->values);
+    erase_slot(filament_map->values);
+    erase_slot(filament_multi_color->values);
+    erase_slot(filament_color_type->values);
+    erase_slot(ams_multi_color_filment);
 
     update_multi_material_filament_presets(to_del_flament_id);
 }
@@ -5477,6 +5420,31 @@ void PresetBundle::update_multi_material_filament_presets(size_t to_delete_filam
                         : from == to ? 0. : new_volumes[2 * from] + new_volumes[2 * to + 1];
                 }
     }
+    // Normalize slot data only after the final material count is known. Retain
+    // existing multi-color entries; initialize just the missing tail.
+    auto *colors = project_config.option<ConfigOptionStrings>("filament_colour");
+    auto *multi_colors = project_config.option<ConfigOptionStrings>("filament_multi_colour");
+    auto *color_types = project_config.option<ConfigOptionStrings>("filament_colour_type");
+    auto *tool_map = project_config.option<ConfigOptionInts>("filament_map");
+    auto new_colors = *colors;
+    new_colors.resize(num_filaments, FullPrintConfig::defaults().option("filament_colour"));
+    auto new_multi_colors = multi_colors->values;
+    const size_t old_color_count = new_multi_colors.size();
+    new_multi_colors.resize(num_filaments);
+    for (size_t i = old_color_count; i < num_filaments; ++i)
+        new_multi_colors[i] = new_colors.values[i];
+    auto new_color_types = color_types->values;
+    new_color_types.resize(num_filaments, "1");
+    auto new_map = tool_map->values;
+    new_map.resize(num_filaments, 1);
+    auto new_ams_colors = ams_multi_color_filment;
+    new_ams_colors.resize(num_filaments);
+
+    colors->values.swap(new_colors.values);
+    multi_colors->values.swap(new_multi_colors);
+    color_types->values.swap(new_color_types);
+    tool_map->values.swap(new_map);
+    ams_multi_color_filment.swap(new_ams_colors);
     volumes.swap(new_volumes);
     multipliers.swap(new_multipliers);
     if (rebuild_matrix)

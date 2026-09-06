@@ -655,6 +655,46 @@ palette and mapping lengths behind the material list. Those paths need their own
 reproductions and tests before changes. The dormant filament-option initializer
 is still intentionally untouched.
 
+## Overnight M2: Material Slot Alignment
+
+Two additional cases reproduced 82 failed assertions before changes: both resize
+overloads replaced existing multi-color entries with their primary color even
+when the requested count did not change, and palette/tool-map lengths could lag
+behind the material list at the physical-tool minimum. With an incomplete primary
+color list, deletion also truncated an otherwise complete tool map. Inspection
+identified unchecked indexing of a short caller-supplied new-color list and
+unchecked deletion of an unavailable or last material slot.
+
+The string-color overload now delegates to the vector-color implementation.
+The requested material count respects the existing physical-tool minimum before
+resizing, and supplied colors apply only to genuinely new, available slots. Slot
+array normalization happens after the final material count is known, preserving
+existing multi-color entries, modes, and tool mappings. Deletion erases each array
+independently; missing tails are initialized without truncating unrelated state.
+Unavailable/last-slot deletion is a logged no-op. Empty palettes use the existing
+configuration default. Physical nozzle geometry, process settings, material
+tuning, and the dormant filament-option initializer are unchanged. Array staging
+does not make the whole selection/editor/connection workflow transactional.
+
+Five new cases pass 958 assertions, covering 24 resize scenarios, complete/short
+palettes, first/middle/last deletion on two- and four-tool fixtures, partial color
+requests, unavailable deletion, empty arrays, and mixed 0.6/0.4/0.4/0.6 nozzle
+geometry preservation. Together with M1, the ten targeted cases pass 4,465
+assertions. The complete Mac build, 260 standard native cases / 241,775 assertions,
+48 FFF cases / 870 assertions, and 20 offline utility cases / 211 assertions pass.
+Release/FibreSeek checks and all 936 resource profiles pass; saved user-profile
+checksums are unchanged. The reference slice again differs only in its two
+timestamp comments, with identical 167 layers and 3h 45m 38s estimate.
+
+Revision `v2026.09.06-material-slots.1`, package `2026.9.6.2`, updates the splash
+and About revision and retains the accurate Orca base/Prusa inspiration credit.
+The installed app is intentionally not replaced while the user is absent. The
+next acceptance work remains complete GUI switching/cancellation and saved-project
+round trips with real multi-tool projects, not just these synthetic array tests.
+GitHub's older branding-sync build run was cancelled when superseded by the new
+push, not reported as a compiler/test failure; matching latest-head CI must still
+be checked before claiming cross-platform success for the overnight work.
+
 ## Review Conclusions
 
 The useful Prusa 3 ideas were explicit ownership and scope, private candidate
