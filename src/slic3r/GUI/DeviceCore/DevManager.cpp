@@ -624,11 +624,13 @@ namespace Slic3r
             }
         }
 
-        if (selected_machine != dev_id) {
-            OnSelectedMachineChanged(selected_machine, dev_id);
-        }
-
+        // Observers read get_selected_machine(), and may rebuild the sidebar.
+        // Publish the destination first so they cannot revive the old agent.
+        const std::string previous_selected_machine = selected_machine;
         selected_machine = dev_id;
+        if (previous_selected_machine != dev_id) {
+            OnSelectedMachineChanged(previous_selected_machine, dev_id);
+        }
         return true;
     }
 
@@ -929,10 +931,7 @@ namespace Slic3r
     {
         if (MachineObject* obj_ = get_selected_machine()) {
             GUI::wxGetApp().sidebar().update_sync_status(obj_);
-            if(m_agent->get_filament_sync_mode() == FilamentSyncMode::subscription)
-            {
-                GUI::wxGetApp().sidebar().load_ams_list(obj_);
-            }
+            GUI::wxGetApp().sidebar().load_ams_list(obj_);
         };
     }
 

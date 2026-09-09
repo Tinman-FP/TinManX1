@@ -115,7 +115,9 @@ void NetworkAgent::add_cloud_agent(const std::string& provider, std::shared_ptr<
 
 void NetworkAgent::set_printer_agent(std::shared_ptr<IPrinterAgent> printer_agent)
 {
-    if (!printer_agent) {
+    // UI refreshes often select the same cached agent. Re-registering callbacks
+    // here mutates a live plug-in session without changing its destination.
+    if (!printer_agent || printer_agent == m_printer_agent) {
         return;
     }
 

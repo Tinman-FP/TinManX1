@@ -8,8 +8,62 @@
 #include "slic3r/Utils/CrealityPrintAgent.hpp"
 #include "slic3r/Utils/Http.hpp"
 #include "slic3r/Utils/OrcaCloudServiceAgent.hpp"
+#include "slic3r/Utils/OrcaPrinterAgent.hpp"
+#include "slic3r/Utils/NetworkAgent.hpp"
 #include "slic3r/Utils/SnapmakerPrinterAgent.hpp"
 #include "slic3r/Utils/RecentProjectThumbnailCache.hpp"
+
+namespace {
+class SelectionTestAgent : public Slic3r::OrcaPrinterAgent {
+public:
+    SelectionTestAgent() : OrcaPrinterAgent("") {}
+    int disconnects = 0;
+    int callback_writes = 0;
+    Slic3r::QueueOnMainFn queue;
+
+    int disconnect_printer() override { ++disconnects; return 0; }
+    int set_queue_on_main_fn(Slic3r::QueueOnMainFn fn) override
+    {
+        ++callback_writes;
+        queue = std::move(fn);
+        return 0;
+    }
+};
+}
+
+TEST_CASE("Reselecting a cached printer agent leaves live callbacks untouched", "[PrinterHandoff][TinMan]")
+{
+    auto first = std::make_shared<SelectionTestAgent>();
+    auto second = std::make_shared<SelectionTestAgent>();
+    Slic3r::NetworkAgent network(nullptr, first);
+    int dispatched = 0;
+    network.set_queue_on_main_fn([&](std::function<void()> fn) { ++dispatched; fn(); });
+    const auto writes = first->callback_writes;
+    for (int repeat = 0; repeat < 20; ++repeat)
+        network.set_printer_agent(first);
+    CHECK(first->disconnects == 0);
+    CHECK(first->callback_writes == writes);
+    REQUIRE(first->queue);
+    first->queue([] {});
+    CHECK(dispatched == 1);
+
+    network.set_printer_agent(second);
+    CHECK(first->disconnects == 1);
+    CHECK_FALSE(first->queue);
+    REQUIRE(second->queue);
+    CHECK(network.get_printer_agent() == second);
+    second->queue([] {});
+    CHECK(dispatched == 2);
+
+    network.set_printer_agent(nullptr);
+    CHECK(network.get_printer_agent() == second);
+    CHECK(second->disconnects == 0);
+    network.set_printer_agent(first);
+    CHECK(second->disconnects == 1);
+    CHECK_FALSE(second->queue);
+    REQUIRE(first->queue);
+    CHECK(first->disconnects == 1);
+}
 
 TEST_CASE("Recent thumbnail lookup never opens the original project", "[TinMan][ThumbnailCache]")
 {

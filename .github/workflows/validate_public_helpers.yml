@@ -42,6 +42,9 @@ jobs:
       - name: Verify build identity and incremental rebuild isolation
         run: python3 checks/test_tinman_build_info.py
 
+      - name: Verify printer handoff and passive inventory boundaries
+        run: python3 checks/test_printer_handoff_contract.py
+
       - name: Verify shared hardware catalog and tuned profile checksums
         run: |
           python3 checks/verify_tinman_machine_profile_catalog.py

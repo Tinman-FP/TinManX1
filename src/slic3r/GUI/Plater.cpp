@@ -641,6 +641,24 @@ bool sidebar_ensure_printer_agent_for_machine(MachineObject* obj)
     return true;
 }
 
+bool sidebar_refresh_filament_info(MachineObject* obj)
+{
+    if (obj == nullptr || !sidebar_ensure_printer_agent_for_machine(obj))
+        return false;
+
+    auto* agent = wxGetApp().getAgent();
+    if (agent->get_filament_sync_mode() != FilamentSyncMode::pull)
+        return true;
+
+    const std::string dev_id = obj->get_dev_id().empty() ? obj->get_dev_ip() : obj->get_dev_id();
+    const std::string dev_ip = obj->get_dev_ip().empty() ? obj->get_dev_id() : obj->get_dev_ip();
+    if (dev_id.empty() || dev_ip.empty())
+        return false;
+    if (agent->connect_printer(dev_id, dev_ip, "bblp", obj->get_access_code(), obj->local_use_ssl) != 0)
+        return false;
+    return agent->fetch_filament_info(dev_id);
+}
+
 } // namespace
 
 // Sidebar / private
@@ -4345,21 +4363,8 @@ std::map<int, DynamicPrintConfig> Sidebar::build_filament_ams_list(MachineObject
     std::map<int, DynamicPrintConfig> filament_ams_list;
     if (!obj) return filament_ams_list;
 
-    // For pull-mode agents (e.g., HTTP REST API), refresh DevFilaSystem first.
-    // The Device tab can view a different printer than the edited preset, so
-    // make the active agent match the selected machine before pulling slots.
-    sidebar_ensure_printer_agent_for_machine(obj);
-    auto* agent = wxGetApp().getDeviceManager()->get_agent();
-    if (agent && agent->get_filament_sync_mode() == FilamentSyncMode::pull) {
-        const std::string dev_id = obj->get_dev_id().empty() ? obj->get_dev_ip() : obj->get_dev_id();
-        const std::string dev_ip = obj->get_dev_ip().empty() ? obj->get_dev_id() : obj->get_dev_ip();
-        if (!dev_id.empty() && !dev_ip.empty()) {
-            agent->connect_printer(dev_id, dev_ip, "bblp", obj->get_access_code(), false);
-        }
-        if (!agent->fetch_filament_info(dev_id)) {
-            return filament_ams_list;
-        }
-    }
+    // Rendering inventory must not switch transports or open connections.
+    // Pull-mode refresh belongs to the explicit Sync command below.
 
     auto build_tray_config = [](DevAmsTray const &tray, std::string const &name, std::string ams_id, std::string slot_id) {
         BOOST_LOG_TRIVIAL(info) << boost::format("build_filament_ams_list: name %1% setting_id %2% type %3% color %4%")
@@ -4483,9 +4488,7 @@ void Sidebar::load_ams_list(MachineObject* obj)
 {
     std::map<int, DynamicPrintConfig> filament_ams_list;
 
-    // build_filament_ams_list handles both subscription-based and non-subscription-based agents:
-    // - For non-subscription agents, it calls fetch_filament_info() first to populate DevFilaSystem
-    // - Then it always reads from DevFilaSystem to build the filament list
+    // Display the supplied machine's cached inventory without touching its agent.
     if (obj) {
         filament_ams_list = build_filament_ams_list(obj);
     }
@@ -4521,6 +4524,13 @@ void Sidebar::sync_ams_list(bool is_from_big_sync_btn)
     if (!obj)
         return;
     sidebar_select_machine_if_needed(obj);
+    if (!sidebar_refresh_filament_info(obj)) {
+        load_ams_list(nullptr);
+        p->plater->pop_warning_and_go_to_device_page(
+            p->plater->get_selected_printer_name_in_combox(), Plater::PrinterWarningType::NOT_CONNECTED,
+            _L("Sync printer information"));
+        return;
+    }
     GUI::wxGetApp().sidebar().load_ams_list(obj);
 
     auto & list = wxGetApp().preset_bundle->filament_ams_list;
