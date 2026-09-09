@@ -19,9 +19,17 @@ public:
     SelectionTestAgent() : OrcaPrinterAgent("") {}
     int disconnects = 0;
     int callback_writes = 0;
+    int connect_result = 0;
+    std::function<void()> on_disconnect;
     Slic3r::QueueOnMainFn queue;
 
-    int disconnect_printer() override { ++disconnects; return 0; }
+    int connect_printer(std::string, std::string, std::string, std::string, bool) override { return connect_result; }
+    int disconnect_printer() override
+    {
+        ++disconnects;
+        if (on_disconnect) on_disconnect();
+        return 0;
+    }
     int set_queue_on_main_fn(Slic3r::QueueOnMainFn fn) override
     {
         ++callback_writes;
@@ -63,6 +71,72 @@ TEST_CASE("Reselecting a cached printer agent leaves live callbacks untouched", 
     CHECK_FALSE(second->queue);
     REQUIRE(first->queue);
     CHECK(first->disconnects == 1);
+}
+
+TEST_CASE("Queued LAN success cannot survive a printer switch or same-device reconnect", "[PrinterHandoff][TinMan]")
+{
+    auto agent = std::make_shared<SelectionTestAgent>();
+    Slic3r::NetworkAgent network(nullptr, agent);
+    CHECK(network.lan_connection_generation("h2d") == 0);
+    CHECK_FALSE(network.is_current_lan_connection("h2d", 0));
+    REQUIRE(network.connect_printer("h2d", "fixture", "", "", true) == 0);
+    const auto original = network.lan_connection_generation("h2d");
+    REQUIRE(original != 0);
+    CHECK(network.is_current_lan_connection("h2d", original));
+    CHECK(network.lan_connection_generation("x1c") == 0);
+    CHECK_FALSE(network.is_current_lan_connection("x1c", original));
+    network.set_printer_agent(agent);
+    CHECK(network.is_current_lan_connection("h2d", original));
+
+    int sends = 0;
+    auto queued_success = [&] {
+        if (network.is_current_lan_connection("h2d", original)) ++sends;
+    };
+    queued_success();
+    CHECK(sends == 1);
+    REQUIRE(network.connect_printer("x1c", "fixture", "", "", true) == 0);
+    queued_success();
+    CHECK(sends == 1);
+    CHECK(network.lan_connection_generation("h2d") == 0);
+    REQUIRE(network.connect_printer("h2d", "fixture", "", "", true) == 0);
+    queued_success();
+    CHECK(sends == 1);
+    CHECK(network.lan_connection_generation("h2d") > original);
+
+    const auto replacement = network.lan_connection_generation("h2d");
+    REQUIRE(network.connect_printer("h2d", "fixture", "", "", true) == 0);
+    CHECK_FALSE(network.is_current_lan_connection("h2d", replacement));
+    CHECK(network.is_current_lan_connection("h2d", network.lan_connection_generation("h2d")));
+}
+
+TEST_CASE("LAN ownership is invalidated before transport teardown", "[PrinterHandoff][TinMan]")
+{
+    auto agent = std::make_shared<SelectionTestAgent>();
+    Slic3r::NetworkAgent network(nullptr, agent);
+    REQUIRE(network.connect_printer("h2d", "fixture", "", "", true) == 0);
+    const auto generation = network.lan_connection_generation("h2d");
+    agent->on_disconnect = [&] { CHECK_FALSE(network.is_current_lan_connection("h2d", generation)); };
+    SECTION("Explicit disconnect") { CHECK(network.disconnect_printer() == 0); }
+    SECTION("Different transport") { network.set_printer_agent(std::make_shared<SelectionTestAgent>()); }
+    CHECK(agent->disconnects == 1);
+    CHECK(network.lan_connection_generation("h2d") == 0);
+}
+
+TEST_CASE("Rejected LAN connections cannot authorize queued requests", "[PrinterHandoff][TinMan]")
+{
+    auto agent = std::make_shared<SelectionTestAgent>();
+    Slic3r::NetworkAgent network(nullptr, agent);
+    REQUIRE(network.connect_printer("h2d", "fixture", "", "", true) == 0);
+    const auto generation = network.lan_connection_generation("h2d");
+    agent->connect_result = -1;
+    CHECK(network.connect_printer("h2d", "fixture", "", "", true) == -1);
+    CHECK(network.lan_connection_generation("h2d") == 0);
+    CHECK_FALSE(network.is_current_lan_connection("h2d", generation));
+    CHECK(network.connect_printer("", "fixture", "", "", true) == -1);
+    CHECK_FALSE(network.is_current_lan_connection("", 0));
+    Slic3r::NetworkAgent absent(nullptr, nullptr);
+    CHECK(absent.connect_printer("h2d", "fixture", "", "", true) == -1);
+    CHECK(absent.lan_connection_generation("h2d") == 0);
 }
 
 TEST_CASE("Recent thumbnail lookup never opens the original project", "[TinMan][ThumbnailCache]")

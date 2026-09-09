@@ -416,6 +416,15 @@ void Button::messureSize()
         wxWindow::SetMinSize(size);
 }
 
+Button::~Button()
+{
+    // Escape or a printer refresh can destroy a pressed button before mouse-up.
+    // wx keeps capture outside the window; leaving it set routes events to freed memory.
+    pressedDown = false;
+    if (HasCapture())
+        ReleaseMouse();
+}
+
 void Button::mouseDown(wxMouseEvent& event)
 {
     event.Skip();
@@ -440,8 +449,10 @@ void Button::mouseReleased(wxMouseEvent& event)
 
 void Button::mouseCaptureLost(wxMouseCaptureLostEvent &event)
 {
-    wxMouseEvent evt;
-    mouseReleased(evt);
+    // Capture loss cancels a click; it must not activate a dialog's default action.
+    pressedDown = false;
+    state_handler.set_state(0, StateHandler::Pressed);
+    Refresh();
 }
 
 void Button::keyDownUp(wxKeyEvent &event)

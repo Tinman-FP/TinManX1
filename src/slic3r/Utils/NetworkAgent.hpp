@@ -7,6 +7,8 @@
 #include "IPrinterAgent.hpp"
 #include <map>
 #include <memory>
+#include <mutex>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -144,6 +146,9 @@ public:
     int send_message(std::string dev_id, std::string json_str, int qos, int flag);
     int connect_printer(std::string dev_id, std::string dev_ip, std::string username, std::string password, bool use_ssl);
     int disconnect_printer();
+    // Capture before queuing a LAN callback; validate again on the UI thread.
+    std::uint64_t lan_connection_generation(const std::string& dev_id) const;
+    bool is_current_lan_connection(const std::string& dev_id, std::uint64_t generation) const;
     int send_message_to_printer(std::string dev_id, std::string json_str, int qos, int flag);
     int check_cert();
     void install_device_cert(std::string dev_id, bool lan_only);
@@ -183,6 +188,10 @@ private:
     void apply_printer_callbacks(const std::shared_ptr<IPrinterAgent>& printer_agent,
                                  const PrinterCallbacks& callbacks);
     PrinterCallbacks m_printer_callbacks;
+    void invalidate_lan_connection();
+    mutable std::mutex m_lan_connection_mutex;
+    std::string m_lan_connection_device;
+    std::uint64_t m_lan_connection_generation = 0;
     bool enable_track = false;
 
     // Sub-agent composition

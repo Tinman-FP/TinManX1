@@ -123,6 +123,7 @@ void NetworkAgent::set_printer_agent(std::shared_ptr<IPrinterAgent> printer_agen
 
     // Disconnect all callbacks from the old agent
     auto old_printer_agent = m_printer_agent;
+    invalidate_lan_connection();
 
     m_printer_agent    = std::move(printer_agent);
     m_printer_agent_id = m_printer_agent->get_agent_info().id;
@@ -772,16 +773,49 @@ int NetworkAgent::send_message(std::string dev_id, std::string json_str, int qos
 
 int NetworkAgent::connect_printer(std::string dev_id, std::string dev_ip, std::string username, std::string password, bool use_ssl)
 {
-    if (m_printer_agent)
-        return m_printer_agent->connect_printer(dev_id, dev_ip, username, password, use_ssl);
-    return -1;
+    if (!m_printer_agent || dev_id.empty())
+        return -1;
+    std::uint64_t generation;
+    {
+        std::lock_guard<std::mutex> lock(m_lan_connection_mutex);
+        m_lan_connection_device = dev_id;
+        generation = ++m_lan_connection_generation;
+    }
+    const int result = m_printer_agent->connect_printer(dev_id, dev_ip, username, password, use_ssl);
+    if (result != 0) {
+        std::lock_guard<std::mutex> lock(m_lan_connection_mutex);
+        if (m_lan_connection_generation == generation) {
+            m_lan_connection_device.clear();
+            ++m_lan_connection_generation;
+        }
+    }
+    return result;
 }
 
 int NetworkAgent::disconnect_printer()
 {
+    invalidate_lan_connection();
     if (m_printer_agent)
         return m_printer_agent->disconnect_printer();
     return -1;
+}
+
+void NetworkAgent::invalidate_lan_connection()
+{
+    std::lock_guard<std::mutex> lock(m_lan_connection_mutex);
+    m_lan_connection_device.clear();
+    ++m_lan_connection_generation;
+}
+
+std::uint64_t NetworkAgent::lan_connection_generation(const std::string& dev_id) const
+{
+    std::lock_guard<std::mutex> lock(m_lan_connection_mutex);
+    return !dev_id.empty() && dev_id == m_lan_connection_device ? m_lan_connection_generation : 0;
+}
+
+bool NetworkAgent::is_current_lan_connection(const std::string& dev_id, std::uint64_t generation) const
+{
+    return generation != 0 && generation == lan_connection_generation(dev_id);
 }
 
 int NetworkAgent::send_message_to_printer(std::string dev_id, std::string json_str, int qos, int flag)

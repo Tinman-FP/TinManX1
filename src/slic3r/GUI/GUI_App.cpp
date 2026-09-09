@@ -2120,7 +2120,8 @@ void GUI_App::init_networking_callbacks()
                 if (is_closing()) {
                     return;
                 }
-                CallAfter([this, state, dev_id, msg] {
+                const auto generation = m_agent ? m_agent->lan_connection_generation(dev_id) : 0;
+                CallAfter([this, state, dev_id, msg, generation] {
                     if (is_closing()) {
                         return;
                     }
@@ -2132,6 +2133,12 @@ void GUI_App::init_networking_callbacks()
 
                         if (obj->is_lan_mode_printer()) {
                             if (state == ConnectStatus::ConnectStatusOk) {
+                                // A queued success can outlive disconnect, a printer
+                                // switch, or even a reconnect to the same printer.
+                                if (!m_agent || !m_agent->is_current_lan_connection(dev_id, generation)) {
+                                    BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: ignoring stale LAN success callback";
+                                    return;
+                                }
                                 obj->command_request_push_all(true);
                                 obj->command_get_version();
                                 event.SetInt(0);

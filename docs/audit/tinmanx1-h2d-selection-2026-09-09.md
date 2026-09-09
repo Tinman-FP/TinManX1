@@ -1,6 +1,6 @@
 # H2D Selection Handoff
 
-Revision: `v2026.09.09-printer-handoff.1`.
+Revision: `v2026.09.09-printer-handoff.2`.
 
 ## Evidence
 
@@ -63,3 +63,44 @@ and installed profile resources; none are rewritten.
 Installation and live acceptance results are recorded in the associated pull
 request after verification. No result here certifies an unattended print or all
 possible proprietary plug-in behavior.
+
+## Follow-up: Queued Connection Success and Mouse Capture
+
+The 18:45 repeat crash still used the pre-fix executable (verified by Mach-O
+UUID). Unlike the first report, this stack reaches the Bambu LAN send function
+through `GUI_App::init_networking_callbacks()` and `command_request_push_all()`.
+The preceding log shows an X1C-to-H2D switch approximately 230 ms apart. The
+queued success callback previously sent without checking whether its connection
+was still owned by the active transport.
+
+Revision .2 adds a mutex-protected LAN device/generation token in NetworkAgent.
+Every connect gets a new generation, including same-device reconnects. Explicit
+disconnect and agent replacement invalidate it before transport teardown. The
+local-success callback captures the token before `CallAfter`, then validates it
+on the UI thread before sending. Synchronously rejected connections invalidate
+their token without overwriting a newer connection. Cloud/multi-printer
+subscription callbacks are not restricted to the selected LAN printer.
+
+This guards TinManX1's queued work, not the internals of the vendor library. The
+plug-in callback has no vendor session token: a stale event first delivered
+after reconnecting to the same device cannot be distinguished by its device ID
+alone. Generation tests do not claim otherwise.
+
+Live acceptance of .1 exposed a separate crash at 18:57 when dismissing an
+offline-printer InfoDialog. The fault was in Cocoa `WX_filterSendEvent`, which
+dereferences `wxWindow::GetCapture()` on mouse movement. The custom Button
+captured the mouse but did not release capture on destruction; Escape can close
+the dialog without a mouse-up. The bundled wxWidgets destructor explicitly
+asserts that destroying a captured window will cause a later crash.
+
+Revision .2 releases a Button's mouse capture before destruction. Capture loss
+now cancels the pressed state instead of synthesizing a mouse-up at (0, 0),
+which could otherwise activate the button unexpectedly. This is separate from
+the connection callback correction.
+
+Additional native tests cover old-device callbacks, A-to-B-to-A switches,
+same-device reconnects, invalidation before disconnect/agent replacement,
+failed connections, and same-agent no-op preservation. Two additional source
+contracts cover GUI token validation order and button capture cancellation.
+Final build, installed identity and live acceptance outcomes are recorded in
+the pull request; no printer operations are required for these tests.

@@ -17,6 +17,24 @@ def section(path, start, end):
 
 
 class PrinterHandoffContract(unittest.TestCase):
+    def test_button_teardown_releases_capture_and_capture_loss_cancels_click(self):
+        destructor = section("src/slic3r/GUI/Widgets/Button.cpp", "Button::~Button()", "void Button::mouseDown(")
+        self.assertIn("if (HasCapture())", destructor)
+        self.assertIn("ReleaseMouse()", destructor)
+        lost = section("src/slic3r/GUI/Widgets/Button.cpp", "void Button::mouseCaptureLost(", "void Button::keyDownUp(")
+        self.assertIn("pressedDown = false", lost)
+        self.assertNotIn("mouseReleased(", lost)
+        self.assertNotIn("sendButtonEvent(", lost)
+
+    def test_lan_success_is_validated_after_queueing_before_sending(self):
+        body = section("src/slic3r/GUI/GUI_App.cpp",
+                       "m_agent->set_on_local_connect_fn(\n            [this](int state, std::string dev_id, std::string msg)",
+                       "auto message_arrive_fn =")
+        self.assertLess(body.index("lan_connection_generation(dev_id)"), body.index("CallAfter("))
+        self.assertIn("[this, state, dev_id, msg, generation]", body)
+        self.assertLess(body.index("is_current_lan_connection(dev_id, generation)"),
+                        body.index("obj->command_request_push_all(true)"))
+
     def test_rendering_filament_inventory_does_not_switch_or_connect_agents(self):
         body = section("src/slic3r/GUI/Plater.cpp",
                        "Sidebar::build_filament_ams_list(MachineObject* obj)",
