@@ -1,5 +1,13 @@
 # Changelog
 
+## v2026.09.13-about-credits.1
+
+- replaced the inherited About header with the TinManX1 logo and native product, revision, build, and upstream-version labels
+- changed the project link to TinManX1 and expanded Credits and Licenses with project stewardship, Codex assistance, upstream slicers, feature authors, and research references
+- retained third-party library acknowledgments and the AGPL notice, with clear separation between inherited code, research inspiration, and vendor compatibility
+- updated the published Wave Overhang research credit and retained the explicit PrusaSlicer 3.0.0-alpha11-inspired, not-full-rebase distinction
+- synchronized the splash revision and added About branding/credit regression checks; printer profiles and connectivity are unchanged
+
 ## v2026.09.05-settings-resilience.1
 
 - fixed a macOS settings-panel crash when inherited user profiles omit optional Wave Overhang fields introduced by a newer schema

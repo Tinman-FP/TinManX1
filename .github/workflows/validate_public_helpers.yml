@@ -45,6 +45,9 @@ jobs:
       - name: Verify printer handoff and passive inventory boundaries
         run: python3 checks/test_printer_handoff_contract.py
 
+      - name: Verify About branding and contributor attribution
+        run: python3 checks/test_about_dialog_contract.py
+
       - name: Verify shared hardware catalog and tuned profile checksums
         run: |
           python3 checks/verify_tinman_machine_profile_catalog.py
