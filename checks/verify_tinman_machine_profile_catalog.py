@@ -11,7 +11,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 PROFILES_ROOT = ROOT / "resources" / "profiles"
 HELPER = ROOT / "scripts" / "source-helpers" / "normalize_tinman_machine_catalog.py"
@@ -26,11 +25,14 @@ CONTRACT = runpy.run_path(str(HELPER))
 FAMILIES = CONTRACT["FAMILIES"]
 NOZZLES = CONTRACT["NOZZLES"]
 CONTRACT_VERSION = CONTRACT["CONTRACT_VERSION"]
+HARDWARE_CATALOG = CONTRACT["HARDWARE_CATALOG"]
 PROCESS_MODES = CONTRACT["PROCESS_MODES"]
 QUALITY_MODE = CONTRACT["QUALITY_MODE"]
 process_modes = CONTRACT["process_modes"]
 process_name = CONTRACT["process_name"]
 mode_settings = CONTRACT["mode_settings"]
+prusa_core_one_l_source_process_name = CONTRACT["prusa_core_one_l_source_process_name"]
+nozzle_flow_types = CONTRACT["nozzle_flow_types"]
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -43,6 +45,27 @@ def digest(path: Path) -> str:
 
 def validate_repo() -> list[str]:
     errors: list[str] = []
+
+    definitions = HARDWARE_CATALOG["machines"]
+    hardware_by_model = {definition["model"]: definition for definition in definitions}
+    if len({definition["id"] for definition in definitions}) != len(definitions):
+        errors.append("hardware catalog contains duplicate machine ids")
+    alias_owners: dict[str, str] = {}
+    for definition in definitions:
+        model = definition["model"]
+        count = definition["tool_count"]
+        if type(count) is not int or not 1 <= count <= 64:
+            errors.append(f"{model}: invalid hardware tool count")
+        if model not in definition["aliases"]:
+            errors.append(f"{model}: model is missing from hardware aliases")
+        if definition["connection_mode"] not in {
+            "inherited", "bambu", "creality", "qidi_moonraker", "snapmaker", "moonraker"
+        }:
+            errors.append(f"{model}: unknown hardware connection mode")
+        for alias in definition["aliases"]:
+            owner = alias_owners.setdefault(alias.lower(), model)
+            if not alias or owner != model:
+                errors.append(f"{model}: empty or ambiguous hardware alias {alias!r}")
 
     mode_by_name = {mode.name: mode for mode in PROCESS_MODES}
     if set(mode_by_name) != {"Tank", "Quality", "Fast", "Draft"}:
@@ -95,8 +118,10 @@ def validate_repo() -> list[str]:
 
     if PLATER_SOURCE.is_file():
         plater_source = PLATER_SOURCE.read_text()
-        if "panel_nozzle_dia->Show(!isDual);" not in plater_source:
+        if "panel_nozzle_dia->Show(!isDual && !show_tool_nozzles);" not in plater_source:
             errors.append("Plater.cpp does not expose the shared multi-extruder nozzle selector")
+        if "panel_tool_nozzles->Show(show_tool_nozzles);" not in plater_source:
+            errors.append("Plater.cpp does not expose per-tool U1 nozzle controls")
         if "if (use_split_nozzle_controls)" not in plater_source:
             errors.append("Plater.cpp does not reserve split nozzle controls for Bambu printers")
 
@@ -169,6 +194,7 @@ def validate_repo() -> list[str]:
                     and data.get("printer_variant")
                     and data.get("name") not in expected_names
                     and data.get("name") not in required_sources
+                    and data.get("name") not in hardware_by_model[family.model].get("managed_profile_names", [])
                 ):
                     unexpected_noncanonical.append(str(data.get("name")))
             if unexpected_noncanonical:
@@ -193,8 +219,15 @@ def validate_repo() -> list[str]:
                 if data.get("printer_variant") != nozzle:
                     errors.append(f"{name}: printer_variant mismatch")
                 diameters = data.get("nozzle_diameter") or []
+                if len(diameters) != hardware_by_model[family.model]["tool_count"]:
+                    errors.append(f"{name}: generated nozzle count disagrees with runtime hardware catalog")
                 if not diameters or diameters[0] != nozzle:
                     errors.append(f"{name}: primary nozzle diameter mismatch")
+                expected_flow_types = nozzle_flow_types(family, len(diameters))
+                if data.get("default_nozzle_volume_type") != expected_flow_types:
+                    errors.append(
+                        f"{name}: nozzle-flow default mismatch; expected {expected_flow_types}"
+                    )
                 if family.composite_second_nozzle and (
                     len(diameters) < 2 or diameters[1] != family.composite_second_nozzle
                 ):
@@ -239,7 +272,7 @@ def validate_repo() -> list[str]:
                     if candidate.get("compatible_printers") != [name]:
                         errors.append(f"{candidate_name}: compatibility mismatch")
                     if mode is not None:
-                        expected_settings = mode_settings(mode, nozzle)
+                        expected_settings = mode_settings(mode, nozzle, family)
                         mismatches = {
                             key: (candidate.get(key), value)
                             for key, value in expected_settings.items()
@@ -249,6 +282,13 @@ def validate_repo() -> list[str]:
                             errors.append(
                                 f"{candidate_name}: process contract mismatch {mismatches}"
                             )
+                        if family.model == "Prusa CORE One L":
+                            expected_parent = prusa_core_one_l_source_process_name(nozzle, mode)
+                            if candidate.get("inherits") != expected_parent:
+                                errors.append(
+                                    f"{candidate_name}: expected standard Prusa inheritance "
+                                    f"{expected_parent!r}, found {candidate.get('inherits')!r}"
+                                )
 
     if len(names) != len(FAMILIES) * len(NOZZLES):
         errors.append(
@@ -272,6 +312,26 @@ def validate_live(app_support: Path) -> list[str]:
     }
     if actual_models != expected_models:
         errors.append("live enabled-model list does not match the curated contract")
+
+    saved_flow_types = conf.get("nozzle_volume_types") or {}
+    for family in FAMILIES:
+        for nozzle in NOZZLES:
+            name = family.canonical_name(nozzle)
+            profile_path = (
+                PROFILES_ROOT
+                / family.vendor
+                / "machine"
+                / "TinMan Codex"
+                / f"{name}.json"
+            )
+            profile = load_json(profile_path)
+            expected = ",".join(
+                nozzle_flow_types(family, len(profile.get("nozzle_diameter") or []) or 1)
+            )
+            if saved_flow_types.get(name) != expected:
+                errors.append(
+                    f"live nozzle-flow selection differs: {name} expected {expected!r}"
+                )
 
     for vendor in sorted({family.vendor for family in FAMILIES}):
         repo_index = PROFILES_ROOT / f"{vendor}.json"

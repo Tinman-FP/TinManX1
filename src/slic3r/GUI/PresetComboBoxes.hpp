@@ -7,6 +7,7 @@
 #include <wx/clrpicker.h>
 
 #include "libslic3r/Preset.hpp"
+#include "libslic3r/FilamentSelection.hpp"
 #include "wxExtensions.hpp"
 #include "BitmapComboBox.hpp"
 #include "Widgets/ComboBox.hpp"
@@ -61,15 +62,17 @@ public:
     void set_label_marker(int item, LabelItemType label_item_type = LABEL_ITEM_MARKER);
     bool set_printer_technology(PrinterTechnology pt);
 
-    void set_selection_changed_function(std::function<void(int)> sel_changed) { on_selection_changed = sel_changed; }
+    void set_selection_changed_function(std::function<bool(int)> sel_changed) { on_selection_changed = std::move(sel_changed); }
 
     bool is_selected_physical_printer();
 
     bool is_selected_printer_model();
 
-    // Return true, if physical printer was selected
-    // and next internal selection was accomplished
-    bool selection_is_changed_according_to_physical_printers();
+    enum class PhysicalSelectionResult { NotApplicable, Accepted, Canceled };
+    PhysicalSelectionResult selection_is_changed_according_to_physical_printers();
+
+    std::optional<FilamentSelectionColor> pending_filament_color() const;
+    bool apply_filament_selection(const FilamentSlotSelection &selection);
 
     void update(std::string select_preset);
     // select preset which is selected in PreseBundle
@@ -106,7 +109,7 @@ public:
 
 protected:
     typedef std::size_t Marker;
-    std::function<void(int)>    on_selection_changed { nullptr };
+    std::function<bool(int)>    on_selection_changed { nullptr };
 
     Preset::Type        m_type;
     std::string         m_main_bitmap_name;
@@ -150,9 +153,6 @@ protected:
     void invalidate_selection();
     void validate_selection(bool predicate = false);
     void update_selection();
-
-    // BBS: ams
-    int  update_ams_color();
 
 #ifdef __linux__
     static const char* separator_head() { return "-- "; }

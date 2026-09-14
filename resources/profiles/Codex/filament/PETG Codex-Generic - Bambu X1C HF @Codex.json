@@ -216,5 +216,8 @@
     ],
     "chamber_temperature": [
         "0"
+    ],
+    "filament_extruder_variant": [
+        "Direct Drive High Flow"
     ]
 }

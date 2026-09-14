@@ -5,8 +5,18 @@ on:
     - main
     paths:
     - 'resources/profiles/**'
+    - 'resources/orcaslicer_codex/hardware/**'
+    - 'checks/verify_tinman_machine_profile_catalog.py'
+    - 'manifests/tinmanx1-profile-resources.sha256'
     - 'scripts/lint_tinmanx1_fiberseek_profiles.py'
     - 'scripts/orca_extra_profile_check.py'
+    - 'scripts/profile-contracts/**'
+    - 'scripts/source-helpers/codex_filament_contracts.py'
+    - 'scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py'
+    - 'scripts/source-helpers/normalize_tinman_machine_catalog.py'
+    - 'scripts/test_tinman_motion_envelope.py'
+    - 'resources/orcaslicer_codex/motion_envelope/**'
+    - 'scripts/source-helpers/tinman_profile_manifest.py'
     - ".github/workflows/check_profiles.yml"
 
   workflow_dispatch:
@@ -42,6 +52,13 @@ jobs:
             exit "${status}"
           fi
           exit "${lint_status}"
+
+      - name: Verify TinMan profile manifest and CORE One L HF catalog
+        run: |
+          python3 checks/verify_tinman_machine_profile_catalog.py
+          python3 scripts/source-helpers/tinman_profile_manifest.py
+          python3 scripts/source-helpers/audit_prusa_core_one_l_hf_catalog.py
+          python3 scripts/test_tinman_motion_envelope.py
 
       # download
       - name: Download

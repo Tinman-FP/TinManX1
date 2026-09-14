@@ -1,6 +1,6 @@
 {
 	"name": "Prusa",
-	"version": "02.04.00.04",
+	"version": "02.04.00.06",
 	"force_update": "0",
 	"description": "Prusa configurations",
 	"machine_model_list": [
@@ -2791,18 +2791,6 @@
 			"sub_path": "machine/Prusa MK4S HF0.8 nozzle.json"
 		},
 		{
-			"name": "Prusa CORE One L 0.4 nozzle",
-			"sub_path": "machine/Prusa CORE One L 0.4 nozzle.json"
-		},
-		{
-			"name": "Prusa CORE One L 0.6 nozzle",
-			"sub_path": "machine/Prusa CORE One L 0.6 nozzle.json"
-		},
-		{
-			"name": "Prusa CORE One L 0.8 nozzle",
-			"sub_path": "machine/Prusa CORE One L 0.8 nozzle.json"
-		},
-		{
 			"name": "Prusa CORE One L 0.4 nozzle - TinMan Codex",
 			"sub_path": "machine/TinMan Codex/Prusa CORE One L 0.4 nozzle - TinMan Codex.json"
 		},
@@ -2819,5 +2807,5 @@
 			"sub_path": "machine/TinMan Codex/Prusa CORE One L 1.0 nozzle - TinMan Codex.json"
 		}
 	],
-	"tinman_codex_machine_contract": "2"
+	"tinman_codex_machine_contract": "6"
 }

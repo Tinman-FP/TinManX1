@@ -1,9 +1,12 @@
 #include "CrealityPrint.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <map>
+#include <regex>
 #include <sstream>
 #include <exception>
+#include <thread>
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
 #include <boost/log/trivial.hpp>
@@ -12,6 +15,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/asio.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/nowide/convert.hpp>
 
 #include <curl/curl.h>
@@ -51,7 +55,7 @@ namespace pt = boost::property_tree;
 namespace Slic3r {
 
 CrealityPrint::CrealityPrint(DynamicPrintConfig* config) : 
-    m_host(config->opt_string("print_host")), 
+    m_host(get_device_api_url(config->opt_string("print_host"))),
     m_web_ui(config->opt_string("print_host_webui")),
     m_cafile(config->opt_string("printhost_cafile")),
     m_port(config->opt_string("printhost_port")),
@@ -60,6 +64,51 @@ CrealityPrint::CrealityPrint(DynamicPrintConfig* config) :
 {}
 
 const char* CrealityPrint::get_name() const { return "Creality Print"; }
+
+std::string CrealityPrint::get_device_api_url(std::string url)
+{
+    boost::trim(url);
+    const std::string host = Http::get_host_from_url(url);
+    return host.empty() ? std::string() : "http://" + host;
+}
+
+std::string CrealityPrint::get_device_webui_url(std::string url)
+{
+    boost::trim(url);
+    if (url.empty())
+        return url;
+
+    if (!boost::algorithm::istarts_with(url, "http://") &&
+        !boost::algorithm::istarts_with(url, "https://"))
+        url = "http://" + url;
+
+    const size_t scheme_end      = url.find("://");
+    const size_t authority_begin = scheme_end == std::string::npos ? 0 : scheme_end + 3;
+    const size_t authority_end   = url.find_first_of("/?#", authority_begin);
+    const size_t end             = authority_end == std::string::npos ? url.size() : authority_end;
+    const std::string authority  = url.substr(authority_begin, end - authority_begin);
+
+    // A path indicates an intentional proxy URL. Only supply the K-series
+    // reverse-proxy port for a bare printer host that has no explicit port.
+    const bool has_path_separator = authority_end != std::string::npos && url[authority_end] == '/';
+    const bool has_custom_path = has_path_separator && authority_end + 1 < url.size()
+        && url[authority_end + 1] != '?' && url[authority_end + 1] != '#';
+    bool has_port = false;
+    if (!authority.empty() && authority.front() == '[') {
+        const size_t bracket = authority.find(']');
+        has_port = bracket != std::string::npos && bracket + 1 < authority.size() && authority[bracket + 1] == ':';
+    } else {
+        has_port = authority.rfind(':') != std::string::npos;
+    }
+
+    if (!has_custom_path && !has_port)
+        url.insert(end, ":4408");
+    if (!has_path_separator) {
+        const size_t query_or_fragment = url.find_first_of("?#", authority_begin);
+        url.insert(query_or_fragment == std::string::npos ? url.size() : query_or_fragment, "/");
+    }
+    return url;
+}
 
 std::string CrealityPrint::get_host() const {
     return m_host;
@@ -298,6 +347,54 @@ std::string CrealityPrint::query_boxes_info() const
     }
 }
 
+bool CrealityPrint::validate_cfs_file_info_response(const std::string& response,
+                                                    const std::string& filename,
+                                                    std::string& error)
+{
+    error.clear();
+    try {
+        const json payload = json::parse(response);
+        if (!payload.contains("retGcodeFileInfo2") || !payload["retGcodeFileInfo2"].is_array()) {
+            error = "The K2 did not return its G-code metadata index.";
+            return false;
+        }
+
+        const json* file_info = nullptr;
+        for (const auto& item : payload["retGcodeFileInfo2"]) {
+            if (item.value("name", std::string()) == filename) {
+                file_info = &item;
+                break;
+            }
+        }
+        if (file_info == nullptr) {
+            error = "The K2 did not index the uploaded G-code file.";
+            return false;
+        }
+        if (!file_info->value("validation_completed", false)) {
+            error = "The K2 has not finished validating the uploaded G-code file.";
+            return false;
+        }
+        if (file_info->value("material", std::string()).empty() ||
+            file_info->value("materialColors", std::string()).empty() ||
+            file_info->value("materialIds", std::string()).empty() ||
+            file_info->value("printer_model", std::string()).empty()) {
+            error = "The K2 could not read the filament metadata required for CFS printing.";
+            return false;
+        }
+
+        const std::string match = file_info->value("match", std::string());
+        static const std::regex confirmed_mapping(R"(T[0-9]+[A-Z]=T[0-9]+[A-Z])");
+        if (!std::regex_search(match, confirmed_mapping)) {
+            error = "The K2 did not confirm a usable CFS filament mapping.";
+            return false;
+        }
+        return true;
+    } catch (const json::exception& e) {
+        error = std::string("The K2 returned invalid G-code metadata: ") + e.what();
+        return false;
+    }
+}
+
 bool CrealityPrint::start_print(wxString &msg, const std::string &filename, const std::map<std::string, std::string>& extended_info) const
 {
     try {
@@ -353,6 +450,11 @@ bool CrealityPrint::start_print(wxString &msg, const std::string &filename, cons
                 };
                 ws.write(net::buffer(to_string(cmd)));
             } else {
+                if (color_list.empty()) {
+                    msg = _L("No CFS filament mapping was provided. The printer was not started.");
+                    return false;
+                }
+
                 json color_match = {
                     {"method", "set"},
                     {"params", {
@@ -363,6 +465,36 @@ bool CrealityPrint::start_print(wxString &msg, const std::string &filename, cons
                     }}
                 };
                 ws.write(net::buffer(to_string(color_match)));
+
+                json metadata_query = {
+                    {"method", "get"},
+                    {"params", {
+                        {"reqGcodeFile", 1},
+                        {"reqGcodeList", 1}
+                    }}
+                };
+                std::string validation_error;
+                bool metadata_valid = false;
+                for (int attempt = 0; attempt < 5 && !metadata_valid; ++attempt) {
+                    const std::string metadata_response =
+                        ws_send_and_read(ws, metadata_query, "retGcodeFileInfo2", 40);
+                    metadata_valid = !metadata_response.empty() &&
+                        validate_cfs_file_info_response(metadata_response, filename, validation_error);
+                    if (!metadata_valid && attempt < 4)
+                        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                }
+                if (!metadata_valid) {
+                    if (validation_error.empty())
+                        validation_error = "The K2 did not confirm the uploaded G-code metadata.";
+                    BOOST_LOG_TRIVIAL(error) << "CrealityPrint: Refusing CFS start for " << filename
+                                             << ": " << validation_error;
+                    msg = wxString::FromUTF8(validation_error) +
+                          _L(" Reslice with the current TinManX1 build and verify the filament mapping; the printer was not started.");
+                    return false;
+                }
+
+                BOOST_LOG_TRIVIAL(info) << "CrealityPrint: K2 validated CFS metadata and mapping for "
+                                        << filename << " (" << color_list.size() << " mapping entries)";
 
                 json multi_color_print = {
                     {"method", "set"},

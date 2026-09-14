@@ -44,15 +44,36 @@ if (SLIC3R_GUI)
         include(${wxWidgets_USE_FILE})
     endif()
 
-    if(APPLE AND TARGET wx::wxgl)
-        # Newer wxWidgets CMake exports may inject the macOS OpenGL framework
-        # as a quoted file path inside wx::wxgl, which Ninja then treats as a
-        # missing input file. Orca links OpenGL explicitly elsewhere, so strip
-        # these broken pseudo-paths from the imported target.
-        get_target_property(_wx_gl_libs wx::wxgl INTERFACE_LINK_LIBRARIES)
-        if(_wx_gl_libs)
-            list(FILTER _wx_gl_libs EXCLUDE REGEX "framework OpenGL")
-            set_target_properties(wx::wxgl PROPERTIES INTERFACE_LINK_LIBRARIES "${_wx_gl_libs}")
+    if(APPLE)
+        # wxWidgets' exported targets can retain absolute paths to the SDK used
+        # to build the dependency. Mixing those headers and frameworks with the
+        # active Xcode SDK causes availability errors in Objective-C++ sources.
+        if(IS_ABSOLUTE "${CMAKE_OSX_SYSROOT}")
+            set(_wx_stale_sdk "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk")
+            set(_wx_imported_targets
+                wx::wxbase wx::wxcore wx::wxadv wx::wxaui wx::wxhtml
+                wx::wxwebview wx::wxmedia wx::wxgl wx::wxxml wx::wxnet)
+            foreach(_wx_target IN LISTS _wx_imported_targets)
+                if(TARGET ${_wx_target})
+                    get_target_property(_wx_target_libs ${_wx_target} INTERFACE_LINK_LIBRARIES)
+                    if(_wx_target_libs)
+                        string(REPLACE "${_wx_stale_sdk}" "${CMAKE_OSX_SYSROOT}"
+                            _wx_target_libs "${_wx_target_libs}")
+                        set_target_properties(${_wx_target} PROPERTIES
+                            INTERFACE_LINK_LIBRARIES "${_wx_target_libs}")
+                    endif()
+                endif()
+            endforeach()
+        endif()
+
+        # Some wxWidgets exports also inject the OpenGL framework as a quoted
+        # pseudo-path. Orca links OpenGL explicitly elsewhere, so remove it.
+        if(TARGET wx::wxgl)
+            get_target_property(_wx_gl_libs wx::wxgl INTERFACE_LINK_LIBRARIES)
+            if(_wx_gl_libs)
+                list(FILTER _wx_gl_libs EXCLUDE REGEX "framework OpenGL")
+                set_target_properties(wx::wxgl PROPERTIES INTERFACE_LINK_LIBRARIES "${_wx_gl_libs}")
+            endif()
         endif()
     endif()
 

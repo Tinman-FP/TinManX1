@@ -187,6 +187,7 @@
 	"auxiliary_fan": "0",
 	"default_bed_type": "Textured PEI Plate",
 	"printer_agent": "snapmaker",
+	"host_type": "moonraker",
 	"printable_area": [
 		"0.5x1",
 		"270.5x1",

@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <random>
 #include <sstream>
 
@@ -536,6 +537,7 @@ int OrcaCloudServiceAgent::init_log()
 
 int OrcaCloudServiceAgent::set_config_dir(std::string cfg_dir)
 {
+    std::lock_guard<std::recursive_mutex> lock(state_mutex);
     config_dir = cfg_dir;
     wxFileName fallback(wxString::FromUTF8(cfg_dir.c_str()), "orca_refresh_token.sec");
     fallback.Normalize();
@@ -793,6 +795,12 @@ std::string OrcaCloudServiceAgent::get_user_id()
     return session.user_id;
 }
 
+CloudProfileSession OrcaCloudServiceAgent::get_profile_session()
+{
+    std::lock_guard<std::mutex> lock(session_mutex);
+    return {session.user_id, session_revision, session.logged_in};
+}
+
 std::string OrcaCloudServiceAgent::get_user_name()
 {
     std::lock_guard<std::mutex> lock(session_mutex);
@@ -972,80 +980,27 @@ void OrcaCloudServiceAgent::enable_multi_machine(bool enable)
 int OrcaCloudServiceAgent::get_user_presets(std::map<std::string, std::map<std::string, std::string>>* user_presets)
 {
     if (!user_presets) return BAMBU_NETWORK_ERR_INVALID_HANDLE;
-
-    if (!is_user_login()) {
-        BOOST_LOG_TRIVIAL(error) << "OrcaCloudServiceAgent: Not logged in";
+    const auto requested_session = get_profile_session();
+    if (!requested_session.logged_in || requested_session.user_id.empty())
         return BAMBU_NETWORK_ERR_INVALID_HANDLE;
+
+    // A full library can authorize deletions. Never borrow the incremental cursor
+    // or publish a partial, not-modified, or superseded-account response.
+    std::string response;
+    unsigned int http_code = 0;
+    if (http_get(ORCA_SYNC_PULL_PATH, &response, &http_code) != BAMBU_NETWORK_SUCCESS)
+        return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
+    try {
+        auto snapshot = tinmanx_parse_cloud_profile_snapshot(http_code, response, requested_session.user_id);
+        std::lock_guard<std::mutex> lock(session_mutex);
+        if (!requested_session.matches({session.user_id, session_revision, session.logged_in}))
+            return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
+        user_presets->swap(snapshot);
+        return BAMBU_NETWORK_SUCCESS;
+    } catch (const std::exception &error) {
+        BOOST_LOG_TRIVIAL(error) << "OrcaCloudServiceAgent: Full profile snapshot rejected: " << error.what();
+        return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
     }
-
-    bool success = false;
-    std::string error_msg;
-    int http_code_out = 0;
-    SyncState saved_state;
-
-    {
-        std::lock_guard<std::recursive_mutex> lock(state_mutex);
-        saved_state = sync_state;
-        sync_state = SyncState{};
-    }
-
-    auto on_success = [&](const SyncPullResponse& resp) {
-        // Get current user_id for all presets (required by load_user_preset)
-        std::string current_user_id = get_user_id();
-
-        for (const auto& upsert : resp.upserts) {
-            // Parse JSON content into key-value pairs using helper
-            std::map<std::string, std::string> value_map;
-            json_to_map(upsert.content.dump(), value_map);
-
-            // Add metadata from top-level sync response if not already in content
-            // These are required by PresetCollection::load_user_preset
-            if (value_map.find(BBL_JSON_KEY_SETTING_ID) == value_map.end()) {
-                value_map[BBL_JSON_KEY_SETTING_ID] = upsert.id;
-            }
-            if (value_map.find(BBL_JSON_KEY_USER_ID) == value_map.end()) {
-                value_map[BBL_JSON_KEY_USER_ID] = current_user_id;
-            }
-            if (value_map.find(ORCA_JSON_KEY_UPDATE_TIME) == value_map.end()) {
-                value_map[ORCA_JSON_KEY_UPDATE_TIME] = std::to_string(upsert.updated_time);
-            }
-
-            // Use preset name from content or fallback to upsert.name or upsert.id
-            std::string preset_name = upsert.content.value(BBL_JSON_KEY_NAME, "");
-            if (preset_name.empty()) {
-                preset_name = upsert.name.empty() ? upsert.id : upsert.name;
-            }
-
-            // Store as: user_presets[preset_name][key] = value
-            // This matches the format expected by PresetBundle::load_user_presets
-            (*user_presets)[preset_name] = value_map;
-        }
-
-        if (resp.next_cursor != 0) {
-            std::lock_guard<std::recursive_mutex> lock(state_mutex);
-            sync_state.last_sync_timestamp = resp.next_cursor;
-            save_sync_state();
-        } else {
-            std::lock_guard<std::recursive_mutex> lock(state_mutex);
-            sync_state = saved_state;
-        }
-        success = true;
-    };
-
-    auto on_error = [&](int code, const std::string& err) {
-        http_code_out = code;
-        error_msg = err;
-        success = false;
-    };
-
-    sync_pull(on_success, on_error);
-
-    if (!success) {
-        std::lock_guard<std::recursive_mutex> lock(state_mutex);
-        sync_state = saved_state;
-    }
-
-    return success ? BAMBU_NETWORK_SUCCESS : BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
 }
 
 std::string OrcaCloudServiceAgent::request_setting_id(std::string name, std::map<std::string, std::string>* values_map, unsigned int* http_code)
@@ -1138,16 +1093,21 @@ int OrcaCloudServiceAgent::get_setting_list(std::string bundle_version, Progress
 int OrcaCloudServiceAgent::get_setting_list2(std::string bundle_version, CheckFn chk_fn, ProgressFn pro_fn, WasCancelledFn cancel_fn)
 {
     (void) bundle_version;
+    const auto requested_session = get_profile_session();
     bool success = false;
     int error_code = 0;
 
     auto on_success = [&](const SyncPullResponse& resp) {
+        // Account replacement must not publish an older account's callbacks or cursor.
+        std::lock_guard<std::recursive_mutex> lock(state_mutex);
+        if (!requested_session.matches(get_profile_session()))
+            return;
         int total = static_cast<int>(resp.upserts.size() + resp.deletes.size());
         int processed = 0;
         bool cancelled = false;
 
         for (const auto& upsert : resp.upserts) {
-            if (cancel_fn && cancel_fn()) {
+            if ((cancel_fn && cancel_fn()) || !requested_session.matches(get_profile_session())) {
                 cancelled = true;
                 break;
             }
@@ -1187,7 +1147,7 @@ int OrcaCloudServiceAgent::get_setting_list2(std::string bundle_version, CheckFn
 
         if (!cancelled) {
             for (const auto& deleted_id : resp.deletes) {
-                if (cancel_fn && cancel_fn()) {
+                if ((cancel_fn && cancel_fn()) || !requested_session.matches(get_profile_session())) {
                     cancelled = true;
                     break;
                 }
@@ -1208,10 +1168,14 @@ int OrcaCloudServiceAgent::get_setting_list2(std::string bundle_version, CheckFn
             }
         }
 
+        cancelled = cancelled || !requested_session.matches(get_profile_session()) || (cancel_fn && cancel_fn());
         if (!cancelled && resp.next_cursor != 0) {
-            std::lock_guard<std::recursive_mutex> lock(state_mutex);
+            const auto previous = sync_state;
             sync_state.last_sync_timestamp = resp.next_cursor;
-            save_sync_state();
+            if (!save_sync_state()) {
+                sync_state = previous;
+                return;
+            }
         }
 
         if (pro_fn) {
@@ -1255,26 +1219,89 @@ int OrcaCloudServiceAgent::delete_setting(std::string setting_id)
 // Sync Protocol Implementation
 // ============================================================================
 
+long long parse_orca_sync_timestamp(const nlohmann::json& object, const char* key)
+{
+    if (!object.is_object())
+        throw std::invalid_argument("Invalid cloud sync record.");
+    const auto it = object.find(key);
+    if (it == object.end()) return 0;
+    if (it->is_number_unsigned()) {
+        const auto value = it->get<unsigned long long>();
+        if (value <= static_cast<unsigned long long>(std::numeric_limits<long long>::max()))
+            return static_cast<long long>(value);
+    } else if (it->is_number_integer()) {
+        const auto value = it->get<long long>();
+        if (value >= 0) return value;
+    }
+    throw std::invalid_argument(std::string("Invalid cloud sync timestamp: ") + key);
+}
+
+SyncPullResponse parse_orca_sync_pull_response(const std::string& body)
+{
+    const auto root = nlohmann::json::parse(body);
+    if (!root.is_object() || !root.contains("upserts") || !root.at("upserts").is_array())
+        throw std::invalid_argument("Cloud sync response is missing its profile list.");
+    SyncPullResponse resp;
+    resp.next_cursor = parse_orca_sync_timestamp(root, "next_cursor");
+    if (root.contains("has_more") && (!root.at("has_more").is_boolean() ||
+        (root.at("has_more").get<bool>() && resp.next_cursor == 0)))
+        throw std::invalid_argument("Invalid cloud sync continuation.");
+    for (const auto& item : root.at("upserts")) {
+        if (!item.is_object() || !item.contains("content") || !item.at("content").is_object())
+            throw std::invalid_argument("Invalid cloud sync profile content.");
+        ProfileUpsert upsert;
+        upsert.id = item.value("id", "");
+        if (upsert.id.empty())
+            throw std::invalid_argument("Missing cloud sync profile identity.");
+        upsert.name = item.value("name", "");
+        upsert.updated_time = parse_orca_sync_timestamp(item, ORCA_JSON_KEY_UPDATE_TIME);
+        upsert.created_time = parse_orca_sync_timestamp(item, ORCA_JSON_KEY_CREATED_TIME);
+        upsert.content = item.at("content");
+        const auto content_id = upsert.content.value("setting_id", "");
+        if (!content_id.empty() && content_id != upsert.id)
+            throw std::invalid_argument("Conflicting cloud sync profile identity.");
+        resp.upserts.push_back(std::move(upsert));
+    }
+    if (root.contains("deletes")) {
+        if (!root.at("deletes").is_array())
+            throw std::invalid_argument("Invalid cloud sync deletion list.");
+        for (const auto& item : root.at("deletes")) {
+            if (!item.is_string() || item.get_ref<const std::string&>().empty())
+                throw std::invalid_argument("Invalid cloud sync deletion identity.");
+            resp.deletes.push_back(item.get<std::string>());
+        }
+    }
+    return resp;
+}
+
 int OrcaCloudServiceAgent::sync_pull(
     std::function<void(const SyncPullResponse&)> on_success,
     std::function<void(int http_code, const std::string& error)> on_error)
 {
     std::string path = ORCA_SYNC_PULL_PATH;
-    if (sync_state.last_sync_timestamp != 0) {
-        path += "?cursor=" + std::to_string(sync_state.last_sync_timestamp);
+    CloudProfileSession requested_session;
+    {
+        std::lock_guard<std::recursive_mutex> lock(state_mutex);
+        requested_session = get_profile_session();
+        if (sync_state.last_sync_timestamp != 0)
+            path += "?cursor=" + std::to_string(sync_state.last_sync_timestamp);
     }
+
+    auto session_current = [&] { return requested_session.matches(get_profile_session()); };
+    if (!session_current()) return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
 
     std::string response;
     unsigned int http_code = 0;
     int result = http_get(path, &response, &http_code);
+    if (!session_current()) return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
 
     // Handle 410 Gone - cursor too old, need full resync
     if (http_code == 410) {
         BOOST_LOG_TRIVIAL(warning) << "OrcaCloudServiceAgent: sync_pull returned 410 Gone - cursor too old, triggering full resync";
-        clear_sync_state();
-        // Retry without cursor
+        // Retry privately. Keep the durable cursor until the replacement is accepted.
         path = ORCA_SYNC_PULL_PATH;
         result = http_get(path, &response, &http_code);
+        if (!session_current()) return BAMBU_NETWORK_ERR_GET_SETTING_LIST_FAILED;
     }
 
     if (result != BAMBU_NETWORK_SUCCESS || (http_code != 200 && http_code != 304)) {
@@ -1292,29 +1319,7 @@ int OrcaCloudServiceAgent::sync_pull(
     }
 
     try {
-        auto json = nlohmann::json::parse(response);
-        SyncPullResponse resp;
-        resp.next_cursor = json.value("next_cursor", 0);
-
-        if (json.contains("upserts") && json["upserts"].is_array()) {
-            for (const auto& item : json["upserts"]) {
-                ProfileUpsert upsert;
-                upsert.id = item.value("id", "");
-                upsert.name = item.value("name", "");
-                upsert.updated_time = item.value(ORCA_JSON_KEY_UPDATE_TIME, 0);
-                upsert.created_time = item.value(ORCA_JSON_KEY_CREATED_TIME, 0);
-                if (item.contains("content")) {
-                    upsert.content = item["content"];
-                }
-                resp.upserts.push_back(upsert);
-            }
-        }
-
-        if (json.contains("deletes") && json["deletes"].is_array()) {
-            for (const auto& item : json["deletes"]) {
-                resp.deletes.push_back(item.get<std::string>());
-            }
-        }
+        const auto resp = parse_orca_sync_pull_response(response);
 
         if (on_success) on_success(resp);
         return BAMBU_NETWORK_SUCCESS;
@@ -1377,7 +1382,7 @@ SyncPushResult OrcaCloudServiceAgent::sync_push(const std::string& profile_id,
                 auto& profile_data = json["server_profile"];
                 result.server_version.id = profile_data.value("id", "");
                 result.server_version.name = profile_data.value("name", "");
-                result.server_version.updated_time = profile_data.value(ORCA_JSON_KEY_UPDATE_TIME, 0);
+                result.server_version.updated_time = parse_orca_sync_timestamp(profile_data, ORCA_JSON_KEY_UPDATE_TIME);
             }
         } catch (...) {}
         // Surface the conflict via the http-error callback with the local preset name injected.
@@ -1399,7 +1404,7 @@ SyncPushResult OrcaCloudServiceAgent::sync_push(const std::string& profile_id,
     // Success
     try {
         auto json = nlohmann::json::parse(response);
-        result.new_updated_time = json.value(ORCA_JSON_KEY_UPDATE_TIME, 0);
+        result.new_updated_time = parse_orca_sync_timestamp(json, ORCA_JSON_KEY_UPDATE_TIME);
         if (result.new_updated_time != 0) {
             result.success = true;
         } else {
@@ -1419,14 +1424,17 @@ SyncPushResult OrcaCloudServiceAgent::sync_push(const std::string& profile_id,
 void OrcaCloudServiceAgent::load_sync_state()
 {
     std::lock_guard<std::recursive_mutex> lock(state_mutex);
-
+    sync_state = SyncState{};
     if (sync_state_path.empty()) return;
 
     try {
         std::ifstream ifs(sync_state_path);
         if (ifs.good()) {
             std::string line;
-            if (std::getline(ifs, line)) {
+            if (std::getline(ifs, line) && ifs.peek() == std::char_traits<char>::eof()) {
+                if (!line.empty() && line.back() == '\r') line.pop_back();
+                if (line.empty() || !std::all_of(line.begin(), line.end(), [](unsigned char c) { return c >= '0' && c <= '9'; }))
+                    return;
                 sync_state.last_sync_timestamp = std::stoll(line);
             }
         }
@@ -1435,21 +1443,20 @@ void OrcaCloudServiceAgent::load_sync_state()
     }
 }
 
-void OrcaCloudServiceAgent::save_sync_state()
+bool OrcaCloudServiceAgent::save_sync_state()
 {
     std::lock_guard<std::recursive_mutex> lock(state_mutex);
 
-    if (sync_state_path.empty()) return;
+    if (sync_state_path.empty()) return true;
 
     try {
-        std::string tmp_path = sync_state_path + ".tmp";
-        std::ofstream ofs(tmp_path, std::ios::out | std::ios::trunc);
-        if (ofs.good()) {
-            ofs << std::to_string(sync_state.last_sync_timestamp);
-            ofs.close();
-            boost::filesystem::rename(tmp_path, sync_state_path);
-        }
-    } catch (...) {}
+        boost::filesystem::create_directories(boost::filesystem::path(sync_state_path).parent_path());
+        write_file_with_replace(sync_state_path, std::to_string(sync_state.last_sync_timestamp));
+        return true;
+    } catch (const std::exception& e) {
+        BOOST_LOG_TRIVIAL(warning) << "OrcaCloudServiceAgent: cannot persist sync cursor - " << e.what();
+        return false;
+    }
 }
 
 void OrcaCloudServiceAgent::clear_sync_state()
@@ -1905,15 +1912,28 @@ bool OrcaCloudServiceAgent::set_user_session(const std::string& token,
     decode_jwt_expiry(token, exp_tp);
 
     {
-        std::lock_guard<std::mutex> lock(session_mutex);
-        session.access_token = token;
-        session.refresh_token = refresh_token;
-        session.user_id = user_id;
-        session.user_name = username;
-        session.user_nickname = nickname;
-        session.user_avatar = avatar;
-        session.expires_at = exp_tp;
-        session.logged_in = true;
+        std::lock_guard<std::recursive_mutex> state_lock(state_mutex);
+        bool account_changed;
+        {
+            std::lock_guard<std::mutex> lock(session_mutex);
+            account_changed = !session.logged_in || session.user_id != user_id;
+            if (account_changed) ++session_revision;
+            session.access_token = token;
+            session.refresh_token = refresh_token;
+            session.user_id = user_id;
+            session.user_name = username;
+            session.user_nickname = nickname;
+            session.user_avatar = avatar;
+            session.expires_at = exp_tp;
+            session.logged_in = true;
+        }
+        // A token refresh retains the active cursor. Account changes load only their own state.
+        const auto path = config_dir.empty() || user_id.empty() ? std::string{} :
+            (boost::filesystem::path(config_dir) / "user" / user_id / ORCA_SYNC_STATE_FILE).string();
+        if (account_changed || sync_state_path != path) {
+            sync_state_path = path;
+            load_sync_state();
+        }
     }
 
     if (persist) {
@@ -1929,21 +1949,11 @@ bool OrcaCloudServiceAgent::set_user_session(const std::string& token,
         persist_user_secret(sec.dump());
     }
 
-    // Set per-user sync state path
-    if (!config_dir.empty() && !user_id.empty()) {
-        boost::filesystem::path user_dir = boost::filesystem::path(config_dir) / "user" / user_id;
-        if (!boost::filesystem::exists(user_dir)) {
-            boost::filesystem::create_directories(user_dir);
-        }
-        sync_state_path = (user_dir / ORCA_SYNC_STATE_FILE).string();
-        load_sync_state();
-    }
-
     BOOST_LOG_TRIVIAL(info) << "OrcaCloudServiceAgent: set_user_session - user_id=" << user_id << ", username=" << username;
     return true;
 }
 
-bool OrcaCloudServiceAgent::set_user_session(const json& session_json, bool notify_login)
+bool OrcaCloudServiceAgent::set_user_session(const json& session_json, bool notify_login, bool persist)
 {
     std::string access_token = get_json_string_field(session_json, "access_token");
     if (access_token.empty()) {
@@ -1989,7 +1999,7 @@ bool OrcaCloudServiceAgent::set_user_session(const json& session_json, bool noti
         return false;
     }
 
-    bool success = set_user_session(access_token, user_id, username, nickname, avatar, refresh_token);
+    bool success = set_user_session(access_token, user_id, username, nickname, avatar, refresh_token, persist);
     if (success && notify_login && on_login_complete_handler) {
         on_login_complete_handler(true, user_id);
     }
@@ -1999,8 +2009,12 @@ bool OrcaCloudServiceAgent::set_user_session(const json& session_json, bool noti
 void OrcaCloudServiceAgent::clear_session()
 {
     {
+        std::lock_guard<std::recursive_mutex> state_lock(state_mutex);
         std::lock_guard<std::mutex> lock(session_mutex);
+        ++session_revision;
         session = SessionInfo{};
+        sync_state = SyncState{};
+        sync_state_path.clear();
     }
     clear_user_secret();
 }

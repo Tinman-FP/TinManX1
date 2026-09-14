@@ -33,7 +33,8 @@ static std::map<int, std::string> error_messages = {
     {101, L("The player is not loaded, please click \"play\" button to retry.")},
     {102, L("The player is not loaded, please click \"play\" button to retry.")},
     {103, L("The player is not loaded, please click \"play\" button to retry.")},
-    {104, L("The player is not loaded because the GStreamer GTK video sink is missing or failed to initialize.")}
+    {104, L("The player is not loaded because the GStreamer GTK video sink is missing or failed to initialize.")},
+    {105, L("The direct camera decoder is missing from this TinManX1 installation.")}
 };
 
 namespace Slic3r {
@@ -182,6 +183,7 @@ MediaPlayCtrl::~MediaPlayCtrl()
 
 void MediaPlayCtrl::SetMachineObject(MachineObject* obj)
 {
+    m_direct_stream_url.clear();
     std::string machine = obj ? obj->get_dev_id() : "";
     if (obj) {
         m_camera_exists  = obj->has_ipcam;
@@ -242,6 +244,40 @@ void MediaPlayCtrl::SetMachineObject(MachineObject* obj)
         SetStatus("", false);
 }
 
+void MediaPlayCtrl::SetDirectStreamURL(const std::string& stream_url, const std::string& identity, const wxString& idle_message)
+{
+    if (stream_url == m_direct_stream_url && identity == m_machine) {
+        if (!stream_url.empty() && m_last_state == MEDIASTATE_IDLE) {
+            m_next_retry   = wxDateTime::Now();
+            m_user_triggered = true;
+            Play();
+        } else if (stream_url.empty()) {
+            SetStatus(idle_message, false);
+        }
+        return;
+    }
+
+    if (m_last_state != MEDIASTATE_IDLE)
+        Stop(" ");
+
+    m_direct_stream_url = stream_url;
+    m_machine           = identity;
+    m_failed_retry      = 0;
+    m_failed_code       = 0;
+    m_last_failed_codes.clear();
+    Enable(true);
+
+    if (stream_url.empty()) {
+        m_next_retry = wxDateTime();
+        SetStatus(idle_message, false);
+        return;
+    }
+
+    m_next_retry     = wxDateTime::Now();
+    m_user_triggered = true;
+    Play();
+}
+
 wxString hide_id_middle_string(wxString const &str, size_t offset = 0, size_t length = -1)
 {
 #if BBL_RELEASE_TO_PUBLIC
@@ -298,6 +334,18 @@ void MediaPlayCtrl::Play()
         return;
     }
     m_failed_code = 0;
+    if (!m_direct_stream_url.empty()) {
+        if (!boost::algorithm::istarts_with(m_direct_stream_url, "rtsp://") &&
+            !boost::algorithm::istarts_with(m_direct_stream_url, "rtsps://")) {
+            Stop(_L("The camera stream address is invalid."));
+            return;
+        }
+        BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl direct RTSP requested for " << m_machine;
+        m_url = "<direct>" + m_direct_stream_url;
+        load();
+        m_button_play->SetIcon("media_stop");
+        return;
+    }
     if (m_machine.empty()) {
         Stop(_L("Please confirm if the printer is connected."));
         return;
@@ -466,7 +514,8 @@ void MediaPlayCtrl::Stop(wxString const &msg, wxString const &msg2)
     ++m_failed_retry;
     bool local = tunnel == "local" || tunnel == "rtsp" ||
                  tunnel == "rtsps";
-    if (m_failed_code < 0 && last_state != wxMEDIASTATE_PLAYING && local && (m_failed_retry > 1 || m_user_triggered)) {
+    if (m_direct_stream_url.empty() && m_failed_code < 0 && last_state != wxMEDIASTATE_PLAYING && local &&
+        (m_failed_retry > 1 || m_user_triggered)) {
         m_next_retry = wxDateTime(); // stop retry
         if (wxGetApp().show_modal_ip_address_enter_dialog(false, _L("LAN Connection Failed (Failed to start liveview)"))) {
             m_failed_retry = 0;
@@ -740,6 +789,11 @@ void MediaPlayCtrl::media_proc()
         }
         else if (url == "<play>") {
             m_media_ctrl->Play();
+        }
+        else if (url.StartsWith("<direct>")) {
+            BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl: start direct stream load";
+            m_media_ctrl->LoadDirectStream(url.Mid(8));
+            BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl: end direct stream load";
         }
         else {
             BOOST_LOG_TRIVIAL(info) <<  "MediaPlayCtrl: start load";

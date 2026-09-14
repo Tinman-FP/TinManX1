@@ -3,7 +3,9 @@
 #include "Tab.hpp"
 #include "PresetHints.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/PresetTransfer.hpp"
 #include "libslic3r/PrintConfig.hpp"
+#include "libslic3r/TinManMachineProfileContract.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/GCode/GCodeProcessor.hpp"
@@ -229,8 +231,10 @@ void Tab::create_preset_tab()
         m_presets_choice = new TabPresetComboBox(panel, m_type);
         // m_presets_choice->SetFont(Label::Body_10); // BBS
         m_presets_choice->set_selection_changed_function([this](int selection) {
-            if (!m_presets_choice->selection_is_changed_according_to_physical_printers())
+            const auto physical_result = m_presets_choice->selection_is_changed_according_to_physical_printers();
+            if (physical_result == PresetComboBox::PhysicalSelectionResult::NotApplicable)
             {
+                const std::string previous_physical_printer = m_preset_bundle->physical_printers.get_selected_full_printer_name();
                 if (m_type == Preset::TYPE_PRINTER && !m_presets_choice->is_selected_physical_printer())
                     m_preset_bundle->physical_printers.unselect_printer();
 
@@ -244,8 +248,9 @@ void Tab::create_preset_tab()
                         m_presets_choice->GetString(selection).ToUTF8().data());
                     preset_name = m_preset_bundle->get_preset_name_by_alias(m_type, selected_label);
                 }
-                select_preset(preset_name);
+                return select_preset(preset_name, false, previous_physical_printer);
             }
+            return physical_result == PresetComboBox::PhysicalSelectionResult::Accepted;
         });
     }
 
@@ -2111,8 +2116,7 @@ void Tab::apply_searcher()
 
 void Tab::cache_config_diff(const std::vector<std::string>& selected_options, const DynamicPrintConfig* config/* = nullptr*/)
 {
-    m_cache_options = selected_options;
-    m_cache_config.apply_only(config ? *config : m_presets->get_edited_preset().config, selected_options);
+    m_transfer_cache.stage_options(config ? *config : m_presets->get_edited_preset().config, selected_options);
 }
 
 void Tab::apply_config_from_cache()
@@ -2123,10 +2127,10 @@ void Tab::apply_config_from_cache()
     if (m_type == Preset::TYPE_PRINTER)
         was_applied = static_cast<TabPrinter*>(this)->apply_extruder_cnt_from_cache();
 
-    if (!m_cache_config.empty()) {
-        m_presets->get_edited_preset().config.apply_only(m_cache_config, m_cache_options);
-        m_cache_config.clear();
-        m_cache_options.clear();
+    if (!m_transfer_cache.config.empty()) {
+        m_presets->get_edited_preset().config.apply_only(m_transfer_cache.config, m_transfer_cache.options);
+        m_transfer_cache.config.clear();
+        m_transfer_cache.options.clear();
 
         was_applied = true;
     }
@@ -2146,12 +2150,19 @@ void Tab::on_presets_changed()
     if (wxGetApp().plater() == nullptr)
         return;
 
-    // Instead of PostEvent (EVT_TAB_PRESETS_CHANGED) just call update_presets
+    // Restore and connect a third-party printer before the sidebar decides
+    // whether the current profile can print. Connection testing used to be the
+    // only path that forced this refresh, leaving Prepare in export-only mode.
+    if (m_type == Preset::TYPE_PRINTER) {
+        wxGetApp().switch_printer_agent(!m_preset_bundle->is_bbl_vendor());
+    }
+
+    // Instead of PostEvent (EVT_TAB_PRESETS_CHANGED) just call update_presets.
+    // For printer presets this must run after the runtime connection overlay is
+    // restored so the Print action and Device URL use the selected machine.
     wxGetApp().plater()->sidebar().update_presets(m_type);
 
-    // Check if printer agent needs switching
     if (m_type == Preset::TYPE_PRINTER) {
-        wxGetApp().switch_printer_agent();
 
         // Trigger per-vendor preset update check
         const Preset& printer_preset = m_preset_bundle->printers.get_edited_preset();
@@ -2487,7 +2498,6 @@ void TabPrint::build()
         for (const char *opt_key : {
             "wave_overhangs",
             "wave_overhangs_instead_of_bridges",
-            "wave_overhang_algorithm",
             "support_remaining_areas_after_wave_overhangs",
             "wave_overhang_min_angle",
             "wave_overhang_min_length",
@@ -2501,7 +2511,6 @@ void TabPrint::build()
             "wave_overhang_minimum_width",
             "wave_overhang_min_new_area",
             "wave_overhang_flow_mm3_per_mm",
-            "wave_overhang_ring_overlap",
             "wave_overhang_fringe_reinforcement_max_cover_to_real",
             "wave_overhang_fringe_reinforcement_max_cover_area",
             "wave_overhang_fringe_contact_compensation_max_over_cap",
@@ -2514,6 +2523,7 @@ void TabPrint::build()
             "wave_overhang_travel_speed",
             "wave_overhang_end_retract_length",
             "wave_overhang_fan_speed",
+            "wave_overhang_aux_fan_speed",
             "wave_overhang_nozzle_temp",
             "wave_overhang_min_wave_time",
             "wave_overhang_min_layer_time",
@@ -2523,7 +2533,9 @@ void TabPrint::build()
             "wave_overhang_floor_hilbert_density",
             "wave_overhang_floor_print_speed",
             "wave_overhang_floor_perimeter_speed",
+            "wave_overhang_floor_speed_ramp",
             "wave_overhang_floor_fan_speed",
+            "wave_overhang_floor_aux_fan_speed",
             "wave_overhang_debug_gcode",
         }) {
             if (!m_config->has(opt_key)) {
@@ -2773,7 +2785,6 @@ void TabPrint::build()
             optgroup = page->new_optgroup(L("Wave overhangs"), L"param_overhang");
             optgroup->append_single_option_line("wave_overhangs");
             optgroup->append_single_option_line("wave_overhangs_instead_of_bridges");
-            optgroup->append_single_option_line("wave_overhang_algorithm");
             optgroup->append_single_option_line("support_remaining_areas_after_wave_overhangs");
 
             optgroup = page->new_optgroup(L("Wave detection"), L"param_overhang");
@@ -2791,7 +2802,6 @@ void TabPrint::build()
             optgroup->append_single_option_line("wave_overhang_minimum_width");
             optgroup->append_single_option_line("wave_overhang_min_new_area");
             optgroup->append_single_option_line("wave_overhang_flow_mm3_per_mm");
-            optgroup->append_single_option_line("wave_overhang_ring_overlap");
 
             optgroup = page->new_optgroup(L("Wave fringe reinforcement"), L"param_overhang");
             optgroup->append_single_option_line("wave_overhang_fringe_reinforcement_max_cover_to_real");
@@ -2812,6 +2822,7 @@ void TabPrint::build()
 
             optgroup = page->new_optgroup(L("Wave cooling"), L"param_cooling");
             optgroup->append_single_option_line("wave_overhang_fan_speed");
+            optgroup->append_single_option_line("wave_overhang_aux_fan_speed");
             optgroup->append_single_option_line("wave_overhang_nozzle_temp");
             optgroup->append_single_option_line("wave_overhang_min_wave_time");
             optgroup->append_single_option_line("wave_overhang_min_layer_time");
@@ -2823,7 +2834,9 @@ void TabPrint::build()
             optgroup->append_single_option_line("wave_overhang_floor_hilbert_density");
             optgroup->append_single_option_line("wave_overhang_floor_print_speed");
             optgroup->append_single_option_line("wave_overhang_floor_perimeter_speed");
+            optgroup->append_single_option_line("wave_overhang_floor_speed_ramp");
             optgroup->append_single_option_line("wave_overhang_floor_fan_speed");
+            optgroup->append_single_option_line("wave_overhang_floor_aux_fan_speed");
 
             optgroup = page->new_optgroup(L("Wave debug"), L"param_overhang");
             optgroup->append_single_option_line("wave_overhang_debug_gcode");
@@ -5565,17 +5578,21 @@ void TabPrinter::on_preset_loaded()
     m_extruder_variant_list = m_config->option<ConfigOptionStrings>("printer_extruder_variant")->values;
 
     if (base_name != m_base_preset_name) {
-        bool use_default_nozzle_volume_type = true;
         m_base_preset_name = base_name;
-        std::string prev_nozzle_volume_type = wxGetApp().app_config->get_nozzle_volume_types_from_config(base_name);
-        if (!prev_nozzle_volume_type.empty()) {
-            ConfigOptionEnumsGeneric* nozzle_volume_type_option = m_preset_bundle->project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type");
-            if (nozzle_volume_type_option->deserialize(prev_nozzle_volume_type)) {
-                use_default_nozzle_volume_type = false;
+        const bool fixed_nozzle_volume_type = tinmanx_apply_nozzle_volume_contract(
+            current_printer.name, current_printer.config, m_preset_bundle->project_config);
+        if (!fixed_nozzle_volume_type) {
+            bool use_default_nozzle_volume_type = true;
+            std::string prev_nozzle_volume_type = wxGetApp().app_config->get_nozzle_volume_types_from_config(base_name);
+            if (!prev_nozzle_volume_type.empty()) {
+                ConfigOptionEnumsGeneric* nozzle_volume_type_option = m_preset_bundle->project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type");
+                if (nozzle_volume_type_option->deserialize(prev_nozzle_volume_type)) {
+                    use_default_nozzle_volume_type = false;
+                }
             }
-        }
-        if (use_default_nozzle_volume_type) {
-            m_preset_bundle->project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values = current_printer.config.option<ConfigOptionEnumsGeneric>("default_nozzle_volume_type")->values;
+            if (use_default_nozzle_volume_type) {
+                m_preset_bundle->project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values = current_printer.config.option<ConfigOptionEnumsGeneric>("default_nozzle_volume_type")->values;
+            }
         }
     }
 }
@@ -6315,15 +6332,36 @@ bool Tab::select_preset(
             size_t 				      idx_new = 0;
             if (idx_new < presets.size())
                 for (; idx_new < presets.size() && ! presets[idx_new].is_visible; ++ idx_new) ;
-            preset_name = presets[idx_new].name;
             if (idx_new == presets.size()) {
                 // If no name is provided, select the "-- default --" preset.
                 preset_name = m_presets->default_preset().name;
-            }
+            } else
+                preset_name = presets[idx_new].name;
             BOOST_LOG_TRIVIAL(info) << boost::format("not cause by delete current ,choose the first visible, idx %1%, name %2%")
                                         %idx_new %preset_name;
         }
     }
+    const auto restore_previous_physical_printer = [&]() {
+        if (m_type != Preset::TYPE_PRINTER) return;
+        auto &physical = m_preset_bundle->physical_printers;
+        const auto &current_name = m_presets->get_edited_preset().name;
+        if (!last_selected_ph_printer_name.empty() &&
+            current_name == PhysicalPrinter::get_preset_name(last_selected_ph_printer_name))
+            physical.select_printer(last_selected_ph_printer_name);
+        else if (physical.has_selection() && physical.get_selected_printer_preset_name() != current_name)
+            physical.unselect_printer();
+    };
+    // A stale selector must not discard edits and silently select another
+    // printer through PresetCollection's first-visible fallback.
+    const Preset *requested_preset = m_presets->find_preset(Preset::remove_suffix_modified(preset_name), false, true);
+    if (requested_preset == nullptr || !requested_preset->is_visible) {
+        restore_previous_physical_printer();
+        update_tab_ui();
+        on_presets_changed();
+        show_error(this, _L("The selected preset is no longer available. The previous selection has been kept."));
+        return false;
+    }
+    preset_name = requested_preset->name;
     //BBS: add project embedded preset logic and refine is_external
     assert(! delete_current || (m_presets->get_edited_preset().name != preset_name && (m_presets->get_edited_preset().is_user() || m_presets->get_edited_preset().is_project_embedded)));
     //assert(! delete_current || (m_presets->get_edited_preset().name != preset_name && m_presets->get_edited_preset().is_user()));
@@ -6334,6 +6372,13 @@ bool Tab::select_preset(
     bool no_transfer = false;
     bool technology_changed = false;
     m_dependent_tabs.clear();
+    std::vector<PresetTransferCache *> transfer_caches{&m_transfer_cache};
+    for (auto type : {Preset::TYPE_PRINT, Preset::TYPE_FILAMENT, Preset::TYPE_SLA_PRINT, Preset::TYPE_SLA_MATERIAL}) {
+        if (Tab *tab = wxGetApp().get_tab(type))
+            transfer_caches.push_back(&tab->m_transfer_cache);
+    }
+    PresetTransferCacheScope transfer_scope(transfer_caches);
+    std::vector<PresetCollection *> dependent_discards;
     if ((m_presets->type() == Preset::TYPE_FILAMENT) && !preset_name.empty())
     {
         Preset *to_be_selected = m_presets->find_preset(preset_name, false, true);
@@ -6357,7 +6402,7 @@ bool Tab::select_preset(
     if (force_no_transfer) {
         no_transfer = true;
     }
-    if (current_dirty && ! may_discard_current_dirty_preset(nullptr, preset_name, no_transfer) && !force_select) {
+    if (current_dirty && !force_select && !may_discard_current_dirty_preset(nullptr, preset_name, no_transfer)) {
         canceled = true;
         BOOST_LOG_TRIVIAL(info) << boost::format("current dirty and cancelled");
     } else if (print_tab) {
@@ -6372,12 +6417,13 @@ bool Tab::select_preset(
         bool 			   new_preset_compatible = is_compatible_with_print(dependent.get_edited_preset_with_vendor_profile(),
         	m_presets->get_preset_with_vendor_profile(*m_presets->find_preset(preset_name, true)), printer_profile);
         if (! canceled)
-            canceled = old_preset_dirty && ! may_discard_current_dirty_preset(&dependent, preset_name) && ! new_preset_compatible && !force_select;
+            canceled = old_preset_dirty && !new_preset_compatible && !force_select &&
+                !may_discard_current_dirty_preset(&dependent, preset_name);
         if (! canceled) {
             // The preset will be switched to a different, compatible preset, or the '-- default --'.
             m_dependent_tabs.emplace_back((printer_technology == ptFFF) ? Preset::Type::TYPE_FILAMENT : Preset::Type::TYPE_SLA_MATERIAL);
             if (old_preset_dirty && ! new_preset_compatible)
-                dependent.discard_current_changes();
+                dependent_discards.push_back(&dependent);
         }
         BOOST_LOG_TRIVIAL(info) << boost::format("select process, new_preset_compatible %1%, old_preset_dirty %2%, cancelled %3%")
             %new_preset_compatible %old_preset_dirty % canceled;
@@ -6389,7 +6435,7 @@ bool Tab::select_preset(
         //
         // With the introduction of the SLA printer types, we need to support switching between
         // the FFF and SLA printers.
-        const Preset 		&new_printer_preset     = *m_presets->find_preset(preset_name, true);
+        const Preset          new_printer_preset = *m_presets->find_preset(preset_name, true);
 		const PresetWithVendorProfile new_printer_preset_with_vendor_profile = m_presets->get_preset_with_vendor_profile(new_printer_preset);
         PrinterTechnology    old_printer_technology = m_presets->get_edited_preset().printer_technology();
         PrinterTechnology    new_printer_technology = new_printer_preset.printer_technology();
@@ -6409,15 +6455,15 @@ bool Tab::select_preset(
                 { Preset::Type::TYPE_FILAMENT,      &m_preset_bundle->filaments,    ptFFF },
                 //{ Preset::Type::TYPE_SLA_MATERIAL,  &m_preset_bundle->sla_materials,ptSLA }
             };
-            Preset *to_be_selected = m_presets->find_preset(preset_name, false, true);
             ConfigOptionStrings* cur_opt2 = dynamic_cast <ConfigOptionStrings *>(m_presets->get_edited_preset().config.option("printer_extruder_variant"));
-            ConfigOptionStrings* to_select_opt2 = dynamic_cast <ConfigOptionStrings *>(to_be_selected->config.option("printer_extruder_variant"));
-            bool no_transfer_variant = cur_opt2->values != to_select_opt2->values;
+            const auto *to_select_opt2 = new_printer_preset.config.option<ConfigOptionStrings>("printer_extruder_variant");
+            bool no_transfer_variant = !cur_opt2 || !to_select_opt2 || cur_opt2->values != to_select_opt2->values;
             for (PresetUpdate &pu : updates) {
                 pu.old_preset_dirty = (old_printer_technology == pu.technology) && pu.presets->current_is_dirty();
                 pu.new_preset_compatible = (new_printer_technology == pu.technology) && is_compatible_with_printer(pu.presets->get_edited_preset_with_vendor_profile(), new_printer_preset_with_vendor_profile);
                 if (!canceled)
-                    canceled = pu.old_preset_dirty && !may_discard_current_dirty_preset(pu.presets, preset_name, false, no_transfer_variant) && !pu.new_preset_compatible && !force_select;
+                    canceled = pu.old_preset_dirty && !pu.new_preset_compatible && !force_select &&
+                        !may_discard_current_dirty_preset(pu.presets, preset_name, false, no_transfer_variant);
             }
             if (!canceled) {
                 for (PresetUpdate &pu : updates) {
@@ -6425,7 +6471,7 @@ bool Tab::select_preset(
                     if (pu.technology == new_printer_technology)
                         m_dependent_tabs.emplace_back(pu.tab_type);
                     if (pu.old_preset_dirty && !pu.new_preset_compatible)
-                        pu.presets->discard_current_changes();
+                        dependent_discards.push_back(pu.presets);
                 }
             }
         }
@@ -6436,6 +6482,13 @@ bool Tab::select_preset(
                 %technology_changed  % canceled;
     }
 
+    if (!canceled) {
+        const Preset *still_available = m_presets->find_preset(preset_name, false, true);
+        if (!still_available || !still_available->is_visible) {
+            canceled = true;
+            show_error(this, _L("The selected preset is no longer available. The previous selection has been kept."));
+        }
+    }
     BOOST_LOG_TRIVIAL(info) << boost::format("before delete action, canceled %1%, delete_current %2%") %canceled %delete_current;
     bool        delete_third_printer = false;
     std::deque<Preset> filament_presets;
@@ -6483,18 +6536,11 @@ bool Tab::select_preset(
 
     if (canceled) {
         BOOST_LOG_TRIVIAL(info) << boost::format("canceled delete, update ui...");
-        if (m_type == Preset::TYPE_PRINTER) {
-            if (!last_selected_ph_printer_name.empty() &&
-                m_presets->get_edited_preset().name == PhysicalPrinter::get_preset_name(last_selected_ph_printer_name)) {
-                // If preset selection was canceled and previously was selected physical printer, we should select it back
-                m_preset_bundle->physical_printers.select_printer(last_selected_ph_printer_name);
-            }
-            if (m_preset_bundle->physical_printers.has_selection()) {
-                // If preset selection was canceled and physical printer was selected
-                // we must disable selection marker for the physical printers
-                m_preset_bundle->physical_printers.unselect_printer();
-            }
-        }
+        // Restore before notifying the sidebar; no dependent cache belongs to
+        // this cancelled selection, including a postponed outer-workflow cache.
+        transfer_scope.rollback();
+        m_dependent_tabs.clear();
+        restore_previous_physical_printer();
 
         update_tab_ui();
 
@@ -6502,7 +6548,14 @@ bool Tab::select_preset(
         // if this action was initiated from the plater.
         on_presets_changed();
     } else {
+        // All confirmations succeeded. The existing selection/apply path now
+        // owns these transfers; do not resurrect consumed caches on UI errors.
+        transfer_scope.commit();
         BOOST_LOG_TRIVIAL(info) << boost::format("successfully delete, will update compatibility");
+        // Keep dependent edits until final target validation and any requested
+        // deletion succeed. Explicit saves made in the dialogs remain saved.
+        for (PresetCollection *dependent : dependent_discards)
+            dependent->discard_current_changes();
         if (current_dirty)
             m_presets->discard_current_changes();
 
@@ -6535,9 +6588,9 @@ bool Tab::select_preset(
              * to the corresponding printer_technology
              */
             const PrinterTechnology printer_technology = m_presets->get_edited_preset().printer_technology();
-            if (printer_technology == ptFFF && m_dependent_tabs.front() != Preset::Type::TYPE_PRINT)
+            if (printer_technology == ptFFF && (m_dependent_tabs.empty() || m_dependent_tabs.front() != Preset::Type::TYPE_PRINT))
                 m_dependent_tabs = { Preset::Type::TYPE_PRINT, Preset::Type::TYPE_FILAMENT };
-            else if (printer_technology == ptSLA && m_dependent_tabs.front() != Preset::Type::TYPE_SLA_PRINT)
+            else if (printer_technology == ptSLA && (m_dependent_tabs.empty() || m_dependent_tabs.front() != Preset::Type::TYPE_SLA_PRINT))
                 m_dependent_tabs = { Preset::Type::TYPE_SLA_PRINT, Preset::Type::TYPE_SLA_MATERIAL };
         }
 
@@ -6610,17 +6663,24 @@ bool Tab::may_discard_current_dirty_preset(PresetCollection *presets /*= nullptr
 
         if (m_type == presets->type()) // save changes for the current preset from this tab
         {
+            const Preset draft = presets->get_edited_preset();
             // revert unselected options to the old values
             presets->get_edited_preset().config.apply_only(presets->get_selected_preset().config, unselected_options);
-            //BBS: add project embedded preset relate logic
-            save_preset(name, false, save_to_project);
-            //save_preset(name);
+            const SaveContext save_context{nullptr, dlg.get_names_and_types().front().connection_update};
+            if (!save_preset(name, false, save_to_project, false, "", &save_context)) {
+                presets->get_edited_preset() = draft;
+                return false;
+            }
         }
         else
         {
-            //BBS: add project embedded preset relate logic
-            m_preset_bundle->save_changes_for_preset(name, presets->type(), unselected_options, save_to_project);
-            //m_preset_bundle->save_changes_for_preset(name, presets->type(), unselected_options);
+            try {
+                m_preset_bundle->save_changes_for_preset(name, presets->type(), unselected_options, save_to_project);
+                dlg.get_names_and_types().front().connection_update.apply(*m_preset_bundle);
+            } catch (const std::exception &error) {
+                show_error(this, _L("Could not complete the save. Earlier successful saves have been kept.") + "\n\n" + wxString::FromUTF8(error.what()));
+                return false;
+            }
 
             // If filament preset is saved for multi-material printer preset,
             // there are cases when filament comboboxs are updated for old (non-modified) colors,
@@ -6946,30 +7006,20 @@ void Tab::compare_preset()
     wxGetApp().mainframe->diff_dialog.show(m_type);
 }
 
-void Tab::transfer_options(const std::string &name_from, const std::string &name_to, std::vector<std::string> options)
+bool Tab::transfer_options(const std::string &name_from, const std::string &name_to, std::vector<std::string> options)
 {
     if (options.empty())
-        return;
-
-    Preset* preset_from = m_presets->find_preset(name_from);
-    Preset* preset_to = m_presets->find_preset(name_to);
-
-    if (m_type == Preset::TYPE_PRINTER) {
-         auto it = std::find(options.begin(), options.end(), "extruders_count");
-         if (it != options.end()) {
-             // erase "extruders_count" option from the list
-             options.erase(it);
-             // cache the extruders count
-             static_cast<TabPrinter*>(this)->cache_extruder_cnt(&preset_from->config);
-         }
+        return true;
+    std::string reason;
+    if (!transfer_preset_options(*m_presets, name_from, name_to, std::move(options),
+        [this](const std::string &name) { return select_preset(name); }, reason)) {
+        if (!reason.empty())
+            show_error(this, _L("Could not transfer the selected preset settings.") + "\n\n" + wxString::FromUTF8(reason));
+        return false;
     }
-    cache_config_diff(options, &preset_from->config);
-
-    if (name_to != m_presets->get_edited_preset().name )
-        select_preset(preset_to->name);
-
-    apply_config_from_cache();
+    update_dirty();
     load_current_preset();
+    return true;
 }
 
 // Save the current preset into file.
@@ -6978,41 +7028,47 @@ void Tab::transfer_options(const std::string &name_from, const std::string &name
 // Wizard calls save_preset with a name "My Settings", otherwise no name is provided and this method
 // opens a Slic3r::GUI::SavePresetDialog dialog.
 //BBS: add project embedded preset relate logic
-void Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_project, bool from_input, std::string input_name )
+bool Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_project, bool from_input, std::string input_name, const SaveContext *context)
 {
     // ORCA: Validate before opening any save-name UI for filament presets.
     if (!validate_filament_temperature_pairs())
-        return;
+        return false;
 
     // since buttons(and choices too) don't get focus on Mac, we set focus manually
     // to the treectrl so that the EVT_* events are fired for the input field having
     // focus currently.is there anything better than this ?
 //!	m_tabctrl->OnSetFocus();
+    PendingPhysicalPrinterUpdate connection_update = context ? context->connection_update : PendingPhysicalPrinterUpdate{};
     if (from_input) {
         SavePresetDialog dlg(m_parent, m_type, m_mode, detach ? _u8L("Detached") : "");
         dlg.Show(false);
         dlg.input_name_from_other(input_name);
         wxCommandEvent evt(wxEVT_TEXT, GetId());
         dlg.GetEventHandler()->ProcessEvent(evt);
-        dlg.confirm_from_other();
+        if (!dlg.confirm_from_other()) {
+            show_error(this, _L("The preset name is invalid or cannot be overwritten."));
+            return false;
+        }
         name = input_name;
         detach = dlg.get_detach_value(m_type);
+        connection_update = dlg.pending_physical_printer_update(name);
     }
 
     if (name.empty()) {
         SavePresetDialog dlg(m_parent, m_type, m_mode, detach ? _u8L("Detached") : "");
         if (!m_just_edit) {
             if (dlg.ShowModal() != wxID_OK)
-                return;
+                return false;
         }
         name = dlg.get_name();
         //BBS: add project embedded preset relate logic
         save_to_project = dlg.get_save_to_project_selection(m_type);
         detach          = dlg.get_detach_value(m_type);
+        connection_update = dlg.pending_physical_printer_update(name);
     }
 
     //BBS record current preset name
-    Preset& edited_preset = m_presets->get_edited_preset();
+    Preset edited_preset = context && context->candidate ? *context->candidate : m_presets->get_edited_preset();
     std::string curr_preset_name = edited_preset.name;
 
     bool exist_preset = false;
@@ -7026,19 +7082,27 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
     // Can still be set for all after creation
     if (m_presets->type() == Preset::TYPE_FILAMENT && !exist_preset && edited_preset.is_system) {
         Preset* _curr_printer = const_cast<Preset*>(&wxGetApp().preset_bundle->printers.get_selected_preset_base());
-        ConfigOptionStrings* compatible_printers = m_config->option<ConfigOptionStrings>("compatible_printers");
+        ConfigOptionStrings* compatible_printers = edited_preset.config.option<ConfigOptionStrings>("compatible_printers");
         if (nullptr != _curr_printer && compatible_printers && compatible_printers->values.empty())
             compatible_printers->values.push_back(_curr_printer->name);
     }
     // Save the preset into Slic3r::data_dir / presets / section_name / preset_name.json
-    m_presets->save_current_preset(name, detach, save_to_project, nullptr);
+    try {
+        if (!m_presets->save_current_preset(name, detach, save_to_project, &edited_preset)) {
+            show_error(this, _L("This preset cannot be overwritten. Save it under a different name."));
+            return false;
+        }
+    } catch (const std::exception &error) {
+        show_error(this, _L("Could not save the preset. Your unsaved changes have been kept.") + "\n\n" + wxString::FromUTF8(error.what()));
+        return false;
+    }
 
     //BBS create new settings
     new_preset = m_presets->find_preset(name, false, true);
     //Preset* preset = &m_presets.preset(it - m_presets.begin(), true);
     if (!new_preset) {
         BOOST_LOG_TRIVIAL(info) << "create new preset failed";
-        return;
+        return false;
     }
 
     // set sync_info for sync service
@@ -7052,7 +7116,16 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
             new_preset->user_id = wxGetApp().getAgent()->get_user_id();
         BOOST_LOG_TRIVIAL(info) << "sync_preset: create preset = " << new_preset->name;
     }
-    new_preset->save_info();
+    if (!new_preset->save_info())
+        show_error(this, _L("The preset was saved locally, but its synchronization metadata could not be saved. Cloud synchronization may be delayed."));
+
+    bool connection_saved = true;
+    try {
+        connection_update.apply(*m_preset_bundle);
+    } catch (const std::exception &error) {
+        connection_saved = false;
+        show_error(this, _L("The preset was saved, but its printer connection could not be updated. The previous connection was kept.") + "\n\n" + wxString::FromUTF8(error.what()));
+    }
 
     // Mark the print & filament enabled if they are compatible with the currently selected preset.
     // If saving the preset changes compatibility with other presets, keep the now incompatible dependent presets selected, however with a "red flag" icon showing that they are no more compatible.
@@ -7113,6 +7186,7 @@ void Tab::save_preset(std::string name /*= ""*/, bool detach, bool save_to_proje
 
     // update preset comboboxes in DiffPresetDlg
     wxGetApp().mainframe->diff_dialog.update_presets(m_type);
+    return connection_saved;
 }
 
 // Called for a currently selected preset.
@@ -7505,7 +7579,7 @@ void TabPrinter::cache_extruder_cnt(const DynamicPrintConfig* config/* = nullptr
 
     // get extruders count
     auto* nozzle_diameter = dynamic_cast<const ConfigOptionFloats*>(cached_config.option("nozzle_diameter"));
-    m_cache_extruder_count = nozzle_diameter->values.size(); //m_extruders_count;
+    m_transfer_cache.extruder_count = nozzle_diameter->values.size(); //m_extruders_count;
 }
 
 bool TabPrinter::apply_extruder_cnt_from_cache()
@@ -7513,9 +7587,9 @@ bool TabPrinter::apply_extruder_cnt_from_cache()
     if (m_presets->get_edited_preset().printer_technology() == ptSLA)
         return false;
 
-    if (m_cache_extruder_count > 0) {
-        m_presets->get_edited_preset().set_num_extruders(m_cache_extruder_count);
-        m_cache_extruder_count = 0;
+    if (m_transfer_cache.extruder_count > 0) {
+        m_presets->get_edited_preset().set_num_extruders(m_transfer_cache.extruder_count);
+        m_transfer_cache.extruder_count = 0;
         return true;
     }
     return false;

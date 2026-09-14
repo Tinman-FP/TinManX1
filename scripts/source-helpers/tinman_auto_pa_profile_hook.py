@@ -18,13 +18,6 @@ WRAPPER_REL = Path("Contents/Resources/orcaslicer_codex/auto_pa/tinman_auto_pa_p
 
 
 TARGET_MARKERS = (
-    "qidi x-plus 4",
-    "qidi xplus4",
-    "qidi plus 4",
-    "qidi plus4",
-    "qidi-xplus-4",
-    "qidimaxez",
-    "max ez",
     "ratrig v-core 4",
     "rat rig v-core 4",
     "prusa core one",

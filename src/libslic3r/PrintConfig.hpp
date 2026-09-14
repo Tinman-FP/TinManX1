@@ -80,11 +80,6 @@ enum PrintHostType {
     htPrusaLink, htPrusaConnect, htOctoPrint, htDuet, htFlashAir, htAstroBox, htRepetier, htMKS, htESP3D, htCrealityPrint, htObico, htFlashforge, htSimplyPrint, htElegooLink, ht3DPrinterOS, htMoonraker
 };
 
-enum WaveOverhangAlgorithm {
-    woaAndersons,
-    woaKaiser
-};
-
 enum WaveOverhangSpacingMode {
     wosmUniform,
     wosmProgressive
@@ -639,7 +634,6 @@ CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(ForwardCompatibilitySubstitutionRule)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(GCodeThumbnailsFormat)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(CounterboreHoleBridgingOption)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(PrintHostType)
-CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WaveOverhangAlgorithm)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WaveOverhangSpacingMode)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WaveOverhangSeamMode)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WaveOverhangPattern)
@@ -3798,13 +3792,16 @@ public:
     ConfigOptionFloat wave_overhang_perimeter_speed;
     ConfigOptionFloat wave_overhang_travel_speed;
     ConfigOptionInt wave_overhang_fan_speed;
+    ConfigOptionInt wave_overhang_aux_fan_speed;
     ConfigOptionInt wave_overhang_floor_layers;
     ConfigOptionBool wave_overhang_floor_use_hilbert;
     ConfigOptionInt wave_overhang_floor_hilbert_layers;
     ConfigOptionInt wave_overhang_floor_hilbert_density;
     ConfigOptionFloat wave_overhang_floor_print_speed;
     ConfigOptionFloat wave_overhang_floor_perimeter_speed;
+    ConfigOptionInt wave_overhang_floor_speed_ramp;
     ConfigOptionInt wave_overhang_floor_fan_speed;
+    ConfigOptionInt wave_overhang_floor_aux_fan_speed;
     ConfigOptionInt wave_overhang_nozzle_temp;
 
     size_t hash() const throw()
@@ -3814,13 +3811,16 @@ public:
         tinman_config_hash_combine(seed, wave_overhang_perimeter_speed);
         tinman_config_hash_combine(seed, wave_overhang_travel_speed);
         tinman_config_hash_combine(seed, wave_overhang_fan_speed);
+        tinman_config_hash_combine(seed, wave_overhang_aux_fan_speed);
         tinman_config_hash_combine(seed, wave_overhang_floor_layers);
         tinman_config_hash_combine(seed, wave_overhang_floor_use_hilbert);
         tinman_config_hash_combine(seed, wave_overhang_floor_hilbert_layers);
         tinman_config_hash_combine(seed, wave_overhang_floor_hilbert_density);
         tinman_config_hash_combine(seed, wave_overhang_floor_print_speed);
         tinman_config_hash_combine(seed, wave_overhang_floor_perimeter_speed);
+        tinman_config_hash_combine(seed, wave_overhang_floor_speed_ramp);
         tinman_config_hash_combine(seed, wave_overhang_floor_fan_speed);
+        tinman_config_hash_combine(seed, wave_overhang_floor_aux_fan_speed);
         tinman_config_hash_combine(seed, wave_overhang_nozzle_temp);
         return seed;
     }
@@ -3832,13 +3832,16 @@ public:
             wave_overhang_perimeter_speed, rhs.wave_overhang_perimeter_speed,
             wave_overhang_travel_speed, rhs.wave_overhang_travel_speed,
             wave_overhang_fan_speed, rhs.wave_overhang_fan_speed,
+            wave_overhang_aux_fan_speed, rhs.wave_overhang_aux_fan_speed,
             wave_overhang_floor_layers, rhs.wave_overhang_floor_layers,
             wave_overhang_floor_use_hilbert, rhs.wave_overhang_floor_use_hilbert,
             wave_overhang_floor_hilbert_layers, rhs.wave_overhang_floor_hilbert_layers,
             wave_overhang_floor_hilbert_density, rhs.wave_overhang_floor_hilbert_density,
             wave_overhang_floor_print_speed, rhs.wave_overhang_floor_print_speed,
             wave_overhang_floor_perimeter_speed, rhs.wave_overhang_floor_perimeter_speed,
+            wave_overhang_floor_speed_ramp, rhs.wave_overhang_floor_speed_ramp,
             wave_overhang_floor_fan_speed, rhs.wave_overhang_floor_fan_speed,
+            wave_overhang_floor_aux_fan_speed, rhs.wave_overhang_floor_aux_fan_speed,
             wave_overhang_nozzle_temp, rhs.wave_overhang_nozzle_temp);
     }
 
@@ -3851,13 +3854,16 @@ public:
             wave_overhang_perimeter_speed, rhs.wave_overhang_perimeter_speed,
             wave_overhang_travel_speed, rhs.wave_overhang_travel_speed,
             wave_overhang_fan_speed, rhs.wave_overhang_fan_speed,
+            wave_overhang_aux_fan_speed, rhs.wave_overhang_aux_fan_speed,
             wave_overhang_floor_layers, rhs.wave_overhang_floor_layers,
             wave_overhang_floor_use_hilbert, rhs.wave_overhang_floor_use_hilbert,
             wave_overhang_floor_hilbert_layers, rhs.wave_overhang_floor_hilbert_layers,
             wave_overhang_floor_hilbert_density, rhs.wave_overhang_floor_hilbert_density,
             wave_overhang_floor_print_speed, rhs.wave_overhang_floor_print_speed,
             wave_overhang_floor_perimeter_speed, rhs.wave_overhang_floor_perimeter_speed,
+            wave_overhang_floor_speed_ramp, rhs.wave_overhang_floor_speed_ramp,
             wave_overhang_floor_fan_speed, rhs.wave_overhang_floor_fan_speed,
+            wave_overhang_floor_aux_fan_speed, rhs.wave_overhang_floor_aux_fan_speed,
             wave_overhang_nozzle_temp, rhs.wave_overhang_nozzle_temp);
     }
 
@@ -3868,13 +3874,16 @@ protected:
         cache.opt_add("wave_overhang_perimeter_speed", base_ptr, this->wave_overhang_perimeter_speed);
         cache.opt_add("wave_overhang_travel_speed", base_ptr, this->wave_overhang_travel_speed);
         cache.opt_add("wave_overhang_fan_speed", base_ptr, this->wave_overhang_fan_speed);
+        cache.opt_add("wave_overhang_aux_fan_speed", base_ptr, this->wave_overhang_aux_fan_speed);
         cache.opt_add("wave_overhang_floor_layers", base_ptr, this->wave_overhang_floor_layers);
         cache.opt_add("wave_overhang_floor_use_hilbert", base_ptr, this->wave_overhang_floor_use_hilbert);
         cache.opt_add("wave_overhang_floor_hilbert_layers", base_ptr, this->wave_overhang_floor_hilbert_layers);
         cache.opt_add("wave_overhang_floor_hilbert_density", base_ptr, this->wave_overhang_floor_hilbert_density);
         cache.opt_add("wave_overhang_floor_print_speed", base_ptr, this->wave_overhang_floor_print_speed);
         cache.opt_add("wave_overhang_floor_perimeter_speed", base_ptr, this->wave_overhang_floor_perimeter_speed);
+        cache.opt_add("wave_overhang_floor_speed_ramp", base_ptr, this->wave_overhang_floor_speed_ramp);
         cache.opt_add("wave_overhang_floor_fan_speed", base_ptr, this->wave_overhang_floor_fan_speed);
+        cache.opt_add("wave_overhang_floor_aux_fan_speed", base_ptr, this->wave_overhang_floor_aux_fan_speed);
         cache.opt_add("wave_overhang_nozzle_temp", base_ptr, this->wave_overhang_nozzle_temp);
     }
 };
@@ -3884,8 +3893,6 @@ class WaveOverhangPlannerConfig : public StaticPrintConfig {
 public:
     ConfigOptionFloat wave_overhang_min_wave_time;
     ConfigOptionFloat wave_overhang_min_layer_time;
-    ConfigOptionEnum<WaveOverhangAlgorithm> wave_overhang_algorithm;
-    ConfigOptionFloat wave_overhang_ring_overlap;
     ConfigOptionFloat wave_overhang_min_angle;
     ConfigOptionEnum<WaveOverhangSpacingMode> wave_overhang_spacing_mode;
     ConfigOptionEnum<WaveOverhangSeamMode> wave_overhang_seam_mode;
@@ -3899,8 +3906,6 @@ public:
         size_t seed = 0;
         tinman_config_hash_combine(seed, wave_overhang_min_wave_time);
         tinman_config_hash_combine(seed, wave_overhang_min_layer_time);
-        tinman_config_hash_combine(seed, wave_overhang_algorithm);
-        tinman_config_hash_combine(seed, wave_overhang_ring_overlap);
         tinman_config_hash_combine(seed, wave_overhang_min_angle);
         tinman_config_hash_combine(seed, wave_overhang_spacing_mode);
         tinman_config_hash_combine(seed, wave_overhang_seam_mode);
@@ -3916,8 +3921,6 @@ public:
         return tinman_config_equal(
             wave_overhang_min_wave_time, rhs.wave_overhang_min_wave_time,
             wave_overhang_min_layer_time, rhs.wave_overhang_min_layer_time,
-            wave_overhang_algorithm, rhs.wave_overhang_algorithm,
-            wave_overhang_ring_overlap, rhs.wave_overhang_ring_overlap,
             wave_overhang_min_angle, rhs.wave_overhang_min_angle,
             wave_overhang_spacing_mode, rhs.wave_overhang_spacing_mode,
             wave_overhang_seam_mode, rhs.wave_overhang_seam_mode,
@@ -3934,8 +3937,6 @@ public:
         return tinman_config_less(
             wave_overhang_min_wave_time, rhs.wave_overhang_min_wave_time,
             wave_overhang_min_layer_time, rhs.wave_overhang_min_layer_time,
-            wave_overhang_algorithm, rhs.wave_overhang_algorithm,
-            wave_overhang_ring_overlap, rhs.wave_overhang_ring_overlap,
             wave_overhang_min_angle, rhs.wave_overhang_min_angle,
             wave_overhang_spacing_mode, rhs.wave_overhang_spacing_mode,
             wave_overhang_seam_mode, rhs.wave_overhang_seam_mode,
@@ -3950,8 +3951,6 @@ protected:
     {
         cache.opt_add("wave_overhang_min_wave_time", base_ptr, this->wave_overhang_min_wave_time);
         cache.opt_add("wave_overhang_min_layer_time", base_ptr, this->wave_overhang_min_layer_time);
-        cache.opt_add("wave_overhang_algorithm", base_ptr, this->wave_overhang_algorithm);
-        cache.opt_add("wave_overhang_ring_overlap", base_ptr, this->wave_overhang_ring_overlap);
         cache.opt_add("wave_overhang_min_angle", base_ptr, this->wave_overhang_min_angle);
         cache.opt_add("wave_overhang_spacing_mode", base_ptr, this->wave_overhang_spacing_mode);
         cache.opt_add("wave_overhang_seam_mode", base_ptr, this->wave_overhang_seam_mode);

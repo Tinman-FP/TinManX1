@@ -2,6 +2,7 @@
 #define slic3r_PhysicalPrinterDialog_hpp_
 
 #include <vector>
+#include <memory>
 
 #include <wx/gdicmn.h>
 
@@ -26,8 +27,10 @@ namespace GUI {
 class ConfigOptionsGroup;
 class PhysicalPrinterDialog : public DPIDialog
 {
+    Preset m_original_preset;
+    Preset m_draft_preset;
     DynamicPrintConfig* m_config            { nullptr };
-    ConfigOptionsGroup* m_optgroup          { nullptr };
+    std::unique_ptr<ConfigOptionsGroup> m_optgroup;
 
     Button*     m_printhost_browse_btn              {nullptr};
     Button*     m_printhost_test_btn                {nullptr};

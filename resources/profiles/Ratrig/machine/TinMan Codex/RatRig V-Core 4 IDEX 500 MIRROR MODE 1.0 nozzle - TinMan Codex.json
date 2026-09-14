@@ -11,6 +11,10 @@
         "1.0",
         "1.0"
     ],
+    "default_nozzle_volume_type": [
+        "Standard",
+        "Standard"
+    ],
     "min_layer_height": [
         "0.20",
         "0.20"
@@ -20,5 +24,8 @@
         "0.70"
     ],
     "default_print_profile": "0.50mm Quality @RatRig V-Core 4 IDEX 500 MIRROR MODE 1.0 nozzle - TinMan Codex",
-    "setting_id": "60Gx9aTvCH1vuuPI"
+    "setting_id": "60Gx9aTvCH1vuuPI",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - RatRig V-Core 4 @Codex"
+    ]
 }

@@ -803,6 +803,7 @@ def comment_tokens(value: str | None) -> list[str]:
 def material_tuning_candidates(comments: dict[str, str]) -> list[str]:
     candidates: list[str] = []
     for key in (
+        "continuous_fiber_source_material_id",
         "fiber_source_material_id",
         "filament_id",
         "filament_settings_id",
@@ -810,12 +811,16 @@ def material_tuning_candidates(comments: dict[str, str]) -> list[str]:
         "fiber_plastic_name",
         "filament_type",
         "fiber_name",
+        "continuous_fiber_name",
     ):
         candidates.extend(comment_tokens(comments.get(key)))
 
     plastic_tokens = comment_tokens(comments.get("fiber_plastic_type")) + comment_tokens(comments.get("fiber_plastic_name"))
     fiber_tokens = (
-        comment_tokens(comments.get("fiber_name"))
+        comment_tokens(comments.get("continuous_fiber_name"))
+        + comment_tokens(comments.get("continuous_fiber_type"))
+        + comment_tokens(comments.get("continuous_fiber_source_material_id"))
+        + comment_tokens(comments.get("fiber_name"))
         + comment_tokens(comments.get("fiber_type"))
         + comment_tokens(comments.get("fiber_source_material_id"))
         + comment_tokens(comments.get("filament_id"))
@@ -1181,8 +1186,14 @@ def planner_config(parsed: ParsedGCode, args: argparse.Namespace) -> PlannerConf
     cfg.restart_length = parse_first_positive_float(comments.get("fiber_restart_length"), cfg.restart_length)
     cfg.start_length = parse_first_positive_float(comments.get("fiber_start_length"), cfg.start_length)
     cfg.slow_length = parse_first_positive_float(comments.get("fiber_slow_length"), cfg.slow_length)
-    cfg.fiber_diameter = parse_first_float(comments.get("fiber_diameter"), cfg.fiber_diameter, prefer_last_nonzero=True)
-    cfg.fiber_linear_density = parse_first_float(comments.get("fiber_linear_density"), cfg.fiber_linear_density, prefer_last_nonzero=True)
+    cfg.fiber_diameter = parse_first_float(
+        comments.get("continuous_fiber_diameter") or comments.get("fiber_diameter"),
+        cfg.fiber_diameter, prefer_last_nonzero=True,
+    )
+    cfg.fiber_linear_density = parse_first_float(
+        comments.get("continuous_fiber_linear_density") or comments.get("fiber_linear_density"),
+        cfg.fiber_linear_density, prefer_last_nonzero=True,
+    )
     cfg.fiber_width = parse_first_positive_float(comments.get("fiber_line_width"), cfg.fiber_width)
     cfg.fiber_p_value = round(math.pi * (cfg.fiber_diameter / 2.0) ** 2 * 0.835, 5)
     cfg.fiber_v_per_mm = cfg.fiber_p_value

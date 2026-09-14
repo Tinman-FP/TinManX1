@@ -1,7 +1,7 @@
 {
     "type": "machine",
     "name": "Prusa CORE One L 0.8 nozzle - TinMan Codex",
-    "inherits": "Prusa CORE One L 0.8 nozzle",
+    "inherits": "Prusa CORE One L HF 0.8 nozzle",
     "from": "system",
     "instantiation": "true",
     "printer_model": "Prusa CORE One L",
@@ -10,6 +10,9 @@
     "nozzle_diameter": [
         "0.8"
     ],
+    "default_nozzle_volume_type": [
+        "Standard"
+    ],
     "min_layer_height": [
         "0.16"
     ],
@@ -17,5 +20,8 @@
         "0.56"
     ],
     "default_print_profile": "0.40mm Quality @Prusa CORE One L 0.8 nozzle - TinMan Codex",
-    "setting_id": "qsW2sTXsb5RE46SB"
+    "setting_id": "qsW2sTXsb5RE46SB",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Prusa Core One @Codex"
+    ]
 }

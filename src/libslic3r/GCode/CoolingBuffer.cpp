@@ -3,6 +3,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/log/trivial.hpp>
+#include <cstdio>
 #include <iostream>
 #include <float.h>
 #include <system_error>
@@ -71,6 +72,8 @@ struct CoolingLine
         // ORCA: Add support for ironing fan speed control
         TYPE_IRONING_FAN_START         = 1 << 19,
         TYPE_IRONING_FAN_END           = 1 << 20,
+        TYPE_WAVE_OVERHANG_FAN_START   = 1 << 21,
+        TYPE_WAVE_OVERHANG_FAN_END     = 1 << 22,
     };
 
     CoolingLine(unsigned int type, size_t  line_start, size_t  line_end) :
@@ -102,6 +105,8 @@ struct CoolingLine
     float   time_max;
     // If marked with the "slowdown" flag, the line has been slowed down.
     bool    slowdown;
+    int     wave_overhang_fan_percent = -1;
+    int     wave_overhang_aux_fan_percent = -1;
 };
 
 // Calculate the required per extruder time stretches.
@@ -519,6 +524,15 @@ std::vector<PerExtruderAdjustments> CoolingBuffer::parse_layer_gcode(const std::
             line.type = CoolingLine::TYPE_OVERHANG_FAN_START;
         } else if (boost::starts_with(sline, ";_OVERHANG_FAN_END")) {
             line.type = CoolingLine::TYPE_OVERHANG_FAN_END;
+        } else if (boost::starts_with(sline, ";_WAVE_OVERHANG_FAN_START")) {
+            line.type = CoolingLine::TYPE_WAVE_OVERHANG_FAN_START;
+            int main_percent = -1;
+            int aux_percent = -1;
+            std::sscanf(sline.c_str(), ";_WAVE_OVERHANG_FAN_START %d %d", &main_percent, &aux_percent);
+            line.wave_overhang_fan_percent = main_percent < 0 ? -1 : std::clamp(main_percent, 0, 100);
+            line.wave_overhang_aux_fan_percent = aux_percent < 0 ? -1 : std::clamp(aux_percent, 0, 100);
+        } else if (boost::starts_with(sline, ";_WAVE_OVERHANG_FAN_END")) {
+            line.type = CoolingLine::TYPE_WAVE_OVERHANG_FAN_END;
         } else if (boost::starts_with(sline, ";_INTERNAL_BRIDGE_FAN_START")) { // ORCA: Add support for separate internal bridge fan speed control
             line.type = CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START;
         } else if (boost::starts_with(sline, ";_INTERNAL_BRIDGE_FAN_END")) { // ORCA: Add support for separate internal bridge fan speed control
@@ -730,6 +744,8 @@ std::string CoolingBuffer::apply_layer_cooldown(
     int  supp_interface_fan_speed = 0;
     bool ironing_fan_control= false; // ORCA: Add support for ironing fan speed control
     int  ironing_fan_speed   = 0; // ORCA: Add support for ironing fan speed control
+    int  wave_overhang_fan_speed = -1;
+    bool wave_aux_override_active = false;
     auto change_extruder_set_fan = [ this, layer_id, layer_time, &new_gcode, part_cooling_fan_min_pwm,
         &overhang_fan_control, &overhang_fan_speed,
         &internal_bridge_fan_control, &internal_bridge_fan_speed,
@@ -829,6 +845,7 @@ std::string CoolingBuffer::apply_layer_cooldown(
                                                                {CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START, false}, // ORCA: Add support for separate internal bridge fan speed control
                                                                {CoolingLine::TYPE_SUPPORT_INTERFACE_FAN_START, false},
                                                                {CoolingLine::TYPE_IRONING_FAN_START, false}, // ORCA: Add support for ironing fan speed control
+                                                               {CoolingLine::TYPE_WAVE_OVERHANG_FAN_START, false},
                                                                {CoolingLine::TYPE_FORCE_RESUME_FAN, false}};
     bool need_set_fan = false;
 
@@ -857,6 +874,25 @@ std::string CoolingBuffer::apply_layer_cooldown(
                 fan_speed_change_requests[CoolingLine::TYPE_OVERHANG_FAN_START] = false;
             }
             need_set_fan = true;
+        } else if (line->type & CoolingLine::TYPE_WAVE_OVERHANG_FAN_START) {
+            wave_overhang_fan_speed = line->wave_overhang_fan_percent;
+            if (wave_overhang_fan_speed >= 0) {
+                fan_speed_change_requests[CoolingLine::TYPE_WAVE_OVERHANG_FAN_START] = true;
+                need_set_fan = true;
+            }
+            if (line->wave_overhang_aux_fan_percent >= 0 && m_config.auxiliary_fan.value) {
+                new_gcode += GCodeWriter::set_additional_fan(line->wave_overhang_aux_fan_percent);
+                wave_aux_override_active = true;
+            }
+        } else if (line->type & CoolingLine::TYPE_WAVE_OVERHANG_FAN_END) {
+            if (fan_speed_change_requests[CoolingLine::TYPE_WAVE_OVERHANG_FAN_START]) {
+                fan_speed_change_requests[CoolingLine::TYPE_WAVE_OVERHANG_FAN_START] = false;
+                need_set_fan = true;
+            }
+            if (wave_aux_override_active && m_config.auxiliary_fan.value) {
+                new_gcode += GCodeWriter::set_additional_fan(m_additional_fan_speed);
+                wave_aux_override_active = false;
+            }
         } else if (line->type & CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START) { // ORCA: Add support for separate internal bridge fan speed control
             if (internal_bridge_fan_control && !fan_speed_change_requests[CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START]) {
                 need_set_fan = true;
@@ -982,7 +1018,10 @@ std::string CoolingBuffer::apply_layer_cooldown(
         }
 
         if (need_set_fan) {
-            if (fan_speed_change_requests[CoolingLine::TYPE_OVERHANG_FAN_START]){
+            if (fan_speed_change_requests[CoolingLine::TYPE_WAVE_OVERHANG_FAN_START]) {
+                new_gcode += GCodeWriter::set_fan(m_config.gcode_flavor, wave_overhang_fan_speed, part_cooling_fan_min_pwm);
+                m_current_fan_speed = wave_overhang_fan_speed;
+            } else if (fan_speed_change_requests[CoolingLine::TYPE_OVERHANG_FAN_START]){
                 new_gcode += GCodeWriter::set_fan(m_config.gcode_flavor, overhang_fan_speed, part_cooling_fan_min_pwm);
                 m_current_fan_speed = overhang_fan_speed;
             } else if (fan_speed_change_requests[CoolingLine::TYPE_INTERNAL_BRIDGE_FAN_START]){ // ORCA: Add support for separate internal bridge fan speed control

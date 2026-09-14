@@ -15,8 +15,10 @@ This repository preserves source credit for the TinManX1 public patch release. I
 | --- | --- | --- |
 | OrcaSlicer / SoftFever and contributors | <https://github.com/OrcaSlicer/OrcaSlicer> | Primary upstream application and source baseline for this patchset. Preserve AGPL license, upstream notices, and contributor credit. |
 | Bambu Studio / Bambu Lab contributors | <https://github.com/bambulab/BambuStudio> | Upstream family member and connectivity behavior reference. Proprietary plugin binaries are not redistributed here. |
-| PrusaSlicer / Prusa Research contributors | <https://github.com/prusa3d/PrusaSlicer> | Upstream slicer family lineage and behavior reference. |
-| Slic3r contributors | <https://github.com/slic3r/Slic3r> | Original slicer lineage behind PrusaSlicer-derived slicers. |
+| PrusaSlicer / Prusa Research contributors | <https://github.com/prusa3d/PrusaSlicer> | Upstream slicer family lineage and behavior reference. PrusaSlicer 3.0.0-alpha11 also informed profile ownership, derived-state handling, and optional layer-height inheritance; see `docs/research/profile-reliability-work.md`. TinManX1 remains OrcaSlicer-based, not a full PrusaSlicer 3 rebase. |
+| Slic3r / Alessandro Ranellucci and the RepRap community | <https://github.com/slic3r/Slic3r> | Original slicer lineage behind PrusaSlicer-derived slicers. |
+| SuperSlicer / supermerill and contributors | <https://github.com/supermerill/SuperSlicer> | Community slicing enhancements inherited through the upstream family. |
+| Cura / UltiMaker and contributors | <https://github.com/Ultimaker/Cura> | Algorithm contributions acknowledged by the OrcaSlicer upstream project. |
 
 ## Wave Overhangs
 
@@ -24,7 +26,7 @@ This repository preserves source credit for the TinManX1 public patch release. I
 | --- | --- | --- |
 | Dennis Klappe, OrcaSlicer-WaveOverhangs | <https://github.com/dennisklappe/OrcaSlicer-WaveOverhangs> | OrcaSlicer Wave Overhangs fork and practical Orca integration reference. |
 | Steven McCulloch, PrusaSlicer-WaveOverhangs | <https://github.com/stmcculloch/PrusaSlicer-WaveOverhangs> | PrusaSlicer wave-overhang lineage referenced by the Orca fork. |
-| Janis A. Andersons et al. | <https://doi.org/10.2139/ssrn.6640458> | Wave-inspired overhang research lineage. |
+| Janis A. Andersons, Salome Sanchez, and Tom Vaneker | <https://doi.org/10.1016/j.addlet.2026.100392> | Published wave-inspired overhang research. Janis A. Andersons also authored the wavefront generator used by the current implementation. Earlier preprint: <https://doi.org/10.2139/ssrn.6640458>. |
 | Rieks Kaiser, LaSO | <https://github.com/riekskaiser/wave_LaSO> | Laterally supported overhang algorithm reference. |
 
 ## Arc Supports
@@ -53,6 +55,15 @@ This repository preserves source credit for the TinManX1 public patch release. I
 | MechaniCalc | <https://mechanicalc.com/reference/strength-of-materials> | Mechanics vocabulary and load-path reference. |
 | Rocket/FibreSeek local reference work | Proprietary/local reference only | Used as private interoperability and planning context for command sequencing, profile comparison, and hardware constraints. No proprietary Rocket/FibreSeek assets, binaries, database exports, UI text, or private validation data are redistributed here. |
 
+## Machine Capability Envelopes
+
+| Source | URL | Credit |
+| --- | --- | --- |
+| Anonoei, Klipper Auto Speed | <https://github.com/Anonoei/klipper_auto_speed> | MIT-licensed missed-step search concept and research reference. TinManX1 does not vendor or copy its source code. |
+| Klipper documentation | <https://www.klipper3d.org/Resonance_Compensation.html> | Motion-limit, resonance-compensation, and input-shaper quality guidance. |
+| Andrew Ellis, Print Tuning Guide | <https://ellis3dp.com/Print-Tuning-Guide/articles/determining_max_speeds_accels.html> | Validation-duration, practical-limit, and safety-margin methodology. |
+| Frix-x, Shake&Tune | <https://github.com/Frix-x/klippain-shaketune> | GPL-3.0 vibration-profile methodology used as a research reference; no Shake&Tune source code is vendored. |
+
 ## TinManX1 FibreSeek Planner And Profile Work
 
 | Source | Credit |
@@ -63,6 +74,11 @@ This repository preserves source credit for the TinManX1 public patch release. I
 
 ## Additional Ledgers
 
+- The application's Credits and Licenses dialog acknowledges upstream libraries
+  and tools. Its dependency entries include the native geometry/image/network
+  libraries, FFmpeg for the macOS camera bridge, and Shapely for optional Arc
+  Overhang tooling. Original notices remain in their source or dependency
+  packages; the camera bridge carries `FFmpeg-LGPL-2.1.txt` when bundled.
 - `docs/attribution/source-credit-ledger-2026-06.md`
 - `docs/research/experimental-transform-credit-ledger.md`
 - `docs/research/wave-overhang-source-snapshot-2026-05-19.md`

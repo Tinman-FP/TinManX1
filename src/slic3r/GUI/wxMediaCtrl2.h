@@ -28,6 +28,8 @@ public:
 
     void Load(wxURI url);
 
+    void LoadDirectStream(wxString const & url);
+
     void Play();
 
     void Stop();
@@ -52,6 +54,8 @@ protected:
 private:
     void create_player();
     void * m_player = nullptr;
+    void * m_direct_player = nullptr;
+    bool m_direct_stream_active = false;
     wxMediaState m_state = wxMEDIASTATE_STOPPED;
     int          m_error  = 0;
     wxSize       m_video_size{16, 9};
@@ -66,6 +70,8 @@ public:
     ~wxMediaCtrl2();
 
     void Load(wxURI url);
+
+    void LoadDirectStream(wxString const & url);
 
     void Play();
 

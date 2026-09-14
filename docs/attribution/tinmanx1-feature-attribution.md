@@ -50,3 +50,12 @@ The TinManX1 port emits advisory-only viewport metadata. The Prepare view now su
 - Local reference boundary: Rocket/FibreSeek behavior was used only as private interoperability evidence for command sequencing, profile comparison, and hardware constraints. Proprietary Rocket/FibreSeek assets, databases, UI strings, and private G-code exports are not redistributed.
 
 The TinManX1 port preserves continuous-fiber lane metadata and review gates for Preview/Summary use. The native planner emits experimental FibreSeek-style command blocks and summaries, but it does not certify hardware readiness, start uploads, or replace real-machine qualification.
+
+## Auto Pressure Advance / Max Flow Preflight
+
+- Source: TinManX1 same-print calibration requirements from William Tinney's Qidi Plus 4, Max EZ, RatRig V-Core 4 IDEX, and Prusa Core One workflows.
+- Reference credit: CNC Kitchen pressure-advance and volumetric-flow testing methodology, Klipper pressure-advance documentation, Marlin Linear Advance documentation, and Prusa pressure-advance behavior as calibration references.
+- Project credit: William Tinney / Tinman-FP for printer fleet requirements, calibration-region constraints, Beacon-assisted measurement direction, and live G-code export validation.
+- Implementation credit: OpenAI Codex / GPT-5 for the TinManX1 postprocessor wrapper, real-score gating, RatRig T0/T1 detection, max-flow governor integration path, visible calibration-lane gate, profile hook, and verification scaffolding.
+
+The TinManX1 auto-PA path only applies PA, adaptive PA, or max-flow changes when real same-print calibration score files are available for the detected target printer and a named TinMan calibration lane is visible in the sliced object list. Without real scores or a visible edge-strip lane, it preserves the model G-code and emits an audit stamp rather than applying hidden or synthetic calibration data.

@@ -1,5 +1,6 @@
 #include "AboutDialog.hpp"
 #include "I18N.hpp"
+#include "TinManBuildInfo.hpp"
 
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Color.hpp"
@@ -44,7 +45,7 @@ void AboutDialogLogo::onRepaint(wxEvent &event)
 CopyrightsDialog::CopyrightsDialog()
     : DPIDialog(static_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY, from_u8((boost::format("%1% - %2%")
         % (wxGetApp().is_editor() ? SLIC3R_APP_FULL_NAME : GCODEVIEWER_APP_NAME)
-        % _utf8(L("Portions copyright"))).str()),
+        % _utf8(L("Credits and Licenses"))).str()),
         wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
     this->SetFont(wxGetApp().normal_font());
@@ -59,7 +60,7 @@ CopyrightsDialog::CopyrightsDialog()
 
     m_html = new wxHtmlWindow(this, wxID_ANY, wxDefaultPosition,
                               wxSize(40 * em_unit(), 20 * em_unit()), wxHW_SCROLLBAR_AUTO);
-    m_html->SetMinSize(wxSize(FromDIP(870),FromDIP(520)));
+    m_html->SetMinSize(wxSize(FromDIP(620), FromDIP(440)));
     m_html->SetBackgroundColour(*wxWHITE);
     wxFont font = get_default_font(this);
     const int fs = font.GetPointSize();
@@ -84,36 +85,54 @@ void CopyrightsDialog::fill_entries()
     m_entries = {
         { "Admesh",                                         "",      "https://admesh.readthedocs.io/" },
         { "Anti-Grain Geometry",                            "",      "http://antigrain.com" },
+        { "ankerl::unordered_dense",                        "",      "https://github.com/martinus/unordered_dense" },
         { "ArcWelderLib",                                   "",      "https://plugins.octoprint.org/plugins/arc_welder" },
         { "Boost",                                          "",      "http://www.boost.org" },
         { "Cereal",                                         "",      "http://uscilab.github.io/cereal" },
         { "CGAL",                                           "",      "https://www.cgal.org" },
         { "Clipper",                                        "",      "http://www.angusj.co" },
+        { "Clipper2",                                       "",      "https://github.com/AngusJohnson/Clipper2" },
         { "libcurl",                                        "",      "https://curl.se/libcurl" },
         { "Draco",                                          "",      "https://google.github.io/draco/" },
+        { "Earcut",                                         "",      "https://github.com/mapbox/earcut.hpp" },
         { "Eigen3",                                         "",      "http://eigen.tuxfamily.org" },
         { "Expat",                                          "",      "http://www.libexpat.org" },
         { "fast_float",                                     "",      "https://github.com/fastfloat/fast_float" },
+        { "FFmpeg (macOS camera bridge)",                    "",      "https://ffmpeg.org/" },
+        { "FreeType",                                       "",      "https://freetype.org/" },
         { "GLAD (Multi-Language GL Loader-Generator)",       "",      "https://github.com/Dav1dde/glad" },
         { "GLFW",                                           "",      "https://www.glfw.org" },
+        { "GLU tessellator",                                "",      "https://gitlab.freedesktop.org/mesa/glu" },
         { "GNU gettext",                                    "",      "https://www.gnu.org/software/gettext" },
+        { "HIDAPI",                                         "",      "https://github.com/libusb/hidapi" },
         { "ImGUI",                                          "",      "https://github.com/ocornut/imgui" },
         { "ImGuizmo",                                       "",      "https://github.com/CedricGuillemet/ImGuizmo" },
         { "Libigl",                                         "",      "https://libigl.github.io" },
         { "libnest2d",                                      "",      "https://github.com/tamasmeszaros/libnest2d" },
+        { "libnoise",                                       "",      "https://github.com/SoftFever/Orca-deps-libnoise" },
+        { "libjpeg-turbo",                                  "",      "https://libjpeg-turbo.org/" },
+        { "libpng",                                         "",      "https://www.libpng.org/pub/png/libpng.html" },
         { "lib_fts",                                        "",      "https://www.forrestthewoods.com" },
         { "Mesa 3D",                                        "",      "https://mesa3d.org" },
+        { "MCUT",                                           "",      "https://github.com/cutdigital/mcut" },
+        { "MD4C",                                           "",      "https://github.com/mity/md4c" },
+        { "mdns",                                           "",      "https://github.com/mjansson/mdns" },
+        { "miniLZO",                                        "",      "https://www.oberhumer.com/opensource/lzo/" },
         { "Miniz",                                          "",      "https://github.com/richgel999/miniz" },
         { "Nanosvg",                                        "",      "https://github.com/memononen/nanosvg" },
         { "nlohmann/json",                                  "",      "https://json.nlohmann.me" },
         { "Qhull",                                          "",      "http://qhull.org" },
         { "Open Cascade",                                   "",      "https://www.opencascade.com" },
+        { "OpenCV",                                         "",      "https://opencv.org/" },
         { "OpenGL",                                         "",      "https://www.opengl.org" },
+        { "OpenSSL",                                        "",      "https://openssl-library.org/" },
         { "PoEdit",                                         "",      "https://poedit.net" },
         { "PrusaSlicer",                                    "",      "https://www.prusa3d.com" },
+        { "QOI",                                            "",      "https://qoiformat.org/" },
         { "Real-Time DXT1/DXT5 C compression library",      "",      "https://github.com/Cyan4973/RygsDXTc" },
         { "SemVer",                                         "",      "https://semver.org" },
         { "Shinyprofiler",                                  "",      "https://code.google.com/p/shinyprofiler" },
+        { "Shapely (optional Arc Overhang tooling)",         "",      "https://github.com/shapely/shapely" },
         { "SuperSlicer",                                    "",      "https://github.com/supermerill/SuperSlicer" },
         { "TBB",                                            "",      "https://www.intel.cn/content/www/cn/zh/developer/tools/oneapi/onetbb.html" },
         { "wxWidgets",                                      "",      "https://www.wxwidgets.org" },
@@ -130,8 +149,6 @@ wxString CopyrightsDialog::get_html_text()
     const auto text_clr_str = encode_color(ColorRGB(text_clr.Red(), text_clr.Green(), text_clr.Blue()));
     const auto bgr_clr_str = encode_color(ColorRGB(bgr_clr.Red(), bgr_clr.Green(), bgr_clr.Blue()));
 
-    const wxString copyright_str = _L("Copyright") + "&copy; ";
-
     wxString text = wxString::Format(
         "<html>"
             "<body bgcolor= %s link= %s>"
@@ -141,17 +158,52 @@ wxString CopyrightsDialog::get_html_text()
                 "<a href=\"%s\">%s.</a><br/>"
                 "<font size=\"5\">%s.</font><br/>"
                 "<br /><br />"
-                "<font size=\"5\">%s</font><br/>"
-                "<font size=\"5\">%s:</font><br/>"
-                "<br />"
                 "<font size=\"3\">",
          bgr_clr_str, text_clr_str, text_clr_str,
         _L("License"),
         _L("TinManX1 is based on Orca Slicer and is licensed under "),
         "https://www.gnu.org/licenses/agpl-3.0.html",_L("GNU Affero General Public License, version 3"),
-        _L("Orca Slicer is based on PrusaSlicer and BambuStudio"),
-        _L("Libraries"),
-        _L("This software uses open source components whose copyright and other proprietary rights belong to their respective owners"));
+        _L("Upstream copyrights and third-party license notices are retained"));
+
+    const auto append_credits = [&text](const wxString& heading, const std::vector<Entry>& entries) {
+        text += "<h3>" + heading + "</h3>";
+        for (const auto& entry : entries) {
+            text += wxString::Format("<p><b>%s</b><br/>%s<br/><a href=\"%s\">%s</a></p>",
+                from_u8(entry.lib_name), from_u8(entry.copyright), from_u8(entry.link), _L("Source and details"));
+        }
+    };
+
+    append_credits(_L("TinManX1 Contributors"), {
+        { "William Tinney / Tinman-FP", "Project stewardship, requirements, printer testing, validation feedback, and release direction.", "https://github.com/Tinman-FP/TinManX1" },
+        { "OpenAI Codex", "AI-assisted engineering, implementation, review, regression tests, documentation, and packaging under project direction.", "https://openai.com/codex/" },
+    });
+    append_credits(_L("Upstream Slicer Projects"), {
+        { "OrcaSlicer / SoftFever and contributors", "Primary application and slicing baseline: OrcaSlicer 2.4.2.", "https://github.com/OrcaSlicer/OrcaSlicer" },
+        { "Bambu Studio / Bambu Lab and contributors", "Upstream application lineage and printer integration work.", "https://github.com/bambulab/BambuStudio" },
+        { "PrusaSlicer / Prusa Research and contributors", "Upstream slicing lineage; selected profile-reliability improvements inspired by PrusaSlicer 3.0.0-alpha11. Not a full PrusaSlicer 3 rebase.", "https://github.com/prusa3d/PrusaSlicer" },
+        { "Slic3r / Alessandro Ranellucci and the RepRap community", "Original slicer foundation and community contributions.", "https://github.com/slic3r/Slic3r" },
+        { "SuperSlicer / supermerill and contributors", "Community slicing enhancements inherited through the upstream family.", "https://github.com/supermerill/SuperSlicer" },
+        { "Cura / UltiMaker and contributors", "Algorithm contributions acknowledged by the OrcaSlicer upstream project.", "https://github.com/Ultimaker/Cura" },
+    });
+    append_credits(_L("Feature Sources and Research"), {
+        { "Wave Overhangs / Dennis Klappe and contributors", "OrcaSlicer integration; the current port follows upstream v0.4.0.", "https://github.com/dennisklappe/OrcaSlicer-WaveOverhangs" },
+        { "Janis A. Andersons, Salome Sanchez, and Tom Vaneker", "Wave-inspired overhang research; Janis A. Andersons also authored the wavefront generator used by the implementation.", "https://doi.org/10.1016/j.addlet.2026.100392" },
+        { "Steven McCulloch / layershift3d", "Arc Overhang concept and PrusaSlicer Wave Overhangs lineage.", "https://github.com/stmcculloch" },
+        { "Nicolai Wachenschwan", "PrusaSlicer Arc Overhang integration.", "https://github.com/nicolai-wachenschwan/arc-overhang-prusaslicer-integration" },
+        { "Kelsch", "OrcaSlicer Arc Overhang integration; its GPL-3.0 notices remain with the bundled adapter sources.", "https://github.com/Kelsch/arc-overhang-orcaslicer-integration" },
+        { "Rieks Kaiser / LaSO", "Laterally supported overhang research reference.", "https://github.com/riekskaiser/wave_LaSO" },
+        { "Klipper contributors", "Printer-control and calibration compatibility references.", "https://www.klipper3d.org/" },
+        { "Moonraker / Arksine and contributors", "HTTP and WebSocket API reference for supported printer integrations.", "https://github.com/Arksine/moonraker" },
+        { "CNC Kitchen / Stefan Hermann and ModBot", "Material, flow, pressure-advance, and calibration research references.", "https://github.com/Tinman-FP/TinManX1/blob/agent/snapmaker-live-filament-sync/ATTRIBUTION.md" },
+        { "Anonoei / Klipper Auto Speed", "Missed-step search research reference; no Auto Speed source code is vendored.", "https://github.com/Anonoei/klipper_auto_speed" },
+        { "Andrew Ellis and Frix-x / Shake&amp;Tune", "Motion-limit validation and vibration-analysis references; no Shake&amp;Tune source code is vendored.", "https://github.com/Tinman-FP/TinManX1/blob/agent/snapmaker-live-filament-sync/ATTRIBUTION.md" },
+        { "MechaniCalc, Autodesk, SOLIDWORKS, and additive-manufacturing researchers", "Strength Lens mechanics and visualization references. Strength Lens is advisory, not certified FEA.", "https://github.com/Tinman-FP/TinManX1/blob/agent/snapmaker-live-filament-sync/SoftFever_doc/orcaslicer_codex_feature_attribution.md" },
+        { "Rocket / FibreSeek", "Interoperability research only. No proprietary source code, assets, or endorsement is claimed.", "https://github.com/Tinman-FP/TinManX1/blob/agent/snapmaker-live-filament-sync/NOTICE.md" },
+    });
+    text += "<p><a href=\"https://github.com/Tinman-FP/TinManX1/blob/agent/snapmaker-live-filament-sync/ATTRIBUTION.md\">"
+            "Full attribution and source ledgers</a></p>";
+    text += "<h3>" + _L("Libraries") + "</h3><p>" +
+        _L("This software uses open source components whose copyright and other proprietary rights belong to their respective owners") + "</p>";
 
     for (auto& entry : m_entries) {
         text += format_wxstr(
@@ -185,7 +237,7 @@ void CopyrightsDialog::on_dpi_changed(const wxRect &suggested_rect)
 
     msw_buttons_rescale(this, em, { wxID_CLOSE });
 
-    const wxSize& size = wxSize(40 * em, 20 * em);
+    const wxSize size(FromDIP(620), FromDIP(440));
 
     m_html->SetMinSize(size);
     m_html->Refresh();
@@ -214,63 +266,43 @@ AboutDialog::AboutDialog()
     SetFont(wxGetApp().normal_font());
 	SetBackgroundColour(*wxWHITE);
 
-    wxPanel* m_panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(560), FromDIP(125)), wxTAB_TRAVERSAL);
-
-    wxBoxSizer *panel_versizer = new wxBoxSizer(wxVERTICAL);
-    wxBoxSizer *vesizer  = new wxBoxSizer(wxVERTICAL);
-
-    m_panel->SetSizer(panel_versizer);
-
     wxBoxSizer *ver_sizer = new wxBoxSizer(wxVERTICAL);
+    auto main_sizer = new wxBoxSizer(wxVERTICAL);
+    auto header = new wxBoxSizer(wxHORIZONTAL);
+    auto identity = new wxBoxSizer(wxVERTICAL);
 
-	auto main_sizer = new wxBoxSizer(wxVERTICAL);
-    main_sizer->Add(m_panel, 1, wxEXPAND | wxALL, 0);
-    main_sizer->Add(ver_sizer, 0, wxEXPAND | wxALL, 0);
-
-	bool is_dark = wxGetApp().app_config->get("dark_color_mode") == "1";
-
-    // logo
-    m_logo_bitmap = ScalableBitmap(this, is_dark ? "TinManX1_about_dark" : "TinManX1_about", 125);
-    m_logo = new wxStaticBitmap(this, wxID_ANY, m_logo_bitmap.bmp(), wxDefaultPosition,wxDefaultSize, 0);
-    m_logo->SetSizer(vesizer);
-
-    panel_versizer->Add(m_logo, 1, wxALL | wxEXPAND, 0);
-
-    // version
-    {
-
-        auto _build_string_font = Label::Body_12;
-        // _build_string_font.SetStyle(wxFONTSTYLE_ITALIC);
-
-        vesizer->Add(0, 0, 1, wxEXPAND, FromDIP(5));
-        auto          version_string = std::string(SoftFever_VERSION); // _L("Orca Slicer ") + " " + std::string(SoftFever_VERSION);
-        wxStaticText* version = new wxStaticText(this, wxID_ANY, version_string.c_str(), wxDefaultPosition, wxDefaultSize);
-        wxStaticText* credits_string = new wxStaticText(this, wxID_ANY, wxString::Format("Build %s", std::string(GIT_COMMIT_HASH)), wxDefaultPosition, wxDefaultSize);
-        credits_string->SetFont(_build_string_font);
-        wxFont version_font = GetFont();
-        version_font = version_font.Scaled(1.85f); // SetPointSize(20) not works on macOS because it uses a 72 PPI reference
-        version->SetFont(version_font);
-        version->SetForegroundColour(wxColour("#949494"));
-        credits_string->SetForegroundColour(wxColour("#949494"));
-        version->SetBackgroundColour(wxColour("#FFFFFF"));
-        credits_string->SetBackgroundColour(wxColour("#FFFFFF"));
-
-        vesizer->Add(version, 0, wxRIGHT | wxALIGN_RIGHT, FromDIP(20));
-        vesizer->AddSpacer(FromDIP(5));
-        vesizer->Add(credits_string, 0, wxRIGHT | wxALIGN_RIGHT, FromDIP(20));
-        vesizer->Add(0, 0, 1, wxEXPAND, FromDIP(5));
-    }
+    // NanoSVG does not render SVG text. Keep the product name and build identity native.
+    m_logo_bitmap = ScalableBitmap(this, "TinManX1_192px", 96);
+    m_logo = new wxStaticBitmap(this, wxID_ANY, m_logo_bitmap.bmp());
+    header->Add(m_logo, 0, wxRIGHT | wxALIGN_CENTER_VERTICAL, FromDIP(20));
+    auto name = new wxStaticText(this, wxID_ANY, "TinManX1");
+    name->SetFont(GetFont().Scaled(1.85f).Bold());
+    identity->Add(name, 0, wxBOTTOM, FromDIP(8));
+    const wxString revision = wxString::FromUTF8(TINMANX1_REVISION) + "\n" +
+                              wxString::Format("Build %s", std::string(GIT_COMMIT_HASH));
+    auto version = new wxStaticText(this, wxID_ANY, revision);
+    version->SetFont(Label::Body_12);
+    identity->Add(version, 0, wxBOTTOM, FromDIP(8));
+    auto upstream = new wxStaticText(this, wxID_ANY,
+        _L("Based on OrcaSlicer") + " " + wxString::FromUTF8(SoftFever_VERSION));
+    upstream->SetFont(Label::Body_12);
+    identity->Add(upstream);
+    header->Add(identity, 1, wxALIGN_CENTER_VERTICAL);
+    main_sizer->Add(header, 0, wxALL | wxEXPAND, FromDIP(20));
+    main_sizer->Add(new wxStaticLine(this), 0, wxLEFT | wxRIGHT | wxEXPAND, FromDIP(20));
+    main_sizer->Add(ver_sizer, 0, wxEXPAND);
 
     wxBoxSizer *text_sizer_horiz = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer *text_sizer = new wxBoxSizer(wxVERTICAL);
     text_sizer_horiz->Add( 0, 0, 0, wxLEFT, FromDIP(20));
 
     std::vector<wxString> text_list;
-    text_list.push_back(_L("Open-source slicing stands on a tradition of collaboration and attribution. Slic3r, created by Alessandro Ranellucci and the RepRap community, laid the foundation. PrusaSlicer by Prusa Research built on that work, Bambu Studio forked from PrusaSlicer, and SuperSlicer extended it with community-driven enhancements. Each project carried the work of its predecessors forward, crediting those who came before."));
-    text_list.push_back(_L("Orca Slicer began in that same spirit, drawing from PrusaSlicer, BambuStudio, SuperSlicer, and CuraSlicer, and TinManX1 carries that open-source work forward for FibreSeek and continuous-fiber workflows."));
-    text_list.push_back(_L("TinManX1 keeps upstream attribution visible while focusing this build on printer profiles, reinforced-material workflows, and local manufacturing reliability."));
+    text_list.push_back(_L("An independent slicer maintained by William Tinney / Tinman-FP, with OpenAI Codex engineering assistance and community contributions."));
+    text_list.push_back(_L("Built on OrcaSlicer by SoftFever and contributors, with foundations and contributions from Bambu Studio, PrusaSlicer, Slic3r, SuperSlicer, and Cura."));
+    text_list.push_back(_L("Includes selected improvements inspired by PrusaSlicer 3.0.0-alpha11: profile ownership, derived-state handling, and layer-height inheritance. This is not a full PrusaSlicer 3 rebase."));
+    text_list.push_back(_L("Feature authors, research references, and third-party libraries are acknowledged in Credits and Licenses. TinManX1 is not affiliated with or endorsed by the upstream projects or printer manufacturers."));
 
-    text_sizer->Add( 0, 0, 0, wxTOP, FromDIP(33));
+    text_sizer->Add( 0, 0, 0, wxTOP, FromDIP(16));
     bool is_zh = wxGetApp().app_config->get("language") == "zh_CN";
     for (int i = 0; i < text_list.size(); i++)
     {
@@ -302,16 +334,18 @@ AboutDialog::AboutDialog()
         text_sizer->Add( staticText, 0, wxUP | wxDOWN, FromDIP(3));
     }
 
-    text_sizer_horiz->Add(text_sizer, 1, wxALL,0);
+    text_sizer_horiz->Add(text_sizer, 1, wxRIGHT, FromDIP(20));
     ver_sizer->Add(text_sizer_horiz, 0, wxALL,0);
-    ver_sizer->Add( 0, 0, 0, wxTOP, FromDIP(43));
+    ver_sizer->Add( 0, 0, 0, wxTOP, FromDIP(20));
 
     wxBoxSizer *copyright_ver_sizer = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer *copyright_hor_sizer = new wxBoxSizer(wxHORIZONTAL);
 
     copyright_hor_sizer->Add(copyright_ver_sizer, 0, wxLEFT, FromDIP(20));
 
-    wxStaticText *html_text = new wxStaticText(this, wxID_ANY, "TinManX1 build. Orca Slicer copyrights belong to their respective owners.", wxDefaultPosition, wxDefaultSize);
+    wxStaticText *html_text = new wxStaticText(this, wxID_ANY, "AGPL-3.0-or-later. Upstream notices retained.", wxDefaultPosition, wxDefaultSize);
+    html_text->SetFont(Label::Body_12);
+    html_text->Wrap(FromDIP(300));
     html_text->SetForegroundColour(wxColour(107, 107, 107));
 
     copyright_ver_sizer->Add(html_text, 0, wxALL , 0);
@@ -328,7 +362,7 @@ AboutDialog::AboutDialog()
               (boost::format(
               "<html>"
               "<body>"
-              "<p style=\"text-align:left\"><a style=\"color:#009789\" href=\"https://www.orcaslicer.com\">https://www.orcaslicer.com</ a></p>"
+              "<p style=\"text-align:left\"><a style=\"color:#009789\" href=\"https://github.com/Tinman-FP/TinManX1\">TinManX1 on GitHub</a></p>"
               "</body>"
               "</html>")
             ).str());
@@ -336,8 +370,8 @@ AboutDialog::AboutDialog()
           copyright_ver_sizer->Add(m_html, 0, wxEXPAND, 0);
           m_html->Bind(wxEVT_HTML_LINK_CLICKED, &AboutDialog::onLinkClicked, this);
       }
-    //Add "Portions copyright" button
-    Button* button_portions = new Button(this,_L("Portions copyright"));
+    Button* button_portions = new Button(this, _L("Credits and Licenses"));
+    m_copy_rights_btn_id = button_portions->GetId();
     button_portions->SetStyle(ButtonStyle::Regular, ButtonType::Window);
 
     wxBoxSizer *copyright_button_ver = new wxBoxSizer(wxVERTICAL);
@@ -348,7 +382,7 @@ AboutDialog::AboutDialog()
     copyright_hor_sizer->Add(copyright_button_ver, 0, wxRIGHT, FromDIP(20));
 
     ver_sizer->Add(copyright_hor_sizer, 0, wxEXPAND ,0);
-    ver_sizer->Add( 0, 0, 0, wxTOP, FromDIP(30));
+    ver_sizer->Add( 0, 0, 0, wxTOP, FromDIP(20));
     button_portions->Bind(wxEVT_BUTTON, &AboutDialog::onCopyrightBtn, this);
 
     wxGetApp().UpdateDlgDarkUI(this);
@@ -372,12 +406,9 @@ void AboutDialog::on_dpi_changed(const wxRect &suggested_rect)
 
     msw_buttons_rescale(this, em, { wxID_CLOSE, m_copy_rights_btn_id });
 
-    m_html->SetMinSize(wxSize(-1, 16 * em));
+    m_html->SetMinSize(wxSize(-1, FromDIP(16)));
     m_html->Refresh();
 
-    const wxSize& size = wxSize(65 * em, 30 * em);
-
-    SetMinSize(size);
     Fit();
     Refresh();
 }

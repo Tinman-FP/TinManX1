@@ -1357,6 +1357,33 @@ void SelectMachineDialog::auto_supply_with_ext(std::vector<DevAmsTray> slots) {
 }
 
 bool SelectMachineDialog::is_nozzle_type_match(DevExtderSystem data, wxString& error_message) const {
+    DeviceManager* dev_manager = wxGetApp().getDeviceManager();
+    MachineObject* obj = dev_manager ? dev_manager->get_selected_machine() : nullptr;
+    const auto* tool_nozzles = obj ? &obj->GetNozzleSystem()->GetNozzles() : nullptr;
+    if (tool_nozzles != nullptr && tool_nozzles->size() > 1 && wxGetApp().preset_bundle) {
+        const auto& project_config = wxGetApp().preset_bundle->project_config;
+        const auto* nozzle_volume_types = dynamic_cast<const ConfigOptionEnumsGeneric*>(project_config.option("nozzle_volume_type"));
+        if (nozzle_volume_types == nullptr)
+            return false;
+
+        PartPlate* plate = wxGetApp().plater()->get_partplate_list().get_curr_plate();
+        const auto used_filaments = plate->get_used_filaments();
+        for (int filament_id : used_filaments) {
+            const int tool_id = plate->get_physical_extruder_by_filament_id(wxGetApp().preset_bundle->full_config(), filament_id);
+            const auto nozzle = tool_nozzles->find(tool_id);
+            if (nozzle == tool_nozzles->end() || tool_id < 0 || tool_id >= nozzle_volume_types->size())
+                return false;
+
+            const bool machine_high_flow = nozzle->second.m_nozzle_flow == NozzleFlowType::H_FLOW;
+            const bool preset_high_flow = NozzleVolumeType(nozzle_volume_types->get_at(tool_id)) == NozzleVolumeType::nvtHighFlow;
+            if (machine_high_flow != preset_high_flow) {
+                error_message = wxString::Format(_L("The nozzle flow setting of T%d doesn't match the slicing profile."), tool_id);
+                return false;
+            }
+        }
+        return true;
+    }
+
     if (data.GetTotalExtderCount() <= 1 || !wxGetApp().preset_bundle)
         return false;
 
@@ -1772,9 +1799,15 @@ static bool _is_nozzle_data_valid(MachineObject* obj_, const DevExtderSystem &ex
         for (int used_filament_idx : used_filament_idxs)
         {
             int used_nozzle_idx = cur_plate->get_physical_extruder_by_filament_id(preset_bundle->full_config(), used_filament_idx);
-            if (ext_data.GetNozzleType(used_nozzle_idx) == NozzleType::ntUndefine ||
-                ext_data.GetNozzleDiameter(used_nozzle_idx) <= 0.0f ||
-                ext_data.GetNozzleFlowType(used_nozzle_idx) == NozzleFlowType::NONE_FLOWTYPE) {
+            const auto& tool_nozzles = obj_->GetNozzleSystem()->GetNozzles();
+            const auto tool_it = tool_nozzles.find(used_nozzle_idx);
+            const NozzleType nozzle_type = tool_it != tool_nozzles.end() ? tool_it->second.m_nozzle_type :
+                                           ext_data.GetNozzleType(used_nozzle_idx);
+            const float diameter = tool_it != tool_nozzles.end() ? tool_it->second.m_diameter :
+                                   ext_data.GetNozzleDiameter(used_nozzle_idx);
+            const NozzleFlowType flow = tool_it != tool_nozzles.end() ? tool_it->second.m_nozzle_flow :
+                                        ext_data.GetNozzleFlowType(used_nozzle_idx);
+            if (nozzle_type == NozzleType::ntUndefine || diameter <= 0.0f || flow == NozzleFlowType::NONE_FLOWTYPE) {
                 return false;
             }
         }
@@ -1816,7 +1849,10 @@ static bool _is_same_nozzle_diameters(MachineObject* obj, float &tag_nozzle_diam
             }
 
             tag_nozzle_diameter = float(opt_nozzle_diameters->get_at(used_nozzle_idx));
-            auto machine_nozzle_diameter = obj->GetExtderSystem()->GetNozzleDiameter(used_nozzle_idx);
+            const auto& tool_nozzles = obj->GetNozzleSystem()->GetNozzles();
+            const auto tool_it = tool_nozzles.find(used_nozzle_idx);
+            const float machine_nozzle_diameter = tool_it != tool_nozzles.end() ? tool_it->second.m_diameter :
+                                                    obj->GetExtderSystem()->GetNozzleDiameter(used_nozzle_idx);
 
             // Assume matching if diameter is unknown
             if (machine_nozzle_diameter == 0.0f)
@@ -3398,10 +3434,14 @@ void SelectMachineDialog::update_show_status(MachineObject* obj_)
                                                                  mismatch_nozzle_str, obj_->GetExtderSystem()->GetNozzleDiameter(mismatch_nozzle_id), nozzle_diameter);
                 msg_params.emplace_back(nozzle_config);
             } else {
-                const wxString &nozzle_config = wxString::Format(_L("The current nozzle diameter (%.1fmm) doesn't match with the slicing file (%.1fmm). "
+                const auto& tool_nozzles = obj_->GetNozzleSystem()->GetNozzles();
+                const auto tool_it = tool_nozzles.find(mismatch_nozzle_id);
+                const float machine_diameter = tool_it != tool_nozzles.end() ? tool_it->second.m_diameter :
+                                               obj_->GetExtderSystem()->GetNozzleDiameter(0);
+                const wxString &nozzle_config = wxString::Format(_L("The current T%d nozzle diameter (%.1fmm) doesn't match with the slicing file (%.1fmm). "
                                                                     "Please make sure the nozzle installed matches with settings in printer, then set the "
                                                                     "corresponding printer preset when slicing."),
-                                                                 obj_->GetExtderSystem()->GetNozzleDiameter(0), nozzle_diameter);
+                                                                 mismatch_nozzle_id, machine_diameter, nozzle_diameter);
                 msg_params.emplace_back(nozzle_config);
             }
 
@@ -5180,14 +5220,29 @@ static wxString _get_tips(MachineObject* obj_)
     tips = obj_->get_printer_type_display_str();
 
     wxString ext_diameter;
-    if (obj_->GetExtderSystem()->GetTotalExtderCount() == 1) {
+    const auto& tool_nozzles = obj_->GetNozzleSystem()->GetNozzles();
+    if (tool_nozzles.size() > 1) {
+        bool first = true;
+        for (const auto& [tool_id, nozzle] : tool_nozzles) {
+            if (!first)
+                ext_diameter += " / ";
+            ext_diameter += wxString::Format("T%d %s", tool_id, format_nozzle_diameter(nozzle.m_diameter));
+            first = false;
+        }
+    } else if (obj_->GetExtderSystem()->GetTotalExtderCount() == 1) {
         ext_diameter += format_nozzle_diameter(obj_->GetExtderSystem()->GetNozzleDiameter(0));
     } else if (obj_->GetExtderSystem()->GetTotalExtderCount() == 2) {
         ext_diameter += format_nozzle_diameter(obj_->GetExtderSystem()->GetNozzleDiameter(1));//Left
         ext_diameter += "/";
         ext_diameter += format_nozzle_diameter(obj_->GetExtderSystem()->GetNozzleDiameter(0));
     } else {
-        assert(0);
+        bool first = true;
+        for (const auto& extruder : obj_->GetExtderSystem()->GetExtruders()) {
+            if (!first)
+                ext_diameter += " / ";
+            ext_diameter += wxString::Format("T%d %s", extruder.GetExtId(), format_nozzle_diameter(extruder.GetNozzleDiameter()));
+            first = false;
+        }
     }
 
     if (!ext_diameter.empty()) {

@@ -48,30 +48,34 @@ struct ProfileUpsert {
     std::string id;
     std::string name;
     nlohmann::json content;
-    long long updated_time;
-    long long created_time;
+    long long updated_time = 0;
+    long long created_time = 0;
 };
 
 struct SyncPullResponse {
-    long long next_cursor;
+    long long next_cursor = 0;
     std::vector<ProfileUpsert> upserts;
     std::vector<std::string> deletes;
 };
 
 struct SyncPushResult {
-    bool success;
-    int http_code;
-    long long new_updated_time;
+    bool success = false;
+    int http_code = 0;
+    long long new_updated_time = 0;
     ProfileUpsert server_version;
-    bool server_deleted;
+    bool server_deleted = false;
     std::string error_message;
 };
 
 struct SyncState {
-    long long last_sync_timestamp;
+    long long last_sync_timestamp = 0;
 };
 
 #endif // ORCA_SYNC_STRUCTS_DEFINED
+
+// Pure protocol parsing, also used by the offline synchronization tests.
+long long parse_orca_sync_timestamp(const nlohmann::json& object, const char* key);
+SyncPullResponse parse_orca_sync_pull_response(const std::string& body);
 
 /**
  * OrcaCloudServiceAgent - Native cloud service and authentication implementation for Orca Cloud.
@@ -146,6 +150,7 @@ public:
     bool is_user_login() override;
     int user_logout(bool request = false) override;
     std::string get_user_id() override;
+    CloudProfileSession get_profile_session() override;
     std::string get_user_name() override;
     std::string get_user_avatar() override;
     std::string get_user_nickname() override;
@@ -258,9 +263,12 @@ public:
 
     // Sync state management
     void load_sync_state();
-    void save_sync_state();
+    bool save_sync_state();
     void clear_sync_state();
-    const SyncState& get_sync_state() const { return sync_state; }
+    SyncState get_sync_state() const {
+        std::lock_guard<std::recursive_mutex> lock(state_mutex);
+        return sync_state;
+    }
 
     // ========================================================================
     // Orca-Specific: Bundle Subscription
@@ -298,7 +306,7 @@ public:
                           const std::string& refresh_token = "",
                           bool persist = true);
     // Accepts either nested Orca cloud / GoTrue session JSON or flat WebView token JSON.
-    bool set_user_session(const nlohmann::json& session_json, bool notify_login = true);
+    bool set_user_session(const nlohmann::json& session_json, bool notify_login = true, bool persist = true);
     void clear_session();
 
     static std::string generate_uuid_for_setting_id(const std::string& name, const std::string& user_id = "");
@@ -371,6 +379,7 @@ private:
     SessionHandler session_handler;
     OnLoginCompleteHandler on_login_complete_handler;
     SessionInfo session;
+    std::uint64_t session_revision = 0;
     mutable std::mutex session_mutex;
 
     // Refresh diagnostics (see docs/analysis/refresh_token_already_used.md). Epoch seconds so the

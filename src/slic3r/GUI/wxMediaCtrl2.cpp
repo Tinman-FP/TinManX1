@@ -506,6 +506,11 @@ void wxMediaCtrl2::Load(wxURI url)
     wxMediaCtrl::Load(url);
 }
 
+void wxMediaCtrl2::LoadDirectStream(wxString const & url)
+{
+    Load(wxURI(url));
+}
+
 void wxMediaCtrl2::Play()
 {
 #if defined(__LINUX__) && defined(__WXGTK__)

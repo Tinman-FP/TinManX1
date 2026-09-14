@@ -211,6 +211,16 @@ static std::string _parse_printer_type(const std::string& type_str)
         {
             return result;
         }
+
+        // Some LAN discovery callbacks report the official display name in
+        // dev_type instead of the firmware model id. Resolve that name through
+        // the packaged printer catalog before compatibility checks consume it.
+        static const auto models = DevPrinterConfigUtil::get_all_model_id_with_name();
+        const auto model  = models.find(type_str);
+        if (model != models.end() && !model->second.empty())
+        {
+            return model->second;
+        }
     }
 
     BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " Unsupported printer type: " << type_str;

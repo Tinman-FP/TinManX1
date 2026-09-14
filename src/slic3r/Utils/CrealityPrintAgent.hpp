@@ -50,9 +50,13 @@ public:
                                    int&                  box_count,
                                    std::string&          error);
 
-    // Strip PLA/PETG/... subtype suffixes ("PLA Silk", "PLA+", "ABS Pro") to base
-    // type so the preset_bundle->filaments.filament_id_by_type() lookup succeeds.
+    // Strip subtype suffixes ("PLA Silk", "PLA+", "ABS Pro") at material-token
+    // boundaries so short names such as PC cannot consume PCTG or similar types.
     static std::string normalize_filament_type(const std::string& filament_type);
+
+    // Return the bare printer host used by Creality's direct /info and CFS
+    // endpoints, stripping the Moonraker status port when one is configured.
+    static std::string direct_api_host(const std::string& device_address);
 
     // Score visible compatible filament presets against the CFS spool metadata and
     // return the best-matching filament_id. See implementation for scoring details.
@@ -60,6 +64,13 @@ public:
                                              const std::string&      vendor,
                                              const std::string&      brand_name,
                                              const std::string&      base_type);
+
+protected:
+    bool init_device_info(std::string dev_id,
+                          std::string dev_ip,
+                          std::string username,
+                          std::string password,
+                          bool        use_ssl) override;
 };
 
 } // namespace Slic3r

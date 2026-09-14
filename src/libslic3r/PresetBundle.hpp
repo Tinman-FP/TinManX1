@@ -32,6 +32,8 @@ enum class VendorType {
 };
 namespace Slic3r {
 
+class ConfigResolutionTrace;
+
 struct AMSMapInfo
 {
     /*for new ams mapping*/ // from struct FilamentInfo
@@ -364,7 +366,8 @@ public:
     bool                        has_defauls_only() const
         { return prints.has_defaults_only() && filaments.has_defaults_only() && printers.has_defaults_only(); }
 
-    DynamicPrintConfig          full_config(bool apply_extruder = true, std::optional<std::vector<int>>filament_maps = std::nullopt) const;
+    DynamicPrintConfig          full_config(bool apply_extruder = true, std::optional<std::vector<int>>filament_maps = std::nullopt,
+                                            ConfigResolutionTrace *trace = nullptr) const;
     // full_config() with the some "useless" config removed.
     DynamicPrintConfig          full_config_secure(std::optional<std::vector<int>>filament_maps = std::nullopt) const;
 
@@ -519,8 +522,9 @@ private:
     /*ConfigSubstitutions         load_config_file_config_bundle(
         const std::string &path, const boost::property_tree::ptree &tree, ForwardCompatibilitySubstitutionRule compatibility_rule);*/
 
-    DynamicPrintConfig          full_fff_config(bool apply_extruder, std::optional<std::vector<int>> filament_maps=std::nullopt) const;
-    DynamicPrintConfig          full_sla_config() const;
+    DynamicPrintConfig          full_fff_config(bool apply_extruder, std::optional<std::vector<int>> filament_maps=std::nullopt,
+                                                ConfigResolutionTrace *trace = nullptr) const;
+    DynamicPrintConfig          full_sla_config(ConfigResolutionTrace *trace = nullptr) const;
 
     // Orca: used for validation only
     bool validation_mode = false;

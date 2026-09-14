@@ -53,5 +53,6 @@ namespace Slic3r
    public:
        static void  ParseV1_0(const nlohmann::json& nozzletype_json, const nlohmann::json& diameter_json, DevNozzleSystem* system, std::optional<int> flag_e3d);
        static void  ParseV2_0(const json& nozzle_json, DevNozzleSystem* system);
+       static void  ParseTinManTooling(const nlohmann::json& tooling_json, DevNozzleSystem* system);
    };
 };

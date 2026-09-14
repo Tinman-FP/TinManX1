@@ -63,19 +63,16 @@ TaskState parse_task_status(int status)
 int TaskStateInfo::g_task_info_id = 0;
 
 TaskStateInfo::TaskStateInfo(PrintParams param)
-    : m_state(TaskState::TS_PENDING)
-    , m_params(param)
-    , m_sending_percent(0)
-    , m_state_changed_fn(nullptr)
-    , m_cancel(false)
+    : m_params(std::move(param))
 {
     task_info_id = ++TaskStateInfo::g_task_info_id;
 
-    this->set_task_name(param.project_name);
-    this->set_device_name(param.dev_name);
+    this->set_task_name(m_params.project_name);
+    this->set_device_name(m_params.dev_name);
 
-    cancel_fn = [this]() {
-        return m_cancel;
+    const auto runtime = m_runtime;
+    cancel_fn = [runtime]() {
+        return runtime->cancel.load(std::memory_order_acquire);
     };
     update_status_fn = [this](int stage, int code, std::string msg) {
 
@@ -122,12 +119,57 @@ TaskStateInfo::TaskStateInfo(PrintParams param)
     };
 }
 
+TaskState TaskStateInfo::state() const
+{
+    return m_runtime->state.load(std::memory_order_acquire);
+}
+
+void TaskStateInfo::set_state(TaskState state)
+{
+    BOOST_LOG_TRIVIAL(trace) << "TaskStateInfo set state = " << get_task_state_enum_str(state);
+    m_runtime->state.store(state, std::memory_order_release);
+    update();
+}
+
+void TaskStateInfo::update_sending_percent(int percent)
+{
+    m_runtime->sending_percent.store(percent, std::memory_order_release);
+    update();
+}
+
+void TaskStateInfo::set_state_changed_fn(StateChangedFn fn)
+{
+    {
+        std::lock_guard<std::mutex> lock(m_runtime->callback_mutex);
+        m_runtime->state_changed_fn = std::move(fn);
+    }
+    update();
+}
+
+void TaskStateInfo::update()
+{
+    StateChangedFn callback;
+    {
+        std::lock_guard<std::mutex> lock(m_runtime->callback_mutex);
+        callback = m_runtime->state_changed_fn;
+    }
+    if (callback) {
+        callback(m_runtime->state.load(std::memory_order_acquire),
+                 m_runtime->sending_percent.load(std::memory_order_acquire));
+    }
+}
+
 void TaskStateInfo::cancel()
 {
-    m_cancel = true;
-    if (m_state == TaskState::TS_PENDING)
-        m_state = TaskState::TS_REMOVED;
+    m_runtime->cancel.store(true, std::memory_order_release);
+    TaskState expected = TaskState::TS_PENDING;
+    m_runtime->state.compare_exchange_strong(expected, TaskState::TS_REMOVED, std::memory_order_acq_rel);
     update();
+}
+
+bool TaskStateInfo::is_canceled() const
+{
+    return m_runtime->cancel.load(std::memory_order_acquire);
 }
 
 bool TaskGroup::need_schedule(std::chrono::system_clock::time_point last, TaskStateInfo* task)
@@ -152,24 +194,35 @@ void TaskManager::set_max_send_at_same_time(int count)
 TaskManager::TaskManager(NetworkAgent* agent)
     :m_agent(agent)
 {
-    ;
 }
 
+TaskManager::~TaskManager()
+{
+    stop();
+
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    for (auto &group : m_cache_map) {
+        for (auto *task : group.tasks)
+            delete task;
+        group.tasks.clear();
+    }
+    m_cache_map.clear();
+}
 
 int TaskManager::start_print(const std::vector<PrintParams>& params, TaskSettings* settings)
 {
     BOOST_LOG_TRIVIAL(info) << "task_manager: start_print size = " << params.size();
-    TaskManager::MaxSendingAtSameTime = settings->max_sending_at_same_time;
-    TaskManager::SendingInterval = settings->sending_interval;
-    m_map_mutex.lock();
-    TaskGroup task_group(*settings);
+    const TaskSettings effective_settings = settings ? *settings : TaskSettings{};
+    TaskManager::MaxSendingAtSameTime = effective_settings.max_sending_at_same_time;
+    TaskManager::SendingInterval = effective_settings.sending_interval;
+    std::lock_guard<std::mutex> lock(m_map_mutex);
+    TaskGroup task_group(effective_settings);
     task_group.tasks.reserve(params.size());
     for (auto it = params.begin(); it != params.end(); it++) {
         TaskStateInfo* new_item = new TaskStateInfo(*it);
         task_group.append(new_item);
     }
     m_cache_map.push_back(task_group);
-    m_map_mutex.unlock();
     return 0;
 }
 
@@ -257,14 +310,14 @@ int TaskManager::schedule(TaskStateInfo* task)
 
 void TaskManager::start()
 {
-    if (m_started) {
+    bool expected = false;
+    if (!m_started.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
         return;
     }
-    m_started = true;
     m_scedule_thread = Slic3r::create_thread(
         [this] {
         BOOST_LOG_TRIVIAL(trace) << "task_manager: thread start()";
-        while (m_started) {
+        while (m_started.load(std::memory_order_acquire)) {
             m_map_mutex.lock();
             for (auto it = m_cache_map.begin(); it != m_cache_map.end(); it++) {
                 for (auto iter = it->tasks.begin(); iter != it->tasks.end(); iter++) {
@@ -277,13 +330,11 @@ void TaskManager::start()
                 }
             }
             m_map_mutex.unlock();
-            if (!m_scedule_list.empty()) {
-                //BOOST_LOG_TRIVIAL(trace) << "task_manager: need scedule task count = " << m_scedule_list.size();
-                m_scedule_mutex.lock();
+            {
+                std::lock_guard<std::mutex> lock(m_scedule_mutex);
                 for (auto it = m_scedule_list.begin(); it != m_scedule_list.end(); it++) {
                     this->schedule(*it);
                 }
-                m_scedule_mutex.unlock();
             }
             boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
         }
@@ -293,9 +344,34 @@ void TaskManager::start()
 
 void TaskManager::stop()
 {
-    m_started = false;
+    m_started.store(false, std::memory_order_release);
     if (m_scedule_thread.joinable())
         m_scedule_thread.join();
+
+    std::vector<TaskStateInfo *> tasks;
+    {
+        std::lock_guard<std::mutex> lock(m_map_mutex);
+        for (auto &group : m_cache_map) {
+            for (auto *task : group.tasks)
+                if (task)
+                    tasks.push_back(task);
+        }
+    }
+
+    // State-change callbacks may query TaskManager again. Never invoke them
+    // while holding m_map_mutex or shutdown can deadlock against the UI thread.
+    for (auto *task : tasks)
+        task->cancel();
+
+    for (auto *thread : m_sending_thread_list) {
+        if (!thread)
+            continue;
+        if (thread->joinable())
+            thread->join();
+        delete thread;
+    }
+    m_sending_thread_list.clear();
+    m_agent = nullptr;
 }
 
 std::map<int, TaskStateInfo*> TaskManager::get_local_task_list()

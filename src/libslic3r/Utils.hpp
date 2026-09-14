@@ -218,6 +218,10 @@ extern std::vector<std::string> split_string(const std::string &str, char delimi
 // for a short while, so the file may not be movable. Retry while we see recoverable errors.
 extern std::error_code rename_file(const std::string &from, const std::string &to);
 
+// Write and close a same-directory temporary file before replacing the target.
+// Throws on failure; does not promise fsync durability or multi-file transactions.
+void write_file_with_replace(const std::string &file, const std::string &contents);
+
 enum CopyFileResult {
 	SUCCESS = 0,
 	FAIL_COPY_FILE,

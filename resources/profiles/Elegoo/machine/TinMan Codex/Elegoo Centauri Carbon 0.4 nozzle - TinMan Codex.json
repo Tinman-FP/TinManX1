@@ -10,6 +10,9 @@
     "nozzle_diameter": [
         "0.4"
     ],
+    "default_nozzle_volume_type": [
+        "Standard"
+    ],
     "min_layer_height": [
         "0.08"
     ],
@@ -17,5 +20,8 @@
         "0.28"
     ],
     "default_print_profile": "0.20mm Quality @Elegoo Centauri Carbon 0.4 nozzle - TinMan Codex",
-    "setting_id": "OT220VNEYzErb7qi"
+    "setting_id": "OT220VNEYzErb7qi",
+    "default_filament_profile": [
+        "PLA Codex-Polymaker - Elegoo Centauri @Codex"
+    ]
 }

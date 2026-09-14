@@ -1,6 +1,6 @@
 {
 	"name": "Snapmaker",
-	"version": "02.04.00.08",
+	"version": "02.04.00.11",
 	"force_update": "0",
 	"description": "Snapmaker configurations",
 	"machine_model_list": [
@@ -601,6 +601,22 @@
 		{
 			"name": "0.16mm Tank @Snapmaker U1 0.4 nozzle - TinMan Codex",
 			"sub_path": "process/TinMan Codex/0.16mm Tank @Snapmaker U1 0.4 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "0.20mm Quality @Snapmaker U1 Live Mixed - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.20mm Quality @Snapmaker U1 Live Mixed - TinMan Codex.json"
+		},
+		{
+			"name": "0.24mm Fast @Snapmaker U1 Live Mixed - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.24mm Fast @Snapmaker U1 Live Mixed - TinMan Codex.json"
+		},
+		{
+			"name": "0.28mm Draft @Snapmaker U1 Live Mixed - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.28mm Draft @Snapmaker U1 Live Mixed - TinMan Codex.json"
+		},
+		{
+			"name": "0.16mm Tank @Snapmaker U1 Live Mixed - TinMan Codex",
+			"sub_path": "process/TinMan Codex/0.16mm Tank @Snapmaker U1 Live Mixed - TinMan Codex.json"
 		},
 		{
 			"name": "0.30mm Quality @Snapmaker U1 0.6 nozzle - TinMan Codex",
@@ -2173,7 +2189,11 @@
 		{
 			"name": "Snapmaker U1 1.0 nozzle - TinMan Codex",
 			"sub_path": "machine/TinMan Codex/Snapmaker U1 1.0 nozzle - TinMan Codex.json"
+		},
+		{
+			"name": "Snapmaker U1 Live Mixed - TinMan Codex",
+			"sub_path": "machine/TinMan Codex/Snapmaker U1 Live Mixed - TinMan Codex.json"
 		}
 	],
-	"tinman_codex_machine_contract": "2"
+	"tinman_codex_machine_contract": "6"
 }

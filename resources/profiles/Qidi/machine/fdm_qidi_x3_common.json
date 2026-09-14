@@ -5,6 +5,7 @@
 	"from": "system",
 	"instantiation": "false",
 	"gcode_flavor": "klipper",
+	"host_type": "moonraker",
 	"auxiliary_fan": "1",
 	"change_filament_gcode": "",
 	"machine_pause_gcode": "M0",

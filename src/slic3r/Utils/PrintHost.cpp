@@ -4,6 +4,7 @@
 #include <thread>
 #include <exception>
 #include <boost/optional.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/filesystem.hpp>
 
@@ -35,7 +36,6 @@ using boost::optional;
 using Slic3r::GUI::PrintHostQueueDialog;
 
 namespace Slic3r {
-
 
 PrintHost::~PrintHost() {}
 
@@ -102,6 +102,9 @@ std::string PrintHost::get_print_host_webui(DynamicPrintConfig* config)
         if (webui_url.empty())
             return webui_url;
     }
+
+    if (host_type == htCrealityPrint)
+        return CrealityPrint::get_device_webui_url(std::move(webui_url));
 
     const bool has_http_scheme = boost::algorithm::istarts_with(webui_url, "http");
     const bool has_file_scheme = boost::algorithm::istarts_with(webui_url, "file:");

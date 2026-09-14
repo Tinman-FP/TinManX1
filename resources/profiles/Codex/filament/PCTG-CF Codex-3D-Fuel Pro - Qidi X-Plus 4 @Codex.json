@@ -52,7 +52,7 @@
         "0.98"
     ],
     "filament_max_volumetric_speed": [
-        "10"
+        "12"
     ],
     "filament_notes": "3D-Fuel Pro PCTG-CF10 profile seeded from 3D-Fuel Bambu X1C 0.4mm profile published 2026-03-24. Use hardened nozzle. Avoid grid infill; prefer gyroid, cubic, honeycomb, or rectilinear for PCTG. Default color set to black.",
     "filament_settings_id": [

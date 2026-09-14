@@ -1060,7 +1060,12 @@ void AppConfig::save()
     // Rename the config atomically.
     // On Windows, the rename is likely NOT atomic, thus it may fail if PrusaSlicer crashes on another thread in the meanwhile.
     // To cope with that, we already made a backup of the config on Windows.
-    rename_file(path_pid, path);
+    if (const auto error = rename_file(path_pid, path)) {
+        m_dirty = true;
+        BOOST_LOG_TRIVIAL(error) << "Failed to replace configuration " << path << ": " << error.message()
+                                 << "; settings remain unsaved and the temporary file is retained";
+        return;
+    }
     m_dirty = false;
 }
 
@@ -1271,7 +1276,12 @@ void AppConfig::save()
     // Rename the config atomically.
     // On Windows, the rename is likely NOT atomic, thus it may fail if PrusaSlicer crashes on another thread in the meanwhile.
     // To cope with that, we already made a backup of the config on Windows.
-    rename_file(path_pid, path);
+    if (const auto error = rename_file(path_pid, path)) {
+        m_dirty = true;
+        BOOST_LOG_TRIVIAL(error) << "Failed to replace configuration " << path << ": " << error.message()
+                                 << "; settings remain unsaved and the temporary file is retained";
+        return;
+    }
     m_dirty = false;
 }
 #endif

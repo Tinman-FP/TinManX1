@@ -150,8 +150,10 @@ std::string infer_agent_from_text(const std::string& key)
         return "snapmaker";
     if (boost::algorithm::icontains(key, "creality") || boost::algorithm::icontains(key, "k2"))
         return "crealityprint";
+    if (boost::algorithm::icontains(key, "prusa"))
+        return "prusalink";
     if (boost::algorithm::icontains(key, "v-core") || boost::algorithm::icontains(key, "ratrig") ||
-        boost::algorithm::icontains(key, "prusa") || boost::algorithm::icontains(key, "sovol"))
+        boost::algorithm::icontains(key, "sovol"))
         return "moonraker";
 
     return {};
@@ -432,6 +434,556 @@ private:
     std::thread       upload_thread;
 };
 
+class CrealityPrinterWebViewHandler final : public PrinterWebViewHandler {
+public:
+    explicit CrealityPrinterWebViewHandler(PrinterWebView& owner)
+        : PrinterWebViewHandler(owner)
+    {
+    }
+
+    void on_loaded(wxWebViewEvent& evt) override
+    {
+        if (browser() == nullptr || evt.GetURL().IsEmpty())
+            return;
+
+        WebView::RunScript(browser(), wxString::FromUTF8(camera_injection_script()));
+    }
+
+private:
+    static const char* camera_injection_script()
+    {
+        static const std::string script = std::string(R"JS(
+(function () {
+  'use strict';
+
+  const panelId = 'tinman-creality-camera-panel';
+  const stateKey = '__tinmanCrealityCameraState';
+  const probeDelayMs = 3000;
+  const reconnectDelayMs = 5000;
+  const connectTimeoutMs = 20000;
+
+  if (window[stateKey]) {
+    window[stateKey].probeCamera();
+    return;
+  }
+
+  const state = {
+    cameraAvailable: false,
+    connecting: false,
+    connectStartedAt: 0,
+    probeInFlight: false,
+    probeTimer: 0,
+    reconnectTimer: 0,
+    attempt: 0,
+    peerConnection: null,
+    controlSocket: null,
+    observer: null,
+    monitorTimer: 0,
+    probeCamera: null,
+    connectCamera: null
+  };
+  window[stateKey] = state;
+
+  function normalText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+
+  function fluiddThemeClass() {
+    const app = document.querySelector('.v-application.theme--light, .v-application.theme--dark') ||
+      document.querySelector('.theme--light, .theme--dark');
+    return app && app.classList.contains('theme--light') ? 'theme--light' : 'theme--dark';
+  }
+
+  function findFluiddCardByTitle(matches) {
+    const cards = Array.from(document.querySelectorAll('.v-card.collapsable-card, .v-card'));
+    return cards.find((card) => {
+      if (card.id === panelId || card.closest('#' + panelId)) return false;
+      const heading = card.querySelector('.v-card__title, .card-heading');
+      const title = normalText(heading ? heading.textContent : '');
+      return matches.some((match) => title === match || title.startsWith(match + ' '));
+    }) || null;
+  }
+
+  function hideLegacyCameraCards() {
+    const cards = Array.from(document.querySelectorAll('.v-card.collapsable-card, .v-card'));
+    for (const card of cards) {
+      if (card.id === panelId || card.closest('#' + panelId)) continue;
+      const heading = card.querySelector('.v-card__title, .card-heading');
+      const title = normalText(heading ? heading.textContent : '');
+      if (title === 'camera' || title === 'cameras' || title.startsWith('camera ')) {
+        card.setAttribute('data-tinman-legacy-camera', 'hidden');
+        card.style.setProperty('display', 'none', 'important');
+      }
+    }
+  }
+
+  function placePanel(panel) {
+    if (!panel) return false;
+
+    panel.className = 'v-card v-sheet collapsable-card mb-2 mb-sm-4 ' + fluiddThemeClass();
+    const toolheadCard = findFluiddCardByTitle(['tool', 'toolhead']);
+    if (toolheadCard && toolheadCard.parentNode) {
+      panel.classList.remove('tk2-floating-fallback');
+      if (toolheadCard.previousElementSibling !== panel)
+        toolheadCard.parentNode.insertBefore(panel, toolheadCard);
+      return true;
+    }
+
+    const statusCard = findFluiddCardByTitle(['status', 'printer']);
+    if (statusCard && statusCard.parentNode) {
+      panel.classList.remove('tk2-floating-fallback');
+      if (statusCard.nextElementSibling !== panel)
+        statusCard.parentNode.insertBefore(panel, statusCard.nextSibling);
+      return true;
+    }
+
+    panel.classList.add('tk2-floating-fallback');
+    if (!document.body.contains(panel)) document.body.appendChild(panel);
+    return false;
+  }
+
+  function ensureStyle() {
+    if (document.getElementById('tinman-creality-camera-style')) return;
+    const style = document.createElement('style');
+    style.id = 'tinman-creality-camera-style';
+    style.textContent = `
+      #${panelId} { width: 100%; overflow: hidden; }
+      #${panelId}.tk2-floating-fallback {
+        position: fixed; right: 18px; top: 74px; width: min(520px, calc(100vw - 36px));
+        z-index: 2147483000; margin: 0;
+      }
+      #${panelId} .tk2-head { min-height: 42px; padding-top: 0; padding-bottom: 0; }
+      #${panelId} .tk2-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
+      #${panelId} .tk2-camera-icon {
+        width: 18px; height: 13px; border: 2px solid currentColor; border-radius: 2px;
+        position: relative; display: inline-block; opacity: .8;
+      }
+      #${panelId} .tk2-camera-icon::after {
+        content: ''; position: absolute; right: -7px; top: 2px; width: 6px; height: 7px;
+        background: currentColor; clip-path: polygon(0 20%, 100% 0, 100% 100%, 0 80%);
+      }
+      #${panelId} .tk2-actions { display: flex; gap: 6px; align-items: center; }
+      #${panelId} .tk2-btn {
+        min-height: 30px; padding: 0 10px; border: 1px solid rgba(255,255,255,.15);
+        border-radius: 5px; color: currentColor; background: rgba(127,127,127,.10);
+        cursor: pointer; font: inherit; font-size: 12px;
+      }
+      #${panelId} .tk2-btn:hover { background: rgba(127,127,127,.22); }
+      #${panelId} .tk2-body {
+        position: relative; padding: 0; background: #1e1e20; aspect-ratio: 16 / 9;
+      }
+      #${panelId} .tk2-video {
+        display: block; width: 100%; height: 100%; object-fit: contain; background: #1e1e20;
+      }
+      #${panelId} .tk2-status {
+        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        color: rgba(255,255,255,.78); background: #1e1e20; font-size: 13px;
+      }
+      #${panelId} .tk2-status[hidden] { display: none; }
+      @media (max-width: 700px) {
+        #${panelId}.tk2-floating-fallback { left: 10px; right: 10px; top: 58px; width: auto; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function panelVideo() {
+    return document.querySelector('#' + panelId + ' .tk2-video');
+  }
+
+  function cameraIsLive() {
+    const video = panelVideo();
+    return Boolean(video && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0);
+  }
+
+  function setCameraStatus(message) {
+    const status = document.querySelector('#' + panelId + ' .tk2-status');
+    if (!status) return;
+    status.textContent = message || '';
+    status.hidden = !message;
+  }
+
+  function closeCameraConnections() {
+    state.attempt++;
+    state.connecting = false;
+
+    const peer = state.peerConnection;
+    state.peerConnection = null;
+    if (peer) peer.close();
+
+    const socket = state.controlSocket;
+    state.controlSocket = null;
+    if (socket) socket.close();
+
+    const video = panelVideo();
+    if (video) video.srcObject = null;
+  }
+
+  function scheduleReconnect() {
+    if (state.reconnectTimer || document.hidden || !state.cameraAvailable) return;
+    state.reconnectTimer = window.setTimeout(() => {
+      state.reconnectTimer = 0;
+      if (!cameraIsLive()) state.connectCamera(true);
+    }, reconnectDelayMs);
+  }
+
+  function waitForIce(peer, timeoutMs = 8000) {
+    if (peer.iceGatheringState === 'complete') return Promise.resolve();
+    return new Promise((resolve) => {
+      const timeout = window.setTimeout(resolve, timeoutMs);
+      peer.addEventListener('icegatheringstatechange', () => {
+        if (peer.iceGatheringState === 'complete') {
+          window.clearTimeout(timeout);
+          resolve();
+        }
+      });
+    });
+  }
+
+  function getPrinterSession(currentAttempt, timeoutMs = 7000) {
+    return new Promise((resolve, reject) => {
+      const socket = new WebSocket('ws://' + location.hostname + ':9999');
+      const session = { features: [], token: '' };
+      let settled = false;
+      state.controlSocket = socket;
+
+      const fail = (message) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        socket.close();
+        reject(new Error(message));
+      };
+
+      const timeout = window.setTimeout(() => fail('Camera token timed out.'), timeoutMs);
+      socket.addEventListener('open', () => {
+        if (currentAttempt !== state.attempt) return fail('Camera connection cancelled.');
+        socket.send(JSON.stringify({ method: 'get', params: { getToken: 1 } }));
+      });
+      socket.addEventListener('message', (event) => {
+        if (event.data === 'ok' || currentAttempt !== state.attempt) return;
+        try {
+          const message = JSON.parse(event.data);
+          if (Array.isArray(message.features)) session.features = message.features;
+          if (message.videoToken && !settled) {
+            settled = true;
+            window.clearTimeout(timeout);
+            session.token = String(message.videoToken).trim();
+            resolve(session);
+          }
+        } catch (_) {}
+      });
+      socket.addEventListener('error', () => fail('Camera control channel unavailable.'));
+      socket.addEventListener('close', () => {
+        if (!settled) fail('Camera control channel closed.');
+      });
+    });
+  }
+
+  // Match Creality Print's H.264-only offer. Current K2 firmware rejects the
+  // browser's full codec list even when a valid H.264 payload is present.
+  function filterCrealitySdp(sdp) {
+    try {
+      const lines = sdp.split('\r\n');
+      const prefix = [];
+      const suffix = [];
+      const codecGroups = [];
+
+      for (let index = 0; index < lines.length; index++) {
+        const line = lines[index];
+        if (line.includes('a=rtpmap:')) {
+          const group = [];
+          for (;;) {
+            group.push(lines[index]);
+            if (index + 1 === lines.length || lines[index + 1].includes('a=rtpmap:')) {
+              codecGroups.push(group);
+              break;
+            }
+            index++;
+          }
+        }
+        if (codecGroups.length === 0) prefix.push(line);
+      }
+
+      const remove = [];
+      for (let index = 0; index < codecGroups.length; index++) {
+        if (index === codecGroups.length - 1) continue;
+        let discard = true;
+        for (const line of codecGroups[index]) {
+          if (line.includes('a=rtpmap:')) {
+            const payload = parseInt(line.split(' ')[0].split(':')[1], 10);
+            if (payload < 96 || payload > 127) break;
+          }
+          if (/H264/i.test(line)) {
+            discard = false;
+            break;
+          }
+        }
+        if (discard) remove.push(index);
+      }
+      for (let index = remove.length - 1; index >= 0; index--)
+        codecGroups.splice(remove[index], 1);
+
+      if (codecGroups.length) {
+        const last = codecGroups[codecGroups.length - 1];
+        const payload = parseInt(last[0].split(' ')[0].split(':')[1], 10);
+        const codecLines = [];
+        for (const line of last) {
+          if (line.includes(':' + payload + ' ')) codecLines.push(line);
+          else suffix.push(line);
+        }
+        const valid = codecLines.some((line) => /H264/i.test(line)) && payload >= 96 && payload <= 127;
+        if (valid) codecGroups[codecGroups.length - 1] = codecLines;
+        else codecGroups.splice(codecGroups.length - 1, 1);
+      }
+
+      return codecGroups.length ? [...prefix, ...codecGroups[0], ...suffix].join('\r\n') : sdp;
+    } catch (_) {
+      return sdp;
+    }
+  }
+)JS") + R"JS(
+
+  function makeCandidatesNumeric(sdp) {
+    return sdp.split('\r\n').map((line) => {
+      if (!line.startsWith('a=candidate:')) return line;
+      const fields = line.split(' ');
+      if (fields[4] && fields[4].endsWith('.local')) fields[4] = '192.0.2.1';
+      return fields.join(' ');
+    }).join('\r\n');
+  }
+
+  // Token flow and SDP compatibility are based on Creality Print 7.2 behavior.
+  // Credit: GecKoTDF's GPL-3.0 Creality-K2-Camera-Fix documented the current
+  // firmware protocol after Creality retired the legacy unauthenticated player.
+  state.connectCamera = async function (force = false) {
+    if (!state.cameraAvailable || document.hidden || state.connecting || (!force && cameraIsLive())) return;
+
+    if (state.reconnectTimer) {
+      window.clearTimeout(state.reconnectTimer);
+      state.reconnectTimer = 0;
+    }
+    closeCameraConnections();
+    const currentAttempt = state.attempt;
+    state.connecting = true;
+    state.connectStartedAt = Date.now();
+    setCameraStatus('Connecting camera...');
+
+    try {
+      // The K2 camera service briefly retains the previous WebRTC session.
+      // Give it a bounded teardown window before requesting a replacement token.
+      await new Promise((resolve) => window.setTimeout(resolve, 300));
+      if (currentAttempt !== state.attempt) return;
+
+      const session = await getPrinterSession(currentAttempt);
+      if (currentAttempt !== state.attempt) return;
+
+      const encryptedProtocol = session.features.includes('videoInfo.videoEncryption');
+      const peer = new RTCPeerConnection({ iceServers: [] });
+      state.peerConnection = peer;
+
+      peer.addEventListener('connectionstatechange', () => {
+        if (peer !== state.peerConnection) return;
+        if (peer.connectionState === 'failed' || peer.connectionState === 'disconnected')
+          scheduleReconnect();
+      });
+      peer.addEventListener('track', (event) => {
+        if (peer !== state.peerConnection || event.track.kind !== 'video') return;
+        const video = panelVideo();
+        if (!video) return;
+        video.srcObject = event.streams[0] || new MediaStream([event.track]);
+        video.play().catch(() => scheduleReconnect());
+      });
+
+      const transceiver = peer.addTransceiver('video', { direction: 'sendrecv' });
+      const capabilities = RTCRtpReceiver.getCapabilities && RTCRtpReceiver.getCapabilities('video');
+      const h264 = capabilities ? capabilities.codecs.filter((codec) => codec.mimeType.toLowerCase() === 'video/h264') : [];
+      if (h264.length && typeof transceiver.setCodecPreferences === 'function')
+        transceiver.setCodecPreferences(h264);
+
+      await peer.setLocalDescription(await peer.createOffer());
+      await waitForIce(peer);
+      if (currentAttempt !== state.attempt) return;
+
+      const request = {
+        type: 'offer',
+        sdp: filterCrealitySdp(makeCandidatesNumeric(peer.localDescription.sdp))
+      };
+      if (encryptedProtocol) request.token = session.token;
+
+      const signalUrl = encryptedProtocol
+        ? 'http://' + location.hostname + '/call/webrtc_local'
+        : 'http://' + location.hostname + ':8000/call/webrtc_local';
+      const response = await fetch(signalUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'plain/text' },
+        body: btoa(JSON.stringify(request))
+      });
+      const responseText = (await response.text()).trim();
+      if (!response.ok || !responseText || responseText === '{}')
+        throw new Error('Camera signaling failed.');
+
+      const answer = JSON.parse(atob(responseText));
+      await peer.setRemoteDescription(new RTCSessionDescription(answer));
+      setCameraStatus('Waiting for video...');
+    } catch (_) {
+      if (currentAttempt === state.attempt) {
+        state.connecting = false;
+        setCameraStatus('Camera reconnecting...');
+        scheduleReconnect();
+      }
+    }
+  };
+
+  function monitorCamera() {
+    if (!state.cameraAvailable || document.hidden) return;
+    ensurePanel();
+    if (cameraIsLive()) {
+      if (state.reconnectTimer) {
+        window.clearTimeout(state.reconnectTimer);
+        state.reconnectTimer = 0;
+      }
+      setCameraStatus('');
+      return;
+    }
+
+    const connectionAge = Date.now() - state.connectStartedAt;
+    if (state.connecting && connectionAge > connectTimeoutMs) {
+      state.connecting = false;
+      closeCameraConnections();
+      setCameraStatus('Camera reconnecting...');
+      scheduleReconnect();
+    } else if (!state.connecting && connectionAge > connectTimeoutMs) {
+      scheduleReconnect();
+    }
+  }
+
+  function ensurePanel() {
+    hideLegacyCameraCards();
+    ensureStyle();
+    let panel = document.getElementById(panelId);
+    if (!panel) {
+      panel = document.createElement('section');
+      panel.id = panelId;
+      panel.innerHTML = `
+        <div class="tk2-head v-card__title collapsable-card-title card-heading">
+          <div class="row flex-nowrap no-gutters">
+            <div class="col align-self-center tk2-title">
+              <span class="tk2-camera-icon" aria-hidden="true"></span>
+              <span class="font-weight-light">Camera</span>
+            </div>
+            <div class="col col-auto align-self-center tk2-actions">
+              <button class="tk2-btn" type="button" data-tk2-action="refresh">Refresh</button>
+              <button class="tk2-btn" type="button" data-tk2-action="fullscreen">Full screen</button>
+            </div>
+          </div>
+        </div>
+        <div class="tk2-body v-card__text overflow-hidden">
+          <video class="tk2-video" aria-label="K2 Plus camera" autoplay muted playsinline></video>
+          <div class="tk2-status">Connecting camera...</div>
+        </div>
+      `;
+      panel.querySelector('.tk2-video').addEventListener('playing', () => {
+        if (!cameraIsLive()) return;
+        state.connecting = false;
+        if (state.reconnectTimer) {
+          window.clearTimeout(state.reconnectTimer);
+          state.reconnectTimer = 0;
+        }
+        setCameraStatus('');
+      });
+      panel.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-tk2-action]');
+        if (!button) return;
+        const action = button.getAttribute('data-tk2-action');
+        if (action === 'refresh') {
+          state.connectCamera(true);
+        } else if (action === 'fullscreen') {
+          const video = panelVideo();
+          if (video && video.requestFullscreen) video.requestFullscreen();
+        }
+      });
+    }
+    placePanel(panel);
+    if (state.cameraAvailable && !state.connecting && !cameraIsLive() && !state.reconnectTimer)
+      state.connectCamera();
+  }
+
+  function startCameraUi() {
+    state.cameraAvailable = true;
+    ensurePanel();
+
+    if (!state.observer) {
+      let scheduled = false;
+      state.observer = new MutationObserver(() => {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(() => {
+          scheduled = false;
+          ensurePanel();
+        });
+      });
+      state.observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    if (!state.monitorTimer)
+      state.monitorTimer = window.setInterval(monitorCamera, 3000);
+
+    state.connectCamera();
+  }
+
+  function scheduleProbe() {
+    if (state.probeTimer || state.cameraAvailable) return;
+    state.probeTimer = window.setTimeout(() => {
+      state.probeTimer = 0;
+      state.probeCamera();
+    }, probeDelayMs);
+  }
+
+  async function cameraEndpointAvailable() {
+    try {
+      const infoResponse = await fetch('http://' + location.hostname + '/info?tinman=' + Date.now(), { cache: 'no-store' });
+      if (infoResponse.ok) {
+        const info = await infoResponse.json();
+        if (Number(info.videoPort) > 0) return true;
+      }
+    } catch (_) {}
+
+    try {
+      const response = await fetch('/camera.html?tinman_probe=' + Date.now(), { cache: 'no-store' });
+      if (!response.ok) return false;
+      const html = await response.text();
+      return html.includes('RTCPeerConnection') && html.includes('webrtc_local');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  state.probeCamera = async function () {
+    if (state.cameraAvailable) {
+      startCameraUi();
+      return;
+    }
+    if (state.probeInFlight) return;
+
+    state.probeInFlight = true;
+    const available = await cameraEndpointAvailable();
+    state.probeInFlight = false;
+    if (available) startCameraUi();
+    else scheduleProbe();
+  };
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && state.cameraAvailable && !cameraIsLive()) state.connectCamera(true);
+  });
+
+  state.probeCamera();
+})();
+)JS";
+        return script.c_str();
+    }
+};
+
 class QidiBoxPrinterWebViewHandler final : public PrinterWebViewHandler {
 public:
     explicit QidiBoxPrinterWebViewHandler(PrinterWebView& owner)
@@ -598,26 +1150,14 @@ R"JS(
   function placePanel(panel) {
     if (!panel) return false;
 
-    panel.className = 'tinman-qidi-box-card v-card v-sheet collapsable-card mb-2 mb-sm-4 ' + fluiddThemeClass();
-
-    const consoleCard = findFluiddCardByTitle(['console']);
-    if (consoleCard && consoleCard.parentNode) {
-      panel.classList.remove('tq-floating-fallback');
-      consoleCard.parentNode.insertBefore(panel, consoleCard);
-      return true;
-    }
-
-    const temperatureCard = findFluiddCardByTitle(['temperature', 'temperatures']);
-    if (temperatureCard && temperatureCard.parentNode) {
-      panel.classList.remove('tq-floating-fallback');
-      temperatureCard.parentNode.insertBefore(panel, temperatureCard.nextSibling);
-      return true;
-    }
-
-    panel.classList.add('tq-floating-fallback');
-    if (!document.body.contains(panel)) {
+    // Mainsail owns its dashboard card grid through Vue. Adding a foreign child
+    // to that managed tree causes Vue to remount the dashboard on subsequent
+    // status renders, which tears down and recreates every Moonraker WebSocket.
+    // Keep the Tinman panel at body level so its polling and controls cannot
+    // invalidate Mainsail's virtual DOM.
+    panel.className = 'tinman-qidi-box-card v-card v-sheet collapsable-card mb-2 mb-sm-4 tq-floating-fallback ' + fluiddThemeClass();
+    if (panel.parentNode !== document.body)
       document.body.appendChild(panel);
-    }
     return false;
   }
 )JS"
@@ -966,6 +1506,8 @@ std::unique_ptr<PrinterWebViewHandler> create_printer_webview_handler(PrinterWeb
     if (!selected_agent_id.empty()) {
         if (selected_agent_id == "qidi")
             return std::make_unique<QidiBoxPrinterWebViewHandler>(owner);
+        if (selected_agent_id == "crealityprint")
+            return std::make_unique<CrealityPrinterWebViewHandler>(owner);
 
         return std::make_unique<PrinterWebViewHandler>(owner);
     }
@@ -978,6 +1520,8 @@ std::unique_ptr<PrinterWebViewHandler> create_printer_webview_handler(PrinterWeb
 
         if (config_agent_id(*cfg) == "qidi")
             return std::make_unique<QidiBoxPrinterWebViewHandler>(owner);
+        if (config_agent_id(*cfg) == "crealityprint")
+            return std::make_unique<CrealityPrinterWebViewHandler>(owner);
     }
 
     return std::make_unique<PrinterWebViewHandler>(owner);

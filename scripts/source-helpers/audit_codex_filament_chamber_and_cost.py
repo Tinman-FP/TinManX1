@@ -48,6 +48,7 @@ EXACT_PRICE_OVERRIDES: dict[tuple[str, str], PriceSource] = {
         "https://shop.polymaker.com/products/polylite-pla-cf",
     ),
     ("Push Plastic", "PC-PBT"): PriceSource(39.99, "Push Plastic PC+PBT 1 kg spool", "https://www.pushplastic.com/products/pc-pbt-filament-1-75mm-1kg"),
+    ("Push Plastic", "PC-PBT-CF"): PriceSource(99.98, "Push Plastic Carbon Fiber PC+PBT 500 g spool, normalized to 1 kg", "https://www.pushplastic.com/products/carbon-fiber-pc-pbt-filament-1-75mm-500g"),
     ("QIDI", "ABS-GF"): PriceSource(59.99, "QIDI ABS-GF25 1 kg Amazon listing", "https://www.amazon.com/QIDI-TECHNOLOGY-Filament-ABS-GF25-Interlayer/dp/B0BXSMBGCJ"),
     ("QIDI", "PPS-GF"): PriceSource(79.99, "QIDI PPS-GF20 converted from 750 g spool", "https://us.qidi3d.com/products/pps-gf20", "$59.99 / 0.75 kg"),
     ("RatRig Punk", "ABS"): PriceSource(24.99, "RatRig Punk ABS current installed baseline"),
@@ -76,6 +77,7 @@ GENERIC_PRICE_AVERAGES: dict[str, PriceSource] = {
     "PC": PriceSource(40.00, "Generic 1 kg retail average"),
     "PC-CF": PriceSource(75.00, "Generic 1 kg retail average"),
     "PC-PBT": PriceSource(39.99, "Generic 1 kg retail average"),
+    "PC-PBT-CF": PriceSource(99.98, "Push Plastic Carbon Fiber PC+PBT 500 g spool, normalized to 1 kg", "https://www.pushplastic.com/products/carbon-fiber-pc-pbt-filament-1-75mm-500g"),
     "PCTG": PriceSource(30.00, "Generic 1 kg retail average"),
     "PCTG-CF": PriceSource(54.95, "Generic 1 kg retail average"),
     "PE": PriceSource(69.00, "Generic 1 kg retail average"),
@@ -177,6 +179,9 @@ def profile_brand(name: str) -> str:
 
 
 def profile_type(profile: dict[str, Any]) -> str:
+    name = scalar(profile.get("name")).upper()
+    if name.startswith("PC-PBT-CF CODEX-"):
+        return "PC-PBT-CF"
     return scalar(profile.get("filament_type")).upper()
 
 
@@ -258,6 +263,11 @@ def desired_chamber(profile: dict[str, Any]) -> float:
     return float(CHAMBER_BY_TYPE.get(profile_type(profile), 0))
 
 
+def allows_passive_chamber_target(profile: dict[str, Any]) -> bool:
+    name = scalar(profile.get("name"))
+    return name == "PC-PBT-CF Codex-Push Plastic - Prusa CORE One L @Codex"
+
+
 def apply_profile_audit(profile: dict[str, Any], polymaker_prices: dict[tuple[str, str], PriceSource]) -> list[str]:
     changes: list[str] = []
     chamber = desired_chamber(profile)
@@ -266,7 +276,7 @@ def apply_profile_audit(profile: dict[str, Any], polymaker_prices: dict[tuple[st
         if floatish(profile.get("chamber_temperature", profile.get("chamber_temperatures"))) <= 0:
             set_like_existing(profile, "chamber_temperature", money(chamber))
             changes.append(f"chamber={money(chamber)}")
-        if active != "1":
+        if active != "1" and not allows_passive_chamber_target(profile):
             set_like_existing(profile, "activate_chamber_temp_control", "1")
             changes.append("active_chamber=1")
 
@@ -350,11 +360,14 @@ def validate(app_support: Path) -> None:
         active = scalar(profile.get("activate_chamber_temp_control"))
         if cost <= 0:
             failures.append(f"{name}: filament_cost={cost:g}")
-        if chamber > 0 and active != "1":
+        if chamber > 0 and active != "1" and not allows_passive_chamber_target(profile):
             failures.append(f"{name}: chamber={chamber:g} but active={active!r}")
     if failures:
         raise SystemExit("Codex filament audit validation failed:\n" + "\n".join(failures[:40]))
-    print("Codex filament audit validation passed: system profiles have positive costs and active chamber control where chamber > 0.")
+    print(
+        "Codex filament audit validation passed: system profiles have positive costs and "
+        "active chamber control where supported."
+    )
 
 
 def parse_args() -> argparse.Namespace:

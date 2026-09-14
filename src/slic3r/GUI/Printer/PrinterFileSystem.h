@@ -27,7 +27,7 @@ wxDECLARE_EVENT(EVT_MEDIA_ABILITY_CHANGED, wxCommandEvent);
 wxDECLARE_EVENT(EVT_UPLOADING, wxCommandEvent);
 wxDECLARE_EVENT(EVT_UPLOAD_CHANGED, wxCommandEvent);
 
-class PrinterFileSystem : public wxEvtHandler, public boost::enable_shared_from_this<PrinterFileSystem>, BambuLib
+class PrinterFileSystem : public wxEvtHandler, public boost::enable_shared_from_this<PrinterFileSystem>
 {
     static const int CTRL_TYPE     = 0x3001;
 
@@ -380,6 +380,8 @@ private:
     std::vector<bool> m_download_states;
 
 private:
+    BambuLib m_bambu_lib{};
+
     struct Session
     {
         Bambu_Tunnel tunnel = nullptr;

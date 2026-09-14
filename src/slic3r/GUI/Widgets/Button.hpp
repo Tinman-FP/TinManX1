@@ -51,6 +51,7 @@ class Button : public StaticBox
 
 public:
     Button();
+    ~Button() override;
 
     Button(wxWindow* parent, wxString text, wxString icon = "", long style = 0, int iconSize = 0, wxWindowID btn_id = wxID_ANY);
 

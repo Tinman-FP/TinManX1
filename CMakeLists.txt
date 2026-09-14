@@ -84,33 +84,6 @@ else ()
     add_compile_definitions("BBL_RELEASE_TO_PUBLIC=$<CONFIG:Release>")
 endif ()
 
-find_package(Git)
-if(DEFINED ENV{git_commit_hash} AND NOT "$ENV{git_commit_hash}" STREQUAL "")
-    message(STATUS "Specified git commit hash: $ENV{git_commit_hash}")
-    if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
-        # Convert the given hash to short hash
-        execute_process(
-            COMMAND ${GIT_EXECUTABLE} rev-parse --short "$ENV{git_commit_hash}"
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            OUTPUT_VARIABLE GIT_COMMIT_HASH
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-    else()
-        # No .git directory (e.g., Flatpak sandbox) — truncate directly
-        string(SUBSTRING "$ENV{git_commit_hash}" 0 7 GIT_COMMIT_HASH)
-    endif()
-    add_definitions("-DGIT_COMMIT_HASH=\"${GIT_COMMIT_HASH}\"")
-elseif(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
-    # Check current Git commit hash
-    execute_process(
-        COMMAND ${GIT_EXECUTABLE} log -1 --format=%h
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_COMMIT_HASH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    add_definitions("-DGIT_COMMIT_HASH=\"${GIT_COMMIT_HASH}\"")
-endif()
-
 if(DEFINED ENV{SLIC3R_STATIC})
     set(SLIC3R_STATIC_INITIAL $ENV{SLIC3R_STATIC})
 else()
@@ -675,6 +648,10 @@ endif()
 
 find_package(EXPAT)
 
+if(APPLE AND EXPAT_FOUND)
+    list(FILTER EXPAT_INCLUDE_DIRS EXCLUDE REGEX "MacOSX[^/]*\\.sdk/usr/include/?$")
+endif()
+
 if (NOT EXPAT_FOUND)
     add_library(expat STATIC
         ${LIBDIR}/expat/xmlparse.c
@@ -687,6 +664,24 @@ if (NOT EXPAT_FOUND)
 endif ()
 
 find_package(PNG REQUIRED)
+
+# Apple system headers are already supplied by CMAKE_OSX_SYSROOT. Adding the
+# SDK's usr/include directory explicitly places it ahead of libc++ and breaks
+# headers which rely on include_next (for example cstddef -> stddef.h).
+if(APPLE)
+    foreach(_apple_system_target ZLIB::ZLIB EXPAT::EXPAT PNG::PNG Iconv::Iconv)
+        if(TARGET ${_apple_system_target})
+            get_target_property(_apple_system_includes ${_apple_system_target}
+                INTERFACE_INCLUDE_DIRECTORIES)
+            if(_apple_system_includes)
+                list(FILTER _apple_system_includes EXCLUDE REGEX
+                    "MacOSX[^/]*\\.sdk/usr/include/?$")
+                set_target_properties(${_apple_system_target} PROPERTIES
+                    INTERFACE_INCLUDE_DIRECTORIES "${_apple_system_includes}")
+            endif()
+        endif()
+    endforeach()
+endif()
 
 set(OpenGL_GL_PREFERENCE "LEGACY")
 find_package(OpenGL REQUIRED)

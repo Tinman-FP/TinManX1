@@ -1,0 +1,8 @@
+#ifndef TINMAN_BUILD_INFO_HPP
+#define TINMAN_BUILD_INFO_HPP
+
+// Include only in code that displays build identity, not common or precompiled headers.
+#define TINMANX1_REVISION "@TINMANX1_REVISION@"
+#define GIT_COMMIT_HASH "@GIT_COMMIT_HASH@"
+
+#endif

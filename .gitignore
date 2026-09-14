@@ -56,3 +56,5 @@ venv/
 # TinManX1 local validation artifacts.
 /outputs/
 /work/
+resources/orcaslicer_codex/tools/tinman-rtsp-bridge
+resources/orcaslicer_codex/tools/FFmpeg-LGPL-2.1.txt

@@ -14,6 +14,7 @@
 
 #include "slic3r/Utils/FileTransferUtils.hpp"
 #include "slic3r/Utils/BBLNetworkPlugin.hpp"
+#include "slic3r/Utils/NetworkAgentFactory.hpp"
 
 namespace Slic3r {
 namespace GUI {
@@ -27,6 +28,7 @@ static auto file_over_size_str = _u8L("The print file exceeds the maximum allowa
 static auto print_canceled_str    = _u8L("Task canceled.");
 static auto send_print_failed_str = _u8L("Failed to send the print job. Please try again.");
 static auto upload_ftp_failed_str = _u8L("Failed to upload file to ftp. Please try again.");
+static auto mqtt_publish_failed_str = _u8L("The printer control connection was lost before the print could start. TinManX1 tried to reconnect; please verify the printer is online and try again.");
 
 static auto     desc_network_error          = _u8L("Check the current status of the bambu server by clicking on the link above.");
 static auto     desc_file_too_large         = _u8L("The size of the print file is too large. Please adjust the file size and try again.");
@@ -198,7 +200,9 @@ void PrintJob::process(Ctl &ctl)
         this->task_bed_type = bed_type_to_gcode_string(plate_data.is_valid ? plate_data.bed_type : curr_plate->get_bed_type(true));
     }
 
-    PrintParams params;
+    // Value initialization is important because PrintParams crosses the binary
+    // plug-in ABI and all fundamental fields must have deterministic values.
+    PrintParams params{};
 
     // local print access
     params.dev_ip = m_dev_ip;
@@ -262,6 +266,7 @@ void PrintJob::process(Ctl &ctl)
     params.task_vibration_cali  = this->task_vibration_cali;
     params.task_layer_inspect   = this->task_layer_inspect;
     params.task_record_timelapse= this->task_record_timelapse;
+    params.task_timelapse_use_internal = false;
     params.nozzle_mapping       = this->task_nozzle_mapping;
     params.ams_mapping          = this->task_ams_mapping;
     params.ams_mapping2         = this->task_ams_mapping2;
@@ -274,6 +279,7 @@ void PrintJob::process(Ctl &ctl)
     params.auto_bed_leveling    = this->auto_bed_leveling;
     params.auto_flow_cali       = this->auto_flow_cali;
     params.auto_offset_cali     = this->auto_offset_cali;
+    params.extruder_cali_manual_mode = -1;
     params.task_ext_change_assist = this->task_ext_change_assist;
     // Allow disabling the eMMC print path via AppConfig. Plugin 02.03.00.62's
     // eMMC tunnel code hangs indefinitely at the upload phase with some
@@ -489,6 +495,78 @@ void PrintJob::process(Ctl &ctl)
     DeviceManager* dev = wxGetApp().getDeviceManager();
     MachineObject* obj = dev->get_selected_machine();
 
+    const auto printer_agent = m_agent ? m_agent->get_printer_agent() : nullptr;
+    const bool is_bambu_lan = params.connection_type == "lan" && printer_agent &&
+                              printer_agent->get_agent_info().id == BBL_PRINTER_AGENT_ID;
+
+    auto probe_bambu_lan_mqtt = [&]() {
+        static std::atomic_uint64_t sequence{1};
+        const auto id = sequence.fetch_add(1, std::memory_order_relaxed);
+        const std::string command = (boost::format(
+            "{\"info\":{\"command\":\"get_version\",\"sequence_id\":\"tinman_lan_probe_%1%\"}}") % id).str();
+        return m_agent->send_message_to_printer(params.dev_id, command, 0, 0);
+    };
+
+    auto ensure_bambu_lan_mqtt = [&](bool force_reconnect) {
+        if (!is_bambu_lan)
+            return true;
+
+        if (!force_reconnect && probe_bambu_lan_mqtt() == BAMBU_NETWORK_SUCCESS)
+            return true;
+
+        BOOST_LOG_TRIVIAL(warning) << "print_job: Bambu LAN MQTT unavailable; reconnecting before send"
+                                   << ", dev_id=" << params.dev_id
+                                   << ", dev_ip=" << params.dev_ip;
+        ctl.update_status(curr_percent, _u8L("Reconnecting to printer before sending"));
+
+        MachineObject* reconnect_obj = dev ? dev->get_my_machine(params.dev_id) : nullptr;
+        if (reconnect_obj)
+            reconnect_obj->set_lan_mode_connection_state(true);
+
+        m_agent->disconnect_printer();
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(150));
+
+        const int connect_result = m_agent->connect_printer(
+            params.dev_id, params.dev_ip, params.username, params.password, params.use_ssl_for_mqtt);
+        if (connect_result != BAMBU_NETWORK_SUCCESS) {
+            if (reconnect_obj)
+                reconnect_obj->set_lan_mode_connection_state(false);
+            BOOST_LOG_TRIVIAL(error) << "print_job: Bambu LAN reconnect failed to start, result=" << connect_result;
+            return false;
+        }
+
+        for (int attempt = 0; attempt < 40 && !ctl.was_canceled(); ++attempt) {
+            boost::this_thread::sleep_for(boost::chrono::milliseconds(150));
+            if (probe_bambu_lan_mqtt() == BAMBU_NETWORK_SUCCESS) {
+                BOOST_LOG_TRIVIAL(info) << "print_job: Bambu LAN MQTT reconnect verified after " << (attempt + 1) << " probes";
+                return true;
+            }
+        }
+
+        if (reconnect_obj)
+            reconnect_obj->set_lan_mode_connection_state(false);
+        BOOST_LOG_TRIVIAL(error) << "print_job: Bambu LAN MQTT reconnect timed out";
+        return false;
+    };
+
+    auto start_local_print_resilient = [&]() {
+        if (!ensure_bambu_lan_mqtt(false))
+            return BAMBU_NETWORK_ERR_PRINT_LP_PUBLISH_MSG_FAILED;
+
+        int local_result = m_agent->start_local_print(params, update_fn, cancel_fn);
+        if (local_result != BAMBU_NETWORK_ERR_PRINT_LP_PUBLISH_MSG_FAILED || ctl.was_canceled())
+            return local_result;
+
+        // -4030 means the final MQTT command was not published, so the printer
+        // has not started. Reconnecting and repeating the upload once is safe.
+        BOOST_LOG_TRIVIAL(warning) << "print_job: MQTT publish failed after upload; reconnecting and retrying LAN print once";
+        if (!ensure_bambu_lan_mqtt(true))
+            return local_result;
+
+        ctl.update_status(curr_percent, _u8L("Printer reconnected; resuming print transfer"));
+        return m_agent->start_local_print(params, update_fn, cancel_fn);
+    };
+
     auto wait_fn = [this, curr_percent, &obj](int state, std::string job_info) {
             BOOST_LOG_TRIVIAL(info) << "print_job: get_job_info = " << job_info;
 
@@ -605,7 +683,7 @@ void PrintJob::process(Ctl &ctl)
     } else {
         if (this->could_emmc_print) {
             ctl.update_status(curr_percent, _u8L("Sending print job over LAN"));
-            result = m_agent->start_local_print(params, update_fn, cancel_fn);
+            result = start_local_print_resilient();
         } else {
             switch(this->sdcard_state) {
                 case DevStorage::SdcardState::NO_SDCARD:
@@ -615,7 +693,7 @@ void PrintJob::process(Ctl &ctl)
                     if(this->has_sdcard) {
                         // means the storage is abnormal but can be used option is enabled
                         ctl.update_status(curr_percent, _u8L("Sending print job over LAN, but the Storage in the printer is abnormal and print-issues may be caused by this."));
-                        result = m_agent->start_local_print(params, update_fn, cancel_fn);
+                        result = start_local_print_resilient();
                         break;
                     }
                     ctl.update_status(curr_percent, _u8L("The Storage in the printer is abnormal. Please replace it with a normal Storage before sending print job to printer."));
@@ -625,7 +703,7 @@ void PrintJob::process(Ctl &ctl)
                     return;
                 case DevStorage::SdcardState::HAS_SDCARD_NORMAL:
                     ctl.update_status(curr_percent, _u8L("Sending print job over LAN"));
-                    result = m_agent->start_local_print(params, update_fn, cancel_fn);
+                    result = start_local_print_resilient();
                     break;
                 default:
                     ctl.update_status(curr_percent, _u8L("Encountered an unknown error with the Storage status. Please try again."));
@@ -647,6 +725,8 @@ void PrintJob::process(Ctl &ctl)
             msg_text = timeout_to_upload_str;
         } else if (result == BAMBU_NETWORK_ERR_PRINT_LP_UPLOAD_FTP_FAILED || result == BAMBU_NETWORK_ERR_PRINT_SG_UPLOAD_FTP_FAILED) {
             msg_text = upload_ftp_failed_str;
+        } else if (result == BAMBU_NETWORK_ERR_PRINT_LP_PUBLISH_MSG_FAILED) {
+            msg_text = mqtt_publish_failed_str;
         } else if (result == BAMBU_NETWORK_ERR_CANCELED) {
             msg_text = print_canceled_str;
             ctl.update_status(0, msg_text);

@@ -216,5 +216,8 @@
     ],
     "filament_price_source": [
         "Push Plastic PC+PBT 1 kg spool"
+    ],
+    "filament_extruder_variant": [
+        "Direct Drive High Flow"
     ]
 }

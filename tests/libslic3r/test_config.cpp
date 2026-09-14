@@ -11,6 +11,68 @@
 
 using namespace Slic3r;
 
+TEST_CASE("CLI schemas agree with their default value types", "[Config][CLI]")
+{
+    for (const ConfigDef *def : {static_cast<const ConfigDef *>(&cli_actions_config_def),
+                                 static_cast<const ConfigDef *>(&cli_transform_config_def),
+                                 static_cast<const ConfigDef *>(&cli_misc_config_def)}) {
+        for (const auto &entry : def->options) {
+            INFO(entry.first);
+            if (entry.second.default_value)
+                CHECK(entry.second.type == entry.second.default_value->type());
+        }
+    }
+}
+
+TEST_CASE("CLI rejects invalid values without throwing", "[Config][CLI]")
+{
+    for (const char *argument : {"--nozzle-diameter=nil", "--machine-max-speed-e=nil",
+                                "--filament-multitool-ramming-flow=nil", "--nozzle-diameter=bad",
+                                "--nozzle-diameter=0.4oops", "--nozzle-diameter=nan",
+                                "--nozzle-diameter=0.4,", "--printable-area=", "--raft-layers=1oops",
+                                "--raft-layers=1.5", "--reduce-crossing-wall=bad", "--reduce-crossing-wall=",
+                                "--reduce-crossing-wall=1,0", "--wipe=bad"}) {
+        INFO(argument);
+        DynamicPrintConfig config;
+        t_config_option_keys extra;
+        const char *argv[] = {"tinman", argument};
+        CHECK_FALSE(config.read_cli(2, argv, &extra));
+    }
+}
+
+TEST_CASE("CLI booleans accept explicit words and bare flags", "[Config][CLI]")
+{
+    for (const std::string value : {"1", "true", "TRUE", "yes", "on", "enabled",
+                                   "0", "false", "FALSE", "no", "off", "disabled"}) {
+        INFO(value);
+        DynamicPrintConfig config;
+        t_config_option_keys extra;
+        const std::string argument = "--reduce-crossing-wall=" + value;
+        const char *argv[] = {"tinman", argument.c_str()};
+        REQUIRE(config.read_cli(2, argv, &extra));
+        const bool expected = value == "1" || value == "true" || value == "TRUE" ||
+                              value == "yes" || value == "on" || value == "enabled";
+        CHECK(config.opt_bool("reduce_crossing_wall") == expected);
+    }
+    DynamicPrintConfig config;
+    t_config_option_keys extra;
+    const char *argv[] = {"tinman", "--reduce-crossing-wall", "--wipe=true,false", "--wipe"};
+    REQUIRE(config.read_cli(4, argv, &extra));
+    CHECK(config.opt_bool("reduce_crossing_wall"));
+    CHECK(config.option<ConfigOptionBools>("wipe")->values == std::vector<unsigned char>{1, 0, 1});
+}
+
+TEST_CASE("CLI preserves nullable vectors and explicitly empty strings", "[Config][CLI]")
+{
+    DynamicPrintConfig config;
+    t_config_option_keys extra;
+    const char *argv[] = {"tinman", "--filament-retraction-length=nil", "--machine-start-gcode=", "model.stl"};
+    REQUIRE(config.read_cli(4, argv, &extra));
+    CHECK(config.option("filament_retraction_length")->is_nil());
+    CHECK(config.opt_string("machine_start_gcode").empty());
+    CHECK(extra == t_config_option_keys{"model.stl"});
+}
+
 SCENARIO("Generic config validation performs as expected.", "[Config]") {
     GIVEN("A config generated from default options") {
         Slic3r::DynamicPrintConfig config = Slic3r::DynamicPrintConfig::full_print_config();
@@ -32,6 +94,30 @@ SCENARIO("Generic config validation performs as expected.", "[Config]") {
             THEN( "Validate returns error") {
                 REQUIRE_FALSE(config.validate().empty());
             }
+        }
+    }
+}
+
+SCENARIO("Wave Overhang v0.4 options retain their compatibility contract", "[Config][WaveOverhang]") {
+    GIVEN("A complete default print configuration") {
+        Slic3r::DynamicPrintConfig config = Slic3r::DynamicPrintConfig::full_print_config();
+
+        THEN("wave generation remains opt-in with the calibrated 0.4 mm baseline") {
+            REQUIRE_FALSE(config.opt<ConfigOptionBool>("wave_overhangs")->getBool());
+            REQUIRE_THAT(config.opt<ConfigOptionFloat>("wave_overhang_flow_mm3_per_mm")->getFloat(),
+                         Catch::Matchers::WithinAbs(0.15, 1e-9));
+            REQUIRE(config.opt<ConfigOptionInt>("wave_overhang_floor_layers")->getInt() == 2);
+        }
+
+        THEN("the v0.4 cooling and floor-ramp controls are present") {
+            REQUIRE(config.opt<ConfigOptionInt>("wave_overhang_aux_fan_speed")->getInt() == -1);
+            REQUIRE(config.opt<ConfigOptionInt>("wave_overhang_floor_aux_fan_speed")->getInt() == -1);
+            REQUIRE(config.opt<ConfigOptionInt>("wave_overhang_floor_speed_ramp")->getInt() == 0);
+        }
+
+        THEN("retired Kaiser selector fields cannot re-enter saved profiles") {
+            REQUIRE(config.option("wave_overhang_algorithm") == nullptr);
+            REQUIRE(config.option("wave_overhang_ring_overlap") == nullptr);
         }
     }
 }
@@ -359,6 +445,104 @@ SCENARIO("update_diff_values_to_child_config tolerates legacy machine-limit vect
                     REQUIRE_THAT(mx->values[1], Catch::Matchers::WithinAbs(8000.0, 1e-6));
                 }
             }
+        }
+    }
+}
+
+SCENARIO("Extruder variant projection tolerates transient incomplete configs",
+         "[Config][ExtruderVariants]") {
+    GIVEN("A two-extruder printer and an empty variant-backed value") {
+        Slic3r::DynamicPrintConfig values = Slic3r::DynamicPrintConfig::full_print_config();
+        Slic3r::DynamicPrintConfig printer = Slic3r::DynamicPrintConfig::full_print_config();
+
+        printer.option<Slic3r::ConfigOptionFloats>("nozzle_diameter")->values = {0.4, 0.4};
+        printer.option<Slic3r::ConfigOptionEnumsGeneric>("extruder_type")->values = {
+            Slic3r::etDirectDrive, Slic3r::etDirectDrive
+        };
+        printer.option<Slic3r::ConfigOptionEnumsGeneric>("nozzle_volume_type")->values = {
+            Slic3r::nvtStandard, Slic3r::nvtHighFlow
+        };
+        values.option<Slic3r::ConfigOptionInts>("printer_extruder_id")->values = {1, 2};
+        values.option<Slic3r::ConfigOptionStrings>("printer_extruder_variant")->values = {
+            "Direct Drive Standard", "Direct Drive High Flow"
+        };
+        values.option<Slic3r::ConfigOptionFloats>("retraction_length")->values.clear();
+        std::set<std::string> keys = {"retraction_length"};
+
+        THEN("projection skips the incomplete value instead of aborting") {
+            REQUIRE_NOTHROW(values.update_values_to_printer_extruders(
+                printer, keys, "printer_extruder_id", "printer_extruder_variant"));
+            REQUIRE(values.option<Slic3r::ConfigOptionFloats>("retraction_length")->values.empty());
+        }
+    }
+
+    GIVEN("A printer whose hardware-variant vectors are temporarily empty") {
+        Slic3r::DynamicPrintConfig values = Slic3r::DynamicPrintConfig::full_print_config();
+        Slic3r::DynamicPrintConfig printer = Slic3r::DynamicPrintConfig::full_print_config();
+
+        printer.option<Slic3r::ConfigOptionFloats>("nozzle_diameter")->values = {0.4, 0.4};
+        printer.option<Slic3r::ConfigOptionEnumsGeneric>("extruder_type")->values.clear();
+        printer.option<Slic3r::ConfigOptionEnumsGeneric>("nozzle_volume_type")->values.clear();
+        std::set<std::string> keys = {"retraction_length"};
+
+        THEN("projection leaves the config unchanged without throwing") {
+            const auto before = values.option<Slic3r::ConfigOptionFloats>("retraction_length")->values;
+            REQUIRE_NOTHROW(values.update_values_to_printer_extruders(
+                printer, keys, "printer_extruder_id", "printer_extruder_variant"));
+            REQUIRE(values.option<Slic3r::ConfigOptionFloats>("retraction_length")->values == before);
+        }
+    }
+
+    GIVEN("A printer whose transient hardware enums are out of range") {
+        Slic3r::DynamicPrintConfig values = Slic3r::DynamicPrintConfig::full_print_config();
+        Slic3r::DynamicPrintConfig printer = Slic3r::DynamicPrintConfig::full_print_config();
+
+        printer.option<Slic3r::ConfigOptionFloats>("nozzle_diameter")->values = {0.4, 0.4};
+        printer.option<Slic3r::ConfigOptionEnumsGeneric>("extruder_type")->values = {-1, 99};
+        printer.option<Slic3r::ConfigOptionEnumsGeneric>("nozzle_volume_type")->values = {-1, 99};
+        values.option<Slic3r::ConfigOptionFloats>("retraction_length")->values = {0.8};
+        std::set<std::string> keys = {"retraction_length"};
+
+        THEN("projection uses the base variant without indexing enum label tables") {
+            REQUIRE_NOTHROW(values.update_values_to_printer_extruders(
+                printer, keys, "printer_extruder_id", "printer_extruder_variant"));
+            const std::vector<double> expected = {0.8, 0.8};
+            REQUIRE(values.option<Slic3r::ConfigOptionFloats>("retraction_length")->values == expected);
+        }
+    }
+
+    GIVEN("Filaments mapped to invalid extruder numbers during a UI update") {
+        Slic3r::DynamicPrintConfig values = Slic3r::DynamicPrintConfig::full_print_config();
+        Slic3r::DynamicPrintConfig printer = Slic3r::DynamicPrintConfig::full_print_config();
+
+        printer.option<Slic3r::ConfigOptionFloats>("nozzle_diameter")->values = {0.4, 0.4};
+        printer.option<Slic3r::ConfigOptionEnumsGeneric>("extruder_type")->values = {
+            Slic3r::etDirectDrive, Slic3r::etDirectDrive
+        };
+        printer.option<Slic3r::ConfigOptionEnumsGeneric>("nozzle_volume_type")->values = {
+            Slic3r::nvtStandard, Slic3r::nvtHighFlow
+        };
+        auto* filament_map = printer.option<Slic3r::ConfigOptionInts>("filament_map");
+        auto* filament_self_index = values.option<Slic3r::ConfigOptionInts>("filament_self_index", true);
+        auto* filament_variants = values.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant", true);
+        auto* filament_flow_ratio = values.option<Slic3r::ConfigOptionFloats>("filament_flow_ratio");
+        REQUIRE(filament_map != nullptr);
+        REQUIRE(filament_self_index != nullptr);
+        REQUIRE(filament_variants != nullptr);
+        REQUIRE(filament_flow_ratio != nullptr);
+        filament_map->values = {0, 3};
+        filament_self_index->values = {1, 2};
+        filament_variants->values = {
+            "Direct Drive Standard", "Direct Drive High Flow"
+        };
+        filament_flow_ratio->values = {0.9, 1.1};
+        std::set<std::string> keys = {"filament_flow_ratio"};
+
+        THEN("invalid mappings retain compatible filament variants without throwing") {
+            REQUIRE_NOTHROW(values.update_values_to_printer_extruders_for_multiple_filaments(
+                printer, keys, "filament_self_index", "filament_extruder_variant"));
+            const std::vector<double> expected = {0.9, 1.1};
+            REQUIRE(values.option<Slic3r::ConfigOptionFloats>("filament_flow_ratio")->values == expected);
         }
     }
 }

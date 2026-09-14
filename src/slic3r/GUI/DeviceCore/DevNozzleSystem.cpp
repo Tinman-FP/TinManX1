@@ -29,7 +29,13 @@ static unordered_map<string, NozzleFlowType> _str2_nozzle_flow_type = {
     {"S", NozzleFlowType::S_FLOW},
     {"H", NozzleFlowType::H_FLOW},
     {"A", NozzleFlowType::S_FLOW},
-    {"X", NozzleFlowType::S_FLOW}
+    {"X", NozzleFlowType::S_FLOW},
+    // Current Bambu firmware reports generic, TPU, and E3D high-flow
+    // assemblies with E/U/B respectively. This branch has a two-class flow
+    // model, so all three must remain high-flow for job compatibility checks.
+    {"E", NozzleFlowType::H_FLOW},
+    {"U", NozzleFlowType::H_FLOW},
+    {"B", NozzleFlowType::H_FLOW}
 };
 
 static unordered_map<string, NozzleType> _str2_nozzle_type = {
@@ -138,6 +144,40 @@ void DevNozzleSystemParser::ParseV2_0(const json& nozzle_json, DevNozzleSystem* 
         nozzle_obj.m_diameter = njon["diameter"].get<float>();
         s_parse_nozzle_type(njon["type"].get<std::string>(), nozzle_obj);
         system->m_nozzles[nozzle_obj.m_nozzle_id] = nozzle_obj;
+    }
+}
+
+void DevNozzleSystemParser::ParseTinManTooling(const nlohmann::json& tooling_json, DevNozzleSystem* system)
+{
+    if (system == nullptr || !tooling_json.is_array())
+        return;
+
+    std::map<int, DevNozzle> parsed;
+    for (const auto& item : tooling_json) {
+        if (!item.is_object() || !item.contains("id") || !item["id"].is_number_integer() ||
+            !item.contains("diameter") || !item["diameter"].is_number())
+            continue;
+
+        DevNozzle nozzle;
+        nozzle.m_nozzle_id = item["id"].get<int>();
+        nozzle.m_diameter  = item["diameter"].get<float>();
+        if (nozzle.m_nozzle_id < 0 || nozzle.m_nozzle_id >= 16 ||
+            nozzle.m_diameter < 0.1f || nozzle.m_diameter > 2.0f)
+            continue;
+
+        if (item.contains("type") && item["type"].is_string())
+            s_parse_nozzle_type(item["type"].get<std::string>(), nozzle);
+        if (item.contains("flow") && item["flow"].is_string()) {
+            const std::string flow = item["flow"].get<std::string>();
+            nozzle.m_nozzle_flow = flow == "high" ? NozzleFlowType::H_FLOW : NozzleFlowType::S_FLOW;
+        }
+        parsed[nozzle.m_nozzle_id] = nozzle;
+    }
+
+    if (!parsed.empty()) {
+        system->Reset();
+        system->m_nozzles = std::move(parsed);
+        system->m_extder_exist = 1;
     }
 }
 }

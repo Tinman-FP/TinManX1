@@ -291,6 +291,7 @@ private:
 
     //BBS
     std::atomic<bool> m_is_closing {false};
+    std::atomic<bool> m_shutdown_started {false};
     Slic3r::DeviceManager* m_device_manager { nullptr };
     Slic3r::UserManager* m_user_manager { nullptr };
     Slic3r::TaskManager* m_task_manager { nullptr };
@@ -361,7 +362,7 @@ public:
     NetworkAgent* getAgent() { return m_agent; }
 
     // Dynamic printer agent switching
-    void switch_printer_agent();
+    void switch_printer_agent(bool refresh_machine = false);
 
     FilamentColorCodeQuery* get_filament_color_code_query();
     bool is_editor() const { return m_app_mode == EAppMode::Editor; }

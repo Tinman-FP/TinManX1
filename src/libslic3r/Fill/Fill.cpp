@@ -22,6 +22,27 @@
 
 namespace Slic3r {
 
+static void tag_wave_overhang_floor_recursive(ExtrusionEntity *entity, int8_t distance)
+{
+    if (entity == nullptr)
+        return;
+    auto tag = [distance](ExtrusionPath &path) {
+        path.wave_overhang_floor = true;
+        path.wave_overhang_floor_distance = distance;
+    };
+    if (auto *path = dynamic_cast<ExtrusionPath *>(entity))
+        tag(*path);
+    else if (auto *loop = dynamic_cast<ExtrusionLoop *>(entity))
+        for (ExtrusionPath &path : loop->paths)
+            tag(path);
+    else if (auto *multipath = dynamic_cast<ExtrusionMultiPath *>(entity))
+        for (ExtrusionPath &path : multipath->paths)
+            tag(path);
+    else if (auto *collection = dynamic_cast<ExtrusionEntityCollection *>(entity))
+        for (ExtrusionEntity *child : collection->entities)
+            tag_wave_overhang_floor_recursive(child, distance);
+}
+
 // Calculate infill rotation angle (in radians) for a given layer from a rotation template.
 // Grammar subset handled (rotation only):
 //   [±]α[*Z or !][joint][-][N|B|T][length][* or !]
@@ -272,6 +293,9 @@ struct SurfaceFillParams
     // For Gyroid: when true, use the parameterized "optimized" wave.
     bool gyroid_optimized = false;
 
+    bool wave_overhang_floor = false;
+    int8_t wave_overhang_floor_distance = 0;
+
 	bool operator<(const SurfaceFillParams &rhs) const {
 #define RETURN_COMPARE_NON_EQUAL(KEY) if (this->KEY < rhs.KEY) return true; if (this->KEY > rhs.KEY) return false;
 #define RETURN_COMPARE_NON_EQUAL_TYPED(TYPE, KEY) if (TYPE(this->KEY) < TYPE(rhs.KEY)) return true; if (TYPE(this->KEY) > TYPE(rhs.KEY)) return false;
@@ -303,6 +327,8 @@ struct SurfaceFillParams
 		RETURN_COMPARE_NON_EQUAL(infill_lock_depth);
 		RETURN_COMPARE_NON_EQUAL(skin_infill_depth);		RETURN_COMPARE_NON_EQUAL(infill_overhang_angle);
 		RETURN_COMPARE_NON_EQUAL(gyroid_optimized);
+		RETURN_COMPARE_NON_EQUAL_TYPED(unsigned, wave_overhang_floor);
+		RETURN_COMPARE_NON_EQUAL_TYPED(int, wave_overhang_floor_distance);
 
 		return false;
 	}
@@ -329,7 +355,9 @@ struct SurfaceFillParams
 				this->infill_lock_depth       == rhs.infill_lock_depth       &&
 				this->skin_infill_depth       == rhs.skin_infill_depth       &&
                 this->infill_overhang_angle   == rhs.infill_overhang_angle   &&
-                this->gyroid_optimized        == rhs.gyroid_optimized;
+                this->gyroid_optimized        == rhs.gyroid_optimized        &&
+                this->wave_overhang_floor     == rhs.wave_overhang_floor     &&
+                this->wave_overhang_floor_distance == rhs.wave_overhang_floor_distance;
 	}
 };
 
@@ -860,6 +888,8 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
 	        	has_internal_voids = true;
 	        else {
 		        const PrintRegionConfig &region_config = layerm.region().config();
+		        params.wave_overhang_floor = false;
+		        params.wave_overhang_floor_distance = 0;
 		        FlowRole extrusion_role = surface.is_top() ? frTopSolidInfill : (surface.is_solid() ? frSolidInfill : frInfill);
 		        bool     is_bridge 	    = layer.id() > 0 && surface.is_bridge();
 		        params.extruder 	 = layerm.region().extruder(extrusion_role);
@@ -891,6 +921,35 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                     } else if (surface.is_solid_infill()) {
                         params.pattern = region_config.internal_solid_infill_pattern.value;
                         params.density = 100.f;
+                        if (region_config.wave_overhangs.value
+                            && region_config.wave_overhang_floor_use_hilbert.value
+                            && !layer.wave_overhang_shadow_polygons.empty()) {
+                            const int floor_layers = std::max(0, region_config.wave_overhang_floor_layers.value);
+                            const int configured_hilbert_layers = std::max(0, region_config.wave_overhang_floor_hilbert_layers.value);
+                            const int hilbert_layers = configured_hilbert_layers > 0
+                                ? std::min(configured_hilbert_layers, floor_layers)
+                                : floor_layers;
+                            if (hilbert_layers > 0) {
+                                int distance = -1;
+                                const Layer *lower = &layer;
+                                for (int candidate = 1; candidate <= hilbert_layers; ++candidate) {
+                                    lower = lower->lower_layer;
+                                    if (lower == nullptr)
+                                        break;
+                                    if (!lower->wave_overhang_floor_polygons.empty()) {
+                                        distance = candidate;
+                                        break;
+                                    }
+                                }
+                                if (distance > 0
+                                    && !intersection(to_polygons(surface), layer.wave_overhang_shadow_polygons).empty()) {
+                                    params.pattern = ipHilbertCurve;
+                                    params.density = float(std::clamp(region_config.wave_overhang_floor_hilbert_density.value, 1, 100));
+                                    params.wave_overhang_floor = true;
+                                    params.wave_overhang_floor_distance = static_cast<int8_t>(std::min(distance, 127));
+                                }
+                            }
+                        }
                     } else {
                         if (region_config.top_surface_pattern == ipMonotonic || region_config.top_surface_pattern == ipMonotonicLine)
                             params.pattern = ipMonotonic;
@@ -1232,6 +1291,8 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
 #endif /* SLIC3R_DEBUG_SLICE_PROCESSING */
 
     for (SurfaceFill &surface_fill : surface_fills) {
+        auto &dst_entities = m_regions[surface_fill.region_id]->fills.entities;
+        const size_t wave_floor_start = dst_entities.size();
         // Create the filler object.
         std::unique_ptr<Fill> f = std::unique_ptr<Fill>(Fill::new_from_type(surface_fill.params.pattern));
         f->set_bounding_box(bbox);
@@ -1353,8 +1414,12 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
             // make fill
 			f->fill_surface_extrusion(&surface_fill.surface,
 				params,
-				m_regions[surface_fill.region_id]->fills.entities);
+				dst_entities);
 		}
+        if (surface_fill.params.wave_overhang_floor) {
+            for (size_t i = wave_floor_start; i < dst_entities.size(); ++i)
+                tag_wave_overhang_floor_recursive(dst_entities[i], surface_fill.params.wave_overhang_floor_distance);
+        }
     }
 
     // add thin fill regions

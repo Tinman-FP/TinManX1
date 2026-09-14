@@ -219,5 +219,8 @@
     ],
     "filament_price_source_note": [
         "1.75mm (New Packaging) / 1kg / Black; 52.99/1kg"
+    ],
+    "filament_extruder_variant": [
+        "Direct Drive High Flow"
     ]
 }

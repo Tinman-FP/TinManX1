@@ -227,19 +227,6 @@ void SavePresetDialog::Item::update_valid_bmp()
     m_valid_bmp->SetBitmap(create_scaled_bitmap(bmp_name, m_parent));
 }
 
-void SavePresetDialog::Item::accept()
-{
-    if (m_valid_type == Warning) {
-        auto    it               = m_presets->find_preset(m_preset_name, false);
-        Preset &current_preset   = *it;
-        if (!current_preset.setting_id.empty()) {
-            BOOST_LOG_TRIVIAL(info) << "delete preset = " << current_preset.name << ", setting_id = " << current_preset.setting_id;
-            wxGetApp().delete_preset_from_cloud(current_preset.setting_id, current_preset.file);
-        }
-        m_presets->delete_preset(m_preset_name);
-    }
-}
-
 void SavePresetDialog::Item::DoSetSize(int x, int y, int width, int height, int sizeFlags /*= wxSIZE_AUTO*/)
 {
     wxWindow::DoSetSize(x, y, width, height, sizeFlags);
@@ -320,11 +307,8 @@ void SavePresetDialog::input_name_from_other(std::string new_preset_name) {
     curr_item->m_input_ctrl->GetTextCtrl()->SetValue(new_preset_name);
 }
 
-void SavePresetDialog::confirm_from_other() {
-    for (Item *item : m_items) {
-        item->accept();
-        if (item->type() == Preset::TYPE_PRINTER) update_physical_printers(item->preset_name());
-    }
+bool SavePresetDialog::confirm_from_other() {
+    return enable_ok_btn();
 }
 
 // BBS: add project relate
@@ -429,37 +413,21 @@ void SavePresetDialog::on_dpi_changed(const wxRect &suggested_rect)
     Refresh();
 }
 
-void SavePresetDialog::update_physical_printers(const std::string &preset_name)
+PendingPhysicalPrinterUpdate SavePresetDialog::pending_physical_printer_update(const std::string &preset_name) const
 {
-    if (m_action == UndefAction) return;
-
-    PhysicalPrinterCollection &physical_printers = wxGetApp().preset_bundle->physical_printers;
-    if (!physical_printers.has_selection()) return;
-
-    std::string printer_preset_name = physical_printers.get_selected_printer_preset_name();
-
-    if (m_action == Switch)
-        // unselect physical printer, if it was selected
-        physical_printers.unselect_printer();
-    else {
-        PhysicalPrinter printer = physical_printers.get_selected_printer();
-
-        if (m_action == ChangePreset) printer.delete_preset(printer_preset_name);
-
-        if (printer.add_preset(preset_name)) physical_printers.save_printer(printer);
-
-        physical_printers.select_printer(printer.get_full_name(preset_name));
-    }
+    if (m_action == UndefAction || m_ph_printer_name.empty() || m_old_preset_name == preset_name)
+        return {};
+    using Action = PendingPhysicalPrinterUpdate::Action;
+    return {m_action == Switch ? Action::Switch : m_action == ChangePreset ? Action::Replace : Action::Add,
+            m_ph_printer_name, m_old_preset_name, preset_name};
 }
 
 void SavePresetDialog::accept(wxCommandEvent &event)
 {
-    for (Item *item : m_items) {
-        item->accept();
-        if (item->type() == Preset::TYPE_PRINTER) update_physical_printers(item->preset_name());
-    }
-
-    EndModal(wxID_OK);
+    // Confirmation gathers a request. It must not delete the old profile or
+    // change a connection before the caller has saved the replacement.
+    if (enable_ok_btn())
+        EndModal(wxID_OK);
 }
 
 }} // namespace Slic3r::GUI

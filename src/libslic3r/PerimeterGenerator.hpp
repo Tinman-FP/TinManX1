@@ -107,6 +107,9 @@ public:
     // Preserve construction order so overlap precedence remains deterministic.
     std::vector<std::pair<FuzzySkinConfig, ExPolygons>> regions_by_fuzzify;
 
+    // Footprint used by the authoritative backing-floor pass.
+    Polygons                                        out_wave_overhang_floor_polygons;
+
     // TinManX1: footprint covered by native Wave Overhang paths on this
     // layer. LayerRegion forwards it so support generation can leave only
     // residual unsupported area for normal/Arc support.

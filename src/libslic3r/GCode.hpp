@@ -598,6 +598,9 @@ private:
     float                               m_max_layer_z{ 0.0f };
     float                               m_last_width{ 0.0f };
 
+    bool                                m_inside_wave_overhang{ false };
+    double                              m_wave_layer_accumulated_time{ 0.0 };
+
     // Always check gcode placeholders when building in debug mode.
 #if !defined(NDEBUG)
 #define ORCA_CHECK_GCODE_PLACEHOLDERS 1

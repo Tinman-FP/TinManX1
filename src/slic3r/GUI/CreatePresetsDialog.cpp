@@ -2834,99 +2834,105 @@ wxWindow *CreatePrinterPresetDialog::create_page2_dialog_buttons(wxWindow *paren
         }
 
         std::vector<std::string> successful_preset_names;
-        if (curr_selected_preset_type == m_create_type.base_template) {
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " base template";
-            /******************************   clone filament preset    ********************************/
-            std::vector<std::string> failures;
-            if (!selected_filament_presets.empty()) {
-                bool create_preset_result = preset_bundle->filaments.clone_presets_for_printer(selected_filament_presets, failures, printer_preset_name, get_filament_id, rewritten);
-                if (!create_preset_result) {
-                    std::string message;
-                    for (const std::string &failure : failures) { message += "\t" + failure + "\n"; }
-                    MessageDialog dlg(this, _L("Create filament presets failed. As follows:\n") + from_u8(message) + _L("\nDo you want to rewrite it?"),
-                                      wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"),
-                                      wxYES | wxYES_DEFAULT | wxCENTRE);
-                    int res = dlg.ShowModal();
-                    if (wxID_YES == res) {
-                        create_preset_result = preset_bundle->filaments.clone_presets_for_printer(selected_filament_presets, failures, printer_preset_name,
-                                                                                                              get_filament_id, true);
-                    } else {
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " printer preset no same preset but filament has same preset, user cancel create the printer preset";
-                        return;
+        try {
+            if (curr_selected_preset_type == m_create_type.base_template) {
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " base template";
+                /******************************   clone filament preset    ********************************/
+                std::vector<std::string> failures;
+                if (!selected_filament_presets.empty()) {
+                    bool create_preset_result = preset_bundle->filaments.clone_presets_for_printer(selected_filament_presets, failures, printer_preset_name, get_filament_id, rewritten);
+                    if (!create_preset_result) {
+                        std::string message;
+                        for (const std::string &failure : failures) { message += "\t" + failure + "\n"; }
+                        MessageDialog dlg(this, _L("Create filament presets failed. As follows:\n") + from_u8(message) + _L("\nDo you want to rewrite it?"),
+                                          wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"),
+                                          wxYES | wxYES_DEFAULT | wxCENTRE);
+                        int res = dlg.ShowModal();
+                        if (wxID_YES == res) {
+                            create_preset_result = preset_bundle->filaments.clone_presets_for_printer(selected_filament_presets, failures, printer_preset_name,
+                                                                                                                  get_filament_id, true);
+                        } else {
+                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " printer preset no same preset but filament has same preset, user cancel create the printer preset";
+                            return;
+                        }
+                    }
+                    // save created successfully preset name
+                    for (Preset const *sucessful_preset : selected_filament_presets)
+                        successful_preset_names.push_back(sucessful_preset->name.substr(0, sucessful_preset->name.find(" @")) + " @" + printer_preset_name);
+                }
+
+                /******************************   clone process preset    ********************************/
+                failures.clear();
+                if (!selected_process_presets.empty()) {
+                    generate_process_presets_data(selected_process_presets, printer_nozzle_name);
+                    bool create_preset_result = preset_bundle->prints.clone_presets_for_printer(selected_process_presets, failures, printer_preset_name,
+                                                                                                               get_filament_id, rewritten);
+                    if (!create_preset_result) {
+                        std::string message;
+                        for (const std::string &failure : failures) { message += "\t" + failure + "\n"; }
+                        MessageDialog dlg(this, _L("Create process presets failed. As follows:\n") + from_u8(message) + _L("\nDo you want to rewrite it?"),
+                                          wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"),
+                                          wxYES | wxYES_DEFAULT | wxCENTRE);
+                        int res = dlg.ShowModal();
+                        if (wxID_YES == res) {
+                            create_preset_result = preset_bundle->prints.clone_presets_for_printer(selected_process_presets, failures, printer_preset_name, get_filament_id, true);
+                        } else {
+                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " printer preset no same preset but process has same preset, user cancel create the printer preset";
+                            return;
+                        }
                     }
                 }
-                // save created successfully preset name
-                for (Preset const *sucessful_preset : selected_filament_presets)
-                    successful_preset_names.push_back(sucessful_preset->name.substr(0, sucessful_preset->name.find(" @")) + " @" + printer_preset_name);
+            } else if (curr_selected_preset_type == m_create_type.base_curr_printer) { // create printer and based on printer
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " base curr printer";
+                /******************************   clone filament preset    ********************************/
+                std::vector<std::string> failures;
+                if (!selected_filament_presets.empty()) {
+                    bool create_preset_result = preset_bundle->filaments.clone_presets_for_printer(selected_filament_presets, failures, printer_preset_name, get_filament_id, rewritten);
+                    if (!create_preset_result) {
+                        std::string message;
+                        for (const std::string& failure : failures) {
+                            message += "\t" + failure + "\n";
+                        }
+                        MessageDialog dlg(this, _L("Create filament presets failed. As follows:\n") + from_u8(message) + _L("\nDo you want to rewrite it?"),
+                                          wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"),
+                                          wxYES | wxYES_DEFAULT | wxCENTRE);
+                        int           res = dlg.ShowModal();
+                        if (wxID_YES == res) {
+                            create_preset_result = preset_bundle->filaments.clone_presets_for_printer(selected_filament_presets, failures, printer_preset_name, get_filament_id, true);
+                        } else {
+                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " printer preset no same preset but filament has same preset, user cancel create the printer preset";
+                            return;
+                        }
+                    }
+                }
+
+                /******************************   clone process preset    ********************************/
+                failures.clear();
+                if (!selected_process_presets.empty()) {
+                    bool create_preset_result = preset_bundle->prints.clone_presets_for_printer(selected_process_presets, failures, printer_preset_name, get_filament_id, rewritten);
+                    if (!create_preset_result) {
+                        std::string message;
+                        for (const std::string& failure : failures) {
+                            message += "\t" + failure + "\n";
+                        }
+                        MessageDialog dlg(this, _L("Create process presets failed. As follows:\n") + from_u8(message) + _L("\nDo you want to rewrite it?"), wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"), wxYES | wxYES_DEFAULT | wxCENTRE);
+                        int           res = dlg.ShowModal();
+                        if (wxID_YES == res) {
+                            create_preset_result = preset_bundle->prints.clone_presets_for_printer(selected_process_presets, failures, printer_preset_name, get_filament_id, true);
+                        } else {
+                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " printer preset no same preset but filament has same preset, user cancel create the printer preset";
+                            return;
+                        }
+                    }
+                    // save created successfully preset name
+                    for (Preset const *sucessful_preset : selected_filament_presets)
+                        successful_preset_names.push_back(sucessful_preset->name.substr(0, sucessful_preset->name.find(" @")) + " @" + printer_preset_name);
+                }
             }
 
-            /******************************   clone process preset    ********************************/
-            failures.clear();
-            if (!selected_process_presets.empty()) {
-                generate_process_presets_data(selected_process_presets, printer_nozzle_name);
-                bool create_preset_result = preset_bundle->prints.clone_presets_for_printer(selected_process_presets, failures, printer_preset_name,
-                                                                                                           get_filament_id, rewritten);
-                if (!create_preset_result) {
-                    std::string message;
-                    for (const std::string &failure : failures) { message += "\t" + failure + "\n"; }
-                    MessageDialog dlg(this, _L("Create process presets failed. As follows:\n") + from_u8(message) + _L("\nDo you want to rewrite it?"),
-                                      wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"),
-                                      wxYES | wxYES_DEFAULT | wxCENTRE);
-                    int res = dlg.ShowModal();
-                    if (wxID_YES == res) {
-                        create_preset_result = preset_bundle->prints.clone_presets_for_printer(selected_process_presets, failures, printer_preset_name, get_filament_id, true);
-                    } else {
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " printer preset no same preset but process has same preset, user cancel create the printer preset";
-                        return;
-                    }
-                }
-            }
-        } else if (curr_selected_preset_type == m_create_type.base_curr_printer) { // create printer and based on printer
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " base curr printer";
-            /******************************   clone filament preset    ********************************/
-            std::vector<std::string> failures;
-            if (!selected_filament_presets.empty()) {
-                bool create_preset_result = preset_bundle->filaments.clone_presets_for_printer(selected_filament_presets, failures, printer_preset_name, get_filament_id, rewritten);
-                if (!create_preset_result) {
-                    std::string message;
-                    for (const std::string& failure : failures) {
-                        message += "\t" + failure + "\n";
-                    }
-                    MessageDialog dlg(this, _L("Create filament presets failed. As follows:\n") + from_u8(message) + _L("\nDo you want to rewrite it?"),
-                                      wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"),
-                                      wxYES | wxYES_DEFAULT | wxCENTRE);
-                    int           res = dlg.ShowModal();
-                    if (wxID_YES == res) {
-                        create_preset_result = preset_bundle->filaments.clone_presets_for_printer(selected_filament_presets, failures, printer_preset_name, get_filament_id, true);
-                    } else {
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " printer preset no same preset but filament has same preset, user cancel create the printer preset";
-                        return;
-                    }
-                }
-            }
-
-            /******************************   clone process preset    ********************************/
-            failures.clear();
-            if (!selected_process_presets.empty()) {
-                bool create_preset_result = preset_bundle->prints.clone_presets_for_printer(selected_process_presets, failures, printer_preset_name, get_filament_id, rewritten);
-                if (!create_preset_result) {
-                    std::string message;
-                    for (const std::string& failure : failures) {
-                        message += "\t" + failure + "\n";
-                    }
-                    MessageDialog dlg(this, _L("Create process presets failed. As follows:\n") + from_u8(message) + _L("\nDo you want to rewrite it?"), wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"), wxYES | wxYES_DEFAULT | wxCENTRE);
-                    int           res = dlg.ShowModal();
-                    if (wxID_YES == res) {
-                        create_preset_result = preset_bundle->prints.clone_presets_for_printer(selected_process_presets, failures, printer_preset_name, get_filament_id, true);
-                    } else {
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " printer preset no same preset but filament has same preset, user cancel create the printer preset";
-                        return;
-                    }
-                }
-                // save created successfully preset name
-                for (Preset const *sucessful_preset : selected_filament_presets)
-                    successful_preset_names.push_back(sucessful_preset->name.substr(0, sucessful_preset->name.find(" @")) + " @" + printer_preset_name);
-            }
+        } catch (const std::exception &error) {
+            show_error(this, _L("Could not save the new profiles. Profiles already saved remain available; the printer was not created.") + "\n\n" + wxString::FromUTF8(error.what()));
+            return;
         }
 
         /******************************   clone printer preset     ********************************/
@@ -2953,7 +2959,15 @@ wxWindow *CreatePrinterPresetDialog::create_page2_dialog_buttons(wxWindow *paren
         catch (...) {
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " bisic info is not rewritten, may be printer_model, printer_variant, or nozzle_diameter";
         }
-        preset_bundle->printers.save_current_preset(printer_preset_name, true, false, m_printer_preset);
+        try {
+            if (!preset_bundle->printers.save_current_preset(printer_preset_name, true, false, m_printer_preset)) {
+                show_error(this, _L("This preset cannot be overwritten. Save it under a different name."));
+                return;
+            }
+        } catch (const std::exception &error) {
+            show_error(this, _L("Could not save the printer preset.") + "\n\n" + wxString::FromUTF8(error.what()));
+            return;
+        }
         preset_bundle->update_compatible(PresetSelectCompatibleType::Always);
         EndModal(wxID_OK);
 

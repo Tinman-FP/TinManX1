@@ -37,8 +37,8 @@
         "1.00"
     ],
     "filament_max_volumetric_speed": [
-        "3.2",
-        "3.2"
+        "6",
+        "6"
     ],
     "nozzle_temperature": [
         "280",
@@ -93,19 +93,19 @@
         "0"
     ],
     "fan_max_speed": [
-        "20",
-        "20"
+        "40",
+        "40"
     ],
     "overhang_fan_speed": [
-        "35",
-        "35"
+        "70",
+        "70"
     ],
     "filament_retraction_length": [
         "0.8",
         "0.8"
     ],
     "filament_notes": [
-        "TinManX1 PET-CF field tune 2026-08-04: supersedes the July 11 300C / 1.08-flow rescue profile. Use 285C first layer / 280C print, 80C bed, 50C active chamber on supported TinMan machines, flow 1.00, max volumetric 3.2 mm3/s, limited overhang cooling, and pressure advance 0.028. Fiberon permits room-temperature chambers; the controlled 50C target is the TinMan field-quality setting. Dry at 100C for 10h."
+        "TinManX1 X1C HF PET-CF refinement 2026-08-18: based on the 0.6 mm Built Plate Alignment Blocks print, retain 285C first layer / 280C print, 80C bed, flow 1.00, and pressure advance 0.028; use a 6 mm3/s HF ceiling, 40% normal fan after layer 3, 70% overhang fan from 10% overlap, and a 35 s small-layer target. This targets curled upper posts and nozzle pickup without weakening the proven bulk-wall tune. Dry at 100C for 10h and print from a dry box."
     ],
     "tinmanx_petcf17_x1c_tune": [
         "2026-07-11 Bambu X1C PET-CF17 anti-starvation tune"
@@ -122,8 +122,8 @@
         "2026-07-11 enable_pressure_advance=1 pressure_advance=0.026"
     ],
     "slow_down_layer_time": [
-        "25",
-        "25"
+        "35",
+        "35"
     ],
     "slow_down_min_speed": [
         "6",
@@ -133,7 +133,7 @@
         "2026-07-11 all PET-CF rescue tune with pressure advance"
     ],
     "overhang_fan_threshold": [
-        "25%"
+        "10%"
     ],
     "activate_chamber_temp_control": [
         "0"

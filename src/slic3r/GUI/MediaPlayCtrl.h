@@ -36,6 +36,9 @@ public:
 
     void SetMachineObject(MachineObject * obj);
 
+    // Plays a printer-independent RTSP source through the native camera backend.
+    void SetDirectStreamURL(const std::string& stream_url, const std::string& identity, const wxString& idle_message = {});
+
     bool IsStreaming() const;
 
     void ToggleStream();
@@ -90,6 +93,7 @@ private:
     bool m_device_busy = false;
     bool m_disable_lan = false;
     wxString m_url;
+    std::string m_direct_stream_url;
     
     std::deque<wxString> m_tasks;
     boost::mutex m_mutex;

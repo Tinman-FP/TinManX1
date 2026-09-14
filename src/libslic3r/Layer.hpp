@@ -168,10 +168,15 @@ public:
     ExPolygons              loverhangs;
     BoundingBox             loverhangs_bbox;
 
+    // Footprint used to construct authoritative solid backing floors above waves.
+    Polygons                wave_overhang_floor_polygons;
+
     // TinManX1: footprint covered by native Wave Overhang paths on this layer.
     // Support generation subtracts this so normal/Arc support only handles
     // residual unsupported regions.
     Polygons                wave_overhang_covered_polygons;
+    // Portion of this layer promoted into a wave-overhang backing floor.
+    Polygons                wave_overhang_shadow_polygons;
     std::vector<std::string> wave_overhang_diagnostics;
     size_t                  region_count() const { return m_regions.size(); }
     const LayerRegion*      get_region(int idx) const { return m_regions[idx]; }
