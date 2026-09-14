@@ -1,5 +1,15 @@
 # Changelog
 
+## v2026.09.13-cli-regressions.1
+
+- reject malformed CLI booleans, numeric values, illegal nulls, and empty build-plate outlines without crashing; retain nullable settings and legacy CLI flags
+- create nested CLI data/output directories and provide structured error reports on macOS and Windows as well as Linux
+- share privacy-preserving JSON and 3MF export handling and normalize physical-tool arrays before CLI export
+- preserve per-filament fiber metadata instead of overwriting it with process aliases; retain legacy fiber-planner input compatibility
+- honor per-feature filament assignments even when support generation is disabled
+- pin the external regression suite and teach its reference-file parser to read newer upstream fields without expanding or bypassing the tested CLI surface
+- update the native splash/About revision; tuned printer, filament, and process profiles are unchanged
+
 ## v2026.09.13-about-credits.1
 
 - replaced the inherited About header with the TinManX1 logo and native product, revision, build, and upstream-version labels

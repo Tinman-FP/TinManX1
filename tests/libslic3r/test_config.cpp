@@ -11,6 +11,68 @@
 
 using namespace Slic3r;
 
+TEST_CASE("CLI schemas agree with their default value types", "[Config][CLI]")
+{
+    for (const ConfigDef *def : {static_cast<const ConfigDef *>(&cli_actions_config_def),
+                                 static_cast<const ConfigDef *>(&cli_transform_config_def),
+                                 static_cast<const ConfigDef *>(&cli_misc_config_def)}) {
+        for (const auto &entry : def->options) {
+            INFO(entry.first);
+            if (entry.second.default_value)
+                CHECK(entry.second.type == entry.second.default_value->type());
+        }
+    }
+}
+
+TEST_CASE("CLI rejects invalid values without throwing", "[Config][CLI]")
+{
+    for (const char *argument : {"--nozzle-diameter=nil", "--machine-max-speed-e=nil",
+                                "--filament-multitool-ramming-flow=nil", "--nozzle-diameter=bad",
+                                "--nozzle-diameter=0.4oops", "--nozzle-diameter=nan",
+                                "--nozzle-diameter=0.4,", "--printable-area=", "--raft-layers=1oops",
+                                "--raft-layers=1.5", "--reduce-crossing-wall=bad", "--reduce-crossing-wall=",
+                                "--reduce-crossing-wall=1,0", "--wipe=bad"}) {
+        INFO(argument);
+        DynamicPrintConfig config;
+        t_config_option_keys extra;
+        const char *argv[] = {"tinman", argument};
+        CHECK_FALSE(config.read_cli(2, argv, &extra));
+    }
+}
+
+TEST_CASE("CLI booleans accept explicit words and bare flags", "[Config][CLI]")
+{
+    for (const std::string value : {"1", "true", "TRUE", "yes", "on", "enabled",
+                                   "0", "false", "FALSE", "no", "off", "disabled"}) {
+        INFO(value);
+        DynamicPrintConfig config;
+        t_config_option_keys extra;
+        const std::string argument = "--reduce-crossing-wall=" + value;
+        const char *argv[] = {"tinman", argument.c_str()};
+        REQUIRE(config.read_cli(2, argv, &extra));
+        const bool expected = value == "1" || value == "true" || value == "TRUE" ||
+                              value == "yes" || value == "on" || value == "enabled";
+        CHECK(config.opt_bool("reduce_crossing_wall") == expected);
+    }
+    DynamicPrintConfig config;
+    t_config_option_keys extra;
+    const char *argv[] = {"tinman", "--reduce-crossing-wall", "--wipe=true,false", "--wipe"};
+    REQUIRE(config.read_cli(4, argv, &extra));
+    CHECK(config.opt_bool("reduce_crossing_wall"));
+    CHECK(config.option<ConfigOptionBools>("wipe")->values == std::vector<unsigned char>{1, 0, 1});
+}
+
+TEST_CASE("CLI preserves nullable vectors and explicitly empty strings", "[Config][CLI]")
+{
+    DynamicPrintConfig config;
+    t_config_option_keys extra;
+    const char *argv[] = {"tinman", "--filament-retraction-length=nil", "--machine-start-gcode=", "model.stl"};
+    REQUIRE(config.read_cli(4, argv, &extra));
+    CHECK(config.option("filament_retraction_length")->is_nil());
+    CHECK(config.opt_string("machine_start_gcode").empty());
+    CHECK(extra == t_config_option_keys{"model.stl"});
+}
+
 SCENARIO("Generic config validation performs as expected.", "[Config]") {
     GIVEN("A config generated from default options") {
         Slic3r::DynamicPrintConfig config = Slic3r::DynamicPrintConfig::full_print_config();

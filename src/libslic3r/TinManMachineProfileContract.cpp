@@ -314,6 +314,15 @@ bool tinmanx_apply_nozzle_volume_contract(const std::string &preset_name,
     return true;
 }
 
+DynamicPrintConfig tinmanx_portable_project_config(const DynamicPrintConfig &config)
+{
+    DynamicPrintConfig portable = config;
+    for (const auto &key : portable.keys())
+        if (tinmanx_runtime_connection_option(key))
+            portable.erase(key);
+    return portable;
+}
+
 bool tinmanx_normalize_multitool_config(DynamicPrintConfig &config,
                                         size_t filament_count)
 {

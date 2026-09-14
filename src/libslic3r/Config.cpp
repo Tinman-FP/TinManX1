@@ -407,7 +407,7 @@ std::ostream& ConfigDef::print_cli_help(std::ostream& out, bool show_defaults, s
             for (auto& arg : cli_args) {
                 arg.insert(0, (arg.size() == 1) ? "-" : "--");
                 //BBS: refine the print help format
-                if (!def.cli_params.empty())
+                if (!def.cli_params.empty() && def.type != coBool && def.type != coBools)
                     arg += " " + def.cli_params;
                 /*if ( def.type == coInt || def.type == coInts) {
                     arg += " int_value";
@@ -1588,6 +1588,42 @@ const ConfigOption* DynamicConfig::optptr(const t_config_option_key &opt_key) co
     return (it == options.end()) ? nullptr : it->second.get();
 }
 
+static bool valid_cli_numeric_value(const ConfigOptionDef &def, const std::string &value)
+{
+    const bool integer = def.type == coInt || def.type == coInts;
+    const bool percent = def.type == coPercent || def.type == coPercents ||
+                         def.type == coFloatOrPercent || def.type == coFloatsOrPercents;
+    if (!integer && !percent && def.type != coFloat && def.type != coFloats)
+        return true;
+
+    std::vector<std::string> items;
+    if (def.type & coVectorType)
+        boost::split(items, value, boost::is_any_of(","));
+    else
+        items.push_back(value);
+    for (auto item : items) {
+        boost::trim(item);
+        if (item == "nil" && def.nullable)
+            continue;
+        if (percent && !item.empty() && item.back() == '%')
+            item.pop_back();
+        std::istringstream stream(item);
+        stream.imbue(std::locale::classic());
+        double number = 0;
+        int whole = 0;
+        if (integer)
+            stream >> whole;
+        else
+            stream >> number;
+        if (stream.fail() || !std::isfinite(number))
+            return false;
+        stream >> std::ws;
+        if (!stream.eof())
+            return false;
+    }
+    return true;
+}
+
 bool DynamicConfig::read_cli(int argc, const char* const argv[], t_config_option_keys* extra, t_config_option_keys* keys)
 {
     // cache the CLI option => opt_key mapping
@@ -1619,9 +1655,11 @@ bool DynamicConfig::read_cli(int argc, const char* const argv[], t_config_option
         token.erase(token.begin(), token.begin() + (boost::starts_with(token, "--") ? 2 : 1));
         // Read value when supplied in the --key=value form.
         std::string value;
+        bool value_supplied = false;
         {
             size_t equals_pos = token.find("=");
             if (equals_pos != std::string::npos) {
+                value_supplied = true;
                 value = token.substr(equals_pos+1);
                 token.erase(equals_pos);
             }
@@ -1653,12 +1691,13 @@ bool DynamicConfig::read_cli(int argc, const char* const argv[], t_config_option
 
         // If the option type expects a value and it was not already provided,
         // look for it in the next token.
-        if (value.empty() && optdef.type != coBool && optdef.type != coBools) {
+        if (!value_supplied && optdef.type != coBool && optdef.type != coBools) {
             if (i == argc-1) {
                 boost::nowide::cerr << "Need values for option --" << token.c_str() << std::endl;
                 return false;
             }
             value = argv[++ i];
+            value_supplied = true;
         }
 
         /*if (no) {
@@ -1677,36 +1716,68 @@ bool DynamicConfig::read_cli(int argc, const char* const argv[], t_config_option
         }
         ConfigOption            *opt_base   = this->option(opt_key, true);
         ConfigOptionVectorBase  *opt_vector = opt_base->is_vector() ? static_cast<ConfigOptionVectorBase*>(opt_base) : nullptr;
-        if (opt_vector) {
-			if (! existing)
-				// remove the default values
-				opt_vector->clear();
-            // Vector values will be chained. Repeated use of a parameter will append the parameter or parameters
-            // to the end of the value.
-            if (opt_base->type() == coBools && value.empty())
-                static_cast<ConfigOptionBools*>(opt_base)->values.push_back(!no);
-            else
-                // Deserialize any other vector value (ConfigOptionInts, Floats, Percents, Points) the same way
-                // they get deserialized from an .ini file. For ConfigOptionStrings, that means that the C-style unescape
-                // will be applied for values enclosed in quotes, while values non-enclosed in quotes are left to be
-                // unescaped by the calling shell.
-				opt_vector->deserialize(value, true);
-        } else if (opt_base->type() == coBool) {
-            if (value.empty())
-                static_cast<ConfigOptionBool*>(opt_base)->value = !no;
-            else
-                opt_base->deserialize(value);
-        } else if (opt_base->type() == coString) {
-            // Do not unescape single string values, the unescaping is left to the calling shell.
-            static_cast<ConfigOptionString*>(opt_base)->value = value;
-        } else {
-            // Just bail out if the configuration value is not understood.
-            ConfigSubstitutionContext context(ForwardCompatibilitySubstitutionRule::Disable);
-            // Any scalar value of a type different from Bool and String.
-            if (! this->set_deserialize_nothrow(opt_key, value, context, false)) {
-				boost::nowide::cerr << "Invalid value for option --" << token.c_str() << std::endl;
-				return false;
-			}
+        bool valid = valid_cli_numeric_value(optdef, value);
+        if (opt_key == "printable_area" && boost::trim_copy(value).empty())
+            valid = false;
+        try {
+            // CLI literals are friendlier than the on-disk 0/1 representation.
+            if (value_supplied && (optdef.type == coBool || optdef.type == coBools)) {
+                std::vector<std::string> literals;
+                boost::split(literals, value, boost::is_any_of(","));
+                if (optdef.type == coBool && literals.size() != 1)
+                    valid = false;
+                for (std::string &literal : literals) {
+                    boost::trim(literal);
+                    boost::to_lower(literal);
+                    if (literal == "true" || literal == "yes" || literal == "on" || literal == "enabled")
+                        literal = "1";
+                    else if (literal == "false" || literal == "no" || literal == "off" || literal == "disabled")
+                        literal = "0";
+                    else if (literal != "0" && literal != "1" &&
+                             !(literal == "nil" && optdef.type == coBools && optdef.nullable))
+                        valid = false;
+                }
+                value = boost::join(literals, ",");
+            }
+            if (!valid) {
+                boost::nowide::cerr << "Invalid value for option --" << token << std::endl;
+                return false;
+            }
+            if (opt_vector) {
+                if (!existing)
+                    // Remove the default values before the first CLI occurrence.
+                    opt_vector->clear();
+                // Vector values will be chained. Repeated use of a parameter will append the parameter or parameters
+                // to the end of the value.
+                if (opt_base->type() == coBools && !value_supplied)
+                    static_cast<ConfigOptionBools*>(opt_base)->values.push_back(!no);
+                else
+                    // Deserialize any other vector value (ConfigOptionInts, Floats, Percents, Points) the same way
+                    // they get deserialized from an .ini file. For ConfigOptionStrings, that means that the C-style unescape
+                    // will be applied for values enclosed in quotes, while values non-enclosed in quotes are left to be
+                    // unescaped by the calling shell.
+                    valid = opt_vector->deserialize(value, true);
+            } else if (opt_base->type() == coBool) {
+                if (!value_supplied)
+                    static_cast<ConfigOptionBool*>(opt_base)->value = !no;
+                else
+                    valid = opt_base->deserialize(value);
+            } else if (opt_base->type() == coString) {
+                // Do not unescape single string values, the unescaping is left to the calling shell.
+                static_cast<ConfigOptionString*>(opt_base)->value = value;
+            } else {
+                // Just bail out if the configuration value is not understood.
+                ConfigSubstitutionContext context(ForwardCompatibilitySubstitutionRule::Disable);
+                // Any scalar value of a type different from Bool and String.
+                valid = this->set_deserialize_nothrow(opt_key, value, context, false);
+            }
+        } catch (const std::exception &e) {
+            boost::nowide::cerr << "Invalid value for option --" << token << ": " << e.what() << std::endl;
+            return false;
+        }
+        if (!valid) {
+            boost::nowide::cerr << "Invalid value for option --" << token << std::endl;
+            return false;
         }
     }
     return true;

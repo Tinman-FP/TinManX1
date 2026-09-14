@@ -20,6 +20,9 @@ bool tinmanx_machine_preset_allowed(const std::string &preset_name, const std::s
 bool tinmanx_managed_machine_preset(const std::string &preset_name, const std::string &machine_hint = {});
 bool tinmanx_runtime_connection_option(const std::string &option_name);
 
+// Shareable project exports must not carry local printer connections.
+DynamicPrintConfig tinmanx_portable_project_config(const DynamicPrintConfig &config);
+
 // Return the printer-agent implementation required by a curated machine.
 // An empty value means the profile's configured agent should be used.
 std::string tinmanx_expected_printer_agent(const std::string &preset_name,

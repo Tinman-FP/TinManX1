@@ -7715,21 +7715,12 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
         return true;
     }
 
-    static DynamicPrintConfig portable_project_config(const DynamicPrintConfig &config)
-    {
-        DynamicPrintConfig portable = config;
-        for (const auto &key : portable.keys())
-            if (tinmanx_runtime_connection_option(key))
-                portable.erase(key);
-        return portable;
-    }
-
     //BBS: add project config file logic for new json format
     bool _BBS_3MF_Exporter::_add_project_config_file_to_archive(mz_zip_archive& archive, const DynamicPrintConfig &config, Model& model)
     {
         const std::string& temp_path = model.get_backup_path();
         std::string temp_file = temp_path + std::string("/") + "_temp_1.config";
-        portable_project_config(config).save_to_json(temp_file, std::string("project_settings"), std::string("project"), std::string(SLIC3R_VERSION));
+        tinmanx_portable_project_config(config).save_to_json(temp_file, std::string("project_settings"), std::string("project"), std::string(SLIC3R_VERSION));
         return _add_file_to_archive(archive, BBS_PROJECT_CONFIG_FILE, temp_file);
     }
 
@@ -7761,7 +7752,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                     continue;
 
                 const std::string temp_file = temp_path + "/_temp_1.config";
-                portable_project_config(preset->config).save_to_json(temp_file, preset->name, "project", preset->version.to_string());
+                tinmanx_portable_project_config(preset->config).save_to_json(temp_file, preset->name, "project", preset->version.to_string());
                 if (!_add_file_to_archive(archive, dest_file, temp_file))
                     return false;
             }

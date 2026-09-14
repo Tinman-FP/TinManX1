@@ -720,6 +720,22 @@ def main() -> int:
         )
         routes, skipped = planner.plan_routes(parsed, cfg)
 
+        # New native exports keep process fiber metadata separate from the
+        # filament vector settings; legacy files above still use fiber_*.
+        canonical_fixture = Path(tmpdir) / "canonical_metadata.gcode"
+        canonical_fixture.write_text(
+            SYNTHETIC_GCODE
+            + "; fiber_diameter = 0\n; fiber_linear_density = 0\n"
+            + "; continuous_fiber_diameter = 0.31\n"
+            + "; continuous_fiber_linear_density = 125\n",
+            encoding="utf-8",
+        )
+        canonical_cfg = planner.planner_config(planner.parse_gcode(canonical_fixture), default_planner_args())
+        if canonical_cfg.fiber_diameter != 0.31 or canonical_cfg.fiber_linear_density != 125:
+            raise SystemExit("Canonical process fiber metadata was lost to filament vector defaults")
+        if cfg.fiber_diameter != 0.25 or cfg.fiber_linear_density != 102:
+            raise SystemExit("Legacy fiber metadata compatibility was lost")
+
         material_payload = {
             "material_tuning": {
                 "PA-CF + X-CCF": {

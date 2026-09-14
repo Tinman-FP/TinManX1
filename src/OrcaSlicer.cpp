@@ -416,7 +416,6 @@ static PrinterTechnology get_printer_technology(const DynamicConfig &config)
 
 void record_exit_reson(std::string outputdir, int code, int plate_id, std::string error_message, sliced_info_t& sliced_info, std::map<std::string, std::string> key_values = std::map<std::string, std::string>())
 {
-#if defined(__linux__) || defined(__LINUX__)
     std::string result_file;
 
     if (!outputdir.empty())
@@ -460,7 +459,6 @@ void record_exit_reson(std::string outputdir, int code, int plate_id, std::strin
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" <<__LINE__ << boost::format(", saved config to %1%\n")%result_file;
     }
     catch (...) {}
-#endif
 }
 
 static int decode_png_to_thumbnail(std::string png_file, ThumbnailData& thumbnail_data)
@@ -3645,6 +3643,10 @@ int CLI::run(int argc, char **argv)
     if (printer_technology == ptFFF) {
         fff_print_config.apply(m_print_config, true);
         m_print_config.apply(fff_print_config, true);
+        // Use the same physical-tool normalization as Print::apply before
+        // exporting the merged configuration in JSON or 3MF.
+        const auto *filaments = m_print_config.option<ConfigOptionStrings>("filament_settings_id");
+        tinmanx_normalize_multitool_config(m_print_config, filaments ? filaments->values.size() : 1);
     } else {
         boost::nowide::cerr << "invalid printer_technology " << std::endl;
         record_exit_reson(outfile_dir, CLI_INVALID_PRINTER_TECH, 0, cli_errors[CLI_INVALID_PRINTER_TECH], sliced_info);
@@ -5591,7 +5593,7 @@ int CLI::run(int argc, char **argv)
             //FIXME check for mixing the FFF / SLA parameters.
             // or better save fff_print_config vs. sla_print_config
             //m_print_config.save(m_config.opt_string("save"));
-            m_print_config.save_to_json(m_config.opt_string(opt_key), std::string("project_settings"), std::string("project"), std::string(SoftFever_VERSION));
+            tinmanx_portable_project_config(m_print_config).save_to_json(m_config.opt_string(opt_key), std::string("project_settings"), std::string("project"), std::string(SoftFever_VERSION));
         } else if (opt_key == "info") {
             // --info works on unrepaired model
             for (Model &model : m_models) {
@@ -7220,7 +7222,15 @@ bool CLI::setup(int argc, char **argv)
         for (const t_optiondef_map::value_type &optdef : *options)
             m_config.option(optdef.first, true);
 
-    set_data_dir(m_config.opt_string("datadir"));
+    try {
+        set_data_dir(m_config.opt_string("datadir"));
+        const std::string &outputdir = m_config.opt_string("outputdir");
+        if (!outputdir.empty())
+            boost::filesystem::create_directories(outputdir);
+    } catch (const boost::filesystem::filesystem_error &e) {
+        boost::nowide::cerr << "Cannot initialize CLI directory: " << e.what() << std::endl;
+        return false;
+    }
 
     //FIXME Validating at this stage most likely does not make sense, as the config is not fully initialized yet.
     if (!validity.empty()) {
@@ -7459,7 +7469,7 @@ std::string CLI::output_filepath(const ModelObject &object, unsigned int index, 
 
     boost::filesystem::path subdir_path(subdir);
     if (!boost::filesystem::exists(subdir_path))
-        boost::filesystem::create_directory(subdir_path);
+        boost::filesystem::create_directories(subdir_path);
     return output_path;
 }
 

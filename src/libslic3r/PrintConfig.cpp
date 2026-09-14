@@ -12112,7 +12112,7 @@ CLIActionsConfigDef::CLIActionsConfigDef()
     def->cli_params = "slicing_data_directory";
     def->set_default_value(new ConfigOptionString("cached_data"));
 
-    def = this->add("load_slicedata", coStrings);
+    def = this->add("load_slicedata", coString);
     def->label = L("Load slicing data");
     def->tooltip = L("Load cached slicing data from directory.");
     def->cli_params = "slicing_data_directory";
@@ -12467,7 +12467,7 @@ CLIMiscConfigDef::CLIMiscConfigDef()
     def->cli_params = "level";
     def->set_default_value(new ConfigOptionInt(1));
 
-    def = this->add("logfile", coInt);
+    def = this->add("logfile", coString);
     def->label = L("Log file");
     def->tooltip = L("Redirects debug logging to file.\n");
     def->cli_params = "file";

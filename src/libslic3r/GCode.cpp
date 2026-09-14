@@ -6133,24 +6133,8 @@ void GCode::append_full_config(const Print &print, std::string &str)
                 ss << "; " << key << " = " << cfg.opt_serialize(key) << "\n";
         }
     }
-    if (const ConfigOptionString *opt = cfg.option<ConfigOptionString>("continuous_fiber_name"))
-        if (!opt->value.empty())
-            ss << "; fiber_name = " << opt->value << "\n";
-    if (const ConfigOptionString *opt = cfg.option<ConfigOptionString>("continuous_fiber_type"))
-        if (!opt->value.empty())
-            ss << "; fiber_type = " << opt->value << "\n";
-    if (const ConfigOptionString *opt = cfg.option<ConfigOptionString>("continuous_fiber_material_kind"))
-        if (!opt->value.empty())
-            ss << "; fiber_material_kind = " << opt->value << "\n";
-    if (const ConfigOptionString *opt = cfg.option<ConfigOptionString>("continuous_fiber_source_material_id"))
-        if (!opt->value.empty())
-            ss << "; fiber_source_material_id = " << opt->value << "\n";
-    if (const ConfigOptionFloat *opt = cfg.option<ConfigOptionFloat>("continuous_fiber_diameter"))
-        if (opt->value > 0.0)
-            ss << "; fiber_diameter = " << opt->value << "\n";
-    if (const ConfigOptionFloat *opt = cfg.option<ConfigOptionFloat>("continuous_fiber_linear_density"))
-        if (opt->value > 0.0)
-            ss << "; fiber_linear_density = " << opt->value << "\n";
+    // Process continuous_fiber_* and per-filament fiber_* settings are distinct.
+    // Both were serialized above; aliases here would overwrite the filament data.
     str += ss.str();
 }
 

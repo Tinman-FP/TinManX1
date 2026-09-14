@@ -1,0 +1,57 @@
+diff --git a/settings_compare.py b/settings_compare.py
+index 51298e1..c91b20d 100644
+--- a/settings_compare.py
++++ b/settings_compare.py
+@@ -28,6 +28,7 @@ from __future__ import annotations
+ import json
+ import re
+ import zipfile
++from functools import lru_cache
+ from pathlib import Path
+
+ REPO_ROOT = Path(__file__).resolve().parent
+@@ -103,10 +104,20 @@ VARIANT_KEYS = {
+ }
+
+
++@lru_cache(maxsize=1)
++def reference_type_map() -> dict[str, str]:
++    # Reference fixtures were exported by a newer upstream build. Use that
++    # snapshot only for decoding fields absent from the binary under test.
++    import surface
++
++    snapshot = json.loads(surface.SNAPSHOT.read_text())
++    return {o["key"]: o["type"] for o in snapshot["options"]}
++
++
+ def type_of(key: str) -> str | None:
+     import surface
+
+-    return surface.type_map().get(key)
++    return surface.type_map().get(key) or reference_type_map().get(key)
+
+
+ def is_variant_key(key: str) -> bool:
+diff --git a/test_reference_schema_fallback.py b/test_reference_schema_fallback.py
+new file mode 100644
+index 0000000..4dfc869
+--- /dev/null
++++ b/test_reference_schema_fallback.py
+@@ -0,0 +1,17 @@
++import settings_compare as sc
++import surface
++
++
++def test_reference_schema_fallback_does_not_expand_cli_surface(monkeypatch):
++    monkeypatch.setattr(surface, "type_map", lambda: {"filament_mixed_components": "coString"})
++    assert sc.decode_gcode_value("filament_mixed_components", '""') == '""'
++    monkeypatch.setattr(surface, "type_map", lambda: {})
++    assert sc.decode_gcode_value("filament_mixed_components", '""') == [""]
++    assert "filament_mixed_components" not in surface.type_map()
++    assert sc.type_of("unknown_future_setting") is None
++
++
++def test_reference_vector_values_are_still_compared(monkeypatch):
++    monkeypatch.setattr(surface, "type_map", lambda: {})
++    assert sc.decode_gcode_value("filament_mixed_components", '"first;part";second') == ["first;part", "second"]
++    assert not sc.values_match("filament_mixed_components", ["first"], ["second"])

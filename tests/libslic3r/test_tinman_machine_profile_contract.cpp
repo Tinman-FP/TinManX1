@@ -199,6 +199,23 @@ TEST_CASE("TinMan multi-tool contract separates material slots from physical too
     CHECK_FALSE(tinmanx_normalize_multitool_config(config, 3));
 }
 
+TEST_CASE("Portable exports omit connections without changing local profiles", "[Preset][TinMan][CLI]")
+{
+    DynamicPrintConfig config;
+    config.set_key_value("print_host", new ConfigOptionString("printer.local"));
+    config.set_key_value("printhost_apikey", new ConfigOptionString("test-secret"));
+    config.set_key_value("printer_agent", new ConfigOptionString("moonraker"));
+    config.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.6, 0.4}));
+    config.set_key_value("filament_map", new ConfigOptionInts({2, 1}));
+    const auto portable = tinmanx_portable_project_config(config);
+    CHECK_FALSE(portable.has("print_host"));
+    CHECK_FALSE(portable.has("printhost_apikey"));
+    CHECK_FALSE(portable.has("printer_agent"));
+    CHECK(portable.opt_serialize("nozzle_diameter") == config.opt_serialize("nozzle_diameter"));
+    CHECK(portable.opt_serialize("filament_map") == config.opt_serialize("filament_map"));
+    CHECK(config.opt_string("printhost_apikey") == "test-secret");
+}
+
 TEST_CASE("TinMan multi-tool contract rejects a profile without a physical nozzle", "[Preset][TinMan][MultiTool]")
 {
     DynamicPrintConfig config;
